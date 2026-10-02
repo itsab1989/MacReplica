@@ -3,6 +3,9 @@ contact_links:
   - name: Report a security vulnerability
     url: https://github.com/itsab1989/MacReplica/security/advisories/new
     about: Please report security problems privately, not as a public issue.
+  - name: Questions and ideas
+    url: https://github.com/itsab1989/MacReplica/discussions
+    about: Ask a question or share an idea in Discussions.
   - name: User guide and troubleshooting
     url: https://github.com/itsab1989/MacReplica/blob/main/docs/USER_GUIDE.md#troubleshooting
     about: Answers to common problems.
