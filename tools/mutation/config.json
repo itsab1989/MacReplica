@@ -22,7 +22,8 @@
         "RestorePlannerTests",
         "EndToEndTests",
         "TwoStageSelectionTests",
-        "SelectionPlannerTests"
+        "SelectionPlannerTests",
+        "DeveloperEnvironmentTests"
       ],
       "area": "Restore"
     },
@@ -63,7 +64,9 @@
       "tests": [
         "ResumeTests",
         "CleanupTests",
-        "SessionAndPrivilegeEdgeTests"
+        "SessionAndPrivilegeEdgeTests",
+        "DeveloperEnvironmentTests",
+        "GuidedInstallationTests"
       ],
       "area": "Resume"
     },
@@ -174,6 +177,103 @@
       ],
       "area": "ICC profile identity (header, computed Profile ID)",
       "threshold": 75
+    },
+    {
+      "file": "Toolchains/ToolchainProvider.swift",
+      "tests": [
+        "ToolchainSecurityTests",
+        "ToolchainScannerTests"
+      ],
+      "area": "Toolchain validation and command policy"
+    },
+    {
+      "file": "Toolchains/NodeToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "DeveloperEnvironmentTests"
+      ],
+      "area": "Node.js environments"
+    },
+    {
+      "file": "Toolchains/PythonToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "SmallParserTests",
+        "DeveloperEnvironmentTests"
+      ],
+      "area": "Python tools (pyenv, uv, pipx, Conda)"
+    },
+    {
+      "file": "Toolchains/LanguageToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "SmallParserTests",
+        "DeveloperEnvironmentTests"
+      ],
+      "area": "Ruby, Rust, Go, Java, .NET"
+    },
+    {
+      "file": "Toolchains/PackageManagerToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "DeveloperEnvironmentTests"
+      ],
+      "area": "Package managers (MacPorts, Nix, Pixi, mise, asdf)"
+    },
+    {
+      "file": "Support/MiniTOML.swift",
+      "tests": [
+        "SmallParserTests",
+        "ToolchainScannerTests"
+      ],
+      "area": "TOML reader"
+    },
+    {
+      "file": "Distribution/DistributionChannel.swift",
+      "tests": [
+        "ChannelTests",
+        "DeveloperEnvironmentTests"
+      ],
+      "area": "Distribution channels"
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "tests": [
+        "DownloadSourceTests"
+      ],
+      "area": "Download source selection"
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "tests": [
+        "DownloadQueueTests",
+        "GuidedInstallationTests"
+      ],
+      "area": "Download queue"
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "tests": [
+        "DownloadInstallerTests",
+        "GuidedInstallationTests"
+      ],
+      "area": "Download verification"
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "tests": [
+        "GuidedInstallationTests"
+      ],
+      "area": "Manual installation, cancellation"
+    },
+    {
+      "file": "Restore/ToolchainRestore.swift",
+      "tests": [
+        "DeveloperEnvironmentTests",
+        "RestoreExecutionTests",
+        "FailureModeTests"
+      ],
+      "area": "Environment recovery, resume"
     }
   ],
   "exclusions": [
@@ -206,6 +306,26 @@
       "file": "Credentials/Credentials.swift",
       "pattern": "minimumPassphraseLength = 12|defaultIterations = 600_000",
       "reason": "Policy constants; boundaries are tested via the 'short' passphrase and iteration floor."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Restore/ToolchainRestore.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
     }
   ]
 }
