@@ -7,6 +7,25 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION="$1"; NOTARIZED="${2:-false}"
 
+# GitHub shows every line break in release notes, so wrapped lines are joined into one line per
+# paragraph or list item (code blocks are left alone).
+unwrap() {
+  /usr/bin/env python3 -c '
+import re, sys
+out, fence = [], False
+for line in sys.stdin.read().split("\n"):
+    if line.startswith("```"):
+        fence = not fence; out.append(line); continue
+    continuation = (not fence and out and out[-1].strip() and line.strip()
+                    and not re.match(r"\s*([-*]|\d+\.|#|\||>)\s", line) and not out[-1].startswith(("#", "|", "```")))
+    if continuation:
+        out[-1] = out[-1].rstrip() + " " + line.strip()
+    else:
+        out.append(line)
+print("\n".join(out))'
+}
+{
+
 # The section of this version, without the link references at the end of the file.
 awk -v v="$VERSION" '
   $0 ~ "^## \\[" v "\\]" { on = 1; next }
@@ -42,3 +61,4 @@ MacReplica is free and always will be. If it's useful to you, a coffee is a kind
 thanks — completely optional, and the app stays fully featured either way:
 [ko-fi.com/itsab1989](https://ko-fi.com/itsab1989)
 EOF
+} | unwrap
