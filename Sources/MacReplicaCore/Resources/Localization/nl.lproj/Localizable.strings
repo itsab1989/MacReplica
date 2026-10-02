@@ -129,7 +129,7 @@
 "component.brewCasks" = "Homebrew Casks";
 "component.brewCasks.hint" = "Apps en andere pakketten die met Homebrew zijn geïnstalleerd.";
 "component.appStore" = "Mac App Store";
-"component.appStore.hint" = "Apps uit de Mac App Store; je moet ingelogd zijn bij de App Store.";
+"component.appStore.hint" = "Apps uit de Mac App Store. MacReplica opent de App Store-pagina van elke app; je installeert hem daar en MacReplica controleert het resultaat.";
 "component.fonts" = "Lettertypen";
 "component.fonts.hint" = "Lettertypen uit je persoonlijke en de gedeelde lettertypemap.";
 "component.colorProfiles" = "ICC-profielen";
@@ -964,3 +964,11 @@
 
 /* Mixed support */
 "supportLevel.mixed" = "Deels automatisch, deels begeleide stappen";
+
+/* Offer hints */
+"offer.appStore.hint" = "MacReplica opent de App Store-pagina van de app; je installeert hem daar en MacReplica controleert het resultaat.";
+"offer.website.hint" = "MacReplica opent de website van de leverancier; je downloadt en installeert de app daar, daarna controleert MacReplica of hij is geïnstalleerd.";
+
+/* Guided step texts */
+"saved.developerTools" = "Ontwikkelaarstools: %1$@";
+"guidedStep.installYourself" = "MacReplica kent geen officiële download voor deze app. Installeer hem zoals je hem oorspronkelijk kreeg (installatieprogramma, leveranciersaccount of licentieportaal) en klik daarna op Klaar.";

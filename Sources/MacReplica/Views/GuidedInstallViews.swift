@@ -121,8 +121,9 @@ struct GuidedAppRow: View {
                 Text(l.t("guided.noSource")).font(.caption).foregroundStyle(.secondary).padding(.leading, 22)
             }
             if let chosen {
-                Text(l.trustText(chosen.trust)).font(.caption)
-                    .foregroundStyle(chosen.trust == .none ? .orange : .secondary)
+                Text(chosen.kind == .appStore ? l.t("offer.appStore.hint") : chosen.kind == .vendorWebsite ? l.t("offer.website.hint") : l.trustText(chosen.trust))
+                    .font(.caption)
+                    .foregroundStyle(chosen.isDownloadable || chosen.kind == .appStore || chosen.kind == .vendorWebsite ? Color.secondary : Color.orange)
                     .padding(.leading, 22)
                     .fixedSize(horizontal: false, vertical: true)
             }

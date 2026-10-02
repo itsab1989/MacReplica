@@ -30,6 +30,8 @@ public enum GuidedStep: Equatable, Sendable {
     case installFromDiskImage
     case installFromWebsite
     case installFromAppStore
+    /// No official source is known: the user installs the app the way they got it originally.
+    case installYourself
     case runCommand(String)
 }
 
@@ -92,7 +94,7 @@ public actor GuidedInstallation {
                         isInstalled: @escaping @Sendable (RestoreItem) -> String??) async -> ItemResult {
         if let version = isInstalled(item) { return finish(item, ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: version)) }
         guard let offer else {
-            return await waitForUser(item, step: .installFromWebsite, interaction: interaction, isInstalled: isInstalled)
+            return await waitForUser(item, step: .installYourself, interaction: interaction, isInstalled: isInstalled)
         }
         switch offer.kind {
         case .appStore:

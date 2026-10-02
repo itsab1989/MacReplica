@@ -129,7 +129,7 @@
 "component.brewCasks" = "Homebrew Casks";
 "component.brewCasks.hint" = "Apper og andre pakker som ble installert med Homebrew.";
 "component.appStore" = "Mac App Store";
-"component.appStore.hint" = "Apper fra Mac App Store; du må være logget på App Store.";
+"component.appStore.hint" = "Apper fra Mac App Store. MacReplica åpner hver apps side i App Store; du installerer den der, og MacReplica kontrollerer resultatet.";
 "component.fonts" = "Skrifter";
 "component.fonts.hint" = "Skrifter fra din personlige og den felles skriftmappen.";
 "component.colorProfiles" = "ICC-profiler";
@@ -964,3 +964,11 @@
 
 /* Mixed support */
 "supportLevel.mixed" = "Delvis automatisk, delvis veiledede trinn";
+
+/* Offer hints */
+"offer.appStore.hint" = "MacReplica åpner appens side i App Store; du installerer den der, og MacReplica kontrollerer resultatet.";
+"offer.website.hint" = "MacReplica åpner leverandørens nettsted; du laster ned og installerer appen der, og deretter kontrollerer MacReplica at den er installert.";
+
+/* Guided step texts */
+"saved.developerTools" = "Utviklerverktøy: %1$@";
+"guidedStep.installYourself" = "MacReplica kjenner ingen offisiell nedlasting for denne appen. Installer den slik du opprinnelig fikk den (installasjonsprogram, leverandørkonto eller lisensportal), og klikk deretter Ferdig.";

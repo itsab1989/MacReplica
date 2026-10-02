@@ -149,6 +149,7 @@ extension Localizer {
         case .installFromDiskImage: return t("guidedStep.installFromDiskImage")
         case .installFromWebsite: return t("guidedStep.installFromWebsite")
         case .installFromAppStore: return t("guidedStep.installFromAppStore")
+        case .installYourself: return t("guidedStep.installYourself")
         case .runCommand(let command): return t("guidedStep.runCommand", command)
         }
     }

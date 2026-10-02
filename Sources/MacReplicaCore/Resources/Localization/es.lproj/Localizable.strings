@@ -129,7 +129,7 @@
 "component.brewCasks" = "Homebrew Casks";
 "component.brewCasks.hint" = "Apps y otros paquetes instalados con Homebrew.";
 "component.appStore" = "Mac App Store";
-"component.appStore.hint" = "Apps del Mac App Store; tienes que haber iniciado sesión en el App Store.";
+"component.appStore.hint" = "Apps de la Mac App Store. MacReplica abre la página de cada app en la App Store; la instalas allí y MacReplica comprueba el resultado.";
 "component.fonts" = "Tipos de letra";
 "component.fonts.hint" = "Tipos de letra de tu carpeta personal y de la carpeta compartida de tipos de letra.";
 "component.colorProfiles" = "Perfiles ICC";
@@ -964,3 +964,11 @@
 
 /* Mixed support */
 "supportLevel.mixed" = "En parte automático, en parte pasos guiados";
+
+/* Offer hints */
+"offer.appStore.hint" = "MacReplica abre la página de la app en la App Store; la instalas allí y MacReplica comprueba el resultado.";
+"offer.website.hint" = "MacReplica abre el sitio web del fabricante; allí descargas e instalas la app y después MacReplica comprueba que esté instalada.";
+
+/* Guided step texts */
+"saved.developerTools" = "Herramientas de desarrollo: %1$@";
+"guidedStep.installYourself" = "MacReplica no conoce ninguna descarga oficial para esta app. Instálala como la obtuviste originalmente (instalador, cuenta del fabricante o portal de licencias) y haz clic en Hecho.";

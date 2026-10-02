@@ -248,6 +248,7 @@ struct BackupSavedView: View {
         return l.t("saved.contents", l.number(manifest.applications.count), l.number(manifest.brewFormulae.filter(\.installedOnRequest).count
             + manifest.brewCasks.count), l.number(manifest.python.environments.count), l.number(manifest.applicationData.count),
             l.number(manifest.fonts.count), l.number(manifest.iccProfiles.count))
+            + (manifest.toolchains.isEmpty ? "" : " · " + l.t("saved.developerTools", l.number(manifest.toolchains.count)))
     }
 }
 
