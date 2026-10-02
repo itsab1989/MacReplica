@@ -156,4 +156,28 @@ struct DeveloperEnvironmentTests {
         #expect(fresh.calls().contains("brew trust --tap example/tools"))
         #expect(session.results["formula:example/tools/example-tool"]?.outcome == .succeeded || session.results["formula:example-tool"]?.outcome == .succeeded)
     }
+
+    @Test func developmentBuildsAreReproducedUnlessTheUserChoosesStable() async throws {
+        let sandbox = try Sandbox("head-formula")
+        var (_, manifest) = try await TestEnvironment.makeBackup(sandbox)
+        manifest.brewFormulae = [BrewFormulaRecord(name: "jq", version: "HEAD-1a2b3c")]
+        #expect(manifest.brewFormulae[0].isHead)
+        for (choice, expected) in [(nil as String?, "brew install --formula jq --HEAD"), ("stable", "brew install --formula jq")] {
+            let (fresh, target) = try TestEnvironment.freshMac(sandbox, name: "fresh-\(choice ?? "head")")
+            var selection = RestoreSelection(components: [.brewFormulae])
+            if let choice { selection.sourceChoices["formula:jq"] = choice }
+            let plan = RestorePlanner().plan(manifest: manifest, selection: selection)
+            let session = await RestoreExecutor(environment: TestEnvironment.restoreEnvironment(target), backupRoot: sandbox.url, sessionStore: nil)
+                .run(plan: plan, session: RestoreSession(backupPath: "", selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
+            #expect(session.results["formula:jq"]?.outcome == .succeeded)
+            #expect(fresh.calls().contains(expected), "\(fresh.calls())")
+        }
+    }
+
+    @Test func sessionsFromEarlierVersionsStillLoad() throws {
+        let json = #"{"components":["fonts","futureComponent"],"excludedItemIDs":[],"enabledTaps":[],"matchDecisions":{},"conflictResolution":"keepExisting","conflictOverrides":{}}"#
+        let selection = try JSONDecoder().decode(RestoreSelection.self, from: Data(json.utf8))
+        #expect(selection.components == [.fonts])
+        #expect(selection.sourceChoices.isEmpty)
+    }
 }

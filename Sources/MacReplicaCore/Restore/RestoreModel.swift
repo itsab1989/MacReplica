@@ -155,16 +155,42 @@ public struct RestoreSelection: Codable, Equatable, Sendable {
     /// Default for conflicts; per-file choices override it.
     public var conflictResolution: ConflictResolution
     public var conflictOverrides: [String: ConflictResolution]
+    /// Where an item should come from when there are several sources: a download offer ID for
+    /// guided installs, or `stable` for a Homebrew formula that was a development (HEAD) build.
+    public var sourceChoices: [String: String]
 
     public init(components: Set<RestoreComponent> = RestoreComponent.defaultSelection, excludedItemIDs: Set<String> = [],
                 enabledTaps: Set<String> = [], matchDecisions: [String: String] = [:],
-                conflictResolution: ConflictResolution = .keepExisting, conflictOverrides: [String: ConflictResolution] = [:]) {
+                conflictResolution: ConflictResolution = .keepExisting, conflictOverrides: [String: ConflictResolution] = [:],
+                sourceChoices: [String: String] = [:]) {
         self.components = components
         self.excludedItemIDs = excludedItemIDs
         self.enabledTaps = enabledTaps
         self.matchDecisions = matchDecisions
         self.conflictResolution = conflictResolution
         self.conflictOverrides = conflictOverrides
+        self.sourceChoices = sourceChoices
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case components, excludedItemIDs, enabledTaps, matchDecisions, conflictResolution, conflictOverrides, sourceChoices
+    }
+
+    // Sessions saved by earlier versions lack newer fields; they are read with defaults.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        components = Set((try c.decodeIfPresent(LenientList<RestoreComponent>.self, forKey: .components)?.elements) ?? Array(RestoreComponent.defaultSelection))
+        excludedItemIDs = try c.decodeIfPresent(Set<String>.self, forKey: .excludedItemIDs) ?? []
+        enabledTaps = try c.decodeIfPresent(Set<String>.self, forKey: .enabledTaps) ?? []
+        matchDecisions = try c.decodeIfPresent([String: String].self, forKey: .matchDecisions) ?? [:]
+        conflictResolution = try c.decodeIfPresent(ConflictResolution.self, forKey: .conflictResolution) ?? .keepExisting
+        conflictOverrides = try c.decodeIfPresent([String: ConflictResolution].self, forKey: .conflictOverrides) ?? [:]
+        sourceChoices = try c.decodeIfPresent([String: String].self, forKey: .sourceChoices) ?? [:]
+    }
+
+    /// True if a Homebrew development (HEAD) build should be installed as such.
+    public func installsHead(_ item: RestoreItem) -> Bool {
+        item.kind == .formula && (item.originalVersion?.hasPrefix("HEAD") ?? false) && sourceChoices[item.id] != "stable"
     }
 
     public func resolution(for itemID: String) -> ConflictResolution {

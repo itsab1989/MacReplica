@@ -388,6 +388,9 @@ public struct BrewFormulaRecord: Codable, Equatable, Identifiable, Sendable {
     /// False for formulae that were only pulled in as dependencies.
     public var installedOnRequest: Bool
 
+    /// A development build from the formula's source repository (`brew install --HEAD`).
+    public var isHead: Bool { version.hasPrefix("HEAD") }
+
     public init(name: String, version: String, tap: String? = nil, installedOnRequest: Bool = true) {
         self.name = name
         self.version = version

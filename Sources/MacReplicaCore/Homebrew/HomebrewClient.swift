@@ -166,6 +166,9 @@ public struct HomebrewClient: Sendable {
         case .formula(let name):
             try Self.validatePackageName(name)
             arguments = ["install", "--formula", name]
+        case .formulaHead(let name):
+            try Self.validatePackageName(name)
+            arguments = ["install", "--formula", name, "--HEAD"]
         case .cask(let token):
             try Self.validatePackageName(token)
             arguments = ["install", "--cask", token]
@@ -215,6 +218,8 @@ public struct HomebrewClient: Sendable {
 
 public enum HomebrewPackage: Sendable, Equatable {
     case formula(String)
+    /// The development version built from the formula's source repository (`--HEAD`).
+    case formulaHead(String)
     case cask(String)
     case tap(name: String, remote: String?)
 }

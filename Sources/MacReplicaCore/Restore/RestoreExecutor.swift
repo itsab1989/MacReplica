@@ -499,7 +499,7 @@ public final class RestoreExecutor: Sendable {
             case .homebrew: return await installHomebrew(item, context: &context, onEvent: onEvent)
             case .tap: return try await installTap(item, inspector: inspector, context: &context, onEvent: onEvent)
             case .masTool: return try await installMasTool(item, context: context, onEvent: onEvent)
-            case .formula: return try await installFormula(item, context: context, onEvent: onEvent)
+            case .formula: return try await installFormula(item, inspector: inspector, context: context, onEvent: onEvent)
             case .cask: return try await installCask(item, inspector: inspector, context: context, onEvent: onEvent)
             case .appStoreApp: return await checkAppStoreInstall(item, inspector: inspector)
             case .font, .colorProfile:
@@ -630,20 +630,21 @@ public final class RestoreExecutor: Sendable {
     }
 
     private func versionNotes(original: String?, installed: String?) -> [ResultNote] {
-        guard let original, let installed, original != installed,
+        guard let original, let installed, original != installed, !original.hasPrefix("HEAD"),
               VersionComparison.compare(original, installed) == .orderedAscending else { return [] }
         return [.newerVersionInstalled(original: original, installed: installed)]
     }
 
-    private func installFormula(_ item: RestoreItem, context: RunContext,
+    private func installFormula(_ item: RestoreItem, inspector: Inspector, context: RunContext,
                                 onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
         guard let brew = context.brew else { return failed(item, .homebrewUnavailable) }
         if let version = try await environment.homebrew.installedFormulaVersion(brew, name: item.identifier) {
             return ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: version)
         }
         onEvent(.activity(itemID: item.id, .installing))
-        let result = try await environment.homebrew.install(brew, package: .formula(item.identifier), askpass: environment.askpassPath,
-                                                           extraEnvironment: environment.askpassEnvironment)
+        let head = inspector.selection.installsHead(item)
+        let result = try await environment.homebrew.install(brew, package: head ? .formulaHead(item.identifier) : .formula(item.identifier),
+                                                           askpass: environment.askpassPath, extraEnvironment: environment.askpassEnvironment)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let version = try await environment.homebrew.installedFormulaVersion(brew, name: item.identifier) else {

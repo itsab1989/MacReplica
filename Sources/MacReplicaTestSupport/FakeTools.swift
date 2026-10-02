@@ -278,6 +278,7 @@ enum FakeTools {
           spec="$S/brew/available/formulae/$name"
           [ -f "$spec" ] || { echo "Error: No available formula with the name \"$name\"." >&2; exit 1; }
           cp "$spec" "$S/brew/formulae/$name"
+          if [ "${4:-}" = "--HEAD" ]; then printf 'HEAD-abc1234' > "$S/brew/formulae/$name"; fi
           if [ "$name" = "mas" ]; then
             prefix="$(cd "$(dirname "$0")/.." && pwd)"
             cp "$ROOT/tools/mas" "$prefix/bin/mas"
