@@ -37,7 +37,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement privately with GitHub's **Report content** option on the issue, comment or discussion, choosing *Report to repository admins*. Please do not report conduct issues in public issues or discussions. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior can be reported privately to GitHub: open the **…** menu on the issue, comment or discussion, choose **Report content** and then **Report abuse** (GitHub's [reporting guide](https://docs.github.com/en/communities/maintaining-your-safety-on-github/reporting-abuse-or-spam)). GitHub reviews these reports. MacReplica has no separate private contact address at the moment. Please do not report conduct issues in public issues or discussions. The community leaders moderate the project's issues, pull requests and discussions and act on violations they become aware of.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
