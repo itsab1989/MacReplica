@@ -4,7 +4,8 @@
 // failures, so the real MacReplica.app can be validated on screen without
 // changing anything on the Mac:
 //
-//   MacReplicaSimulator create <folder> source|fresh
+//   MacReplicaSimulator create <folder> source|fresh|developer
+//   MacReplicaSimulator install-app <folder> <sample app name>   (simulates the user installing an app)
 //   MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
 //   MacReplicaSimulator set <folder> delay <seconds>
 //   MacReplicaSimulator fail-once <folder> <package> <message>
@@ -19,7 +20,8 @@ import MacReplicaTestSupport
 
 func usage() -> Never {
     FileHandle.standardError.write(Data("""
-    usage: MacReplicaSimulator create <folder> source|fresh
+    usage: MacReplicaSimulator create <folder> source|fresh|developer
+           MacReplicaSimulator install-app <folder> <sample app name>
            MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
            MacReplicaSimulator set <folder> delay <seconds>
            MacReplicaSimulator fail-once <folder> <package> <message>
@@ -50,9 +52,13 @@ do {
     switch arguments[0] {
     case "create":
         guard arguments.count == 3 else { usage() }
-        let scenario: SimulationBuilder.Scenario = arguments[2] == "source" ? .sourceMac : .freshMac
+        let scenario: SimulationBuilder.Scenario = ["source": .sourceMac, "developer": .developerMac][arguments[2]] ?? .freshMac
         try SimulationBuilder.create(at: folder, scenario: scenario)
         print("Created \(scenario.rawValue) simulation at \(folder.path)")
+    case "install-app":
+        guard arguments.count == 3 else { usage() }
+        try root.simulateUserInstall(appNamed: arguments[2])
+        print("Installed \(arguments[2])")
     case "set":
         guard arguments.count == 4 else { usage() }
         let on = arguments[3] == "on"

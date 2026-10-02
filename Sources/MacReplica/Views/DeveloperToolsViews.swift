@@ -39,6 +39,7 @@ struct ToolchainToggle: View {
     var body: some View {
         let l = model.l
         let descriptor = ToolchainCatalog.descriptor(record.provider)
+        let levels = ToolchainCatalog.supportLevels(for: record)
         Toggle(isOn: Binding(get: { !model.excludedToolchains.contains(record.provider) },
                              set: { on in if on { model.excludedToolchains.remove(record.provider) } else { model.excludedToolchains.insert(record.provider) } })) {
             VStack(alignment: .leading, spacing: 1) {
@@ -47,8 +48,15 @@ struct ToolchainToggle: View {
                     if let location = record.location { Text(location).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1) }
                 }
                 Text(summary).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                Text(l.supportLevelText(descriptor.overallSupport)).font(.caption)
-                    .foregroundStyle(descriptor.overallSupport == .automatic ? .green : (descriptor.overallSupport == .guided ? .orange : .secondary))
+                if levels == [.automatic] {
+                    Text(l.supportLevelText(.automatic)).font(.caption).foregroundStyle(.green)
+                } else if levels == [.guided] {
+                    Text(l.supportLevelText(.guided)).font(.caption).foregroundStyle(.orange)
+                } else if levels.isEmpty {
+                    Text(l.supportLevelText(.inventoryOnly)).font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text(l.t("supportLevel.mixed")).font(.caption).foregroundStyle(.orange)
+                }
             }
         }
         .toggleStyle(.checkbox)

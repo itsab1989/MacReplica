@@ -963,3 +963,6 @@
 "resume.waiting.title.one" = "%1$d step of your restore is waiting for you";
 "resume.waiting.title.other" = "%1$d steps of your restore are waiting for you";
 "resume.waiting.message" = "Everything automatic is done. Continue to check what you installed in the meantime and do the remaining steps.";
+
+/* Mixed support */
+"supportLevel.mixed" = "Partly automatic, partly guided steps";

@@ -36,6 +36,16 @@ public enum ToolchainCatalog {
         }
     }
 
+    /// How the recorded items of `record` come back: automatic and/or guided, or nothing (listed only).
+    /// Runtimes restored as Homebrew packages count as automatic.
+    public static func supportLevels(for record: ToolchainRecord) -> Set<SupportLevel> {
+        let provider = provider(record.provider)
+        var levels = Set(provider.restoreActions(for: record).map { provider.supportLevel(for: $0) })
+        if record.runtimes.contains(where: { provider.homebrewPackage(for: $0) != nil }) { levels.insert(.automatic) }
+        levels.remove(.inventoryOnly)
+        return levels
+    }
+
     /// The executables the providers may start for `actions` — exactly these are added to the command policy.
     public static func executables(for actions: [ToolchainAction], context: ToolchainContext) -> Set<String> {
         Set(actions.flatMap { provider($0.provider).executableCandidates(for: $0, context: context) }.filter { $0.hasPrefix("/") })

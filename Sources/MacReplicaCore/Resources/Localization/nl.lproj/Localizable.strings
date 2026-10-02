@@ -961,3 +961,6 @@
 "resume.waiting.title.one" = "%1$d stap van je herstel wacht op jou";
 "resume.waiting.title.other" = "%1$d stappen van je herstel wachten op jou";
 "resume.waiting.message" = "Alles wat automatisch kan, is klaar. Ga verder om te controleren wat je intussen hebt geïnstalleerd en de overige stappen te doen.";
+
+/* Mixed support */
+"supportLevel.mixed" = "Deels automatisch, deels begeleide stappen";

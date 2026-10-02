@@ -961,3 +961,6 @@
 "resume.waiting.title.one" = "%1$d trinn i gjenopprettingen venter på deg";
 "resume.waiting.title.other" = "%1$d trinn i gjenopprettingen venter på deg";
 "resume.waiting.message" = "Alt det automatiske er gjort. Fortsett for å kontrollere det du har installert i mellomtiden, og gjør de gjenværende trinnene.";
+
+/* Mixed support */
+"supportLevel.mixed" = "Delvis automatisk, delvis veiledede trinn";

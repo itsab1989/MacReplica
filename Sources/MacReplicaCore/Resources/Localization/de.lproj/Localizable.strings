@@ -961,3 +961,6 @@
 "resume.waiting.title.one" = "%1$d Schritt deiner Wiederherstellung wartet auf dich";
 "resume.waiting.title.other" = "%1$d Schritte deiner Wiederherstellung warten auf dich";
 "resume.waiting.message" = "Alles Automatische ist erledigt. Mach weiter, um zu prüfen, was du inzwischen installiert hast, und die übrigen Schritte zu erledigen.";
+
+/* Mixed support */
+"supportLevel.mixed" = "Teils automatisch, teils geführte Schritte";

@@ -961,3 +961,6 @@
 "resume.waiting.title.one" = "%1$d étape de votre restauration vous attend";
 "resume.waiting.title.other" = "%1$d étapes de votre restauration vous attendent";
 "resume.waiting.message" = "Tout ce qui est automatique est terminé. Continuez pour vérifier ce que vous avez installé entre-temps et effectuer les étapes restantes.";
+
+/* Mixed support */
+"supportLevel.mixed" = "En partie automatique, en partie par étapes guidées";
