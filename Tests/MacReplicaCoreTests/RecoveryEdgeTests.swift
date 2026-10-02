@@ -301,3 +301,109 @@ struct RecoveryRestoreEdgeTests {
         #expect(session.results[item.id]?.outcome == .alreadyPresent, "found by bundle identifier without mas")
     }
 }
+
+@Suite("More recovery edge cases")
+struct MoreRecoveryEdgeTests {
+    func context(_ sandbox: Sandbox) -> ToolchainContext {
+        ToolchainContext(layout: toolchainLayout(sandbox), workFolder: nil, architecture: .arm64)
+    }
+
+    @Test func rvmRubiesDefaultAndGuidedInstructions() throws {
+        let sandbox = try Sandbox("rvm")
+        try sandbox.file("home/.rvm/rubies/ruby-3.3.5/bin/ruby")
+        try sandbox.file("home/.rvm/rubies/ruby-3.2.4/bin/ruby")
+        try sandbox.symlink("home/.rvm/rubies/default", to: "ruby-3.3.5")
+        try sandbox.file("home/.rvm/config/alias", "default=ruby-3.3.5\n")
+        let record = try #require(RVMProvider().scan(context(sandbox)))
+        #expect(record.runtimes.map(\.version) == ["ruby-3.2.4", "ruby-3.3.5"], "the default link is not a version")
+        #expect(record.runtimes.filter(\.isDefault).map(\.version) == ["ruby-3.3.5"])
+        #expect(RVMProvider().manualInstruction(for: ToolchainAction(provider: .rvm, kind: .runtime, runtime: record.runtimes[1]))
+                == "rvm install ruby-3.3.5\nrvm alias create default ruby-3.3.5")
+        #expect(RVMProvider().manualInstruction(for: ToolchainAction(provider: .rvm, kind: .runtime, runtime: record.runtimes[0])) == "rvm install ruby-3.2.4")
+        #expect(RVMProvider().isSatisfied(ToolchainAction(provider: .rvm, kind: .runtime, runtime: record.runtimes[0]), context: context(sandbox)))
+        #expect(!NVMProvider().isSatisfied(ToolchainAction(provider: .nvm, kind: .environment), context: context(sandbox)))
+        #expect(!DotnetProvider().isSatisfied(ToolchainAction(provider: .dotnet, kind: .environment), context: context(sandbox)))
+        #expect(!YarnProvider().isSatisfied(ToolchainAction(provider: .yarn, kind: .package), context: context(sandbox)))
+    }
+
+    @Test func theFirstCondaInstallationIsUsed() throws {
+        let sandbox = try Sandbox("conda-bases")
+        for base in ["miniforge3", "miniconda3"] {
+            try sandbox.file("home/\(base)/bin/conda", executable: true)
+            try sandbox.file("home/\(base)/conda-meta/history", "==> a <==\n# update specs: ['python']\n==> b <==\n# update specs: ['\(base)-extra']\n")
+        }
+        let record = try #require(CondaProvider().scan(context(sandbox)))
+        #expect(record.location == "~/miniforge3")
+        #expect(record.environments.first?.requestedPackages == ["miniforge3-extra"])
+    }
+
+    @Test func tomlWhitespaceAndUnreadableArrayItems() {
+        let document = MiniTOML.parse("a = [\t\"x\",\r\n  @, \"y\" ]\nb\t=\t2\n")
+        #expect(document["a"] as? [String] == ["x", "@", "y"])
+        #expect(document["b"] as? Int == 2)
+    }
+
+    @Test func casksMatchedByAppNameUseTheFirstMatch() async {
+        let first = CaskInfo(token: "example", appArtifacts: ["Example.app"], download: CaskDownload(url: "https://dl.example.com/first.dmg", sha256: String(repeating: "a", count: 64)))
+        let second = CaskInfo(token: "example-other", appArtifacts: ["Example.app"], download: CaskDownload(url: "https://dl.example.com/second.dmg", sha256: String(repeating: "b", count: 64)))
+        let offers = await DownloadSourceFinder(fetcher: LocalFetcher(root: URL(fileURLWithPath: "/x")), catalog: CaskCatalog(casks: [first, second]),
+                                                macOSVersion: "15.0", architecture: .arm64)
+            .offers(for: AppRecord(name: "Example", path: "/Applications/Example.app"), itemID: "i")
+        #expect(offers.first?.url == "https://dl.example.com/first.dmg")
+    }
+
+    @Test func queueStatesForQueuedPausesHttpWithSignatureAndCancellation() async throws {
+        let sandbox = try Sandbox("queue-states")
+        for name in ["a", "b"] { try Data(repeating: 2, count: 80_000).write(to: try sandbox.file("downloads/dl.example.com/\(name).zip")) }
+        let queue = DownloadQueue(transport: LocalDownloadTransport(root: sandbox.url, chunkSize: 4_000, delayPerChunk: 0.01),
+                                  folder: sandbox.url.appendingPathComponent("dl"), maxConcurrent: 1)
+        await queue.enqueue(DownloadOffer(id: "a", itemID: "a", kind: .vendorFeed, url: "https://dl.example.com/a.zip", trust: .checksum))
+        await queue.enqueue(DownloadOffer(id: "b", itemID: "b", kind: .vendorFeed, url: "http://dl.example.com/b.zip", edSignature: "sig",
+                                          trust: .vendorSignature))
+        #expect(await queue.state("b") == .queued, "plain HTTP is accepted when the file carries the vendor's signature")
+        await queue.pause("b")
+        #expect(await queue.state("b") == .paused, "a queued download can be paused before it starts")
+        await queue.cancel("a")
+        try await Task.sleep(nanoseconds: 200_000_000)
+        #expect(await queue.state("a") == .cancelled, "a cancelled download stays cancelled, it is not reported as a failure")
+        #expect(await queue.state("b") == .paused, "a paused download does not start on its own")
+        await queue.resume("b")
+        await queue.waitUntilIdle()
+        if case .finished? = await queue.state("b") {} else { Issue.record("b not finished") }
+    }
+
+    @Test func packagesFromAnotherDeveloperAreRefused() async throws {
+        let sandbox = try Sandbox("pkg-team")
+        let stub = try sandbox.file("bin/pkgutil", """
+            #!/bin/sh
+            cat <<OUT
+            Package "x.pkg":
+               Status: signed by a developer certificate issued by Apple for distribution
+               Certificate Chain:
+                1. Developer ID Installer: Example Corporation (AAAAA11111)
+            OUT
+            """, executable: true)
+        var layout = toolchainLayout(sandbox)
+        layout.pkgutil = stub.path
+        let installer = DownloadInstaller(layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: [stub.path]),
+                                                                                       baseEnvironment: [:]), macOSVersion: "15.0", architecture: .arm64)
+        let package = try sandbox.file("x.pkg", "synthetic")
+        var offer = DownloadOffer(id: "o", itemID: "i", kind: .homebrewCask, url: "https://x/x.pkg", expectedTeamIdentifier: "BBBBB22222", trust: .checksum)
+        await #expect(throws: DownloadError.wrongDeveloper(expected: "BBBBB22222", actual: "AAAAA11111")) {
+            try await installer.prepare(package, offer: offer, staging: sandbox.url.appendingPathComponent("staging"))
+        }
+        offer.expectedTeamIdentifier = "AAAAA11111"
+        #expect(try await installer.prepare(package, offer: offer, staging: sandbox.url.appendingPathComponent("staging"))
+                == .package(package, teamIdentifier: "AAAAA11111"))
+    }
+
+    @Test func archivesAreSearchedTwoLevelsDeepInNameOrder() throws {
+        let sandbox = try Sandbox("find-depth")
+        let root = try sandbox.folder("x")
+        try SimulationBuilder.makeSyntheticApp(name: "Deep", bundleID: "d", version: "1", in: try sandbox.folder("x/a/b"))
+        #expect(DownloadInstaller.findApplication(in: root) == nil, "three levels down is too deep")
+        try SimulationBuilder.makeSyntheticApp(name: "Zeta", bundleID: "z", version: "1", in: root)
+        try SimulationBuilder.makeSyntheticApp(name: "Alpha", bundleID: "a", version: "1", in: root)
+        #expect(DownloadInstaller.findApplication(in: root)?.lastPathComponent == "Alpha.app")
+    }
+}

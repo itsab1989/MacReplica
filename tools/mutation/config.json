@@ -184,7 +184,8 @@
         "ToolchainSecurityTests",
         "ToolchainScannerTests",
         "ToolchainDetailTests",
-        "ToolchainEdgeTests"
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Toolchain validation and command policy"
     },
@@ -194,7 +195,8 @@
         "ToolchainScannerTests",
         "DeveloperEnvironmentTests",
         "ToolchainDetailTests",
-        "ToolchainEdgeTests"
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Node.js environments"
     },
@@ -205,7 +207,8 @@
         "SmallParserTests",
         "DeveloperEnvironmentTests",
         "ToolchainDetailTests",
-        "ToolchainEdgeTests"
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Python tools (pyenv, uv, pipx, Conda)"
     },
@@ -216,7 +219,8 @@
         "SmallParserTests",
         "DeveloperEnvironmentTests",
         "ToolchainDetailTests",
-        "ToolchainEdgeTests"
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Ruby, Rust, Go, Java, .NET"
     },
@@ -226,7 +230,8 @@
         "ToolchainScannerTests",
         "DeveloperEnvironmentTests",
         "ToolchainDetailTests",
-        "ToolchainEdgeTests"
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Package managers (MacPorts, Nix, Pixi, mise, asdf)"
     },
@@ -235,7 +240,8 @@
       "tests": [
         "SmallParserTests",
         "ToolchainScannerTests",
-        "ToolchainEdgeTests"
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "TOML reader"
     },
@@ -252,7 +258,8 @@
       "file": "Downloads/DownloadSourceFinder.swift",
       "tests": [
         "DownloadSourceTests",
-        "DownloadEdgeTests"
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Download source selection"
     },
@@ -261,7 +268,8 @@
       "tests": [
         "DownloadQueueTests",
         "GuidedInstallationTests",
-        "DownloadEdgeTests"
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Download queue"
     },
@@ -270,7 +278,8 @@
       "tests": [
         "DownloadInstallerTests",
         "GuidedInstallationTests",
-        "DownloadEdgeTests"
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Download verification"
     },
@@ -278,7 +287,8 @@
       "file": "Downloads/GuidedInstallation.swift",
       "tests": [
         "GuidedInstallationTests",
-        "DownloadEdgeTests"
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
       ],
       "area": "Manual installation, cancellation"
     },
@@ -288,7 +298,9 @@
         "DeveloperEnvironmentTests",
         "RestoreExecutionTests",
         "FailureModeTests",
-        "RecoveryRestoreEdgeTests"
+        "RecoveryRestoreEdgeTests",
+        "MoreRecoveryEdgeTests",
+        "ExecutorEdgeTests"
       ],
       "area": "Environment recovery, resume"
     }
@@ -378,6 +390,16 @@
       "file": "Downloads/GuidedInstallation.swift",
       "pattern": "if await queue.state\\(item.id\\) == nil",
       "reason": "Enqueueing again restarts an equivalent download (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "recommended: true\\)\\)",
+      "reason": "markRecommended sets App Store offers as recommended again (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "delayPerChunk > 0",
+      "reason": "Test-only local transport."
     }
   ]
 }
