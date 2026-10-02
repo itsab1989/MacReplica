@@ -180,7 +180,7 @@ struct ICCHeaderTests {
     @Test func descriptionTagBoundaries() {
         func desc(_ text: String) -> [UInt8] {
             let t = Array(text.utf8) + [0]
-            return Array("desc".utf8) + [0, 0, 0, 0] + [0, 0, 0, UInt8(t.count)] + t
+            return bytes(Array("desc".utf8), [0, 0, 0, 0], [0, 0, 0, UInt8(t.count)], t)
         }
         // Text that ends exactly at the end of the file is read.
         #expect(ICCProfileHeader.parse(withSingleTag(desc("Exact")))?.description == "Exact")
@@ -202,8 +202,8 @@ struct ICCHeaderTests {
     @Test func localizedDescriptionBoundaries() {
         let text = Array("Ünï".utf16).flatMap { [UInt8($0 >> 8), UInt8($0 & 0xFF)] }
         func mluc(records: UInt8 = 1, length: Int? = nil) -> [UInt8] {
-            Array("mluc".utf8) + [0, 0, 0, 0] + [0, 0, 0, records] + [0, 0, 0, 12] + Array("enUS".utf8)
-                + [0, 0, 0, UInt8(length ?? text.count)] + [0, 0, 0, 28] + text
+            bytes(Array("mluc".utf8), [0, 0, 0, 0], [0, 0, 0, records], [0, 0, 0, 12], Array("enUS".utf8),
+                  [0, 0, 0, UInt8(length ?? text.count)], [0, 0, 0, 28], text)
         }
         #expect(ICCProfileHeader.parse(withSingleTag(mluc()))?.description == "Ünï", "record ends exactly at the end")
         #expect(ICCProfileHeader.parse(withSingleTag(mluc(records: 0)))?.description == nil)

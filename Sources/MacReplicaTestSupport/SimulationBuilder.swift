@@ -316,15 +316,15 @@ public enum SimulationBuilder {
         func be(_ value: Int) -> [UInt8] { [UInt8(value >> 24 & 0xFF), UInt8(value >> 16 & 0xFF), UInt8(value >> 8 & 0xFF), UInt8(value & 0xFF)] }
         func textDescription(_ text: String) -> [UInt8] {
             let bytes = Array(text.utf8) + [0]
-            return Array("desc".utf8) + [0, 0, 0, 0] + be(bytes.count) + bytes + [UInt8](repeating: 0, count: 12 + 67)
+            return MacReplicaTestSupport.bytes(Array("desc".utf8), [0, 0, 0, 0], be(bytes.count), bytes, [UInt8](repeating: 0, count: 12 + 67))
         }
         func padded(_ bytes: [UInt8]) -> [UInt8] { bytes + [UInt8](repeating: 0, count: (4 - bytes.count % 4) % 4) }
         func s15(_ value: Double) -> [UInt8] { be(Int(Int32(value * 65536)) & 0xFFFF_FFFF) }
-        func xyz(_ x: Double, _ y: Double, _ z: Double) -> [UInt8] { Array("XYZ ".utf8) + [0, 0, 0, 0] + s15(x) + s15(y) + s15(z) }
-        let gamma = Array("curv".utf8) + [0, 0, 0, 0] + be(1) + [2, 0x33, 0, 0] // gamma 2.2, u8Fixed8
+        func xyz(_ x: Double, _ y: Double, _ z: Double) -> [UInt8] { MacReplicaTestSupport.bytes(Array("XYZ ".utf8), [0, 0, 0, 0], s15(x), s15(y), s15(z)) }
+        let gamma = MacReplicaTestSupport.bytes(Array("curv".utf8), [0, 0, 0, 0], be(1), [2, 0x33, 0, 0]) // gamma 2.2, u8Fixed8
         // lut8Type with identity tables and a 2-point grid: enough for ColorSync to accept device profiles.
         func lut8(inputs: Int, outputs: Int) -> [UInt8] {
-            var t = Array("mft1".utf8) + [0, 0, 0, 0] + [UInt8(inputs), UInt8(outputs), 2, 0]
+            var t = MacReplicaTestSupport.bytes(Array("mft1".utf8), [0, 0, 0, 0], [UInt8(inputs), UInt8(outputs), 2, 0])
             for row in 0..<3 { for column in 0..<3 { t += s15(row == column ? 1 : 0) } }
             for _ in 0..<inputs { t += (0..<256).map { UInt8($0) } }
             let points = 1 << inputs
@@ -335,7 +335,7 @@ public enum SimulationBuilder {
         let channels = colorSpace == "CMYK" ? 4 : (colorSpace == "GRAY" ? 1 : 3)
         var tags: [(String, [UInt8])] = [
             ("desc", padded(textDescription(description))),
-            ("cprt", padded(Array("text".utf8) + [0, 0, 0, 0] + Array(copyright.utf8) + [0])),
+            ("cprt", padded(MacReplicaTestSupport.bytes(Array("text".utf8), [0, 0, 0, 0], Array(copyright.utf8), [0]))),
             ("wtpt", xyz(0.9642, 1.0, 0.8249)),
         ]
         switch deviceClass {

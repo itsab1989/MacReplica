@@ -211,8 +211,8 @@ struct InventoryTests {
         var data = SimulationBuilder.makeICCProfile(description: "x")
         // Replace the desc tag with an mluc tag holding UTF-16 text.
         let text = Array("Ünïcode".utf16).flatMap { [UInt8($0 >> 8), UInt8($0 & 0xFF)] }
-        var tag: [UInt8] = Array("mluc".utf8) + [0, 0, 0, 0] + [0, 0, 0, 1] + [0, 0, 0, 12] + Array("enUS".utf8)
-        tag += [0, 0, 0, UInt8(text.count)] + [0, 0, 0, 28] + text
+        let tag = bytes(Array("mluc".utf8), [0, 0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 12], Array("enUS".utf8),
+                        [0, 0, 0, UInt8(text.count)], [0, 0, 0, 28], text)
         data = data.prefix(144) + Data(tag)
         data.replaceSubrange(128..<132, with: [0, 0, 0, 1])
         data.replaceSubrange(136..<140, with: [0, 0, 0, 144])

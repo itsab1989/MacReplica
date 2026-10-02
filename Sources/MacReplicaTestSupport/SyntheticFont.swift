@@ -1,5 +1,9 @@
 import Foundation
 
+/// Joins byte arrays. Explicitly typed parameters keep long concatenations of byte literals fast
+/// to type-check on older Swift compilers.
+public func bytes(_ parts: [UInt8]...) -> [UInt8] { parts.flatMap { $0 } }
+
 /// Builds minimal but valid TrueType fonts for tests and the simulation, so that font
 /// identity (family, style, PostScript name, version) can be tested with real Core Text
 /// parsing and without shipping any real typeface. The fonts contain a single empty glyph.
