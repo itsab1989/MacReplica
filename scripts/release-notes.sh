@@ -28,7 +28,7 @@ else
   cat <<'EOF'
 3. Open MacReplica from Applications. This build is **not signed with an Apple Developer ID and not
    notarized**, so macOS blocks the first launch: open **System Settings → Privacy & Security**,
-   click **Open Anyway** next to the message about MacReplica and confirm. Details:
+   click **Open Anyway** next to the message about MacReplica and enter your login password. Details:
    [Troubleshooting](https://github.com/itsab1989/MacReplica/blob/main/docs/TROUBLESHOOTING.md#macos-says-macreplica-cannot-be-opened).
 EOF
 fi
