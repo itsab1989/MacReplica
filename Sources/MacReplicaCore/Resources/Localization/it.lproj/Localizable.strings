@@ -834,3 +834,36 @@
 "files.styles.other" = "%1$d stili";
 "files.version" = "Versione %1$@";
 "files.legacyOrUnreadable" = "Formato obsoleto o illeggibile";
+
+/* Developer tools, package managers and guided steps */
+"component.developerTools" = "Strumenti per sviluppatori";
+"component.developerTools.hint" = "Gestori di versioni, versioni dei linguaggi e strumenti globali per Python, Node.js, Ruby, Rust, Go, Java e .NET.";
+"component.packageManagers" = "Altri gestori di pacchetti";
+"component.packageManagers.hint" = "MacPorts, Nix, Pixi, mise e asdf. I passaggi che MacReplica non può eseguire da solo vengono mostrati come passaggi guidati.";
+"kind.toolchainStep" = "Strumento per sviluppatori";
+"kind.manualApp" = "Installazione guidata";
+"skip.manualStepRequired" = "In attesa di te – vedi i passaggi guidati";
+"skip.waitingForManualStep" = "In attesa che %1$@ sia completato";
+"skip.postponedByUser" = "Rimandato da te";
+"skip.cancelledByUser" = "Annullato da te";
+"ecosystem.packageManagers" = "Gestori di pacchetti";
+"ecosystem.python" = "Python";
+"ecosystem.node" = "Node.js";
+"ecosystem.ruby" = "Ruby";
+"ecosystem.rust" = "Rust";
+"ecosystem.go" = "Go";
+"ecosystem.java" = "Java";
+"ecosystem.dotnet" = ".NET";
+"supportLevel.automatic" = "Ripristinato automaticamente";
+"supportLevel.guided" = "Passaggio guidato";
+"supportLevel.inventoryOnly" = "Elencato per riferimento";
+"prediction.manualStep" = "Passaggio guidato: MacReplica mostra cosa fare e verifica il risultato";
+"prediction.manualAppStore" = "Da installare dall’App Store – MacReplica apre la pagina e verifica il risultato";
+"prediction.afterToolchain" = "Verrà installato dopo i passaggi necessari";
+"dryRun.group.guided.one" = "%1$d passaggio guidato";
+"dryRun.group.guided.other" = "%1$d passaggi guidati";
+"scan.phase.developerTools" = "Ricerca di strumenti per sviluppatori e gestori di pacchetti …";
+"failure.toolUnavailable.title" = "Strumento necessario mancante";
+"failure.toolUnavailable.explanation" = "Questo passaggio richiede un gestore di versioni o di pacchetti non installato su questo Mac. Installalo (o selezionalo per il ripristino) e riprova.";
+"failure.downloadNotTrusted.title" = "Impossibile verificare il download";
+"failure.downloadNotTrusted.explanation" = "Il file scaricato non corrispondeva alla firma, al checksum o allo sviluppatore del produttore. MacReplica non lo ha installato e ha rimosso il file.";

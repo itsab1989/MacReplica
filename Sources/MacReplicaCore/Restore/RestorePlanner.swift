@@ -48,6 +48,7 @@ public struct RestorePlanner: Sendable {
         var appStore: [RestoreItem] = []
         var files: [RestoreItem] = []
         var manual: [AppRecord] = []
+        var manualItems: [RestoreItem] = []
         var caskTokens = Set<String>()
         let components = selection.components
 
@@ -110,6 +111,12 @@ public struct RestorePlanner: Sendable {
                         dependsOn: [RestoreItem.homebrewID], component: .applications))
                 case .officialDownload, .manual, .appStore:
                     if !selection.excludedItemIDs.contains("manual:\(app.path)") { manual.append(app) }
+                    var item = RestoreItem(
+                        id: "manual:\(app.path)", kind: .manualApp, title: app.name, identifier: app.path,
+                        originalVersion: app.version, bundleIdentifier: app.bundleIdentifier,
+                        appBundleNames: [app.bundleFileName], architectures: app.architectures, component: .applications)
+                    item.app = app
+                    manualItems.append(item)
                 }
             }
         }
@@ -141,26 +148,108 @@ public struct RestorePlanner: Sendable {
                     id: "mas:\(entry.appStoreID)", kind: .appStoreApp, title: entry.name, identifier: String(entry.appStoreID),
                     originalVersion: entry.version, bundleIdentifier: entry.bundleIdentifier ?? app?.bundleIdentifier,
                     appBundleNames: app.map { [$0.bundleFileName] } ?? [], architectures: app?.architectures ?? [],
-                    dependsOn: [RestoreItem.masToolID], component: .appStore))
+                    component: .appStore))
             }
         }
+
+        // Version managers, runtimes and global tools.
+        var toolchainItems: [RestoreItem] = []
+        func homebrewItem(_ package: HomebrewPackageReference, title: String, component: RestoreComponent) -> String {
+            let id = package.itemID
+            switch package.kind {
+            case .formula where !formulae.contains(where: { $0.id == id }):
+                formulae.append(RestoreItem(id: id, kind: .formula, title: title, identifier: package.name,
+                                            dependsOn: [RestoreItem.homebrewID], component: component))
+            case .cask where !casks.contains(where: { $0.id == id }):
+                casks.append(RestoreItem(id: id, kind: .cask, title: title, identifier: package.name,
+                                         dependsOn: [RestoreItem.homebrewID], component: component))
+                caskTokens.insert(package.name)
+            default: break
+            }
+            return id
+        }
+        for record in manifest.toolchains {
+            let component: RestoreComponent = record.ecosystem == .packageManagers ? .packageManagers : .developerTools
+            guard components.contains(component) else { continue }
+            let provider = ToolchainCatalog.provider(record.provider)
+            let name = provider.descriptor.name
+            for runtime in record.runtimes {
+                if let package = provider.homebrewPackage(for: runtime) {
+                    _ = homebrewItem(package, title: [runtime.vendor, "\(name) \(runtime.version)"].compactMap { $0 }.joined(separator: " · "),
+                                     component: component)
+                }
+            }
+            let actions = provider.restoreActions(for: record)
+            guard !actions.isEmpty else { continue }
+            var managerID: String?
+            if let package = provider.managerPackage(for: record), actions.contains(where: { $0.kind != .manager }) {
+                managerID = homebrewItem(package, title: name, component: component)
+            } else if let manager = actions.first(where: { $0.kind == .manager }) {
+                managerID = manager.itemID
+            }
+            for action in actions {
+                var dependsOn: [String] = []
+                if action.kind != .manager, let managerID { dependsOn.append(managerID) }
+                if let runtime = action.package?.runtime {
+                    switch runtime.source {
+                    case .manager:
+                        if let owner = runtime.provider {
+                            dependsOn.append(ToolchainAction(provider: owner, kind: .runtime, runtime: ToolchainRuntime(version: runtime.version)).itemID)
+                        }
+                    case .homebrew:
+                        dependsOn.append(homebrewItem(.formula(runtime.version), title: runtime.version, component: component))
+                    case .other:
+                        break
+                    }
+                }
+                // Programs installed with Cargo need rustup's default toolchain.
+                if action.provider == .cargo, let rustup = manifest.toolchains.first(where: { $0.provider == .rustup }),
+                   let toolchain = rustup.runtimes.first(where: \.isDefault) ?? rustup.runtimes.first {
+                    dependsOn.append(ToolchainAction(provider: .rustup, kind: .runtime, runtime: toolchain).itemID)
+                }
+                var item = RestoreItem(id: action.itemID, kind: .toolchainStep, title: action.title, identifier: record.provider.rawValue,
+                                       originalVersion: action.runtime?.version ?? action.package?.version,
+                                       dependsOn: dependsOn, component: component)
+                item.toolchain = action
+                toolchainItems.append(item)
+            }
+        }
+        // Managers first, then runtimes, environments and packages, so that dependencies come before what needs them.
+        let actionOrder: [ToolchainAction.Kind: Int] = [.manager: 0, .runtime: 1, .environment: 2, .package: 3]
+        toolchainItems = toolchainItems.enumerated().sorted {
+            let left = actionOrder[$0.element.toolchain?.kind ?? .package] ?? 3
+            let right = actionOrder[$1.element.toolchain?.kind ?? .package] ?? 3
+            return left == right ? $0.offset < $1.offset : left < right
+        }.map(\.element)
 
         var python: [RestoreItem] = []
         var applicationData: [RestoreItem] = []
         if components.contains(.python) {
             for environment in manifest.python.environments {
                 let minor = environment.minorVersion
-                let formulaName = PythonVersion.formula(forMinor: minor)
-                let runtimeID = "formula:\(formulaName)"
-                if !formulae.contains(where: { $0.id == runtimeID }) {
-                    formulae.append(RestoreItem(
-                        id: runtimeID, kind: .formula, title: "Python \(minor)", identifier: formulaName,
-                        dependsOn: [RestoreItem.homebrewID], component: .python))
+                var dependsOn: [String] = []
+                // An environment based on a pyenv or uv Python waits for exactly that version when it is restored too.
+                let exact = toolchainItems.first { item in
+                    guard let action = item.toolchain, action.kind == .runtime, [.pyenv, .uv].contains(action.provider) else { return false }
+                    return action.runtime?.version == environment.pythonVersion
+                        && (environment.baseSource == .pyenv) == (action.provider == .pyenv)
+                }
+                if let exact {
+                    dependsOn = [exact.id]
+                } else {
+                    let formulaName = PythonVersion.formula(forMinor: minor)
+                    let runtimeID = "formula:\(formulaName)"
+                    if !formulae.contains(where: { $0.id == runtimeID }) {
+                        formulae.append(RestoreItem(
+                            id: runtimeID, kind: .formula, title: "Python \(minor)", identifier: formulaName,
+                            dependsOn: [RestoreItem.homebrewID], component: .python))
+                    }
+                    dependsOn = [runtimeID]
                 }
                 python.append(RestoreItem(
                     id: "python:\(environment.id)", kind: .pythonEnvironment, title: environment.name, identifier: environment.path,
                     originalVersion: environment.pythonVersion, architectures: environment.architectures,
-                    dependsOn: [runtimeID], component: .python, pythonEnvironment: environment))
+                    dependsOn: dependsOn, component: .python, pythonEnvironment: environment))
             }
         }
         if components.contains(.developerSettings), manifest.developer.gitConfig != nil {
@@ -197,16 +286,22 @@ public struct RestorePlanner: Sendable {
         files.removeAll { excluded.contains($0.id) }
         python.removeAll { excluded.contains($0.id) }
         applicationData.removeAll { excluded.contains($0.id) }
+        toolchainItems.removeAll { excluded.contains($0.id) }
+        manualItems.removeAll { excluded.contains($0.id) }
         // A Python runtime is only needed while an environment still uses it.
         let neededRuntimes = Set(python.flatMap(\.dependsOn))
         formulae.removeAll { $0.component == .python && !neededRuntimes.contains($0.id) }
+        // A manager or runtime from Homebrew is only needed while one of its steps is still selected.
+        let neededByToolchains = Set(toolchainItems.flatMap(\.dependsOn))
+        let toolchainComponents: Set<RestoreComponent?> = [.developerTools, .packageManagers]
+        formulae.removeAll { toolchainComponents.contains($0.component) && !neededByToolchains.contains($0.id) }
 
         // Only keep taps that a remaining package needs.
         let neededTaps = Set((formulae + casks).flatMap(\.dependsOn).filter { $0.hasPrefix("tap:") })
         let tapItems = taps.values.filter { neededTaps.contains($0.id) }.sorted { $0.id < $1.id }
 
         var items: [RestoreItem] = []
-        let needsHomebrew = !(formulae.isEmpty && casks.isEmpty && appStore.isEmpty && python.isEmpty)
+        let needsHomebrew = !(formulae.isEmpty && casks.isEmpty && python.isEmpty)
         if needsHomebrew {
             items.append(RestoreItem(id: RestoreItem.commandLineToolsID, kind: .commandLineTools,
                                      title: "Xcode Command Line Tools", identifier: "xcode-select"))
@@ -214,22 +309,15 @@ public struct RestorePlanner: Sendable {
                                      dependsOn: [RestoreItem.commandLineToolsID]))
         }
         items += tapItems
-        if !appStore.isEmpty {
-            // If the backup restores the "mas" formula anyway, App Store apps wait for it
-            // instead of installing the same tool twice.
-            if formulae.contains(where: { $0.id == "formula:mas" }) {
-                for index in appStore.indices { appStore[index].dependsOn = ["formula:mas"] }
-            } else {
-                items.append(RestoreItem(id: RestoreItem.masToolID, kind: .masTool, title: "mas", identifier: "mas",
-                                         dependsOn: [RestoreItem.homebrewID]))
-            }
-        }
         items += formulae.sorted { $0.identifier < $1.identifier }
         items += casks.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-        items += appStore.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        items += toolchainItems
         items += python
         items += applicationData
         items += files
+        // Guided installs come last: everything automatic runs first, then the user is asked to act.
+        items += appStore.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        items += manualItems.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         manual.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         return RestorePlan(items: items, manualApps: manual)
     }

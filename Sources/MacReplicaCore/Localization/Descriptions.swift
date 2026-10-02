@@ -39,6 +39,8 @@ extension Localizer {
         case .brewCasks: return t("component.brewCasks")
         case .appStore: return t("component.appStore")
         case .python: return t("component.python")
+        case .developerTools: return t("component.developerTools")
+        case .packageManagers: return t("component.packageManagers")
         case .developerSettings: return t("component.developerSettings")
         case .applicationData: return t("component.applicationData")
         case .credentials: return t("component.credentials")
@@ -54,6 +56,8 @@ extension Localizer {
         case .brewCasks: return t("component.brewCasks.hint")
         case .appStore: return t("component.appStore.hint")
         case .python: return t("component.python.hint")
+        case .developerTools: return t("component.developerTools.hint")
+        case .packageManagers: return t("component.packageManagers.hint")
         case .developerSettings: return t("component.developerSettings.hint")
         case .applicationData: return t("component.applicationData.hint")
         case .credentials: return t("component.credentials.hint")
@@ -78,6 +82,8 @@ extension Localizer {
         case .applicationData: return t("kind.applicationData")
         case .gitConfiguration: return t("kind.gitConfiguration")
         case .credential: return t("kind.credential")
+        case .toolchainStep: return t("kind.toolchainStep")
+        case .manualApp: return t("kind.manualApp")
         }
     }
 
@@ -111,8 +117,16 @@ extension Localizer {
         case .fileNotSupported: return t("skip.fileNotSupported")
         case .displaySpecificProfile: return t("skip.displaySpecificProfile")
         case .cancelled: return t("skip.cancelled")
+        case .manualStepRequired: return t("skip.manualStepRequired")
+        case .waitingForManualStep(let title): return t("skip.waitingForManualStep", title)
+        case .postponedByUser: return t("skip.postponedByUser")
+        case .cancelledByUser: return t("skip.cancelledByUser")
         }
     }
+
+    public func ecosystemText(_ ecosystem: Ecosystem) -> String { t("ecosystem.\(ecosystem.rawValue)") }
+
+    public func supportLevelText(_ level: SupportLevel) -> String { t("supportLevel.\(level.rawValue)") }
 
     public func architectureText(_ architecture: CPUArchitecture) -> String {
         switch architecture {
@@ -226,6 +240,7 @@ extension Localizer {
 
     public func predictionText(_ prediction: Prediction, kind: RestoreItemKind) -> String {
         if prediction == .dependsOnEarlierStep, kind == .pythonEnvironment { return t("prediction.recreateEnvironment") }
+        if prediction == .dependsOnEarlierStep, kind == .toolchainStep { return t("prediction.afterToolchain") }
         switch prediction {
         case .willInstall:
             switch kind {
@@ -254,6 +269,7 @@ extension Localizer {
         case .willRecreateEnvironment: return t("prediction.recreateEnvironment")
         case .willCompleteEnvironment: return t("prediction.completeEnvironment")
         case .environmentConflict: return t("prediction.environmentConflict")
+        case .manualStep: return kind == .appStoreApp ? t("prediction.manualAppStore") : t("prediction.manualStep")
         case .checkedWhenRestoring: return t("prediction.checkedWhenRestoring")
         }
     }

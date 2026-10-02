@@ -4,7 +4,7 @@ import SwiftUI
 struct DryRunView: View {
     @EnvironmentObject var model: AppModel
 
-    private enum Group: CaseIterable { case change, present, conflict, skip }
+    private enum Group: CaseIterable { case change, guided, present, conflict, skip }
 
     private func group(_ prediction: Prediction) -> Group {
         switch prediction {
@@ -12,12 +12,14 @@ struct DryRunView: View {
         case .alreadyPresent, .identicalFileExists, .equivalentFileExists, .keepsMacOSVersion: return .present
         case .conflict, .environmentConflict: return .conflict
         case .willSkip, .backupFileDamaged: return .skip
+        case .manualStep: return .guided
         }
     }
 
     private func title(_ group: Group, count: Int) -> String {
         switch group {
         case .change: return model.l.p("dryRun.group.change", count)
+        case .guided: return model.l.p("dryRun.group.guided", count)
         case .present: return model.l.p("dryRun.group.present", count)
         case .conflict: return model.l.p("dryRun.group.conflict", count)
         case .skip: return model.l.p("dryRun.group.skip", count)

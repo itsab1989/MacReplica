@@ -836,3 +836,36 @@
 "files.styles.other" = "%1$d styles";
 "files.version" = "Version %1$@";
 "files.legacyOrUnreadable" = "Legacy or unreadable format";
+
+/* Developer tools, package managers and guided steps */
+"component.developerTools" = "Developer Tools";
+"component.developerTools.hint" = "Version managers, language versions and global tools for Python, Node.js, Ruby, Rust, Go, Java and .NET.";
+"component.packageManagers" = "Other Package Managers";
+"component.packageManagers.hint" = "MacPorts, Nix, Pixi, mise and asdf. Steps MacReplica cannot do by itself are shown as guided steps.";
+"kind.toolchainStep" = "Developer tool";
+"kind.manualApp" = "Guided installation";
+"skip.manualStepRequired" = "Waiting for you – see the guided steps";
+"skip.waitingForManualStep" = "Waits until %1$@ is done";
+"skip.postponedByUser" = "Postponed by you";
+"skip.cancelledByUser" = "Cancelled by you";
+"ecosystem.packageManagers" = "Package managers";
+"ecosystem.python" = "Python";
+"ecosystem.node" = "Node.js";
+"ecosystem.ruby" = "Ruby";
+"ecosystem.rust" = "Rust";
+"ecosystem.go" = "Go";
+"ecosystem.java" = "Java";
+"ecosystem.dotnet" = ".NET";
+"supportLevel.automatic" = "Restored automatically";
+"supportLevel.guided" = "Guided step";
+"supportLevel.inventoryOnly" = "Listed for reference";
+"prediction.manualStep" = "Guided step: MacReplica shows what to do and checks the result";
+"prediction.manualAppStore" = "Install from the App Store – MacReplica opens the page and checks the result";
+"prediction.afterToolchain" = "Will be installed after the steps it needs";
+"dryRun.group.guided.one" = "%1$d guided step";
+"dryRun.group.guided.other" = "%1$d guided steps";
+"scan.phase.developerTools" = "Looking for developer tools and package managers …";
+"failure.toolUnavailable.title" = "Required tool is missing";
+"failure.toolUnavailable.explanation" = "This step needs a version or package manager that is not installed on this Mac. Install it (or select it for the restore), then retry.";
+"failure.downloadNotTrusted.title" = "Download could not be verified";
+"failure.downloadNotTrusted.explanation" = "The downloaded file did not match the vendor's signature, checksum or developer. MacReplica did not install it and removed the file.";

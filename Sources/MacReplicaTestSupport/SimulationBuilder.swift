@@ -35,6 +35,17 @@ public struct SimulationRoot {
     public func failAlways(_ package: String, message: String) throws { try setFlag("fail/\(package)", true, content: message) }
     public func setCommandLineToolsDelay(_ seconds: Double) throws { try setFlag("clt-delay", true, content: String(seconds)) }
 
+    /// Simulates the user installing one of the sample apps by hand (from the App Store or a vendor download).
+    public func simulateUserInstall(appNamed name: String) throws {
+        guard let app = SimulationBuilder.sampleApps.first(where: { $0.name == name }) else { throw CocoaError(.fileNoSuchFile) }
+        try SimulationBuilder.makeAppBundle(app, in: url.appendingPathComponent("Applications"))
+        if let id = app.appStoreID {
+            // What `mas list` reports for an app installed from the App Store.
+            try FileManager.default.createDirectory(at: state.appendingPathComponent("mas/installed"), withIntermediateDirectories: true)
+            try Data("\(app.name)  (\(app.version))".utf8).write(to: state.appendingPathComponent("mas/installed/\(id)"))
+        }
+    }
+
     /// Commands the simulated tools received, one per line.
     public func calls() -> [String] {
         let text = (try? String(contentsOf: state.appendingPathComponent("calls.log"), encoding: .utf8)) ?? ""

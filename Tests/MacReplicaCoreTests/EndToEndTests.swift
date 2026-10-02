@@ -89,7 +89,9 @@ struct EndToEndTests {
         #expect(outcomes["cask:nimbus-notes"] == "succeeded")
         #expect(outcomes["cask:pixel-forge"] == "succeeded")
         #expect(outcomes["cask:orbit-browser"] == "succeeded")
-        #expect(outcomes["mas:1234567890"] == "succeeded")
+        // App Store and manual apps are guided: they wait for the user instead of failing.
+        #expect(outcomes["mas:1234567890"] == "skipped(manualStepRequired)")
+        #expect(plan.items.filter { $0.kind == .manualApp }.allSatisfy { outcomes[$0.id] == "skipped(manualStepRequired)" })
         #expect(outcomes["font:user/ExampleSerif.ttf"] == "skipped(keptExisting)")
         #expect(outcomes["font:user/Example Sans/ExampleSans-Regular.otf"] == "alreadyPresent")
         #expect(outcomes["font:user/Example Sans/ExampleSans-Bold.otf"] == "succeeded")
@@ -107,14 +109,21 @@ struct EndToEndTests {
         #expect(outcomes["icc:user/Example Proof Flags.icc"] == "alreadyPresent")
         #expect(session.results["icc:user/sRGB Copy.icc"]?.notes == [.providedByMacOS])
         #expect(outcomes["icc:system/Displays/Example Display-00000000-0000-0000-0000-SYNTHETIC000.icc"] == "skipped(displaySpecificProfile)")
-        #expect(session.status == .completed)
+        #expect(session.status == .inProgress)
+        #expect(session.onlyWaitingForUser)
         #expect(recorder.summary?.failed == 0)
+        #expect(recorder.summary?.waiting == 3)
 
         // A newer cask version is reported transparently.
         #expect(session.results["cask:pixel-forge"]?.notes == [.newerVersionInstalled(original: "2.4.0", installed: "2.4.1")])
         // Installed apps really exist.
         #expect(FileManager.default.fileExists(atPath: fresh.url.appendingPathComponent("Applications/Pixel Forge.app/Contents/Info.plist").path))
-        #expect(FileManager.default.fileExists(atPath: fresh.url.appendingPathComponent("Applications/Ledger Lite.app").path))
+
+        // The user installs the guided apps; continuing the same session checks them and completes the restore.
+        for name in ["Ledger Lite", "Quill Writer", "Studio Mixer"] { try fresh.simulateUserInstall(appNamed: name) }
+        let continued = await executor.run(plan: plan, session: session, onEvent: { _ in })
+        #expect(continued.results["mas:1234567890"]?.outcome == .alreadyPresent)
+        #expect(continued.status == .completed)
 
         // Second run: everything is detected as already present, nothing is installed again.
         fresh.clearCalls()

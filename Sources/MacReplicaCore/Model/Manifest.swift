@@ -35,6 +35,8 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var guidance: [GuidanceRecord]
     /// How many fonts and profiles were found and how many the user chose to back up.
     public var backupSelection: BackupSelectionSummary?
+    /// Package managers, version managers, runtimes and global tools besides Homebrew and the App Store.
+    public var toolchains: [ToolchainRecord]
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -56,8 +58,10 @@ public struct Manifest: Codable, Equatable, Sendable {
         locations: [LocationAccess] = [],
         developer: DeveloperSettings = DeveloperSettings(),
         credentials: [CredentialRecord] = [],
-        guidance: [GuidanceRecord] = []
+        guidance: [GuidanceRecord] = [],
+        toolchains: [ToolchainRecord] = []
     ) {
+        self.toolchains = toolchains
         self.manifestVersion = manifestVersion
         self.macreplicaVersion = macreplicaVersion
         self.createdAt = createdAt
@@ -83,7 +87,7 @@ public struct Manifest: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
-        case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection
+        case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -113,6 +117,8 @@ public struct Manifest: Codable, Equatable, Sendable {
         credentials = try c.decodeIfPresent([CredentialRecord].self, forKey: .credentials) ?? []
         guidance = try c.decodeIfPresent([GuidanceRecord].self, forKey: .guidance) ?? []
         backupSelection = try c.decodeIfPresent(BackupSelectionSummary.self, forKey: .backupSelection)
+        // Providers added by later versions are dropped instead of failing the whole manifest.
+        toolchains = try c.decodeIfPresent(LenientList<ToolchainRecord>.self, forKey: .toolchains)?.elements ?? []
     }
 }
 
@@ -156,7 +162,7 @@ public struct HomebrewSnapshot: Codable, Equatable, Sendable {
 
 /// How an application originally got onto the Mac, as far as MacReplica can tell.
 /// `unknown` is used whenever there is no reliable evidence — MacReplica never guesses.
-public enum InstallSource: Codable, Equatable, Sendable {
+public enum InstallSource: Codable, Equatable, Hashable, Sendable {
     case homebrewCask(token: String)
     case appStore
     case package(identifier: String)
@@ -284,7 +290,7 @@ public enum MatchEvidence: String, Codable, Sendable, CaseIterable {
     case vendor
 }
 
-public struct AppRecord: Codable, Equatable, Identifiable, Sendable {
+public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var id: String { bundleIdentifier ?? path }
 
     public var name: String

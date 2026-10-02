@@ -30,10 +30,17 @@ public struct RestoreSession: Codable, Equatable, Sendable, Identifiable {
         self.status = .inProgress
     }
 
-    /// Steps that finished, either way, and do not need to run again on resume.
-    public var finishedItemIDs: Set<String> { Set(results.keys) }
+    /// Steps that finished, either way, and do not need to run again on resume. Guided steps the
+    /// user has not done yet, and steps postponed or cancelled by the user, are not finished.
+    public var finishedItemIDs: Set<String> { Set(results.filter { !$0.value.outcome.isOpen }.keys) }
 
-    public var remainingItemIDs: [String] { itemIDs.filter { results[$0] == nil } }
+    public var remainingItemIDs: [String] { itemIDs.filter { results[$0].map { $0.outcome.isOpen } ?? true } }
+
+    /// Steps that ran and now wait for the user (guided, postponed, cancelled by the user).
+    public var openItemIDs: [String] { itemIDs.filter { results[$0]?.outcome.isOpen == true } }
+
+    /// True when every step ran at least once; what remains only waits for the user.
+    public var onlyWaitingForUser: Bool { itemIDs.allSatisfy { results[$0] != nil } && !openItemIDs.isEmpty }
 }
 
 public struct SessionStore: Sendable {

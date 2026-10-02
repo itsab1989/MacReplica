@@ -7,6 +7,10 @@ public enum RestoreComponent: String, Codable, Sendable, CaseIterable, Identifia
     case brewCasks
     case appStore
     case python
+    /// Version managers, language runtimes and global tools (Node.js, Ruby, Rust, Go, Java, .NET, Python tools).
+    case developerTools
+    /// Package managers besides Homebrew (MacPorts, Nix, Pixi, mise, asdf).
+    case packageManagers
     case developerSettings
     case applicationData
     case fonts
@@ -34,6 +38,10 @@ public enum RestoreItemKind: String, Codable, Sendable {
     case applicationData
     case gitConfiguration
     case credential
+    /// A runtime, global package or environment of a version or package manager.
+    case toolchainStep
+    /// An application without automatic installation: guided download and installation.
+    case manualApp
 
     /// Rough relative duration, used to estimate the remaining time before real timings exist.
     var weight: Double {
@@ -49,6 +57,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .pythonEnvironment: return 90
         case .applicationData: return 5
         case .gitConfiguration, .credential: return 1
+        case .toolchainStep: return 60
+        case .manualApp: return 1
         }
     }
 
@@ -62,6 +72,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .pythonEnvironment: return .python
         case .applicationData, .gitConfiguration: return .applicationData
         case .credential: return .permissions
+        case .toolchainStep: return .developerTools
+        case .manualApp: return .downloads
         }
     }
 }
@@ -88,6 +100,10 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     public var applicationData: AppDataFolder?
     /// Sanitized Git configuration to write to `~/.gitconfig`.
     public var gitConfig: String?
+    /// For `toolchainStep`: what to do with which version or package manager.
+    public var toolchain: ToolchainAction?
+    /// For `manualApp` and guided App Store installs: the application as recorded on the old Mac.
+    public var app: AppRecord?
 
     public init(id: String, kind: RestoreItemKind, title: String, identifier: String, originalVersion: String? = nil,
                 bundleIdentifier: String? = nil, appBundleNames: [String] = [], tapRemote: String? = nil, file: FileRecord? = nil,
@@ -176,6 +192,10 @@ public enum FailureCategory: String, Codable, Sendable, CaseIterable {
     case pythonEnvironmentConflict
     case credentialCannotBeOpened
     case applicationRunning
+    /// The version or package manager a step needs is not installed.
+    case toolUnavailable
+    /// A download did not pass verification (checksum, signature, vendor).
+    case downloadNotTrusted
     case timeout
     case cancelled
     case unknown
@@ -205,6 +225,15 @@ public enum SkipReason: Codable, Equatable, Sendable {
     /// A profile macOS generated for a display of the old Mac; macOS creates its own for this Mac.
     case displaySpecificProfile
     case cancelled
+    /// A guided step: the user performs it (install from the App Store, a vendor download, a command
+    /// MacReplica cannot run), then MacReplica checks the result.
+    case manualStepRequired
+    /// Waits for a guided step it depends on.
+    case waitingForManualStep(itemTitle: String)
+    /// The user chose to do this later.
+    case postponedByUser
+    /// The user cancelled an installation that was in progress (not a technical failure).
+    case cancelledByUser
 }
 
 public enum ItemOutcome: Codable, Equatable, Sendable {
@@ -228,6 +257,15 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
     public var isSkip: Bool {
         if case .skipped = self { return true }
         return false
+    }
+
+    /// Steps that still wait for the user: they are offered again when the restore continues.
+    public var isOpen: Bool {
+        guard case .skipped(let reason) = self else { return false }
+        switch reason {
+        case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser: return true
+        default: return false
+        }
     }
 }
 
@@ -278,12 +316,15 @@ public struct RestoreSummary: Equatable, Sendable {
     public var succeeded: Int
     public var failed: Int
     public var skipped: Int
+    /// Guided, postponed or cancelled steps that are still open.
+    public var waiting: Int
     public var total: Int
 
     public init(results: [ItemResult], total: Int) {
         succeeded = results.filter { $0.outcome.isSuccessLike }.count
         failed = results.filter { $0.outcome.isFailure }.count
-        skipped = results.filter { $0.outcome.isSkip }.count
+        waiting = results.filter { $0.outcome.isOpen }.count
+        skipped = results.filter { $0.outcome.isSkip && !$0.outcome.isOpen }.count
         self.total = total
     }
 }
@@ -305,7 +346,9 @@ extension ItemResult {
             case .keptExisting: return "conflict_kept_destination"
             case .userSkipped: return "skipped_by_user"
             case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile: return "incompatible"
-            case .projectFolderMissing, .passphraseNotProvided: return "manual_action_required"
+            case .projectFolderMissing, .passphraseNotProvided, .manualStepRequired, .waitingForManualStep: return "manual_action_required"
+            case .postponedByUser: return "postponed_by_user"
+            case .cancelledByUser: return "cancelled_by_user"
             default: return "skipped"
             }
         case .failed: return "failed"

@@ -834,3 +834,36 @@
 "files.styles.other" = "%1$d stiler";
 "files.version" = "Versjon %1$@";
 "files.legacyOrUnreadable" = "Foreldet eller uleselig format";
+
+/* Developer tools, package managers and guided steps */
+"component.developerTools" = "Utviklerverktøy";
+"component.developerTools.hint" = "Versjonsbehandlere, språkversjoner og globale verktøy for Python, Node.js, Ruby, Rust, Go, Java og .NET.";
+"component.packageManagers" = "Andre pakkebehandlere";
+"component.packageManagers.hint" = "MacPorts, Nix, Pixi, mise og asdf. Trinn MacReplica ikke kan utføre selv, vises som veiledede trinn.";
+"kind.toolchainStep" = "Utviklerverktøy";
+"kind.manualApp" = "Veiledet installasjon";
+"skip.manualStepRequired" = "Venter på deg – se de veiledede trinnene";
+"skip.waitingForManualStep" = "Venter til %1$@ er gjort";
+"skip.postponedByUser" = "Utsatt av deg";
+"skip.cancelledByUser" = "Avbrutt av deg";
+"ecosystem.packageManagers" = "Pakkebehandlere";
+"ecosystem.python" = "Python";
+"ecosystem.node" = "Node.js";
+"ecosystem.ruby" = "Ruby";
+"ecosystem.rust" = "Rust";
+"ecosystem.go" = "Go";
+"ecosystem.java" = "Java";
+"ecosystem.dotnet" = ".NET";
+"supportLevel.automatic" = "Gjenopprettes automatisk";
+"supportLevel.guided" = "Veiledet trinn";
+"supportLevel.inventoryOnly" = "Oppført til informasjon";
+"prediction.manualStep" = "Veiledet trinn: MacReplica viser hva du skal gjøre, og kontrollerer resultatet";
+"prediction.manualAppStore" = "Installer fra App Store – MacReplica åpner siden og kontrollerer resultatet";
+"prediction.afterToolchain" = "Installeres etter trinnene det trenger";
+"dryRun.group.guided.one" = "%1$d veiledet trinn";
+"dryRun.group.guided.other" = "%1$d veiledede trinn";
+"scan.phase.developerTools" = "Ser etter utviklerverktøy og pakkebehandlere …";
+"failure.toolUnavailable.title" = "Nødvendig verktøy mangler";
+"failure.toolUnavailable.explanation" = "Dette trinnet trenger en versjons- eller pakkebehandler som ikke er installert på denne Macen. Installer den (eller velg den for gjenopprettingen), og prøv igjen.";
+"failure.downloadNotTrusted.title" = "Nedlastingen kunne ikke bekreftes";
+"failure.downloadNotTrusted.explanation" = "Den nedlastede filen samsvarte ikke med leverandørens signatur, sjekksum eller utvikler. MacReplica installerte den ikke og fjernet filen.";

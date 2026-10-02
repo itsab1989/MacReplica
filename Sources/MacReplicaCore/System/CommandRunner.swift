@@ -60,8 +60,22 @@ public struct CommandPolicy: Sendable {
     /// Absolute paths of the only executables MacReplica may start.
     public var allowedExecutables: Set<String>
 
+    /// Programs that are never allowed, whatever folder they are in: shells and interpreters that
+    /// would run a command line, and tools that escalate privileges.
+    public static let forbiddenNames: Set<String> = ["sh", "bash", "zsh", "dash", "ksh", "csh", "tcsh", "fish", "env", "sudo", "su",
+                                                    "doas", "eval", "xargs", "perl", "ruby", "node", "osascript", "launchctl"]
+
     public init(allowedExecutables: Set<String>) {
         self.allowedExecutables = allowedExecutables
+    }
+
+    /// The policy plus exact additional executables (absolute paths). Shells and the like are dropped.
+    public func adding(_ executables: Set<String>) -> CommandPolicy {
+        let accepted = executables.filter { path in
+            path.hasPrefix("/") && !path.contains("/../") && !path.hasSuffix("/..")
+                && !Self.forbiddenNames.contains((path as NSString).lastPathComponent.lowercased())
+        }
+        return CommandPolicy(allowedExecutables: allowedExecutables.union(accepted))
     }
 
     public func validate(_ command: Command) throws {
@@ -81,8 +95,13 @@ public struct CommandPolicy: Sendable {
     }
 }
 
+/// A runner whose allow-list can be extended by exact executables for one restore.
+public protocol CommandPolicyExtending: CommandRunning {
+    func allowing(_ executables: Set<String>) -> CommandRunning
+}
+
 /// Runs allow-listed executables with `Process`, never through a shell.
-public final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
+public final class ProcessCommandRunner: CommandRunning, CommandPolicyExtending, @unchecked Sendable {
     private let policy: CommandPolicy
     private let baseEnvironment: [String: String]
 
@@ -91,6 +110,10 @@ public final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
     public init(policy: CommandPolicy, baseEnvironment: [String: String]) {
         self.policy = policy
         self.baseEnvironment = baseEnvironment
+    }
+
+    public func allowing(_ executables: Set<String>) -> CommandRunning {
+        ProcessCommandRunner(policy: policy.adding(executables), baseEnvironment: baseEnvironment)
     }
 
     public func run(_ command: Command, onOutputLine: (@Sendable (String) -> Void)?) async throws -> CommandResult {

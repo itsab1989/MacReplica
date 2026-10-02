@@ -1,7 +1,7 @@
 import Foundation
 
 public enum InventoryPhase: String, Sendable, CaseIterable {
-    case applications, homebrew, appStore, matching, python, fonts, colorProfiles
+    case applications, homebrew, appStore, matching, python, developerTools, fonts, colorProfiles
 }
 
 public struct InventoryProgress: Sendable, Equatable {
@@ -73,6 +73,17 @@ public struct InventoryResult: Sendable {
         manifest.python.environments.removeAll { !ids.contains($0.id) }
         extraFiles.removeAll { removedPaths.contains($0.record.backupPath) }
         if !includeSettings { manifest.python.settings = [] }
+    }
+
+    /// Keeps only the chosen package and version managers (by provider).
+    public mutating func keepToolchains(_ providers: Set<ToolchainProviderID>) {
+        manifest.toolchains.removeAll { !providers.contains($0.provider) }
+    }
+
+    /// Leaves out applications the user deselected for the backup (by `AppRecord.id`).
+    public mutating func excludeApplications(_ ids: Set<String>) {
+        guard !ids.isEmpty else { return }
+        manifest.applications.removeAll { ids.contains($0.id) }
     }
 
     /// Adds a folder of application data chosen by the user (replacing an earlier scan of it).
@@ -222,6 +233,10 @@ public struct InventoryService: Sendable {
         let developer = DeveloperSettingsScanner(layout: layout).scan()
         let detectedData = AppDataProviders.detect(layout: layout)
 
+        // Package and version managers, runtimes and global tools (files only, no tool is started).
+        progress(InventoryProgress(phase: .developerTools, fraction: 0.76, detail: nil))
+        let toolchains = ToolchainCatalog.scan(ToolchainContext(layout: layout, architecture: architecture))
+
         // 6. Fonts and color profiles (80 – 100 %)
         progress(InventoryProgress(phase: .fonts, fraction: 0.8, detail: nil))
         let files = FileScanner(layout: layout)
@@ -248,7 +263,8 @@ public struct InventoryService: Sendable {
             iccProfiles: profiles.map(\.record),
             python: python.snapshot,
             locations: locations,
-            developer: developer)
+            developer: developer,
+            toolchains: toolchains)
         manifest.macreplicaBuild = SystemInfo.buildNumber
         manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)))
         var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)

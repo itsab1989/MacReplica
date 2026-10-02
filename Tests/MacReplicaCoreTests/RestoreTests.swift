@@ -37,12 +37,15 @@ struct RestorePlannerTests {
         let plan = RestorePlanner().plan(manifest: manifest, selection: selection)
         let ids = plan.items.map(\.id)
         #expect(Array(ids.prefix(2)) == [RestoreItem.commandLineToolsID, RestoreItem.homebrewID])
-        #expect(ids.contains(RestoreItem.masToolID))
-        #expect(ids.firstIndex(of: RestoreItem.masToolID)! < ids.firstIndex(of: "mas:42")!)
-        #expect(plan.item(id: "mas:42")?.dependsOn == [RestoreItem.masToolID])
+        // App Store apps are guided installs: no `mas` helper, no Homebrew dependency, after the automatic steps.
+        #expect(!ids.contains(RestoreItem.masToolID))
+        #expect(plan.item(id: "mas:42")?.dependsOn == [])
+        #expect(ids.firstIndex(of: "icc:system/P.icc")! < ids.firstIndex(of: "mas:42")!)
         #expect(plan.item(id: "formula:git")?.dependsOn == [RestoreItem.homebrewID])
         #expect(plan.item(id: RestoreItem.homebrewID)?.dependsOn == [RestoreItem.commandLineToolsID])
-        #expect(ids.last == "icc:system/P.icc")
+        // Apps without automatic installation are guided steps at the very end.
+        #expect(ids.last == "manual:~/Applications/Tool.app")
+        #expect(plan.item(id: "manual:~/Applications/Tool.app")?.kind == .manualApp)
         // Unused taps are not added.
         #expect(!ids.contains("tap:example/tools"))
     }
@@ -92,20 +95,18 @@ struct RestorePlannerTests {
         #expect(plan.item(id: "formula:example/tools/tool")?.dependsOn == [RestoreItem.homebrewID, "tap:example/tools"])
     }
 
-    @Test func masFormulaReplacesTheHelperStep() {
-        var manifest = self.manifest
-        manifest.brewFormulae.append(BrewFormulaRecord(name: "mas", version: "1.8"))
-        let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection())
-        #expect(plan.item(id: RestoreItem.masToolID) == nil)
-        #expect(plan.item(id: "mas:42")?.dependsOn == ["formula:mas"])
-        let ids = plan.items.map(\.id)
-        #expect(ids.firstIndex(of: "formula:mas")! < ids.firstIndex(of: "mas:42")!)
+    @Test func appStoreAppsNeedNeitherHomebrewNorMas() {
+        // `mas install` requires root since mas 7, so App Store apps are installed from the App Store page.
+        let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.appStore]))
+        #expect(plan.items.map(\.id) == ["mas:42"])
+        #expect(plan.item(id: "mas:42")?.dependsOn == [])
     }
 
     @Test func retrySubsetIncludesPrerequisites() {
         let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection())
         let subset = plan.subset(retrying: ["mas:42"])
-        #expect(subset.items.map(\.id) == [RestoreItem.commandLineToolsID, RestoreItem.homebrewID, RestoreItem.masToolID, "mas:42"])
+        #expect(subset.items.map(\.id) == ["mas:42"])
+        #expect(plan.subset(retrying: ["formula:git"]).items.map(\.id) == [RestoreItem.commandLineToolsID, RestoreItem.homebrewID, "formula:git"])
         #expect(subset.manualApps == plan.manualApps)
         #expect(plan.subset(retrying: ["font:user/A.otf"]).items.map(\.id) == ["font:user/A.otf"])
     }
@@ -346,7 +347,7 @@ struct DryRunTests {
         #expect(prediction("font:user/ExampleSerif.ttf") == .conflict(resolution: .keepExisting))
         #expect(prediction("font:user/Example Sans/ExampleSans-Regular.otf") == .identicalFileExists)
         #expect(prediction("font:user/Example Sans/ExampleSans-Bold.otf") == .willCopy)
-        #expect(prediction("mas:1234567890") == .willInstall)
+        #expect(prediction("mas:1234567890") == .manualStep)
     }
 
     @Test func dryRunOnAPreparedMacReportsWhatIsPresent() async throws {

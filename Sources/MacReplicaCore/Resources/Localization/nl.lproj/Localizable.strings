@@ -834,3 +834,36 @@
 "files.styles.other" = "%1$d stijlen";
 "files.version" = "Versie %1$@";
 "files.legacyOrUnreadable" = "Verouderde of onleesbare indeling";
+
+/* Developer tools, package managers and guided steps */
+"component.developerTools" = "Ontwikkelaarstools";
+"component.developerTools.hint" = "Versiebeheerders, taalversies en globale tools voor Python, Node.js, Ruby, Rust, Go, Java en .NET.";
+"component.packageManagers" = "Andere pakketbeheerders";
+"component.packageManagers.hint" = "MacPorts, Nix, Pixi, mise en asdf. Stappen die MacReplica niet zelf kan uitvoeren, worden als begeleide stappen getoond.";
+"kind.toolchainStep" = "Ontwikkelaarstool";
+"kind.manualApp" = "Begeleide installatie";
+"skip.manualStepRequired" = "Wacht op jou – zie de begeleide stappen";
+"skip.waitingForManualStep" = "Wacht tot %1$@ klaar is";
+"skip.postponedByUser" = "Door jou uitgesteld";
+"skip.cancelledByUser" = "Door jou geannuleerd";
+"ecosystem.packageManagers" = "Pakketbeheerders";
+"ecosystem.python" = "Python";
+"ecosystem.node" = "Node.js";
+"ecosystem.ruby" = "Ruby";
+"ecosystem.rust" = "Rust";
+"ecosystem.go" = "Go";
+"ecosystem.java" = "Java";
+"ecosystem.dotnet" = ".NET";
+"supportLevel.automatic" = "Wordt automatisch hersteld";
+"supportLevel.guided" = "Begeleide stap";
+"supportLevel.inventoryOnly" = "Ter informatie vermeld";
+"prediction.manualStep" = "Begeleide stap: MacReplica laat zien wat je moet doen en controleert het resultaat";
+"prediction.manualAppStore" = "Installeren via de App Store – MacReplica opent de pagina en controleert het resultaat";
+"prediction.afterToolchain" = "Wordt geïnstalleerd na de stappen die nodig zijn";
+"dryRun.group.guided.one" = "%1$d begeleide stap";
+"dryRun.group.guided.other" = "%1$d begeleide stappen";
+"scan.phase.developerTools" = "Ontwikkelaarstools en pakketbeheerders worden gezocht …";
+"failure.toolUnavailable.title" = "Benodigde tool ontbreekt";
+"failure.toolUnavailable.explanation" = "Voor deze stap is een versie- of pakketbeheerder nodig die niet op deze Mac is geïnstalleerd. Installeer hem (of selecteer hem voor het herstel) en probeer het opnieuw.";
+"failure.downloadNotTrusted.title" = "Download kon niet worden geverifieerd";
+"failure.downloadNotTrusted.explanation" = "Het gedownloade bestand kwam niet overeen met de handtekening, controlesom of ontwikkelaar van de leverancier. MacReplica heeft het niet geïnstalleerd en het bestand verwijderd.";
