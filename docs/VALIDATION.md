@@ -74,6 +74,25 @@ Real `MacReplica.app` (release build, universal), macOS 27 developer build, simu
 Screenshots of these runs (synthetic data only) are in [images/](images/). The final report with the
 answers for the font/ICC requirements is [VALIDATION_REPORT.md](VALIDATION_REPORT.md).
 
+## Distribution validation (1.0.0)
+
+| Check | Where | Result |
+|---|---|---|
+| Fresh clone builds, tests, packages and launches as documented in BUILD.md | developer's Mac (macOS 27, Apple silicon) | passed (298 tests, universal app, disk image, launch) |
+| Release built only by GitHub Actions from tag `v1.0.0` | release workflow | passed; assets `MacReplica-1.0.0.dmg` and `.sha256` |
+| Checksum of the downloaded disk image | developer's Mac and every validation runner | matches |
+| Disk image mounts, contains `MacReplica.app` and an *Applications* link; bundle ID, version, `arm64` + `x86_64`, valid code signature | macOS 14.8, 15.7, 26.6 (Apple silicon), 15.7 (Intel) | passed |
+| Install (copy out of the disk image) and launch until startup completes | same four runners | passed |
+| Full test suite natively on Intel (x86_64) | GitHub `macos-15-intel` | passed (after making one test architecture-aware) |
+| Intel slice under Rosetta: launch and a complete scan in the real app | developer's Mac | passed |
+| Download with Safari (quarantine attribute set), install into `/Applications`, launch | developer's Mac | passed — but Gatekeeper is turned off on this Mac (`spctl --status`: assessments disabled), so no warning appeared |
+| Gatekeeper assessment of the unsigned app | GitHub runners (Gatekeeper on) | `rejected`, as expected for an unsigned, not notarized app |
+| First-launch instructions | Apple Support and Apple Developer documentation | Privacy & Security → *Open Anyway* + login password; Control-click no longer overrides since macOS 15 |
+| README badges, links, screenshots, rendering on github.com | browser | checked; all badges resolve to live data |
+
+Not verified: macOS 13 (no machine available), a physical Intel Mac, and the Gatekeeper dialogs on
+a Mac with Gatekeeper enabled.
+
 ## Automated tests
 
 `scripts/test.sh` runs 296 tests in 43 suites, including end-to-end backup → verify → restore →
