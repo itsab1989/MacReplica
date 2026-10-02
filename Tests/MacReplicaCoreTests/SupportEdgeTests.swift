@@ -256,3 +256,26 @@ struct CommandRunnerEdgeTests {
         #expect(!result.timedOut)
     }
 }
+
+@Suite("Path resolution regressions")
+struct PathResolutionTests {
+    /// Folders chosen in the file panel can arrive as `/private/tmp/…` or `/private/var/…`.
+    @Test func baseBehindThePrivateSymlinkResolvesNewFiles() throws {
+        let sandbox = try Sandbox("private-base")
+        let privateBase = URL(fileURLWithPath: "/private" + sandbox.url.standardizedFileURL.path)
+        try #require(FileManager.default.fileExists(atPath: privateBase.path))
+        let resolved = try #require(PathSafety.resolve("fonts/user/New.otf", inside: privateBase))
+        #expect(resolved.lastPathComponent == "New.otf")
+        #expect(PathSafety.resolve("../escape", inside: privateBase) == nil)
+    }
+
+    @Test func backupIntoAFolderBehindThePrivateSymlinkSucceeds() async throws {
+        let sandbox = try Sandbox("private-backup")
+        let (_, source) = try TestEnvironment.sourceMac(sandbox)
+        let result = try await TestEnvironment.inventory(source).run()
+        let parent = URL(fileURLWithPath: "/private" + (try sandbox.folder("out")).standardizedFileURL.path)
+        let outcome = try BackupWriter(layout: source.layout, localizer: TestEnvironment.english)
+            .write(result, into: parent, log: LogStore(fileURL: nil, homeDirectory: source.layout.homeDirectory))
+        #expect(BackupVerifier(layout: source.layout).verify(backupAt: outcome.url).isIntact)
+    }
+}

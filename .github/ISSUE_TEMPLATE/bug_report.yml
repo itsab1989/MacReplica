@@ -1,0 +1,75 @@
+name: Bug report
+description: Something in MacReplica does not work as described.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Never paste passwords, keys, tokens or private files.** Check logs and
+        diagnostic reports before attaching them. Security problems: please use the private reporting
+        described in SECURITY.md instead of an issue.
+  - type: input
+    id: version
+    attributes:
+      label: MacReplica version
+      description: MacReplica → About MacReplica, e.g. “1.0.0 (Build 12)”.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      description: Apple menu → About This Mac, e.g. “macOS 15.3”.
+    validations:
+      required: true
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Mac type
+      options:
+        - Apple silicon (M-series)
+        - Intel
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where did it happen?
+      options:
+        - Scan / creating a backup (old Mac)
+        - Check Backup
+        - Opening a backup / restore selection (new Mac)
+        - Preview (Dry Run)
+        - Restore
+        - Resume after an interruption
+        - Somewhere else
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Click Restore and choose the backup
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the message MacReplica showed, if any (screenshots are welcome — please hide personal information).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or diagnostic report (optional)
+      description: Help → Export Diagnostic Report … creates a file with logs and system information (home folder written as ~). Please read it before attaching.
+      render: text

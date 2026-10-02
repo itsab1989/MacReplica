@@ -14,8 +14,12 @@ public enum PathSafety {
     /// Joins `relative` to `base` and confirms the result stays inside `base`.
     public static func resolve(_ relative: String, inside base: URL) -> URL? {
         guard isSafeRelativePath(relative) else { return nil }
-        let candidate = base.appendingPathComponent(relative).standardizedFileURL
-        let basePath = base.standardizedFileURL.path
+        // Standardize the base first and build the candidate from it: `standardizedFileURL` drops a
+        // `/private` prefix (e.g. `/private/tmp`) only for paths that exist, so standardizing an
+        // existing base and a not-yet-existing file separately would make them disagree.
+        let standardBase = base.standardizedFileURL
+        let candidate = standardBase.appendingPathComponent(relative).standardizedFileURL
+        let basePath = standardBase.path
         let prefix = basePath.hasSuffix("/") ? basePath : basePath + "/"
         return candidate.path.hasPrefix(prefix) ? candidate : nil
     }

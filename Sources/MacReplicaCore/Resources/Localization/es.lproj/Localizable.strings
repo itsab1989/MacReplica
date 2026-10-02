@@ -192,9 +192,9 @@
 "prediction.alreadyPresent" = "Ya instalado – se omitirá";
 "prediction.alreadyPresentVersion" = "La versión %1$@ ya está instalada – se omitirá";
 "prediction.identical" = "Ya existe un archivo idéntico – se omitirá";
-"prediction.conflictKeep" = "Existe otro archivo con este nombre – se conservará";
-"prediction.conflictReplace" = "Existe otro archivo con este nombre – se reemplazará";
-"prediction.conflictSkip" = "Existe otro archivo con este nombre – se omitirá";
+"prediction.conflictKeep" = "Existe en este Mac con otro contenido – se conserva la versión de este Mac";
+"prediction.conflictReplace" = "Existe en este Mac con otro contenido – se reemplazará; el actual se guarda en «Replaced Files»";
+"prediction.conflictSkip" = "Existe en este Mac con otro contenido – se omite";
 "prediction.damaged" = "La copia en la copia de seguridad está dañada – se omitirá";
 "prediction.afterPrerequisite" = "Se instalará cuando Homebrew esté listo";
 

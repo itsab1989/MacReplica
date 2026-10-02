@@ -1,0 +1,54 @@
+name: Application support request
+description: Ask MacReplica to preserve the data of an app it does not support yet.
+labels: ["app support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        MacReplica only copies data you created in an app (settings, presets, templates …), never
+        caches, databases, licences or logins. **Do not attach any of your own files, passwords or
+        licence keys** — a description of where the app keeps its data is enough.
+  - type: input
+    id: app
+    attributes:
+      label: Application name
+      placeholder: e.g. Example Editor
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: Application version
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: What do you want to keep?
+      description: For example custom presets, keyboard shortcuts, templates, workspaces.
+    validations:
+      required: true
+  - type: dropdown
+    id: user-created
+    attributes:
+      label: Is this data you created yourself?
+      options:
+        - "Yes – I created or changed it in the app"
+        - "Partly / not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Where does the app store it? (if known)
+      description: Folder path with your home folder written as ~, e.g. ~/Library/Application Support/Example/Presets.
+  - type: input
+    id: docs
+    attributes:
+      label: Vendor documentation (if known)
+      description: A link to the vendor's article about moving settings or presets to another Mac.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: Does the app sync this data itself (account, cloud)? Does it offer its own export?

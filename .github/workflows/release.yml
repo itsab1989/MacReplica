@@ -63,6 +63,22 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} on' CHANGELOG.md > build/notes.md
+          cat >> build/notes.md <<'NOTES'
+
+          ## Download and install
+
+          1. Download `MacReplica-<version>.dmg` below (the `.sha256` file contains its checksum).
+          2. Open it and drag **MacReplica** into **Applications**.
+          NOTES
+          if [ "$HAS_NOTARIZATION" != "true" ]; then
+            echo '3. This build is not notarized: on first launch open **System Settings → Privacy & Security** and click **Open Anyway** (on macOS 13 and 14 you can also Control-click the app and choose **Open**).' >> build/notes.md
+          fi
+          cat >> build/notes.md <<'NOTES'
+
+          Requires macOS 13 or later; universal binary for Apple silicon and Intel. Known limitations: see the [README](https://github.com/itsab1989/MacReplica#known-limitations).
+
+          MacReplica is free and always will be. If it's useful to you, a coffee is a kind way to say thanks — completely optional: [Ko-fi](https://ko-fi.com/itsab1989).
+          NOTES
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

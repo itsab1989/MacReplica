@@ -192,9 +192,9 @@
 "prediction.alreadyPresent" = "Al geïnstalleerd – wordt overgeslagen";
 "prediction.alreadyPresentVersion" = "Versie %1$@ is al geïnstalleerd – wordt overgeslagen";
 "prediction.identical" = "Er bestaat al een identiek bestand – wordt overgeslagen";
-"prediction.conflictKeep" = "Er bestaat een ander bestand met deze naam – dit wordt behouden";
-"prediction.conflictReplace" = "Er bestaat een ander bestand met deze naam – dit wordt vervangen";
-"prediction.conflictSkip" = "Er bestaat een ander bestand met deze naam – wordt overgeslagen";
+"prediction.conflictKeep" = "Bestaat op deze Mac met andere inhoud – de versie van deze Mac blijft behouden";
+"prediction.conflictReplace" = "Bestaat op deze Mac met andere inhoud – wordt vervangen; de huidige blijft bewaard in ‘Replaced Files’";
+"prediction.conflictSkip" = "Bestaat op deze Mac met andere inhoud – overgeslagen";
 "prediction.damaged" = "De kopie in de reservekopie is beschadigd – wordt overgeslagen";
 "prediction.afterPrerequisite" = "Wordt geïnstalleerd zodra Homebrew klaar is";
 

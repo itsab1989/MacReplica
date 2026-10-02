@@ -192,9 +192,9 @@
 "prediction.alreadyPresent" = "Allerede installert – hoppes over";
 "prediction.alreadyPresentVersion" = "Versjon %1$@ er allerede installert – hoppes over";
 "prediction.identical" = "En identisk fil finnes allerede – hoppes over";
-"prediction.conflictKeep" = "En annen fil med dette navnet finnes – den beholdes";
-"prediction.conflictReplace" = "En annen fil med dette navnet finnes – den blir erstattet";
-"prediction.conflictSkip" = "En annen fil med dette navnet finnes – hoppes over";
+"prediction.conflictKeep" = "Finnes på denne Macen med annet innhold – versjonen på denne Macen beholdes";
+"prediction.conflictReplace" = "Finnes på denne Macen med annet innhold – blir erstattet; den nåværende tas vare på i «Replaced Files»";
+"prediction.conflictSkip" = "Finnes på denne Macen med annet innhold – hoppes over";
 "prediction.damaged" = "Kopien i sikkerhetskopien er skadet – hoppes over";
 "prediction.afterPrerequisite" = "Blir installert når Homebrew er klart";
 

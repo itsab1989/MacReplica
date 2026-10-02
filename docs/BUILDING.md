@@ -2,8 +2,10 @@
 
 ## Requirements
 
-- macOS 13 or later
-- Xcode Command Line Tools (`xcode-select --install`) with Swift 6.1 or later. Xcode itself is not needed.
+- A Mac with the Xcode Command Line Tools (`xcode-select --install`) or Xcode, providing **Swift 6.1
+  or later** (Xcode 16.3 or later). Xcode itself is not needed; check with `swift --version`.
+- The resulting app runs on macOS 13 or later (deployment target in `Package.swift`), on Apple
+  silicon and Intel.
 
 ## Build and test
 
