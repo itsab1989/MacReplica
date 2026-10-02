@@ -439,3 +439,89 @@ struct SmallParserTests {
         #expect(GemProvider.parseGemspecName("README") == nil)
     }
 }
+
+@Suite("Toolchain details")
+struct ToolchainDetailTests {
+    func context(_ sandbox: Sandbox) -> ToolchainContext {
+        ToolchainContext(layout: toolchainLayout(sandbox), workFolder: nil, architecture: .arm64)
+    }
+
+    @Test func homebrewNodeInstallationsAndTheirGlobalPackages() throws {
+        let sandbox = try Sandbox("brew-node")
+        try sandbox.file("opt/homebrew/opt/node/bin/node", executable: true)
+        try sandbox.file("opt/homebrew/lib/node_modules/eslint/package.json", #"{"name":"eslint","version":"9.0.0"}"#)
+        try sandbox.file("opt/homebrew/opt/node@20/bin/node", executable: true)
+        try sandbox.file("opt/homebrew/opt/node@20/lib/node_modules/pm2/package.json", #"{"name":"pm2","version":"5.4.0"}"#)
+        try sandbox.file("opt/homebrew/opt/nodenv/bin/node", executable: true)
+        try sandbox.file("opt/homebrew/opt/nodenv/lib/node_modules/other/package.json", #"{"name":"other","version":"1.0.0"}"#)
+        let context = context(sandbox)
+        let packages = try #require(NPMProvider().scan(context)).packages
+        #expect(packages == [ToolchainPackage(name: "eslint", version: "9.0.0", runtime: RuntimeReference(source: .homebrew, version: "node")),
+                             ToolchainPackage(name: "pm2", version: "5.4.0", runtime: RuntimeReference(source: .homebrew, version: "node@20"))],
+                "only the node and node@NN formulae count")
+        let npm = try sandbox.file("opt/homebrew/opt/node@20/bin/npm", executable: true)
+        let action = ToolchainAction(provider: .npm, kind: .package, package: packages[1])
+        #expect(NPMProvider().commands(for: action, context: context)?.first?.executable == npm.path)
+        #expect(NPMProvider().isSatisfied(action, context: context))
+        let main = ToolchainAction(provider: .npm, kind: .package, package: packages[0])
+        #expect(NPMProvider().isSatisfied(main, context: context), "node's global packages live in the prefix, not in the keg")
+        // On a Mac without the formula yet, the expected location is still the prefix (node) or the keg (node@NN).
+        let fresh = try Sandbox("brew-node-fresh")
+        let freshContext = self.context(fresh)
+        #expect(NodeLayout.installation(for: RuntimeReference(source: .homebrew, version: "node"), context: freshContext)?.modules.path
+                == fresh.url.appendingPathComponent("opt/homebrew/lib/node_modules").path)
+        #expect(NodeLayout.installation(for: RuntimeReference(source: .homebrew, version: "node@20"), context: freshContext)?.modules.path
+                == fresh.url.appendingPathComponent("opt/homebrew/opt/node@20/lib/node_modules").path)
+    }
+
+    @Test func contextHelpers() throws {
+        let sandbox = try Sandbox("context-helpers")
+        let context = context(sandbox)
+        #expect(context.systemPath("/opt/local").path == sandbox.url.appendingPathComponent("opt/local").path, "never the real /opt/local")
+        var live = context
+        live.layout.simulationRoot = nil
+        #expect(live.systemPath("/opt/local").path == "/opt/local")
+        let first = try sandbox.file("a/tool", executable: true)
+        let second = try sandbox.file("b/tool", executable: true)
+        try sandbox.file("c/tool")
+        #expect(context.firstExecutable([sandbox.url.appendingPathComponent("c/tool").path, first.path, second.path]) == first.path)
+        #expect(context.firstExecutable([sandbox.url.appendingPathComponent("missing").path]) == nil)
+        #expect(!(context.environment()["PATH"] ?? "").contains("opt/homebrew/bin"), "no Homebrew yet")
+        try sandbox.file("opt/homebrew/bin/brew", executable: true)
+        let path = context.environment(prepending: ["/x/bin"], extra: ["A": "1"])
+        #expect(path["PATH"]?.hasPrefix("/x/bin:" + sandbox.url.appendingPathComponent("opt/homebrew/bin").path) == true)
+        #expect(path["A"] == "1" && path["CI"] == "1")
+    }
+
+    @Test func versionFoldersIgnoreHiddenEntriesAndFiles() throws {
+        let sandbox = try Sandbox("version-folders")
+        try sandbox.file("home/.nvm/nvm.sh")
+        try sandbox.file("home/.nvm/alias/default", "v20.1.0\nignored second line\n")
+        try sandbox.file("home/.nvm/versions/node/v20.1.0/bin/node")
+        try sandbox.file("home/.nvm/versions/node/.DS_Store/x")
+        try sandbox.file("home/.nvm/versions/node/v99.0.0", "a file, not a version folder")
+        let record = try #require(NVMProvider().scan(context(sandbox)))
+        #expect(record.runtimes.map(\.version) == ["v20.1.0"])
+        #expect(record.runtimes.first?.isDefault == true, "only the first line of the alias file counts")
+        #expect(NVMProvider.matches(alias: nil, version: "v20.1.0", all: ["v20.1.0"]) == false)
+        #expect(NVMProvider.matches(alias: "lts/*", version: "v20.1.0", all: ["v20.1.0"]) == false)
+    }
+
+    @Test func managersOnlyAnswerForTheirOwnKindsOfSteps() throws {
+        let sandbox = try Sandbox("kinds")
+        let context = context(sandbox)
+        try sandbox.file("home/.local/share/fnm/node-versions/v1.0.0/installation/bin/node")
+        try sandbox.file("home/.volta/tools/image/node/1.0.0/bin/node")
+        try sandbox.file("home/.volta/tools/user/packages/@scope/tool.json", "{}")
+        let runtime = ToolchainRuntime(version: "v1.0.0")
+        #expect(FNMProvider().isSatisfied(ToolchainAction(provider: .fnm, kind: .runtime, runtime: runtime), context: context))
+        #expect(!FNMProvider().isSatisfied(ToolchainAction(provider: .fnm, kind: .package, runtime: runtime), context: context))
+        #expect(VoltaProvider().isSatisfied(ToolchainAction(provider: .volta, kind: .runtime, runtime: ToolchainRuntime(version: "1.0.0")), context: context))
+        #expect(VoltaProvider().isSatisfied(ToolchainAction(provider: .volta, kind: .package, package: ToolchainPackage(name: "@scope/tool")), context: context))
+        #expect(!VoltaProvider().isSatisfied(ToolchainAction(provider: .volta, kind: .package, package: ToolchainPackage(name: "a/b")), context: context))
+        #expect(!VoltaProvider().isSatisfied(ToolchainAction(provider: .volta, kind: .environment), context: context))
+        try sandbox.file("home/.volta/tools/user/packages/bad.json", #"{"name":"bad","version":"1 0"}"#)
+        #expect(!(VoltaProvider().scan(context)?.packages.contains { $0.name == "bad" } ?? true), "unsafe versions are refused")
+        #expect(VoltaProvider().commands(for: ToolchainAction(provider: .volta, kind: .environment), context: context) == nil)
+    }
+}

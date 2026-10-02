@@ -182,7 +182,8 @@
       "file": "Toolchains/ToolchainProvider.swift",
       "tests": [
         "ToolchainSecurityTests",
-        "ToolchainScannerTests"
+        "ToolchainScannerTests",
+        "ToolchainDetailTests"
       ],
       "area": "Toolchain validation and command policy"
     },
@@ -190,7 +191,8 @@
       "file": "Toolchains/NodeToolchains.swift",
       "tests": [
         "ToolchainScannerTests",
-        "DeveloperEnvironmentTests"
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests"
       ],
       "area": "Node.js environments"
     },
@@ -199,7 +201,8 @@
       "tests": [
         "ToolchainScannerTests",
         "SmallParserTests",
-        "DeveloperEnvironmentTests"
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests"
       ],
       "area": "Python tools (pyenv, uv, pipx, Conda)"
     },
@@ -208,7 +211,8 @@
       "tests": [
         "ToolchainScannerTests",
         "SmallParserTests",
-        "DeveloperEnvironmentTests"
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests"
       ],
       "area": "Ruby, Rust, Go, Java, .NET"
     },
@@ -216,7 +220,8 @@
       "file": "Toolchains/PackageManagerToolchains.swift",
       "tests": [
         "ToolchainScannerTests",
-        "DeveloperEnvironmentTests"
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests"
       ],
       "area": "Package managers (MacPorts, Nix, Pixi, mise, asdf)"
     },
