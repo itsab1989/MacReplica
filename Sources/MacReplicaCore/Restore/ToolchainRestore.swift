@@ -26,10 +26,15 @@ extension RestoreExecutor {
     func prepareToolchains(plan: RestorePlan, context: inout RunContext) {
         let toolchainContext = ToolchainContext(layout: layout, workFolder: layout.caches.appendingPathComponent("Work"),
                                                 architecture: environment.targetArchitecture)
-        let actions = plan.items.compactMap(\.toolchain)
+        var actions = plan.items.compactMap(\.toolchain)
         context.toolchainContext = toolchainContext
-        guard !actions.isEmpty else { return }
-        let executables = ToolchainCatalog.executables(for: actions, context: toolchainContext)
+        // Python environments may be rebuilt with pyenv's or uv's exact interpreter, and uv projects with uv.
+        let inspector = Inspector(environment: environment, backupRoot: backupRoot, selection: RestoreSelection(), damagedFiles: [])
+        let environments = plan.items.compactMap(\.pythonEnvironment)
+        let interpreters = environments.flatMap { inspector.pythonInterpreters(for: $0, brewPrefix: nil) }
+        if environments.contains(where: { $0.manager == .uv }) { actions.append(ToolchainAction(provider: .uv, kind: .package)) }
+        guard !actions.isEmpty || !interpreters.isEmpty else { return }
+        let executables = ToolchainCatalog.executables(for: actions, context: toolchainContext).union(interpreters)
         context.toolchainRunner = (environment.runner as? CommandPolicyExtending)?.allowing(executables) ?? environment.runner
     }
 
@@ -71,7 +76,7 @@ extension RestoreExecutor {
         let folder = layout.caches.appendingPathComponent("Work")
         var written: [URL] = []
         for (url, content) in files {
-            guard url.deletingLastPathComponent().standardizedFileURL == folder.standardizedFileURL else {
+            guard url.deletingLastPathComponent().standardizedFileURL.path == folder.standardizedFileURL.path else {
                 throw CleanupError.outsideOwnedFolder(url.path)
             }
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

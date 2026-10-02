@@ -867,3 +867,6 @@
 "failure.toolUnavailable.explanation" = "Este paso necesita un gestor de versiones o de paquetes que no está instalado en este Mac. Instálalo (o selecciónalo para la restauración) y vuelve a intentarlo.";
 "failure.downloadNotTrusted.title" = "No se pudo verificar la descarga";
 "failure.downloadNotTrusted.explanation" = "El archivo descargado no coincidía con la firma, la suma de comprobación o el desarrollador del fabricante. MacReplica no lo instaló y eliminó el archivo.";
+
+/* Python lock files */
+"note.pythonLockFileUsed" = "Reconstruido exactamente a partir del archivo %1$@ del proyecto";

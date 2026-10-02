@@ -867,3 +867,6 @@
 "failure.toolUnavailable.explanation" = "Dette trinnet trenger en versjons- eller pakkebehandler som ikke er installert på denne Macen. Installer den (eller velg den for gjenopprettingen), og prøv igjen.";
 "failure.downloadNotTrusted.title" = "Nedlastingen kunne ikke bekreftes";
 "failure.downloadNotTrusted.explanation" = "Den nedlastede filen samsvarte ikke med leverandørens signatur, sjekksum eller utvikler. MacReplica installerte den ikke og fjernet filen.";
+
+/* Python lock files */
+"note.pythonLockFileUsed" = "Bygget opp igjen nøyaktig fra prosjektets %1$@";

@@ -12,7 +12,32 @@ extension Inspector {
 
     /// Environments inside tool-managed folders (virtualenvwrapper, pyenv, pipenv) may
     /// create their parent folder; project environments need the project to exist.
-    func mayCreateParent(_ environment: PythonEnvironment) -> Bool { environment.manager != .venv }
+    func mayCreateParent(_ environment: PythonEnvironment) -> Bool { environment.manager.isToolManaged }
+
+    /// Interpreters that can rebuild the environment, best first: exactly the recorded version from
+    /// pyenv or uv, then Homebrew's Python of the same minor version.
+    func pythonInterpreters(for environment: PythonEnvironment, brewPrefix: URL?) -> [String] {
+        let minor = environment.minorVersion
+        var candidates: [String] = []
+        if ToolchainValidation.isSafeVersion(environment.pythonVersion) {
+            candidates.append(layout.homeDirectory.appendingPathComponent(".pyenv/versions/\(environment.pythonVersion)/bin/python\(minor)").path)
+            let architecture = environment.architectures.contains(.arm64) || environment.architectures.isEmpty ? "aarch64" : "x86_64"
+            let uvFolder = layout.homeDirectory.appendingPathComponent(".local/share/uv/python/cpython-\(environment.pythonVersion)-macos-\(architecture)-none")
+            candidates.append(uvFolder.appendingPathComponent("bin/python\(minor)").path)
+        }
+        for prefix in (brewPrefix.map { [$0] } ?? layout.homebrewPrefixes) { candidates.append(layout.homebrewPython(minor: minor, prefix: prefix)) }
+        return candidates
+    }
+
+    /// For uv projects with a lock file: the project folder, if `uv.lock` and `pyproject.toml` are there.
+    func uvProject(for environment: PythonEnvironment, target: URL) -> URL? {
+        guard environment.manager == .uv else { return nil }
+        let project = target.deletingLastPathComponent()
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: project.appendingPathComponent("uv.lock").path),
+              fm.fileExists(atPath: project.appendingPathComponent("pyproject.toml").path) else { return nil }
+        return project
+    }
 
     func existingMinorVersion(of folder: URL) -> String? {
         guard let text = try? String(contentsOf: folder.appendingPathComponent("pyvenv.cfg"), encoding: .utf8) else { return nil }
@@ -89,24 +114,42 @@ extension RestoreExecutor {
             && package.version.range(of: #"^[A-Za-z0-9][A-Za-z0-9.+!_-]{0,100}$"#, options: .regularExpression) != nil
     }
 
-    private func pythonCommand(_ python: String, _ arguments: [String], timeout: TimeInterval, brew: HomebrewInstallation) -> Command {
+    private func pythonCommand(_ python: String, _ arguments: [String], timeout: TimeInterval, brew: HomebrewInstallation?) -> Command {
         Command(executable: python, arguments: arguments,
-                environment: layout.processEnvironment(homebrewPrefix: brew.prefix, askpass: nil).merging([
+                environment: layout.processEnvironment(homebrewPrefix: brew?.prefix, askpass: nil).merging([
                     "PIP_DISABLE_PIP_VERSION_CHECK": "1", "PIP_NO_INPUT": "1", "PYTHONDONTWRITEBYTECODE": "1",
                 ]) { $1 },
                 timeout: timeout)
     }
 
-    func restorePythonEnvironment(_ item: RestoreItem, inspector: Inspector, brew: HomebrewInstallation?,
+    func restorePythonEnvironment(_ item: RestoreItem, inspector: Inspector, brew: HomebrewInstallation?, context: RunContext,
                                   onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
         guard let environment = item.pythonEnvironment else { return failed(item, .unknown) }
         guard let target = inspector.pythonTarget(environment) else {
             return failed(item, .pythonEnvironmentConflict, "environment is outside the home folder")
         }
-        guard let brew else { return failed(item, .homebrewUnavailable) }
-        let python = layout.homebrewPython(minor: environment.minorVersion, prefix: brew.prefix)
-        guard FileManager.default.isExecutableFile(atPath: python) else {
+        guard let python = inspector.pythonInterpreters(for: environment, brewPrefix: brew?.prefix)
+            .first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            if brew == nil { return failed(item, .homebrewUnavailable) }
             return failed(item, .pythonVersionUnavailable, "Python \(environment.minorVersion) is not available from Homebrew")
+        }
+        // A uv project with a lock file is rebuilt exactly from that lock file.
+        if !FileManager.default.fileExists(atPath: target.path), let project = inspector.uvProject(for: environment, target: target),
+           let uv = context.toolchainContext.flatMap({ UVProvider().executableCandidates(for: ToolchainAction(provider: .uv, kind: .package), context: $0)
+               .first { FileManager.default.isExecutableFile(atPath: $0) } }) {
+            onEvent(.activity(itemID: item.id, .creatingEnvironment))
+            let sync = try await (context.toolchainRunner ?? self.environment.runner).run(Command(
+                executable: uv, arguments: ["sync", "--frozen", "--project", project.path, "--python", python],
+                environment: layout.processEnvironment(homebrewPrefix: brew?.prefix, askpass: nil)
+                    .merging(["UV_PROJECT_ENVIRONMENT": target.path, "NO_COLOR": "1", "UV_NO_PROGRESS": "1"]) { $1 },
+                timeout: 3600))
+            if sync.succeeded, inspector.existingMinorVersion(of: target) == environment.minorVersion {
+                log.info("\(item.id): rebuilt from uv.lock", component: .python)
+                var lockNotes: [ResultNote] = [.pythonLockFileUsed(file: "uv.lock")]
+                if !environment.manualPackages.isEmpty { lockNotes.append(.pythonPackagesNeedManualSetup(names: environment.manualPackages.map(\.name).sorted())) }
+                return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: environment.minorVersion, notes: lockNotes)
+            }
+            log.warning("\(item.id): uv sync failed, rebuilding from the recorded packages", component: .python)
         }
         let fm = FileManager.default
         var notes: [ResultNote] = []
@@ -128,14 +171,14 @@ extension RestoreExecutor {
                 try fm.createDirectory(at: parent, withIntermediateDirectories: true)
             }
             onEvent(.activity(itemID: item.id, .creatingEnvironment))
-            let created = try await runPython(python, ["-m", "venv", target.path], timeout: 900, brew: brew)
+            let created = try await runPython(python, ["-m", "venv", target.path], timeout: 900, brew: brew, runner: context.toolchainRunner)
             guard created.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: created))) }
             guard inspector.existingMinorVersion(of: target) == environment.minorVersion else {
                 return failed(item, .verificationFailed, "virtual environment was not created")
             }
             // Bring the packaging tools up to date; not fatal if it fails (e.g. offline).
             let tools = try await runPython(python, ["-m", "pip", "--python", target.path, "install", "--upgrade", "pip", "setuptools", "wheel"],
-                                                  timeout: 900, brew: brew)
+                                                  timeout: 900, brew: brew, runner: context.toolchainRunner)
             if !tools.succeeded { log.warning("Could not update packaging tools in \(environment.path)", component: .python) }
         }
 
@@ -144,7 +187,7 @@ extension RestoreExecutor {
         if !pinned.isEmpty {
             onEvent(.activity(itemID: item.id, .installingPackages))
             let install = try await runPython(python, ["-m", "pip", "--python", target.path, "install"] + pinned.map { "\($0.name)==\($0.version)" },
-                                                    timeout: 3600, brew: brew)
+                                                    timeout: 3600, brew: brew, runner: context.toolchainRunner)
             lastOutput = install.combinedOutput
             if !install.succeeded {
                 let category = ErrorClassifier.classify(install.combinedOutput, exitCode: install.exitCode, timedOut: install.timedOut)
@@ -156,9 +199,10 @@ extension RestoreExecutor {
                 for package in inspector.missingPackages(environment, installed: inspector.installedPackages(in: target)).filter(Self.isSafeRequirement) {
                     try Task.checkCancellation()
                     let exact = try await runPython(python, ["-m", "pip", "--python", target.path, "install", "\(package.name)==\(package.version)"],
-                                                    timeout: 1800, brew: brew)
+                                                    timeout: 1800, brew: brew, runner: context.toolchainRunner)
                     if exact.succeeded { continue }
-                    let current = try await runPython(python, ["-m", "pip", "--python", target.path, "install", package.name], timeout: 1800, brew: brew)
+                    let current = try await runPython(python, ["-m", "pip", "--python", target.path, "install", package.name], timeout: 1800, brew: brew,
+                                                      runner: context.toolchainRunner)
                     if !current.succeeded { lastOutput = current.combinedOutput }
                 }
             }
@@ -182,8 +226,9 @@ extension RestoreExecutor {
         return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: inspector.existingMinorVersion(of: target), notes: notes)
     }
 
-    private func runPython(_ python: String, _ arguments: [String], timeout: TimeInterval, brew: HomebrewInstallation) async throws -> CommandResult {
-        try await environment.runner.run(pythonCommand(python, arguments, timeout: timeout, brew: brew))
+    private func runPython(_ python: String, _ arguments: [String], timeout: TimeInterval, brew: HomebrewInstallation?,
+                           runner: CommandRunning? = nil) async throws -> CommandResult {
+        try await (runner ?? environment.runner).run(pythonCommand(python, arguments, timeout: timeout, brew: brew))
     }
 
     func restoreApplicationData(_ item: RestoreItem, inspector: Inspector, session: RestoreSession,

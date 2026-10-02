@@ -58,6 +58,11 @@ public struct PythonInstallation: Codable, Equatable, Sendable, Identifiable {
 
 public enum EnvironmentManager: String, Codable, Sendable {
     case venv, virtualenvwrapper, pyenvVirtualenv, pipenv, unknown
+    /// Project environments created by uv, virtualenv or for a Poetry project.
+    case uv, virtualenv, poetry
+
+    /// Environments in a tool's own folder (they may be created even if their parent is missing).
+    public var isToolManaged: Bool { [.virtualenvwrapper, .pyenvVirtualenv, .pipenv].contains(self) }
 
     public init(from decoder: Decoder) throws {
         self = EnvironmentManager(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .unknown

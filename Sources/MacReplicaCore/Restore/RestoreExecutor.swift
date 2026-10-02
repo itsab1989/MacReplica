@@ -505,7 +505,7 @@ public final class RestoreExecutor: Sendable {
             case .font, .colorProfile:
                 return await restoreFile(item, inspector: inspector, context: &context, plan: plan, session: session, onEvent: onEvent)
             case .pythonEnvironment:
-                return try await restorePythonEnvironment(item, inspector: inspector, brew: context.brew, onEvent: onEvent)
+                return try await restorePythonEnvironment(item, inspector: inspector, brew: context.brew, context: context, onEvent: onEvent)
             case .applicationData:
                 return restoreApplicationData(item, inspector: inspector, session: session, onEvent: onEvent)
             case .gitConfiguration:

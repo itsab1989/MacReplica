@@ -867,3 +867,6 @@
 "failure.toolUnavailable.explanation" = "Dieser Schritt braucht eine Versions- oder Paketverwaltung, die auf diesem Mac nicht installiert ist. Installier sie (oder wähl sie für die Wiederherstellung aus) und versuch es erneut.";
 "failure.downloadNotTrusted.title" = "Download konnte nicht überprüft werden";
 "failure.downloadNotTrusted.explanation" = "Die geladene Datei passte nicht zur Signatur, Prüfsumme oder zum Entwickler des Herstellers. MacReplica hat sie nicht installiert und die Datei entfernt.";
+
+/* Python lock files */
+"note.pythonLockFileUsed" = "Exakt aus der Datei %1$@ des Projekts neu aufgebaut";

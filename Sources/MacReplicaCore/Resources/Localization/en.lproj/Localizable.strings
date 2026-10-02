@@ -869,3 +869,6 @@
 "failure.toolUnavailable.explanation" = "This step needs a version or package manager that is not installed on this Mac. Install it (or select it for the restore), then retry.";
 "failure.downloadNotTrusted.title" = "Download could not be verified";
 "failure.downloadNotTrusted.explanation" = "The downloaded file did not match the vendor's signature, checksum or developer. MacReplica did not install it and removed the file.";
+
+/* Python lock files */
+"note.pythonLockFileUsed" = "Rebuilt exactly from the project's %1$@";

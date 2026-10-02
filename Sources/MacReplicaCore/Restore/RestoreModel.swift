@@ -306,6 +306,8 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case pythonPackagesUpdated(count: Int)
     /// An environment already existed and only missing packages were added.
     case pythonEnvironmentReused
+    /// The environment was rebuilt exactly from the project's lock file.
+    case pythonLockFileUsed(file: String)
     case pythonSettingsToApply(count: Int)
     case applicationDataCopied(copied: Int, identical: Int, kept: Int)
     /// Data was restored into the folder of a different app version than the one installed.

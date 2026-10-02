@@ -867,3 +867,6 @@
 "failure.toolUnavailable.explanation" = "Voor deze stap is een versie- of pakketbeheerder nodig die niet op deze Mac is geïnstalleerd. Installeer hem (of selecteer hem voor het herstel) en probeer het opnieuw.";
 "failure.downloadNotTrusted.title" = "Download kon niet worden geverifieerd";
 "failure.downloadNotTrusted.explanation" = "Het gedownloade bestand kwam niet overeen met de handtekening, controlesom of ontwikkelaar van de leverancier. MacReplica heeft het niet geïnstalleerd en het bestand verwijderd.";
+
+/* Python lock files */
+"note.pythonLockFileUsed" = "Precies opnieuw opgebouwd uit het bestand %1$@ van het project";

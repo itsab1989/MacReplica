@@ -65,6 +65,9 @@ public enum SimulationBuilder {
         case sourceMac
         /// A freshly installed Mac: no Homebrew, no Command Line Tools, nothing installed.
         case freshMac
+        /// A source Mac that also has developer environments (version managers, runtimes, global tools,
+        /// other package managers) and an app from a nightly channel with a signed vendor update feed.
+        case developerMac
     }
 
     /// Synthetic apps used across scenarios.
@@ -118,6 +121,7 @@ public enum SimulationBuilder {
         try write(FakeTools.brew, to: url.appendingPathComponent("tools/brew"), executable: true)
         try write(FakeTools.mas, to: url.appendingPathComponent("tools/mas"), executable: true)
         try write(FakeTools.python, to: url.appendingPathComponent("tools/python"), executable: true)
+        try write(FakeTools.toolchain, to: url.appendingPathComponent("tools/toolchain"), executable: true)
         try write(FakeTools.xcodeSelect, to: url.appendingPathComponent("bin/xcode-select"), executable: true)
         try write(FakeTools.pkgutil, to: url.appendingPathComponent("bin/pkgutil"), executable: true)
         try write(FakeTools.mdls, to: url.appendingPathComponent("bin/mdls"), executable: true)
@@ -170,13 +174,27 @@ public enum SimulationBuilder {
                                 ("example-tool", "0.9.0"), ("python@3.12", "3.12.7")] {
             try write(version, to: root.state.appendingPathComponent("brew/available/formulae/\(name)"), executable: false)
         }
+        // Version and package managers Homebrew can install (see FakeTools.toolchain).
+        for (name, version) in [("uv", "0.12.22"), ("pyenv", "2.6.10"), ("pipx", "1.8.0"), ("fnm", "1.38.1"), ("volta", "2.0.2"),
+                                ("pnpm", "10.18.0"), ("yarn", "1.22.22"), ("rbenv", "1.3.2"), ("rustup", "1.28.2"), ("go", "1.25.1"),
+                                ("pixi", "0.81.0"), ("mise", "2026.10.0"), ("node", "26.10.0"), ("ruby", "4.0.7")] {
+            try write(version, to: root.state.appendingPathComponent("brew/available/formulae/\(name)"), executable: false)
+        }
+        for (cask, version) in [("miniforge", "26.7.2-0"), ("temurin@21", "21.0.8"), ("dotnet-sdk", "10.0.401")] {
+            try write(#"{"version": "\#(version)", "app": "", "bundle_id": ""}"#,
+                      to: root.state.appendingPathComponent("brew/available/casks/\(cask).json"), executable: false)
+        }
 
         try writeReleases(root)
         try populateMacOSFiles(root)
         switch scenario {
         case .sourceMac: try populateSourceMac(root)
         case .freshMac: try populateFreshMac(root)
+        case .developerMac:
+            try populateSourceMac(root)
+            try populateDeveloperEnvironments(root)
         }
+        try populateVendorDownloads(root)
         return root
     }
 
@@ -256,8 +274,11 @@ public enum SimulationBuilder {
     }
 
     private static func populateFreshMac(_ root: SimulationRoot) throws {
-        // The user already copied their project folder; its environment is missing.
+        // The user already copied their project folders; their environments are missing.
         try write("print('hello')\n", to: root.url.appendingPathComponent("home/Projects/demo-app/main.py"), executable: false)
+        try write("[project]\nname = \"api-service\"\nversion = \"0.1.0\"\n",
+                  to: root.url.appendingPathComponent("home/Projects/api-service/pyproject.toml"), executable: false)
+        try write("version = 1\n\n[[package]]\nname = \"fastapi\"\nversion = \"0.115.0\"\n", to: root.url.appendingPathComponent("home/Projects/api-service/uv.lock"), executable: false)
         // Fonts already on the new Mac: an older version, an identical copy, a different font under the
         // same file name and the same font under another file name.
         let userFonts = root.url.appendingPathComponent("home/Library/Fonts")

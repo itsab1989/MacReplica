@@ -44,6 +44,12 @@ public struct UpdateFeed: Codable, Equatable, Hashable, Sendable {
         self.publicEDKey = publicEDKey
     }
 
+    // "publicEdKey" so that the snake_case manifest key "public_ed_key" round-trips.
+    private enum CodingKeys: String, CodingKey {
+        case url
+        case publicEDKey = "publicEdKey"
+    }
+
     /// Reads `SUFeedURL` and `SUPublicEDKey`. Placeholders, non-web URLs and URLs with credentials are ignored.
     public static func from(info: [String: Any]) -> UpdateFeed? {
         guard let value = (info["SUFeedURL"] as? String)?.trimmingCharacters(in: .whitespaces),
