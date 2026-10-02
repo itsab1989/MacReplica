@@ -1,0 +1,653 @@
+/* MacReplica — Nederlands.
+   Placeholders are positional (%1$@ text, %1$d number) so translations can reorder them.
+   Plural keys end in .one / .other; the count is always %1$d. */
+
+/* Home */
+"home.tagline" = "Zet je apps, lettertypen en kleurprofielen over naar een vers geïnstalleerde Mac.";
+"home.inventory.title" = "Maak reservekopie";
+"home.inventory.subtitle" = "Scan deze Mac en bewaar alles wat MacReplica later kan herstellen.";
+"home.restore.title" = "Herstel";
+"home.restore.subtitle" = "Zet een reservekopie terug op deze Mac.";
+"home.verify.title" = "Controleer reservekopie";
+"home.verify.subtitle" = "Controleer of een reservekopie compleet en onbeschadigd is.";
+"home.dryRunHint" = "Je kunt elk herstel eerst bekijken in een voorvertoning, voordat er iets verandert.";
+
+/* Common */
+"common.back" = "Terug";
+"common.backToStart" = "Terug naar begin";
+"common.cancel" = "Annuleer";
+"common.continue" = "Ga door";
+"common.done" = "Gereed";
+"common.technicalDetails" = "Technische details";
+"common.version" = "Versie %1$@";
+
+/* Menu and About */
+"menu.about" = "Over MacReplica";
+"menu.help" = "MacReplica Help";
+"about.version" = "Versie %1$@";
+"about.description" = "MacReplica legt je apps, Homebrew-pakketten, lettertypen en kleurprofielen vast en herstelt ze op een nieuwe of vers geïnstalleerde Mac.";
+"about.kofi" = "MacReplica is gratis en blijft dat altijd. Heb je er iets aan, dan is een koffie op Ko-fi een vriendelijke manier om dank je te zeggen — volledig vrijblijvend, en de app blijft hoe dan ook compleet.";
+"about.kofiButton" = "Steun via Ko-fi";
+"about.github" = "Project op GitHub";
+"about.license" = "Open source onder de GNU General Public License v3.0";
+
+/* Settings */
+"settings.language" = "Taal";
+"settings.languageHint" = "De app en de rapporten wisselen meteen. Enkele standaardmenucommando’s volgen nadat MacReplica opnieuw is gestart.";
+"settings.logs" = "Logbestanden";
+"settings.openLogs" = "Toon in Finder";
+
+/* Scan */
+"scan.title" = "Deze Mac wordt gescand";
+"scan.subtitle" = "Dit duurt meestal minder dan een minuut.";
+"scan.phase.applications" = "Apps bekijken …";
+"scan.phase.homebrew" = "Homebrew controleren …";
+"scan.phase.appStore" = "Mac App Store-apps controleren …";
+"scan.phase.matching" = "Passende Homebrew-pakketten zoeken …";
+"scan.phase.fonts" = "Lettertypen verzamelen …";
+"scan.phase.colorProfiles" = "Kleurprofielen verzamelen …";
+"scan.readOnly" = "De scan leest alleen informatie. Er wordt niets gewijzigd op deze Mac.";
+"inventory.failed.title" = "De scan kon niet worden voltooid";
+"inventory.failed.message" = "MacReplica liep tijdens het scannen tegen een onverwacht probleem aan. Probeer het opnieuw. Blijft het gebeuren, dan helpen de technische details hieronder om de oorzaak te vinden.";
+
+/* Scan results */
+"results.title" = "Scan voltooid";
+"results.subtitle.one" = "%1$d app gevonden";
+"results.subtitle.other" = "%1$d apps gevonden";
+"results.appsHeading" = "Zo worden de apps hersteld";
+"results.moreHeading" = "Ook inbegrepen";
+"results.showApps" = "Toon alle apps";
+"results.save" = "Bewaar reservekopie …";
+"inventory.warning.homebrewNotInstalled" = "Homebrew is niet geïnstalleerd op deze Mac. De apps worden toch vastgelegd en MacReplica installeert Homebrew indien nodig tijdens het herstel.";
+"inventory.warning.homebrewBroken" = "Homebrew is geïnstalleerd, maar reageert niet. Homebrew-pakketten konden niet worden vastgelegd.";
+"inventory.warning.homebrewListFailed" = "De lijst met Homebrew-pakketten kon niet worden gelezen. Homebrew-pakketten ontbreken in deze reservekopie.";
+"inventory.warning.masNotInstalled" = "Er zijn Mac App Store-apps gevonden, maar het hulpprogramma ‘mas’ is niet geïnstalleerd. Sommige App Store-apps moet je later misschien handmatig downloaden.";
+"inventory.warning.masListFailed" = "De lijst met Mac App Store-apps kon niet worden gelezen.";
+"inventory.warning.catalogUnavailable" = "De Homebrew-catalogus kon niet worden geladen (geen internetverbinding?). Voor handmatig geïnstalleerde apps is niet gezocht naar Homebrew-pakketten.";
+
+/* Match decisions */
+"match.title" = "Mogelijke overeenkomsten gevonden";
+"match.message" = "MacReplica heeft Homebrew-pakketten gevonden die bij deze apps kunnen passen, maar is niet zeker genoeg om er zelf een te kiezen. Kies het juiste pakket of installeer de app later zelf.";
+"match.pickerLabel" = "Homebrew-pakket";
+"match.candidate" = "%1$@ (%2$@)";
+"match.none" = "Geen van deze – ik installeer het zelf";
+
+/* Saving */
+"inventory.save.choose" = "Bewaar hier";
+"inventory.save.message" = "Kies waar je de reservekopie wilt bewaren. Een externe schijf of cloudmap is een goede keuze, zodat de reservekopie beschikbaar is op de nieuwe Mac.";
+"saving.title" = "Reservekopie wordt bewaard";
+"saving.subtitle" = "Lettertypen en kleurprofielen worden gekopieerd en gecontroleerd.";
+"saved.title" = "Reservekopie bewaard";
+"saved.verified" = "De reservekopie is compleet en gecontroleerd.";
+"saved.message" = "Elk gekopieerd bestand is vergeleken met het origineel.";
+"saved.location" = "Locatie";
+"saved.nextSteps" = "Open MacReplica op de nieuwe Mac, kies ‘Herstel’ en selecteer deze map.";
+"saved.openReport" = "Open rapport";
+"saved.showInFinder" = "Toon in Finder";
+"backup.failed.title" = "De reservekopie kon niet worden bewaard";
+"backup.failed.message" = "Niet alle bestanden konden worden gekopieerd of gecontroleerd. De onvolledige reservekopie is verwijderd. Probeer het opnieuw, eventueel op een andere locatie.";
+"backup.failed.notWritable" = "MacReplica kan niet naar deze map schrijven. Kies een andere locatie.";
+
+/* Opening a backup */
+"backup.open.choose" = "Open reservekopie";
+"backup.open.message" = "Selecteer de map met de MacReplica-reservekopie (daarin staat een bestand met de naam manifest.json).";
+"backup.unreadable.title" = "Dit is geen leesbare MacReplica-reservekopie";
+"backup.unreadable.message" = "De map bevat geen geldig manifest.json. Selecteer de map die MacReplica heeft aangemaakt, bijvoorbeeld ‘MacReplica-Backup-2026-10-02-1530’.";
+"backup.newerVersion.title" = "Voor deze reservekopie is een nieuwere MacReplica nodig";
+"backup.newerVersion.message" = "De reservekopie is gemaakt met een nieuwere versie van MacReplica, die een indeling gebruikt die deze versie niet begrijpt. Werk MacReplica bij en probeer het opnieuw.";
+"backup.damaged.title" = "De reservekopie is beschadigd";
+"backup.damaged.checksum" = "De inhoudslijst van de reservekopie is sinds het aanmaken gewijzigd of beschadigd, dus MacReplica kan deze niet vertrouwen. Gebruik een andere kopie van de reservekopie.";
+
+/* Resume */
+"resume.title" = "Een eerder herstel is niet voltooid.";
+"resume.message" = "Wil je verdergaan waar MacReplica is gestopt?";
+"resume.continue" = "Hervat";
+"resume.discard" = "Verwijder";
+"resume.backupMissing.title" = "De reservekopie is niet te vinden";
+"resume.backupMissing.message" = "Het onvoltooide herstel gebruikte de reservekopie op %1$@, die niet beschikbaar is. Sluit de schijf met de reservekopie aan en probeer het opnieuw.";
+
+/* Restore selection */
+"restore.select.title" = "Wat wil je herstellen?";
+"restore.select.subtitle" = "Reservekopie van %1$@ · macOS %2$@ · %3$@";
+"restore.select.individual" = "Kies afzonderlijke onderdelen …";
+"restore.select.summary.one" = "%1$d onderdeel geselecteerd";
+"restore.select.summary.other" = "%1$d onderdelen geselecteerd";
+"restore.select.dryRun" = "Voorvertoning (proefdraai)";
+"restore.select.start" = "Start herstel";
+"restore.select.conflictQuestion" = "Als een lettertype of kleurprofiel al bestaat:";
+"restore.select.conflictHint" = "Identieke bestanden worden altijd herkend en overgeslagen. MacReplica vraagt het eerst voordat er iets wordt vervangen.";
+"restore.select.damaged.one" = "%1$d bestand in deze reservekopie is beschadigd";
+"restore.select.damaged.other" = "%1$d bestanden in deze reservekopie zijn beschadigd";
+"restore.select.damagedHint" = "Beschadigde bestanden worden overgeslagen. Al het andere kan gewoon worden hersteld.";
+"restore.select.otherArchitecture" = "Deze reservekopie komt van een ander type Mac";
+"restore.select.otherArchitectureHint" = "De reservekopie is gemaakt op een Mac met %1$@, deze Mac gebruikt %2$@. MacReplica installeert waar mogelijk de juiste versie van elke app en laat je weten welke apps hier niet werken.";
+
+"component.applications" = "Apps";
+"component.applications.hint" = "Apps die je zelf hebt geïnstalleerd; MacReplica gebruikt Homebrew als er een betrouwbaar pakket bestaat.";
+"component.brewFormulae" = "Homebrew Formulae";
+"component.brewFormulae.hint" = "Opdrachtregelprogramma’s die met Homebrew zijn geïnstalleerd.";
+"component.brewCasks" = "Homebrew Casks";
+"component.brewCasks.hint" = "Apps en andere pakketten die met Homebrew zijn geïnstalleerd.";
+"component.appStore" = "Mac App Store";
+"component.appStore.hint" = "Apps uit de Mac App Store; je moet ingelogd zijn bij de App Store.";
+"component.fonts" = "Lettertypen";
+"component.fonts.hint" = "Lettertypen uit je persoonlijke en de gedeelde lettertypemap.";
+"component.colorProfiles" = "ICC-profielen";
+"component.colorProfiles.hint" = "Kleurprofielen voor beeldschermen, printers en papiersoorten.";
+
+"taps.title" = "Extra Homebrew-bronnen";
+"taps.message" = "Sommige pakketten komen uit bronnen buiten de officiële Homebrew-collectie (zogeheten ‘taps’). Sta alleen bronnen toe die je vertrouwt. Pakketten uit bronnen die je niet toestaat, worden overgeslagen.";
+
+"items.title" = "Kies afzonderlijke onderdelen";
+"items.search" = "Zoek";
+"items.selectAll" = "Alle";
+"items.selectNone" = "Geen";
+
+/* Conflicts */
+"conflict.title.one" = "%1$d bestand bestaat al";
+"conflict.title.other" = "%1$d bestanden bestaan al";
+"conflict.message" = "Deze lettertypen of kleurprofielen bestaan al op deze Mac, maar met een andere inhoud. Wat moet MacReplica doen?";
+"conflict.keep" = "Behoud bestaande";
+"conflict.replace" = "Vervang";
+"conflict.skip" = "Sla over";
+"conflict.applyToAll" = "Pas toe op alle";
+"conflict.replaceHint" = "Als een bestand wordt vervangen, wordt het bestaande bestand verplaatst naar ~/Library/Application Support/MacReplica/Replaced Files en niet verwijderd.";
+
+/* Administrator rights */
+"admin.title" = "Voordat het herstel begint";
+"admin.clt.title" = "macOS vraagt om de Command Line Tools te installeren";
+"admin.clt.message" = "Homebrew heeft de Command Line Tools van Apple nodig. Klik op ‘Installeer’ als het macOS-venster verschijnt. MacReplica wacht en gaat daarna automatisch verder.";
+"admin.password.message" = "macOS vraagt om je beheerderswachtwoord, omdat:";
+"admin.password.homebrew" = "Homebrew moet worden geïnstalleerd. Dat gebeurt in een systeemmap.";
+"admin.password.files" = "Sommige lettertypen of kleurprofielen komen terecht in mappen die door alle gebruikers van deze Mac worden gedeeld.";
+"admin.password.privacy" = "Je voert het wachtwoord in een standaardvenster van macOS in. MacReplica ziet of bewaart het nooit.";
+"admin.continue" = "Ga door";
+"admin.reason.homebrew" = "MacReplica wil Homebrew installeren, waarvoor beheerdersrechten nodig zijn.";
+"admin.reason.files" = "MacReplica wil lettertypen en kleurprofielen kopiëren naar mappen die door alle gebruikers van deze Mac worden gedeeld (lettertypen: %1$d, kleurprofielen: %2$d).";
+"askpass.title" = "Beheerderswachtwoord vereist";
+"askpass.message" = "Homebrew heeft je beheerderswachtwoord nodig om de installatie te voltooien van een app die MacReplica herstelt. Het wachtwoord gaat rechtstreeks naar macOS en wordt niet bewaard.";
+"askpass.ok" = "OK";
+
+/* Dry run */
+"dryRun.title" = "Voorvertoning";
+"dryRun.subtitle" = "Dit zou een herstel doen. Er is niets gewijzigd.";
+"dryRun.checking" = "Controleren wat al op deze Mac staat …";
+"dryRun.export" = "Exporteer rapport …";
+"dryRun.group.change.one" = "%1$d onderdeel wordt geïnstalleerd of gekopieerd";
+"dryRun.group.change.other" = "%1$d onderdelen worden geïnstalleerd of gekopieerd";
+"dryRun.group.present.one" = "%1$d onderdeel staat al op deze Mac";
+"dryRun.group.present.other" = "%1$d onderdelen staan al op deze Mac";
+"dryRun.group.conflict.one" = "%1$d bestand bestaat al met een andere inhoud";
+"dryRun.group.conflict.other" = "%1$d bestanden bestaan al met een andere inhoud";
+"dryRun.group.skip.one" = "%1$d onderdeel wordt overgeslagen";
+"dryRun.group.skip.other" = "%1$d onderdelen worden overgeslagen";
+"dryRun.group.manual.one" = "%1$d app moet handmatig worden geïnstalleerd";
+"dryRun.group.manual.other" = "%1$d apps moeten handmatig worden geïnstalleerd";
+
+"prediction.install" = "Wordt geïnstalleerd met %1$@";
+"prediction.installCommandLineTools" = "Wordt geïnstalleerd (macOS vraagt je om bevestiging)";
+"prediction.installHomebrew" = "Wordt geïnstalleerd (je beheerderswachtwoord is nodig)";
+"prediction.addTap" = "Wordt toegevoegd als Homebrew-bron";
+"prediction.copy" = "Wordt gekopieerd";
+"prediction.alreadyPresent" = "Al geïnstalleerd – wordt overgeslagen";
+"prediction.alreadyPresentVersion" = "Versie %1$@ is al geïnstalleerd – wordt overgeslagen";
+"prediction.identical" = "Er bestaat al een identiek bestand – wordt overgeslagen";
+"prediction.conflictKeep" = "Er bestaat een ander bestand met deze naam – dit wordt behouden";
+"prediction.conflictReplace" = "Er bestaat een ander bestand met deze naam – dit wordt vervangen";
+"prediction.conflictSkip" = "Er bestaat een ander bestand met deze naam – wordt overgeslagen";
+"prediction.damaged" = "De kopie in de reservekopie is beschadigd – wordt overgeslagen";
+"prediction.afterPrerequisite" = "Wordt geïnstalleerd zodra Homebrew klaar is";
+
+/* Progress */
+"progress.title" = "Bezig met herstellen";
+"progress.subtitle" = "MacReplica werkt elk onderdeel af en controleert het resultaat.";
+"progress.position" = "%1$d / %2$d";
+"progress.remaining" = "Nog %1$@";
+"progress.succeeded" = "Gelukt: %1$d";
+"progress.failed" = "Mislukt: %1$d";
+"progress.skipped" = "Overgeslagen: %1$d";
+"progress.recent" = "Voltooid";
+"progress.finishing" = "Afronden …";
+"progress.stopping" = "Stoppen na de huidige stap …";
+"progress.keepOpen" = "Houd MacReplica open en je Mac wakker.";
+"progress.stop" = "Stop";
+"progress.continue" = "Ga door";
+"progress.stopConfirm.title" = "Herstel stoppen?";
+"progress.stopConfirm.message" = "MacReplica stopt na de huidige stap. Je kunt later verdergaan waar het is gestopt.";
+
+"activity.checking" = "Controleren of het al geïnstalleerd is …";
+"activity.downloading" = "Downloaden …";
+"activity.installing" = "Installeren …";
+"activity.copying" = "Kopiëren …";
+"activity.verifying" = "Resultaat controleren …";
+"activity.waitingForCommandLineTools" = "Wachten op de Command Line Tools. Klik op ‘Installeer’ in het macOS-venster en wacht tot de installatie klaar is.";
+"activity.waitingForAdmin" = "Wachten op je beheerderswachtwoord …";
+
+"kind.commandLineTools" = "Apple Command Line Tools";
+"kind.homebrew" = "Homebrew";
+"kind.tap" = "Homebrew-bron";
+"kind.masTool" = "Mac App Store-hulpprogramma";
+"kind.font" = "Lettertype";
+"kind.colorProfile" = "ICC-profiel";
+
+/* Summary */
+"summary.title.done" = "Herstel voltooid";
+"summary.title.problems" = "Herstel voltooid met problemen";
+"summary.title.stopped" = "Herstel gestopt";
+"summary.succeeded" = "gelukt";
+"summary.failed" = "mislukt";
+"summary.skipped" = "overgeslagen";
+"summary.stopped.title" = "Het herstel is gestopt voordat alle onderdelen klaar waren.";
+"summary.stopped.message" = "Je kunt nu of later verdergaan; MacReplica onthoudt waar het is gestopt.";
+"summary.failedHeading" = "Wat niet is gelukt";
+"summary.manualHeading" = "Installeer deze apps zelf";
+"summary.manualMessage" = "MacReplica kon geen betrouwbare automatische bron voor deze apps vinden.";
+"summary.notesHeading.one" = "%1$d opmerking";
+"summary.notesHeading.other" = "%1$d opmerkingen";
+"summary.skippedHeading.one" = "%1$d onderdeel overgeslagen";
+"summary.skippedHeading.other" = "%1$d onderdelen overgeslagen";
+"summary.allDone.title" = "Alles wat je hebt geselecteerd, is hersteld.";
+"summary.allDone.message" = "Elk onderdeel is na het installeren of kopiëren gecontroleerd.";
+"summary.retry" = "Probeer mislukte onderdelen opnieuw";
+"summary.openReport" = "Open rapport";
+"summary.openWebsite" = "Open website";
+
+"outcome.succeeded" = "Gelukt";
+"outcome.alreadyPresent" = "Al geïnstalleerd";
+
+"skip.keptExisting" = "Bestaand bestand behouden";
+"skip.userSkipped" = "Overgeslagen op jouw verzoek";
+"skip.dependencyFailed" = "Overgeslagen omdat %1$@ niet beschikbaar is";
+"skip.tapNotEnabled" = "Overgeslagen omdat de Homebrew-bron %1$@ niet is toegestaan";
+"skip.incompatibleArchitecture" = "Overgeslagen: deze app werkt alleen op Macs met %1$@";
+"skip.cancelled" = "Niet uitgevoerd omdat het herstel is gestopt";
+
+"note.newerVersion" = "Versie %1$@ is geïnstalleerd; de reservekopie had %2$@, die niet meer beschikbaar is.";
+"note.requiresRosetta" = "Deze app is gemaakt voor Intel-Macs en heeft op deze Mac Rosetta 2 nodig. macOS biedt aan Rosetta te installeren wanneer je de app voor het eerst opent.";
+"note.movedAside" = "Het vorige bestand is verplaatst naar %1$@.";
+"note.identical" = "Er stond al een identiek bestand.";
+
+/* Failures */
+"failure.network.title" = "Geen internetverbinding";
+"failure.network.explanation" = "Het downloaden is mislukt. Controleer de internetverbinding en kies ‘Probeer mislukte onderdelen opnieuw’.";
+"failure.appStoreNotSignedIn.title" = "Niet ingelogd bij de App Store";
+"failure.appStoreNotSignedIn.explanation" = "Open de App Store, log in met je Apple Account en kies daarna ‘Probeer mislukte onderdelen opnieuw’. Je kunt de app ook downloaden via je aankopen in de App Store.";
+"failure.packageNotFound.title" = "Niet meer beschikbaar";
+"failure.packageNotFound.explanation" = "Het pakket is niet meer te vinden in Homebrew of de App Store. Installeer de app via de website van de ontwikkelaar.";
+"failure.adminRightsDenied.title" = "Beheerdersrechten zijn niet verleend";
+"failure.adminRightsDenied.explanation" = "Het wachtwoordvenster is geannuleerd of het wachtwoord is niet geaccepteerd. Kies ‘Probeer mislukte onderdelen opnieuw’ om het nog eens te proberen.";
+"failure.appAlreadyExists.title" = "Er is al een ander exemplaar geïnstalleerd";
+"failure.appAlreadyExists.explanation" = "Er bestaat al een app met dezelfde naam, maar MacReplica kan niet bevestigen dat het dezelfde app is. Verwijder of hernoem de bestaande app en probeer het opnieuw.";
+"failure.incompatible.title" = "Niet compatibel met deze Mac";
+"failure.incompatible.explanation" = "Deze app ondersteunt deze Mac of deze versie van macOS niet. Kijk op de website van de ontwikkelaar of er een compatibele versie is.";
+"failure.diskFull.title" = "Niet genoeg opslagruimte";
+"failure.diskFull.explanation" = "Maak wat ruimte vrij op deze Mac en kies daarna ‘Probeer mislukte onderdelen opnieuw’.";
+"failure.verificationFailed.title" = "Kon niet worden bevestigd";
+"failure.verificationFailed.explanation" = "De installatie meldde dat alles gelukt is, maar MacReplica kon daarna het verwachte resultaat niet vinden. Controleer de app handmatig of probeer het opnieuw.";
+"failure.backupFileDamaged.title" = "Beschadigd in de reservekopie";
+"failure.backupFileDamaged.explanation" = "De kopie in de reservekopie komt niet overeen met de checksum en is niet hersteld, zodat er geen beschadigd bestand op deze Mac terechtkomt.";
+"failure.homebrewUnavailable.title" = "Homebrew is niet beschikbaar";
+"failure.homebrewUnavailable.explanation" = "Voor dit onderdeel is Homebrew nodig, maar Homebrew kon niet worden geïnstalleerd of gestart.";
+"failure.homebrewBroken.title" = "Homebrew werkt niet";
+"failure.homebrewBroken.explanation" = "Homebrew is geïnstalleerd, maar reageert niet goed. MacReplica wijzigt geen bestaande Homebrew-installatie. Repareer Homebrew (zie het gedeelte over probleemoplossing in de documentatie) en probeer het opnieuw.";
+"failure.commandLineToolsUnavailable.title" = "Command Line Tools zijn niet geïnstalleerd";
+"failure.commandLineToolsUnavailable.explanation" = "Homebrew heeft de Command Line Tools van Apple nodig. De installatie is niet voltooid. Kies ‘Probeer mislukte onderdelen opnieuw’ en klik op ‘Installeer’ in het macOS-venster.";
+"failure.masUnavailable.title" = "App Store-hulpprogramma niet beschikbaar";
+"failure.masUnavailable.explanation" = "Het hulpprogramma ‘mas’, dat App Store-apps installeert, kon niet worden geïnstalleerd. Je kunt de app downloaden via je aankopen in de App Store.";
+"failure.timeout.title" = "Duurde te lang";
+"failure.timeout.explanation" = "De installatie was niet op tijd klaar en is gestopt. Controleer de internetverbinding en probeer het opnieuw.";
+"failure.cancelled.title" = "Gestopt";
+"failure.cancelled.explanation" = "De stap is onderbroken omdat het herstel is gestopt.";
+"failure.unknown.title" = "Onverwacht probleem";
+"failure.unknown.explanation" = "Er ging iets mis dat MacReplica niet kon vaststellen. De technische details kunnen helpen; je kunt het ook opnieuw proberen.";
+
+/* Verification */
+"verify.progress.title" = "Reservekopie wordt gecontroleerd";
+"verify.progress.subtitle" = "Elk bestand wordt vergeleken met de vastgelegde checksum.";
+"verify.result.title" = "Controle van reservekopie";
+"verify.result.intact" = "De reservekopie is compleet en onbeschadigd.";
+"verify.result.intactMessage.one" = "%1$d bestand is gecontroleerd.";
+"verify.result.intactMessage.other" = "%1$d bestanden zijn gecontroleerd.";
+"verify.result.issues.one" = "%1$d probleem gevonden";
+"verify.result.issues.other" = "%1$d problemen gevonden";
+"verify.result.issuesMessage" = "De reservekopie is nog bruikbaar. Getroffen bestanden worden bij een herstel overgeslagen.";
+"verify.result.unusable" = "De reservekopie is niet bruikbaar";
+"verify.result.unusableMessage" = "De inhoudslijst ontbreekt, is beschadigd of komt van een nieuwere MacReplica.";
+"verify.result.contents" = "Inhoud";
+"verify.result.restore" = "Herstel deze reservekopie …";
+"verify.issue.manifestUnreadable" = "De inhoudslijst (manifest.json) kan niet worden gelezen.";
+"verify.issue.unsupportedVersion" = "De reservekopie gebruikt indelingsversie %1$d; deze MacReplica ondersteunt tot en met versie %2$d.";
+"verify.issue.checksumMissing" = "De reservekopie heeft geen checksum voor de inhoudslijst, dus wijzigingen daarin kunnen niet worden herkend.";
+"verify.issue.checksumMismatch" = "De inhoudslijst is gewijzigd nadat de reservekopie is gemaakt.";
+"verify.issue.unsafePath" = "Onveilig bestandspad geweigerd: %1$@";
+"verify.issue.fileMissing" = "Ontbreekt: %1$@";
+"verify.issue.sizeMismatch" = "Verkeerde grootte: %1$@";
+"verify.issue.hashMismatch" = "Beschadigd (checksum wijkt af): %1$@";
+
+/* Sources and methods */
+"source.homebrew" = "Homebrew";
+"source.appStore" = "Mac App Store";
+"source.package" = "Installatiepakket";
+"source.downloaded" = "Gedownload met %1$@";
+"source.unknown" = "Onbekend";
+"method.homebrewCask" = "Homebrew Cask";
+"method.homebrewFormula" = "Homebrew Formula";
+"method.appStore" = "Mac App Store";
+"method.officialDownload" = "Download van ontwikkelaar";
+"method.manual" = "Handmatige installatie";
+"category.homebrew" = "Te herstellen met Homebrew";
+"category.appStore" = "Te herstellen uit de Mac App Store";
+"category.officialDownload" = "Te herstellen via de website van de ontwikkelaar";
+"category.manual" = "Handmatige installatie nodig";
+"manual.hint.appStore" = "Uit de Mac App Store. Open de App Store en download de app via je aankopen.";
+"manual.hint.candidates" = "Mogelijke Homebrew-pakketten: %1$@. Kies er een bij het herstellen, of download de app bij de ontwikkelaar.";
+"manual.hint.officialDownload" = "Download de huidige versie van de website van de ontwikkelaar.";
+"manual.hint.manual" = "Er is geen automatische bron gevonden. Installeer de app met het originele installatieprogramma of via de website van de ontwikkelaar.";
+"architecture.appleSilicon" = "Apple silicon";
+"architecture.intel" = "Intel";
+"architecture.unknown" = "onbekend";
+"location.user" = "Je eigen bibliotheek";
+"location.system" = "Gedeelde bibliotheek";
+
+/* Time and sizes */
+"time.lessThanMinute" = "minder dan een minuut";
+"time.minutes.one" = "ongeveer %1$d minuut";
+"time.minutes.other" = "ongeveer %1$d minuten";
+"time.hours.one" = "ongeveer %1$d uur";
+"time.hours.other" = "ongeveer %1$d uur";
+"time.hoursMinutes" = "ongeveer %1$d u %2$d min";
+"size.bytes" = "%1$@ bytes";
+"size.kb" = "%1$@ KB";
+"size.mb" = "%1$@ MB";
+"size.gb" = "%1$@ GB";
+
+/* Reports */
+"report.footer" = "Gemaakt met MacReplica %1$@";
+"report.subtitle" = "Reservekopie van %1$@ · macOS %2$@ · %3$@";
+"report.none" = "Geen";
+"report.inventory.title" = "MacReplica-inventaris";
+"report.card.applications" = "Apps";
+"report.taps" = "Extra Homebrew-bronnen";
+"report.manual.title" = "Handmatig te installeren apps";
+"report.manual.intro.one" = "%1$d app kan niet automatisch worden hersteld. Links verwijzen waar bekend naar de officiële website van de ontwikkelaar.";
+"report.manual.intro.other" = "%1$d apps kunnen niet automatisch worden hersteld. Links verwijzen waar bekend naar de officiële website van de ontwikkelaar.";
+"report.openDownloadPage" = "Downloadpagina";
+"report.dryRun.title" = "MacReplica-voorvertoning";
+"report.dryRun.intro" = "Deze voorvertoning laat zien wat een herstel zou doen. Er is niets gewijzigd.";
+"report.dryRun.steps" = "Stappen";
+"report.dryRun.willChange" = "Wordt geïnstalleerd of gekopieerd";
+"report.dryRun.alreadyPresent" = "Al aanwezig";
+"report.dryRun.conflicts" = "Conflicten";
+"report.dryRun.planned" = "Geplande stappen";
+"report.dryRun.needsAdmin" = "Je beheerderswachtwoord is nodig";
+"report.restore.title" = "MacReplica-hersteloverzicht";
+"report.restore.steps" = "Alle stappen";
+"report.restore.notRun" = "Nog niet uitgevoerd";
+"report.column.name" = "Naam";
+"report.column.version" = "Versie";
+"report.column.vendor" = "Ontwikkelaar";
+"report.column.source" = "Bron";
+"report.column.restoreMethod" = "Herstelmethode";
+"report.column.architecture" = "Architectuur";
+"report.column.tap" = "Tap";
+"report.column.appStoreID" = "App Store-ID";
+"report.column.file" = "Bestand";
+"report.column.family" = "Lettertypefamilie";
+"report.column.description" = "Beschrijving";
+"report.column.location" = "Locatie";
+"report.column.size" = "Grootte";
+"report.column.bundleID" = "Bundel-ID";
+"report.column.recommended" = "Aanbevolen methode";
+"report.column.vendorPage" = "Website van ontwikkelaar";
+"report.column.downloadPage" = "Downloadpagina";
+"report.column.notes" = "Opmerkingen";
+"report.column.method" = "Methode";
+"report.column.plannedAction" = "Geplande actie";
+"report.column.result" = "Resultaat";
+
+/* Common additions */
+"common.ok" = "OK";
+
+/* Python development environments */
+"scan.phase.python" = "Python-omgevingen zoeken …";
+"component.python" = "Python-omgevingen";
+"component.python.hint" = "Virtuele omgevingen worden opnieuw opgebouwd met dezelfde Python-versie en pakketten.";
+"python.section.title" = "Ontwikkelomgevingen";
+"python.section.message" = "MacReplica legt je Python-omgevingen vast en bouwt ze op de nieuwe Mac opnieuw op in plaats van ze te kopiëren, want gekopieerde omgevingen werken meestal niet meer. Kies welke je wilt behouden.";
+"python.none" = "Er zijn geen Python-omgevingen gevonden. Mappen zoals Documenten worden alleen doorzocht als je ze toevoegt.";
+"python.search.button" = "Doorzoek een andere map …";
+"python.search.choose" = "Zoek hier";
+"python.search.message" = "Kies een map met Python-projecten, bijvoorbeeld in Documenten.";
+"python.environment" = "Virtuele omgeving: %1$@";
+"python.environmentDetail" = "Python %1$@ · %2$@ pakketten · %3$@";
+"python.manualPackages" = "Geïnstalleerd vanuit lokale mappen of repository’s, dus niet automatisch opnieuw te installeren: %1$@";
+"python.settings.one" = "%1$d Python-instelling uit je shellprofiel";
+"python.settings.other" = "%1$d Python-instellingen uit je shellprofiel";
+"python.source.homebrew" = "via Homebrew";
+"python.source.pyenv" = "via pyenv";
+"python.source.pythonOrg" = "van python.org";
+"python.source.system" = "meegeleverd met macOS";
+"python.requirements.header" = "Vastgelegd door MacReplica voor de omgeving ‘%1$@’ (Python %2$@).\nInstalleer met: python -m pip install -r requirements.txt";
+"kind.pythonEnvironment" = "Python-omgeving";
+"activity.creatingEnvironment" = "Virtuele omgeving aanmaken …";
+"activity.installingPackages" = "Python-pakketten installeren. Dit kan een paar minuten duren …";
+"prediction.recreateEnvironment" = "Wordt opnieuw aangemaakt met de vastgelegde pakketten";
+"prediction.completeEnvironment" = "Er bestaat een compatibele omgeving – ontbrekende pakketten worden toegevoegd";
+"prediction.environmentConflict" = "Op deze locatie staat al iets anders – dit wordt niet aangeraakt";
+"skip.projectFolderMissing" = "Overgeslagen omdat de projectmap %1$@ nog niet bestaat. Kopieer je project naar deze Mac en probeer het opnieuw.";
+"note.pythonManualPackages" = "Installeer deze pakketten zelf opnieuw (ze kwamen uit lokale mappen of repository’s): %1$@";
+"note.pythonPackagesUpdated.one" = "%1$d pakket was niet beschikbaar in de vastgelegde versie; de huidige compatibele versie is geïnstalleerd.";
+"note.pythonPackagesUpdated.other" = "%1$d pakketten waren niet beschikbaar in de vastgelegde versies; de huidige compatibele versies zijn geïnstalleerd.";
+"note.pythonEnvironmentReused" = "Een bestaande compatibele omgeving is behouden en aangevuld.";
+"note.pythonSettings.one" = "%1$d Python-instelling kun je zelf toepassen; zie de herstelinstructies.";
+"note.pythonSettings.other" = "%1$d Python-instellingen kun je zelf toepassen; zie de herstelinstructies.";
+"failure.pythonVersionUnavailable.title" = "Python-versie niet beschikbaar";
+"failure.pythonVersionUnavailable.explanation" = "Homebrew biedt deze Python-versie niet meer aan. Installeer hem met pyenv of via python.org en maak daarna de omgeving aan zoals beschreven in de herstelinstructies.";
+"failure.pythonPackagesIncomplete.title" = "Niet alle Python-pakketten konden worden geïnstalleerd";
+"failure.pythonPackagesIncomplete.explanation" = "De omgeving is aangemaakt, maar sommige pakketten ontbreken. De rest van het herstel heeft hier geen last van. Je kunt het later opnieuw proberen; de technische details noemen de ontbrekende pakketten.";
+"failure.pythonEnvironmentConflict.title" = "Er staat iets anders in de weg";
+"failure.pythonEnvironmentConflict.explanation" = "Op deze locatie bestaat al een andere map of een omgeving met een andere Python-versie. MacReplica wijzigt die niet. Hernoem of verwijder hem en probeer het opnieuw.";
+
+/* Application data */
+"component.applicationData" = "Appgegevens";
+"component.applicationData.hint" = "Mappen met appgegevens die je hebt geselecteerd. Bestaande bestanden worden nooit zonder te vragen overschreven.";
+"appData.section.title" = "Appgegevens";
+"appData.section.message" = "Voeg mappen toe met gegevens die je in apps hebt gemaakt, bijvoorbeeld sjablonen of voorinstellingen in Application Support. Wachtwoorden, sleutels en cookies worden nooit meegenomen.";
+"appData.add.button" = "Voeg map toe …";
+"appData.add.choose" = "Voeg toe";
+"appData.add.message" = "Kies een map met appgegevens om in de reservekopie op te nemen.";
+"appData.summary" = "%1$@ bestanden · %2$@";
+"appData.remove" = "Verwijder uit reservekopie";
+"appData.refused.one" = "%1$d bestand is weggelaten omdat het op een wachtwoord-, sleutel- of cookiebestand lijkt.";
+"appData.refused.other" = "%1$d bestanden zijn weggelaten omdat ze op wachtwoord-, sleutel- of cookiebestanden lijken.";
+"appData.error.title" = "Deze map kan niet worden toegevoegd";
+"appData.error.outsideHome" = "Je kunt alleen mappen binnen je thuismap toevoegen.";
+"appData.error.tooBroad" = "Deze map is te breed. Kies de map van één app, bijvoorbeeld binnen Application Support.";
+"appData.error.sensitive" = "Deze map bevat wachtwoorden, sleutels of privéberichten en wordt nooit in een reservekopie opgenomen.";
+"appData.error.notAFolder" = "Het geselecteerde onderdeel is geen map.";
+"kind.applicationData" = "Appgegevens";
+"note.applicationData" = "Gekopieerd: %1$d bestanden, al identiek: %2$d, bestaande bestanden behouden: %3$d.";
+
+/* Backup package */
+"saved.titlePartial" = "Reservekopie bewaard, maar onvolledig";
+"saved.partial.one" = "%1$d onderdeel kon niet worden opgenomen";
+"saved.partial.other" = "%1$d onderdelen konden niet worden opgenomen";
+"saved.partialMessage" = "Al het andere is bewaard en gecontroleerd. De ontbrekende onderdelen staan hieronder en in de herstelinstructies.";
+"saved.moreIssues" = "en nog %1$d";
+"saved.size" = "%1$@ · %2$@ bestanden";
+"saved.contents" = "Apps: %1$@ · Homebrew-pakketten: %2$@ · Python-omgevingen: %3$@ · Gegevensmappen: %4$@ · Lettertypen: %5$@ · ICC-profielen: %6$@";
+"saved.transfer.title" = "De reservekopie naar de nieuwe Mac overzetten";
+"saved.transfer.intro" = "Kopieer de hele map van de reservekopie naar de nieuwe Mac. Elk van deze manieren werkt:";
+"saved.transfer.drive" = "Een externe schijf of USB-stick";
+"saved.transfer.network" = "Een gedeelde map op je netwerk";
+"saved.transfer.cloud" = "Een cloudmap zoals iCloud Drive (wacht tot het uploaden klaar is)";
+"saved.transfer.airdrop" = "AirDrop, voor kleinere reservekopieën";
+"saved.openInstructions" = "Herstelinstructies";
+"backupIssue.unreadable" = "kon niet worden gelezen";
+"backupIssue.refusedSensitive" = "weggelaten (lijkt een wachtwoord-, sleutel- of cookiebestand)";
+"backupIssue.tooLarge" = "weggelaten (map te groot)";
+"backupIssue.changedDuringBackup" = "gewijzigd tijdens het kopiëren";
+"backup.readme" = "Deze map is een MacReplica-reservekopie (%1$@).\n\nZo herstel je hem op een nieuwe Mac:\n1. Kopieer deze hele map naar de nieuwe Mac.\n2. Open MacReplica en kies ‘Herstel’.\n3. Selecteer deze map.\n\nStapsgewijze instructies: restore/RESTORE_INSTRUCTIONS.html\nOverzicht van de inhoud: reports/inventory.html\n\nWijzig of hernoem geen bestanden in deze map; MacReplica controleert elk bestand voordat het wordt hersteld.\n";
+
+/* Restore instructions */
+"guide.title" = "Zo herstel je deze reservekopie";
+"guide.intro" = "Deze reservekopie is gemaakt met MacReplica. Hij bevat een beschrijving van je apps en instellingen, plus kopieën van lettertypen, kleurprofielen en de bestanden die je hebt geselecteerd. Met deze stappen ga je van de oude Mac naar de nieuwe.";
+"guide.contents" = "Wat er in deze reservekopie staat";
+"guide.automatic" = "Automatisch hersteld";
+"guide.complete" = "Alles wat is geselecteerd, staat in deze reservekopie en is gecontroleerd.";
+"guide.partial.one" = "%1$d onderdeel kon niet in deze reservekopie worden opgenomen:";
+"guide.partial.other" = "%1$d onderdelen konden niet in deze reservekopie worden opgenomen:";
+"guide.oldMac.title" = "Op de oude Mac";
+"guide.oldMac.1" = "Open MacReplica.";
+"guide.oldMac.2" = "Kies ‘Maak reservekopie’ en wacht tot de scan klaar is.";
+"guide.oldMac.3" = "Kies wat je wilt behouden, bijvoorbeeld Python-omgevingen en appgegevens.";
+"guide.oldMac.4" = "Bewaar de reservekopie.";
+"guide.oldMac.5" = "Controleer de reservekopie (MacReplica doet dit automatisch bij het bewaren; je kunt het herhalen met ‘Controleer reservekopie’).";
+"guide.oldMac.6" = "Kopieer de map van de reservekopie veilig naar de nieuwe Mac.";
+"guide.transfer.title" = "De reservekopie overzetten";
+"guide.transfer.intro" = "Kopieer de hele map ‘%1$@’, niet alleen delen ervan. Elk van deze manieren werkt:";
+"guide.transfer.drive" = "een externe schijf of USB-stick";
+"guide.transfer.network" = "een gedeelde map op je netwerk";
+"guide.transfer.cloud" = "een cloudmap zoals iCloud Drive (wacht tot alle bestanden zijn geüpload en gedownload)";
+"guide.transfer.airdrop" = "AirDrop, voor kleinere reservekopieën";
+"guide.transfer.check" = "Op de nieuwe Mac kun je in MacReplica ‘Controleer reservekopie’ kiezen om zeker te weten dat er onderweg niets verloren is gegaan.";
+"guide.newMac.title" = "Op de nieuwe Mac";
+"guide.newMac.1" = "Download MacReplica, zet het in de map Apps en open het.";
+"guide.newMac.2" = "Kies ‘Herstel’ en selecteer de map van de reservekopie.";
+"guide.newMac.3" = "Bekijk wat MacReplica in de reservekopie heeft gevonden.";
+"guide.newMac.4" = "Kies wat je wilt herstellen. Gebruik ‘Voorvertoning (proefdraai)’ om eerst elke stap te zien.";
+"guide.newMac.5" = "Sta toe waar macOS om vraagt: de installatie van de Command Line Tools en, waar nodig, je beheerderswachtwoord.";
+"guide.newMac.6" = "Start het herstel en houd de Mac wakker tot het klaar is.";
+"guide.newMac.7" = "Bekijk het resultaat. Mislukte onderdelen kun je opnieuw proberen.";
+"guide.newMac.8" = "Installeer de apps onder ‘Handmatig te installeren apps’ zelf.";
+"guide.python.title" = "Python-omgevingen";
+"guide.python.intro" = "MacReplica bouwt deze omgevingen automatisch opnieuw op: het installeert de vastgelegde Python-versie met Homebrew, maakt een nieuwe virtuele omgeving aan en installeert de vastgelegde pakketten. De opdrachten hieronder doen hetzelfde met de hand.";
+"guide.python.location" = "Locatie: %1$@";
+"guide.python.packages.one" = "%1$d pakket vastgelegd";
+"guide.python.packages.other" = "%1$d pakketten vastgelegd";
+"guide.python.manualCommands" = "Zo bouw je de omgeving met de hand opnieuw op in Terminal:";
+"guide.python.backupFolder" = "reservekopiemap";
+"guide.python.manualPackages" = "Installeer deze pakketten zelf opnieuw, want ze kwamen uit lokale mappen of repository’s: %1$@";
+"guide.python.settings" = "Python-instellingen";
+"guide.python.settingsIntro" = "Deze instellingen zijn in je shellprofiel gevonden. MacReplica wijzigt geen shellprofielen; voeg ze zelf toe als je ze nodig hebt:";
+"guide.appData.intro" = "Deze mappen worden naar dezelfde plek teruggezet. Bestanden die al bestaan met een andere inhoud, worden behouden, tenzij je ervoor kiest ze te vervangen.";
+"guide.appData.files.one" = "%1$d bestand";
+"guide.appData.files.other" = "%1$d bestanden";
+"guide.trouble.title" = "Als er iets misgaat";
+"guide.trouble.1" = "Mislukte onderdelen kun je aan het einde van het herstel opnieuw proberen, bijvoorbeeld nadat je bent ingelogd bij de App Store of als de internetverbinding terug is.";
+"guide.trouble.2" = "Logbestanden staan in ~/Library/Logs/MacReplica. Kies in MacReplica ‘Help › Open logbestanden’ of ‘Help › Exporteer diagnoserapport’.";
+"guide.trouble.3" = "Een onderbroken herstel gaat de volgende keer dat je MacReplica opent verder waar het is gestopt.";
+
+/* Logs, help and startup */
+"help.openLogs" = "Open logbestanden";
+"help.exportDiagnostics" = "Exporteer diagnoserapport …";
+"help.support" = "Steun MacReplica";
+"logs.hint" = "Details worden vastgelegd in het logbestand (%1$@).";
+"diagnostics.saveMessage" = "Het rapport bevat technische details en recente regels uit het logbestand. Persoonlijke paden worden ingekort en er zit geen inhoud van reservekopieën in.";
+"diagnostics.failed" = "Het diagnoserapport kon niet worden bewaard";
+"safeMode.title" = "MacReplica is de vorige keer niet volledig gestart";
+"safeMode.message" = "Het stopte tijdens de stap ‘%1$@’. MacReplica draait nu in veilige modus: onvoltooide herstelsessies worden niet automatisch geladen en de taal is Engels. De logbestanden kunnen helpen om de oorzaak te vinden.";
+"safeMode.continue" = "Ga normaal door";
+"startup.stage.launch" = "starten";
+"startup.stage.configuration" = "configuratie laden";
+"startup.stage.localization" = "talen laden";
+"startup.stage.storage" = "opgeslagen herstelsessies lezen";
+"startup.stage.environment" = "deze Mac controleren";
+"startup.stage.userInterface" = "venster openen";
+
+/* Version and updates */
+"about.versionBuild" = "Versie %1$@ (build %2$@)";
+"about.platform" = "Voor macOS %1$@ of nieuwer · Apple silicon en Intel";
+"update.check" = "Zoek naar updates …";
+"update.upToDate" = "MacReplica is up-to-date.";
+"update.currentVersion" = "Je gebruikt versie %1$@.";
+"update.available" = "MacReplica %1$@ is beschikbaar. Je gebruikt nu versie %2$@.";
+"update.availableHint" = "MacReplica installeert updates niet zelf. Open de releasepagina om de nieuwe versie te downloaden.";
+"update.unable" = "MacReplica kan nu niet naar updates zoeken. Probeer het later opnieuw.";
+"update.viewRelease" = "Bekijk release";
+"update.automatic" = "Zoek eens per week naar updates";
+"update.prereleases" = "Neem ook prereleaseversies mee";
+
+/* Permissions and scanned locations */
+"access.section.title" = "Gescande locaties";
+"access.blocked.title" = "Sommige locaties konden niet worden gelezen";
+"access.blocked.message" = "macOS heeft MacReplica geen toestemming gegeven om ze te lezen, dus hun inhoud zit niet in deze reservekopie. Al het andere is normaal gescand. Wil je ze toch meenemen, geef dan toegang in ‘Systeeminstellingen › Privacy en beveiliging’ en scan opnieuw.";
+"access.openSettings" = "Open Privacy en beveiliging";
+"access.scanned" = "Gescand";
+"access.notFound" = "Niet op deze Mac";
+"access.noPermission" = "Geen toestemming";
+"access.unsupported" = "Niet bruikbaar";
+"access.area.applications" = "Apps";
+"access.area.userFonts" = "Lettertypen (je eigen bibliotheek)";
+"access.area.systemFonts" = "Lettertypen (gedeeld)";
+"access.area.userColorProfiles" = "ICC-profielen (je eigen bibliotheek)";
+"access.area.systemColorProfiles" = "ICC-profielen (gedeeld)";
+"access.area.homebrew" = "Homebrew";
+"access.area.appStore" = "Mac App Store";
+"access.area.python" = "Python-omgevingen";
+"access.area.applicationData" = "Appgegevens";
+"report.locations" = "Gescande locaties";
+"report.column.area" = "Gebied";
+
+/* Application data profiles */
+"appData.profileName" = "%1$@ – %2$@";
+"appData.category.actions" = "Handelingen";
+"appData.category.brushes" = "Penselen";
+"appData.category.styles" = "Stijlen";
+"appData.category.gradients" = "Verlopen";
+"appData.category.patterns" = "Patronen";
+"appData.category.swatches" = "Stalen";
+"appData.category.presets" = "Voorinstellingen";
+"appData.category.shortcuts" = "Toetscombinaties";
+"appData.category.luts" = "LUT’s";
+"appData.category.fusionTemplates" = "Fusion-sjablonen";
+"appData.category.fusionMacros" = "Fusion-macro’s";
+"note.applicationVersionDiffers" = "De gegevens zijn hersteld voor %1$@, dat niet op deze Mac is geïnstalleerd. Gebruik je een nieuwere versie, importeer de voorinstellingen dan daar.";
+
+/* Developer settings */
+"component.developerSettings" = "Ontwikkelaarsinstellingen";
+"component.developerSettings.hint" = "Je Git-instellingen, zonder tokens of privéserveradressen.";
+"developer.git" = "Git-instellingen";
+"developer.git.detail" = "Naam, aliassen en voorkeuren uit ~/.gitconfig. Secties die tokens of privéservers kunnen bevatten, worden weggelaten.";
+"developer.git.email" = "Neem mijn e-mailadres mee";
+"kind.gitConfiguration" = "Git-instellingen";
+
+/* Credentials */
+"component.credentials" = "Inloggegevens (versleuteld)";
+"component.credentials.hint" = "Worden alleen hersteld als je daarvoor kiest en de wachtzin invoert die je bij het maken van de reservekopie hebt ingesteld.";
+"credentials.section.title" = "Inloggegevens (geavanceerd)";
+"credentials.section.message" = "Wachtwoorden, tokens, cookies en de sleutelhanger zitten nooit in een reservekopie. SSH-sleutels zijn de enige inloggegevens die MacReplica kan overzetten, en alleen als je dit inschakelt: ze worden versleuteld met een wachtzin die je zelf kiest.";
+"credentials.ssh.toggle" = "Neem SSH-sleutels mee (versleuteld)";
+"credentials.ssh.none" = "Er zijn geen SSH-sleutels gevonden.";
+"credentials.ssh.description" = "MacReplica neemt je SSH-sleutels en SSH-configuratie uit ~/.ssh mee (privé- en openbare sleutels, config, known_hosts).";
+"credentials.ssh.risk" = "Iedereen die de reservekopie en de wachtzin in handen krijgt, kan inloggen op elke server waartoe deze sleutels toegang geven.";
+"credentials.enabled" = "SSH-sleutels worden versleuteld en opgeslagen in de map met inloggegevens van de reservekopie.";
+"credentials.optIn.title" = "SSH-sleutels meenemen?";
+"credentials.optIn.warningTitle" = "Deze reservekopie bevat gevoelige gegevens";
+"credentials.optIn.warning" = "Het overzetten van inloggegevens kan gevoelige authenticatie-informatie omvatten. Iedereen die deze reservekopie en de bijbehorende wachtzin in handen krijgt, kan mogelijk toegang krijgen tot de geselecteerde accounts of diensten. Schakel dit alleen in als je het risico begrijpt en aanvaardt.";
+"credentials.optIn.storage" = "De sleutels worden versleuteld (AES-256-GCM) met een sleutel die van je wachtzin is afgeleid, en apart opgeslagen in de map met inloggegevens van de reservekopie. De wachtzin zelf wordt nergens bewaard. Vergeet je hem, dan kunnen de sleutels niet meer uit de reservekopie worden teruggehaald.";
+"credentials.passphrase" = "Wachtzin";
+"credentials.passphraseConfirm" = "Herhaal wachtzin";
+"credentials.passphraseRules" = "Minstens %1$d tekens. Bewaar hem op een veilige plek, los van de reservekopie.";
+"credentials.optIn.understood" = "Ik begrijp het risico en dat een verloren wachtzin niet kan worden teruggehaald.";
+"credentials.optIn.enable" = "Neem versleuteld mee";
+"credentials.restore.title" = "Wachtzin voor inloggegevens";
+"credentials.restore.message" = "Deze reservekopie bevat versleutelde SSH-sleutels. Voer de wachtzin in die je bij het maken van de reservekopie hebt gekozen. Bestaande sleutels op deze Mac worden niet vervangen, tenzij je hebt gekozen om bestaande bestanden te vervangen.";
+"credentials.restore.skip" = "Herstel zonder inloggegevens";
+"kind.credential" = "Versleutelde inloggegevens";
+"skip.passphraseNotProvided" = "Overgeslagen omdat er geen wachtzin is ingevoerd";
+"failure.credentialCannotBeOpened.title" = "Inloggegevens konden niet worden geopend";
+"failure.credentialCannotBeOpened.explanation" = "De wachtzin is onjuist of het versleutelde bestand is beschadigd. Er is niets gewijzigd. Je kunt het opnieuw proberen met de juiste wachtzin; log anders opnieuw in of maak nieuwe sleutels aan op deze Mac.";
+
+/* Restore instructions: developer settings, sign-ins, permissions */
+"guide.developer.intro" = "Je Git-instellingen worden hersteld naar ~/.gitconfig als dat bestand nog niet bestaat. Tokens, credential helpers voor specifieke servers en privéserveradressen zijn weggelaten.";
+"guide.developer.removed" = "Weggelaten secties, stel ze opnieuw in als je ze nodig hebt: %1$@";
+"guide.accounts.title" = "Logins en inloggegevens";
+"guide.accounts.intro" = "Als je een app herstelt, worden de app en de instellingen hersteld, niet je login. Houd hier rekening mee:";
+"guide.accounts.configuration" = "Configuratie (appinstellingen, voorinstellingen, Git-instellingen) wordt hersteld waar MacReplica dat ondersteunt.";
+"guide.accounts.reauthentication" = "Logins worden niet hersteld: apps en diensten zoals Adobe, Microsoft, Google, GitHub, cloudopslag en abonnementen vragen je opnieuw in te loggen, omdat hun logins aan de oude Mac zijn gekoppeld.";
+"guide.accounts.keychain" = "De macOS-sleutelhanger wordt nooit gekopieerd. Gebruik ‘iCloud-sleutelhanger’ (app ‘Wachtwoorden’) om je bewaarde wachtwoorden naar de nieuwe Mac te brengen.";
+"guide.accounts.noCredentials" = "Deze reservekopie bevat geen inloggegevens.";
+"guide.accounts.vault" = "Deze reservekopie bevat versleutelde inloggegevens voor %1$@ (%2$@) in %3$@. Ze kunnen alleen worden hersteld met de wachtzin die bij het maken van de reservekopie is gekozen.";
+"guide.access.title" = "Locaties die niet konden worden gelezen";
+"guide.access.intro" = "macOS heeft MacReplica niet toegestaan deze locaties te lezen, dus hun inhoud ontbreekt in deze reservekopie:";

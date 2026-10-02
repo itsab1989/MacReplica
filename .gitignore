@@ -1,0 +1,41 @@
+# Build output
+.build/
+build/
+dist/
+*.app
+*.dmg
+*.pkg
+*.zip
+*.xcarchive
+DerivedData/
+.swiftpm/
+Package.resolved
+
+# Xcode user data
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+xcuserdata/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs, reports and backups produced while testing
+*.log
+mutation-report/
+MacReplica-Backup-*/
+MacReplica-Staging/
+
+# Python tooling caches
+__pycache__/
+*.pyc
+.venv/
+
+# Secrets must never be committed
+*.p12
+*.cer
+*.pem
+*.key
+*.mobileprovision
+.env

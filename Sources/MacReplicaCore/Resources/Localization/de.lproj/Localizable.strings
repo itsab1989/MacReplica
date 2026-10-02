@@ -1,0 +1,653 @@
+/* MacReplica — Deutsch.
+   Platzhalter sind positionsbezogen (%1$@ Text, %1$d Zahl) und dürfen umgestellt werden.
+   Pluralschlüssel enden auf .one / .other; die Anzahl ist immer %1$d. */
+
+/* Startseite */
+"home.tagline" = "Bring deine Apps, Schriften und Farbprofile auf einen frisch installierten Mac.";
+"home.inventory.title" = "Backup erstellen";
+"home.inventory.subtitle" = "Scanne diesen Mac und sichere alles, was MacReplica später wiederherstellen kann.";
+"home.restore.title" = "Wiederherstellen";
+"home.restore.subtitle" = "Spiel ein Backup auf diesen Mac zurück.";
+"home.verify.title" = "Backup prüfen";
+"home.verify.subtitle" = "Stell sicher, dass ein Backup vollständig und unbeschädigt ist.";
+"home.dryRunHint" = "Du kannst dir jede Wiederherstellung vorab in einer Vorschau ansehen, bevor sich etwas ändert.";
+
+/* Allgemein */
+"common.back" = "Zurück";
+"common.backToStart" = "Zum Start";
+"common.cancel" = "Abbrechen";
+"common.continue" = "Weiter";
+"common.done" = "Fertig";
+"common.technicalDetails" = "Technische Details";
+"common.version" = "Version %1$@";
+
+/* Menü und Über */
+"menu.about" = "Über MacReplica";
+"menu.help" = "MacReplica-Hilfe";
+"about.version" = "Version %1$@";
+"about.description" = "MacReplica erfasst deine Apps, Homebrew-Pakete, Schriften und Farbprofile und stellt sie auf einem neuen oder frisch installierten Mac wieder her.";
+"about.kofi" = "MacReplica ist kostenlos und wird es immer bleiben. Wenn es dir nützlich ist, ist ein Kaffee auf Ko-fi eine nette Art, Danke zu sagen — völlig optional, und die App bleibt so oder so voll funktionsfähig.";
+"about.kofiButton" = "Auf Ko-fi unterstützen";
+"about.github" = "Projekt auf GitHub";
+"about.license" = "Open Source unter der GNU General Public License v3.0";
+
+/* Einstellungen */
+"settings.language" = "Sprache";
+"settings.languageHint" = "Die App und ihre Berichte wechseln sofort. Einige Standard-Menübefehle folgen erst nach einem Neustart von MacReplica.";
+"settings.logs" = "Protokolldateien";
+"settings.openLogs" = "Im Finder zeigen";
+
+/* Scan */
+"scan.title" = "Mac wird gescannt";
+"scan.subtitle" = "Das dauert meist weniger als eine Minute.";
+"scan.phase.applications" = "Programme werden erfasst …";
+"scan.phase.homebrew" = "Homebrew wird geprüft …";
+"scan.phase.appStore" = "Apps aus dem Mac App Store werden geprüft …";
+"scan.phase.matching" = "Passende Homebrew-Pakete werden gesucht …";
+"scan.phase.fonts" = "Schriften werden gesammelt …";
+"scan.phase.colorProfiles" = "Farbprofile werden gesammelt …";
+"scan.readOnly" = "Der Scan liest nur Informationen aus. An diesem Mac wird nichts verändert.";
+"inventory.failed.title" = "Der Scan konnte nicht abgeschlossen werden";
+"inventory.failed.message" = "Beim Scannen ist ein unerwartetes Problem aufgetreten. Bitte versuch es noch einmal. Falls es weiterhin passiert, helfen die technischen Details unten bei der Ursachensuche.";
+
+/* Scan-Ergebnisse */
+"results.title" = "Scan abgeschlossen";
+"results.subtitle.one" = "%1$d Programm gefunden";
+"results.subtitle.other" = "%1$d Programme gefunden";
+"results.appsHeading" = "So werden die Apps wiederhergestellt";
+"results.moreHeading" = "Außerdem enthalten";
+"results.showApps" = "Alle Programme anzeigen";
+"results.save" = "Backup sichern …";
+"inventory.warning.homebrewNotInstalled" = "Homebrew ist auf diesem Mac nicht installiert. Die Apps werden trotzdem erfasst, und MacReplica installiert Homebrew bei Bedarf während der Wiederherstellung.";
+"inventory.warning.homebrewBroken" = "Homebrew ist installiert, reagiert aber nicht. Homebrew-Pakete konnten nicht erfasst werden.";
+"inventory.warning.homebrewListFailed" = "Die Liste der Homebrew-Pakete konnte nicht gelesen werden. Homebrew-Pakete fehlen in diesem Backup.";
+"inventory.warning.masNotInstalled" = "Es wurden Apps aus dem Mac App Store gefunden, aber das Hilfsprogramm „mas“ ist nicht installiert. Einige App-Store-Apps musst du später eventuell selbst laden.";
+"inventory.warning.masListFailed" = "Die Liste der Apps aus dem Mac App Store konnte nicht gelesen werden.";
+"inventory.warning.catalogUnavailable" = "Der Homebrew-Katalog konnte nicht geladen werden (keine Internetverbindung?). Selbst installierte Apps wurden nicht auf Homebrew-Pakete geprüft.";
+
+/* Zuordnung */
+"match.title" = "Mögliche Treffer gefunden";
+"match.message" = "MacReplica hat Homebrew-Pakete gefunden, die zu diesen Apps passen könnten, ist sich aber nicht sicher genug, um selbst eines auszuwählen. Bitte wähle das passende Paket aus oder installiere die App später selbst.";
+"match.pickerLabel" = "Homebrew-Paket";
+"match.candidate" = "%1$@ (%2$@)";
+"match.none" = "Keins davon – selbst installieren";
+
+/* Sichern */
+"inventory.save.choose" = "Hier sichern";
+"inventory.save.message" = "Wähl aus, wo das Backup gespeichert werden soll. Ein externes Laufwerk oder ein Cloud-Ordner eignet sich gut, damit das Backup auf dem neuen Mac verfügbar ist.";
+"saving.title" = "Backup wird gesichert";
+"saving.subtitle" = "Schriften und Farbprofile werden kopiert und geprüft.";
+"saved.title" = "Backup gesichert";
+"saved.verified" = "Das Backup ist vollständig und wurde geprüft.";
+"saved.message" = "Jede kopierte Datei wurde mit dem Original verglichen.";
+"saved.location" = "Speicherort";
+"saved.nextSteps" = "Öffne MacReplica auf dem neuen Mac, wähle „Wiederherstellen“ und dann diesen Ordner.";
+"saved.openReport" = "Bericht öffnen";
+"saved.showInFinder" = "Im Finder zeigen";
+"backup.failed.title" = "Das Backup konnte nicht gesichert werden";
+"backup.failed.message" = "Nicht alle Dateien konnten kopiert oder geprüft werden. Das unvollständige Backup wurde entfernt. Bitte versuch es noch einmal, eventuell an einem anderen Ort.";
+"backup.failed.notWritable" = "MacReplica kann nicht in diesen Ordner schreiben. Bitte wähl einen anderen Ort.";
+
+/* Backup öffnen */
+"backup.open.choose" = "Backup öffnen";
+"backup.open.message" = "Wähl den MacReplica-Backup-Ordner aus (er enthält eine Datei namens manifest.json).";
+"backup.unreadable.title" = "Das ist kein lesbares MacReplica-Backup";
+"backup.unreadable.message" = "Der Ordner enthält keine gültige manifest.json. Bitte wähl den Ordner aus, den MacReplica erstellt hat, zum Beispiel „MacReplica-Backup-2026-10-02-1530“.";
+"backup.newerVersion.title" = "Dieses Backup braucht ein neueres MacReplica";
+"backup.newerVersion.message" = "Das Backup wurde mit einer neueren Version von MacReplica erstellt, deren Format diese Version nicht versteht. Bitte aktualisiere MacReplica und versuch es erneut.";
+"backup.damaged.title" = "Das Backup ist beschädigt";
+"backup.damaged.checksum" = "Das Inhaltsverzeichnis des Backups wurde seit der Erstellung verändert oder beschädigt, daher kann MacReplica ihm nicht vertrauen. Bitte verwende eine andere Kopie des Backups.";
+
+/* Fortsetzen */
+"resume.title" = "Eine frühere Wiederherstellung wurde nicht abgeschlossen.";
+"resume.message" = "Möchtest du dort fortsetzen, wo MacReplica aufgehört hat?";
+"resume.continue" = "Fortsetzen";
+"resume.discard" = "Verwerfen";
+"resume.backupMissing.title" = "Das Backup wurde nicht gefunden";
+"resume.backupMissing.message" = "Die unterbrochene Wiederherstellung nutzte das Backup unter %1$@, das nicht verfügbar ist. Bitte schließ das Laufwerk mit dem Backup an und versuch es erneut.";
+
+/* Auswahl für die Wiederherstellung */
+"restore.select.title" = "Was soll wiederhergestellt werden?";
+"restore.select.subtitle" = "Backup vom %1$@ · macOS %2$@ · %3$@";
+"restore.select.individual" = "Einzelne Objekte wählen …";
+"restore.select.summary.one" = "%1$d Objekt ausgewählt";
+"restore.select.summary.other" = "%1$d Objekte ausgewählt";
+"restore.select.dryRun" = "Vorschau (Testlauf)";
+"restore.select.start" = "Wiederherstellen";
+"restore.select.conflictQuestion" = "Wenn eine Schrift oder ein Farbprofil schon vorhanden ist:";
+"restore.select.conflictHint" = "Identische Dateien werden immer erkannt und übersprungen. MacReplica fragt nach, bevor etwas ersetzt wird.";
+"restore.select.damaged.one" = "%1$d Datei in diesem Backup ist beschädigt";
+"restore.select.damaged.other" = "%1$d Dateien in diesem Backup sind beschädigt";
+"restore.select.damagedHint" = "Beschädigte Dateien werden übersprungen. Alles andere lässt sich normal wiederherstellen.";
+"restore.select.otherArchitecture" = "Dieses Backup stammt von einem anderen Mac-Typ";
+"restore.select.otherArchitectureHint" = "Das Backup wurde auf einem Mac mit %1$@ erstellt, dieser Mac nutzt %2$@. MacReplica installiert nach Möglichkeit die passende Version jeder App und weist dich auf Apps hin, die hier nicht laufen.";
+
+"component.applications" = "Programme";
+"component.applications.hint" = "Selbst installierte Apps; MacReplica nutzt Homebrew, wenn es ein verlässliches Paket gibt.";
+"component.brewFormulae" = "Homebrew Formulae";
+"component.brewFormulae.hint" = "Mit Homebrew installierte Befehlszeilenprogramme.";
+"component.brewCasks" = "Homebrew Casks";
+"component.brewCasks.hint" = "Apps und andere Pakete, die mit Homebrew installiert wurden.";
+"component.appStore" = "Mac App Store";
+"component.appStore.hint" = "Apps aus dem Mac App Store; du musst im App Store angemeldet sein.";
+"component.fonts" = "Schriften";
+"component.fonts.hint" = "Schriften aus deinem persönlichen und dem gemeinsamen Schriftordner.";
+"component.colorProfiles" = "ICC-Profile";
+"component.colorProfiles.hint" = "Farbprofile für Monitore, Drucker und Papiere.";
+
+"taps.title" = "Zusätzliche Homebrew-Quellen";
+"taps.message" = "Einige Pakete stammen aus Quellen außerhalb der offiziellen Homebrew-Sammlung (sogenannte „Taps“). Erlaube nur Quellen, denen du vertraust. Pakete aus nicht erlaubten Quellen werden übersprungen.";
+
+"items.title" = "Einzelne Objekte wählen";
+"items.search" = "Suchen";
+"items.selectAll" = "Alle";
+"items.selectNone" = "Keine";
+
+/* Konflikte */
+"conflict.title.one" = "%1$d Datei ist bereits vorhanden";
+"conflict.title.other" = "%1$d Dateien sind bereits vorhanden";
+"conflict.message" = "Diese Schriften oder Farbprofile gibt es auf diesem Mac bereits mit anderem Inhalt. Was soll MacReplica tun?";
+"conflict.keep" = "Vorhandene behalten";
+"conflict.replace" = "Ersetzen";
+"conflict.skip" = "Überspringen";
+"conflict.applyToAll" = "Für alle übernehmen";
+"conflict.replaceHint" = "Wird eine Datei ersetzt, wird die vorhandene nach ~/Library/Application Support/MacReplica/Replaced Files verschoben und nicht gelöscht.";
+
+/* Administratorrechte */
+"admin.title" = "Bevor die Wiederherstellung startet";
+"admin.clt.title" = "macOS fragt nach der Installation der Command Line Tools";
+"admin.clt.message" = "Homebrew braucht die Command Line Tools von Apple. Klick im macOS-Fenster auf „Installieren“. MacReplica wartet und macht danach automatisch weiter.";
+"admin.password.message" = "macOS fragt nach deinem Administratorpasswort, weil:";
+"admin.password.homebrew" = "Homebrew muss installiert werden. Es wird in einen Systemordner installiert.";
+"admin.password.files" = "Einige Schriften oder Farbprofile kommen in Ordner, die alle Benutzer dieses Macs gemeinsam nutzen.";
+"admin.password.privacy" = "Das Passwort wird in einem normalen macOS-Fenster eingegeben. MacReplica sieht oder speichert es nie.";
+"admin.continue" = "Weiter";
+"admin.reason.homebrew" = "MacReplica möchte Homebrew installieren. Dafür sind Administratorrechte nötig.";
+"admin.reason.files" = "MacReplica möchte Schriften und Farbprofile in Ordner kopieren, die alle Benutzer dieses Macs gemeinsam nutzen (Schriften: %1$d, Farbprofile: %2$d).";
+"askpass.title" = "Administratorpasswort erforderlich";
+"askpass.message" = "Homebrew braucht dein Administratorpasswort, um die Installation einer App abzuschließen, die MacReplica gerade wiederherstellt. Das Passwort geht direkt an macOS und wird nicht gespeichert.";
+"askpass.ok" = "OK";
+
+/* Vorschau */
+"dryRun.title" = "Vorschau";
+"dryRun.subtitle" = "Das würde eine Wiederherstellung tun. Es wurde nichts verändert.";
+"dryRun.checking" = "Prüfe, was schon auf diesem Mac ist …";
+"dryRun.export" = "Bericht exportieren …";
+"dryRun.group.change.one" = "%1$d Objekt wird installiert oder kopiert";
+"dryRun.group.change.other" = "%1$d Objekte werden installiert oder kopiert";
+"dryRun.group.present.one" = "%1$d Objekt ist schon auf diesem Mac";
+"dryRun.group.present.other" = "%1$d Objekte sind schon auf diesem Mac";
+"dryRun.group.conflict.one" = "%1$d Datei ist bereits mit anderem Inhalt vorhanden";
+"dryRun.group.conflict.other" = "%1$d Dateien sind bereits mit anderem Inhalt vorhanden";
+"dryRun.group.skip.one" = "%1$d Objekt wird übersprungen";
+"dryRun.group.skip.other" = "%1$d Objekte werden übersprungen";
+"dryRun.group.manual.one" = "%1$d App muss von Hand installiert werden";
+"dryRun.group.manual.other" = "%1$d Apps müssen von Hand installiert werden";
+
+"prediction.install" = "Wird mit %1$@ installiert";
+"prediction.installCommandLineTools" = "Wird installiert (macOS bittet dich um Bestätigung)";
+"prediction.installHomebrew" = "Wird installiert (braucht dein Administratorpasswort)";
+"prediction.addTap" = "Wird als Homebrew-Quelle hinzugefügt";
+"prediction.copy" = "Wird kopiert";
+"prediction.alreadyPresent" = "Schon installiert – wird übersprungen";
+"prediction.alreadyPresentVersion" = "Version %1$@ ist schon installiert – wird übersprungen";
+"prediction.identical" = "Eine identische Datei ist schon vorhanden – wird übersprungen";
+"prediction.conflictKeep" = "Eine andere Datei mit diesem Namen ist vorhanden – sie wird behalten";
+"prediction.conflictReplace" = "Eine andere Datei mit diesem Namen ist vorhanden – sie wird ersetzt";
+"prediction.conflictSkip" = "Eine andere Datei mit diesem Namen ist vorhanden – wird übersprungen";
+"prediction.damaged" = "Die Kopie im Backup ist beschädigt – wird übersprungen";
+"prediction.afterPrerequisite" = "Wird installiert, sobald Homebrew bereit ist";
+
+/* Fortschritt */
+"progress.title" = "Wiederherstellung läuft";
+"progress.subtitle" = "MacReplica arbeitet jedes Objekt ab und prüft das Ergebnis.";
+"progress.position" = "%1$d / %2$d";
+"progress.remaining" = "noch %1$@";
+"progress.succeeded" = "Erfolgreich: %1$d";
+"progress.failed" = "Fehlgeschlagen: %1$d";
+"progress.skipped" = "Übersprungen: %1$d";
+"progress.recent" = "Erledigt";
+"progress.finishing" = "Wird abgeschlossen …";
+"progress.stopping" = "Wird nach dem aktuellen Schritt gestoppt …";
+"progress.keepOpen" = "Bitte lass MacReplica geöffnet und deinen Mac wach.";
+"progress.stop" = "Stoppen";
+"progress.continue" = "Weitermachen";
+"progress.stopConfirm.title" = "Wiederherstellung stoppen?";
+"progress.stopConfirm.message" = "MacReplica stoppt nach dem aktuellen Schritt. Du kannst später an dieser Stelle fortsetzen.";
+
+"activity.checking" = "Prüfe, ob es schon installiert ist …";
+"activity.downloading" = "Wird geladen …";
+"activity.installing" = "Wird installiert …";
+"activity.copying" = "Wird kopiert …";
+"activity.verifying" = "Ergebnis wird geprüft …";
+"activity.waitingForCommandLineTools" = "Warte auf die Command Line Tools. Bitte klick im macOS-Fenster auf „Installieren“ und warte, bis die Installation fertig ist.";
+"activity.waitingForAdmin" = "Warte auf dein Administratorpasswort …";
+
+"kind.commandLineTools" = "Apple Command Line Tools";
+"kind.homebrew" = "Homebrew";
+"kind.tap" = "Homebrew-Quelle";
+"kind.masTool" = "Mac App Store-Hilfsprogramm";
+"kind.font" = "Schrift";
+"kind.colorProfile" = "ICC-Profil";
+
+/* Zusammenfassung */
+"summary.title.done" = "Wiederherstellung abgeschlossen";
+"summary.title.problems" = "Wiederherstellung mit Problemen beendet";
+"summary.title.stopped" = "Wiederherstellung gestoppt";
+"summary.succeeded" = "erfolgreich";
+"summary.failed" = "fehlgeschlagen";
+"summary.skipped" = "übersprungen";
+"summary.stopped.title" = "Die Wiederherstellung wurde gestoppt, bevor alle Objekte erledigt waren.";
+"summary.stopped.message" = "Du kannst jetzt oder später fortsetzen; MacReplica merkt sich, wo es aufgehört hat.";
+"summary.failedHeading" = "Was nicht geklappt hat";
+"summary.manualHeading" = "Diese Apps selbst installieren";
+"summary.manualMessage" = "MacReplica hat für diese Apps keine verlässliche automatische Quelle gefunden.";
+"summary.notesHeading.one" = "%1$d Hinweis";
+"summary.notesHeading.other" = "%1$d Hinweise";
+"summary.skippedHeading.one" = "%1$d Objekt übersprungen";
+"summary.skippedHeading.other" = "%1$d Objekte übersprungen";
+"summary.allDone.title" = "Alles Ausgewählte wurde wiederhergestellt.";
+"summary.allDone.message" = "Jedes Element wurde nach der Installation oder dem Kopieren überprüft.";
+"summary.retry" = "Fehlgeschlagene erneut versuchen";
+"summary.openReport" = "Bericht öffnen";
+"summary.openWebsite" = "Website öffnen";
+
+"outcome.succeeded" = "Erfolgreich";
+"outcome.alreadyPresent" = "Schon installiert";
+
+"skip.keptExisting" = "Vorhandene Datei behalten";
+"skip.userSkipped" = "Wie gewählt übersprungen";
+"skip.dependencyFailed" = "Übersprungen, weil %1$@ nicht verfügbar ist";
+"skip.tapNotEnabled" = "Übersprungen, weil die Homebrew-Quelle %1$@ nicht erlaubt wurde";
+"skip.incompatibleArchitecture" = "Übersprungen: Diese App läuft nur auf Macs mit %1$@";
+"skip.cancelled" = "Nicht erledigt, weil die Wiederherstellung gestoppt wurde";
+
+"note.newerVersion" = "Version %1$@ wurde installiert; das Backup enthielt %2$@, die nicht mehr verfügbar ist.";
+"note.requiresRosetta" = "Diese App wurde für Intel-Macs entwickelt und braucht auf diesem Mac Rosetta 2. macOS bietet die Installation von Rosetta an, wenn du die App zum ersten Mal öffnest.";
+"note.movedAside" = "Die bisherige Datei wurde nach %1$@ verschoben.";
+"note.identical" = "Eine identische Datei war bereits vorhanden.";
+
+/* Fehler */
+"failure.network.title" = "Keine Internetverbindung";
+"failure.network.explanation" = "Der Download hat nicht funktioniert. Bitte prüf die Internetverbindung und wähl „Fehlgeschlagene erneut versuchen“.";
+"failure.appStoreNotSignedIn.title" = "Nicht im App Store angemeldet";
+"failure.appStoreNotSignedIn.explanation" = "Öffne den App Store, melde dich mit deinem Apple Account an und wähl dann „Fehlgeschlagene erneut versuchen“. Du kannst die App auch über deine Käufe im App Store laden.";
+"failure.packageNotFound.title" = "Nicht mehr verfügbar";
+"failure.packageNotFound.explanation" = "Das Paket ist weder in Homebrew noch im App Store zu finden. Bitte installier die App von der Website des Herstellers.";
+"failure.adminRightsDenied.title" = "Administratorrechte wurden nicht erteilt";
+"failure.adminRightsDenied.explanation" = "Das Passwortfenster wurde abgebrochen oder das Passwort nicht akzeptiert. Wähl „Fehlgeschlagene erneut versuchen“, um es noch einmal zu probieren.";
+"failure.appAlreadyExists.title" = "Eine andere Version ist bereits installiert";
+"failure.appAlreadyExists.explanation" = "Es gibt bereits eine App mit demselben Namen, aber MacReplica kann nicht bestätigen, dass es dieselbe App ist. Entferne oder benenne die vorhandene App um und versuch es dann erneut.";
+"failure.incompatible.title" = "Nicht kompatibel mit diesem Mac";
+"failure.incompatible.explanation" = "Diese App unterstützt diesen Mac oder diese macOS-Version nicht. Sieh auf der Website des Herstellers nach einer kompatiblen Version.";
+"failure.diskFull.title" = "Nicht genug Speicherplatz";
+"failure.diskFull.explanation" = "Gib etwas Speicherplatz auf diesem Mac frei und wähl dann „Fehlgeschlagene erneut versuchen“.";
+"failure.verificationFailed.title" = "Konnte nicht bestätigt werden";
+"failure.verificationFailed.explanation" = "Die Installation hat Erfolg gemeldet, aber MacReplica konnte das erwartete Ergebnis danach nicht finden. Bitte prüf die App selbst oder versuch es erneut.";
+"failure.backupFileDamaged.title" = "Im Backup beschädigt";
+"failure.backupFileDamaged.explanation" = "Die Kopie im Backup passt nicht zu ihrer Prüfsumme und wurde nicht wiederhergestellt, damit keine beschädigte Datei auf diesem Mac landet.";
+"failure.homebrewUnavailable.title" = "Homebrew ist nicht verfügbar";
+"failure.homebrewUnavailable.explanation" = "Dieses Objekt braucht Homebrew, das nicht installiert oder gestartet werden konnte.";
+"failure.homebrewBroken.title" = "Homebrew funktioniert nicht";
+"failure.homebrewBroken.explanation" = "Homebrew ist installiert, reagiert aber nicht richtig. MacReplica verändert keine bestehende Homebrew-Installation. Bitte repariere Homebrew (siehe Abschnitt zur Fehlerbehebung in der Dokumentation) und versuch es erneut.";
+"failure.commandLineToolsUnavailable.title" = "Command Line Tools wurden nicht installiert";
+"failure.commandLineToolsUnavailable.explanation" = "Homebrew braucht die Command Line Tools von Apple. Die Installation wurde nicht abgeschlossen. Wähl „Fehlgeschlagene erneut versuchen“ und klick im macOS-Fenster auf „Installieren“.";
+"failure.masUnavailable.title" = "App Store-Hilfsprogramm nicht verfügbar";
+"failure.masUnavailable.explanation" = "Das Programm „mas“, das App-Store-Apps installiert, konnte nicht installiert werden. Du kannst die App über deine Käufe im App Store laden.";
+"failure.timeout.title" = "Hat zu lange gedauert";
+"failure.timeout.explanation" = "Die Installation wurde nicht rechtzeitig fertig und deshalb gestoppt. Bitte prüf die Internetverbindung und versuch es erneut.";
+"failure.cancelled.title" = "Gestoppt";
+"failure.cancelled.explanation" = "Der Schritt wurde unterbrochen, weil die Wiederherstellung gestoppt wurde.";
+"failure.unknown.title" = "Unerwartetes Problem";
+"failure.unknown.explanation" = "Es ist ein Fehler aufgetreten, den MacReplica nicht zuordnen konnte. Die technischen Details helfen eventuell weiter; du kannst es auch erneut versuchen.";
+
+/* Prüfung */
+"verify.progress.title" = "Backup wird geprüft";
+"verify.progress.subtitle" = "Jede Datei wird mit ihrer gespeicherten Prüfsumme verglichen.";
+"verify.result.title" = "Backup-Prüfung";
+"verify.result.intact" = "Das Backup ist vollständig und unbeschädigt.";
+"verify.result.intactMessage.one" = "%1$d Datei wurde geprüft.";
+"verify.result.intactMessage.other" = "%1$d Dateien wurden geprüft.";
+"verify.result.issues.one" = "%1$d Problem gefunden";
+"verify.result.issues.other" = "%1$d Probleme gefunden";
+"verify.result.issuesMessage" = "Das Backup ist trotzdem nutzbar. Betroffene Dateien werden bei der Wiederherstellung übersprungen.";
+"verify.result.unusable" = "Das Backup ist nicht nutzbar";
+"verify.result.unusableMessage" = "Sein Inhaltsverzeichnis fehlt, ist beschädigt oder stammt von einem neueren MacReplica.";
+"verify.result.contents" = "Inhalt";
+"verify.result.restore" = "Dieses Backup wiederherstellen …";
+"verify.issue.manifestUnreadable" = "Das Inhaltsverzeichnis (manifest.json) kann nicht gelesen werden.";
+"verify.issue.unsupportedVersion" = "Das Backup nutzt Formatversion %1$d; dieses MacReplica unterstützt bis Version %2$d.";
+"verify.issue.checksumMissing" = "Das Backup hat keine Prüfsumme für sein Inhaltsverzeichnis, daher lassen sich Änderungen daran nicht erkennen.";
+"verify.issue.checksumMismatch" = "Das Inhaltsverzeichnis wurde nach der Erstellung des Backups verändert.";
+"verify.issue.unsafePath" = "Unsicherer Dateipfad abgelehnt: %1$@";
+"verify.issue.fileMissing" = "Fehlt: %1$@";
+"verify.issue.sizeMismatch" = "Falsche Größe: %1$@";
+"verify.issue.hashMismatch" = "Beschädigt (Prüfsumme weicht ab): %1$@";
+
+/* Quellen und Methoden */
+"source.homebrew" = "Homebrew";
+"source.appStore" = "Mac App Store";
+"source.package" = "Installationspaket";
+"source.downloaded" = "Geladen mit %1$@";
+"source.unknown" = "Unbekannt";
+"method.homebrewCask" = "Homebrew Cask";
+"method.homebrewFormula" = "Homebrew Formula";
+"method.appStore" = "Mac App Store";
+"method.officialDownload" = "Download vom Hersteller";
+"method.manual" = "Manuelle Installation";
+"category.homebrew" = "Mit Homebrew wiederherstellbar";
+"category.appStore" = "Aus dem Mac App Store wiederherstellbar";
+"category.officialDownload" = "Von der Website des Herstellers wiederherstellbar";
+"category.manual" = "Manuelle Installation nötig";
+"manual.hint.appStore" = "Aus dem Mac App Store. Öffne den App Store und lade die App über deine Käufe.";
+"manual.hint.candidates" = "Mögliche Homebrew-Pakete: %1$@. Wähl bei der Wiederherstellung eins aus oder lade die App vom Hersteller.";
+"manual.hint.officialDownload" = "Lade die aktuelle Version von der Website des Herstellers.";
+"manual.hint.manual" = "Keine automatische Quelle gefunden. Installier die App mit dem Originalinstaller oder von der Website des Herstellers.";
+"architecture.appleSilicon" = "Apple silicon";
+"architecture.intel" = "Intel";
+"architecture.unknown" = "unbekannt";
+"location.user" = "Deine Library";
+"location.system" = "Gemeinsame Library";
+
+/* Zeiten und Größen */
+"time.lessThanMinute" = "weniger als eine Minute";
+"time.minutes.one" = "etwa %1$d Minute";
+"time.minutes.other" = "etwa %1$d Minuten";
+"time.hours.one" = "etwa %1$d Stunde";
+"time.hours.other" = "etwa %1$d Stunden";
+"time.hoursMinutes" = "etwa %1$d Std. %2$d Min.";
+"size.bytes" = "%1$@ Byte";
+"size.kb" = "%1$@ KB";
+"size.mb" = "%1$@ MB";
+"size.gb" = "%1$@ GB";
+
+/* Berichte */
+"report.footer" = "Erstellt mit MacReplica %1$@";
+"report.subtitle" = "Backup vom %1$@ · macOS %2$@ · %3$@";
+"report.none" = "Keine";
+"report.inventory.title" = "MacReplica-Bestandsaufnahme";
+"report.card.applications" = "Programme";
+"report.taps" = "Zusätzliche Homebrew-Quellen";
+"report.manual.title" = "Manuell zu installierende Apps";
+"report.manual.intro.one" = "%1$d App kann nicht automatisch wiederhergestellt werden. Die Links führen, soweit bekannt, zur offiziellen Website des Herstellers.";
+"report.manual.intro.other" = "%1$d Apps können nicht automatisch wiederhergestellt werden. Die Links führen, soweit bekannt, zur offiziellen Website des Herstellers.";
+"report.openDownloadPage" = "Download-Seite";
+"report.dryRun.title" = "MacReplica-Vorschau";
+"report.dryRun.intro" = "Diese Vorschau zeigt, was eine Wiederherstellung tun würde. Es wurde nichts verändert.";
+"report.dryRun.steps" = "Schritte";
+"report.dryRun.willChange" = "Wird installiert oder kopiert";
+"report.dryRun.alreadyPresent" = "Bereits vorhanden";
+"report.dryRun.conflicts" = "Konflikte";
+"report.dryRun.planned" = "Geplante Schritte";
+"report.dryRun.needsAdmin" = "Braucht dein Administratorpasswort";
+"report.restore.title" = "MacReplica-Wiederherstellung – Zusammenfassung";
+"report.restore.steps" = "Alle Schritte";
+"report.restore.notRun" = "Noch nicht erledigt";
+"report.column.name" = "Name";
+"report.column.version" = "Version";
+"report.column.vendor" = "Hersteller";
+"report.column.source" = "Quelle";
+"report.column.restoreMethod" = "Wiederherstellungsmethode";
+"report.column.architecture" = "Architektur";
+"report.column.tap" = "Tap";
+"report.column.appStoreID" = "App Store-ID";
+"report.column.file" = "Datei";
+"report.column.family" = "Schriftfamilie";
+"report.column.description" = "Beschreibung";
+"report.column.location" = "Ort";
+"report.column.size" = "Größe";
+"report.column.bundleID" = "Bundle-ID";
+"report.column.recommended" = "Empfohlene Methode";
+"report.column.vendorPage" = "Website des Herstellers";
+"report.column.downloadPage" = "Download-Seite";
+"report.column.notes" = "Hinweise";
+"report.column.method" = "Methode";
+"report.column.plannedAction" = "Geplante Aktion";
+"report.column.result" = "Ergebnis";
+
+/* Allgemeine Ergänzungen */
+"common.ok" = "OK";
+
+/* Python-Entwicklungsumgebungen */
+"scan.phase.python" = "Python-Umgebungen werden gesucht …";
+"component.python" = "Python-Umgebungen";
+"component.python.hint" = "Virtuelle Umgebungen werden mit derselben Python-Version und denselben Paketen neu aufgebaut.";
+"python.section.title" = "Entwicklungsumgebungen";
+"python.section.message" = "MacReplica erfasst deine Python-Umgebungen und baut sie auf dem neuen Mac neu auf, statt sie zu kopieren – kopierte Umgebungen funktionieren meist nicht mehr. Wähl aus, welche du behalten möchtest.";
+"python.none" = "Es wurden keine Python-Umgebungen gefunden. Ordner wie „Dokumente“ werden nur durchsucht, wenn du sie hinzufügst.";
+"python.search.button" = "Anderen Ordner durchsuchen …";
+"python.search.choose" = "Hier suchen";
+"python.search.message" = "Wähl einen Ordner mit Python-Projekten aus, zum Beispiel in „Dokumente“.";
+"python.environment" = "Virtuelle Umgebung: %1$@";
+"python.environmentDetail" = "Python %1$@ · %2$@ Pakete · %3$@";
+"python.manualPackages" = "Aus lokalen Ordnern oder Repositorys installiert und daher nicht automatisch neu installierbar: %1$@";
+"python.settings.one" = "%1$d Python-Einstellung aus deinem Shell-Profil";
+"python.settings.other" = "%1$d Python-Einstellungen aus deinem Shell-Profil";
+"python.source.homebrew" = "von Homebrew";
+"python.source.pyenv" = "von pyenv";
+"python.source.pythonOrg" = "von python.org";
+"python.source.system" = "in macOS enthalten";
+"python.requirements.header" = "Von MacReplica erfasst für die Umgebung „%1$@“ (Python %2$@).\nInstallieren mit: python -m pip install -r requirements.txt";
+"kind.pythonEnvironment" = "Python-Umgebung";
+"activity.creatingEnvironment" = "Virtuelle Umgebung wird erstellt …";
+"activity.installingPackages" = "Python-Pakete werden installiert. Das kann ein paar Minuten dauern …";
+"prediction.recreateEnvironment" = "Wird mit den erfassten Paketen neu erstellt";
+"prediction.completeEnvironment" = "Eine kompatible Umgebung ist vorhanden – fehlende Pakete werden ergänzt";
+"prediction.environmentConflict" = "An diesem Ort ist bereits etwas anderes vorhanden – es wird nicht angetastet";
+"skip.projectFolderMissing" = "Übersprungen, weil der Projektordner %1$@ noch nicht existiert. Kopier dein Projekt auf diesen Mac und versuch es dann erneut.";
+"note.pythonManualPackages" = "Installier diese Pakete selbst neu (sie stammen aus lokalen Ordnern oder Repositorys): %1$@";
+"note.pythonPackagesUpdated.one" = "%1$d Paket war in der erfassten Version nicht verfügbar; die aktuelle kompatible Version wurde installiert.";
+"note.pythonPackagesUpdated.other" = "%1$d Pakete waren in den erfassten Versionen nicht verfügbar; die aktuellen kompatiblen Versionen wurden installiert.";
+"note.pythonEnvironmentReused" = "Eine vorhandene kompatible Umgebung wurde behalten und ergänzt.";
+"note.pythonSettings.one" = "%1$d Python-Einstellung kannst du von Hand übernehmen; siehe die Anleitung zur Wiederherstellung.";
+"note.pythonSettings.other" = "%1$d Python-Einstellungen kannst du von Hand übernehmen; siehe die Anleitung zur Wiederherstellung.";
+"failure.pythonVersionUnavailable.title" = "Python-Version nicht verfügbar";
+"failure.pythonVersionUnavailable.explanation" = "Homebrew bietet diese Python-Version nicht mehr an. Installier sie mit pyenv oder von python.org und erstelle dann die Umgebung wie in der Anleitung zur Wiederherstellung beschrieben.";
+"failure.pythonPackagesIncomplete.title" = "Nicht alle Python-Pakete konnten installiert werden";
+"failure.pythonPackagesIncomplete.explanation" = "Die Umgebung wurde erstellt, aber einige Pakete fehlen. Der Rest der Wiederherstellung ist davon nicht betroffen. Du kannst es später erneut versuchen; die technischen Details nennen die fehlenden Pakete.";
+"failure.pythonEnvironmentConflict.title" = "Etwas anderes ist im Weg";
+"failure.pythonEnvironmentConflict.explanation" = "An diesem Ort gibt es bereits einen anderen Ordner oder eine Umgebung mit einer anderen Python-Version. MacReplica verändert sie nicht. Benenne sie um oder entferne sie und versuch es dann erneut.";
+
+/* Programmdaten */
+"component.applicationData" = "Programmdaten";
+"component.applicationData.hint" = "Von dir ausgewählte Ordner mit App-Daten. Vorhandene Dateien werden nie ohne Nachfrage überschrieben.";
+"appData.section.title" = "Programmdaten";
+"appData.section.message" = "Füg Ordner mit Daten hinzu, die du in Apps erstellt hast, zum Beispiel Vorlagen oder Presets in Application Support. Passwörter, Schlüssel und Cookies werden nie mitgesichert.";
+"appData.add.button" = "Ordner hinzufügen …";
+"appData.add.choose" = "Hinzufügen";
+"appData.add.message" = "Wähl einen Ordner mit Programmdaten aus, der ins Backup aufgenommen werden soll.";
+"appData.summary" = "%1$@ Dateien · %2$@";
+"appData.remove" = "Aus dem Backup entfernen";
+"appData.refused.one" = "%1$d Datei wurde ausgelassen, weil sie nach einer Passwort-, Schlüssel- oder Cookie-Datei aussieht.";
+"appData.refused.other" = "%1$d Dateien wurden ausgelassen, weil sie nach Passwort-, Schlüssel- oder Cookie-Dateien aussehen.";
+"appData.error.title" = "Dieser Ordner kann nicht hinzugefügt werden";
+"appData.error.outsideHome" = "Es können nur Ordner innerhalb deines Benutzerordners hinzugefügt werden.";
+"appData.error.tooBroad" = "Dieser Ordner ist zu umfassend. Bitte wähl den Ordner einer einzelnen App aus, zum Beispiel in Application Support.";
+"appData.error.sensitive" = "Dieser Ordner enthält Passwörter, Schlüssel oder private Nachrichten und wird nie in ein Backup aufgenommen.";
+"appData.error.notAFolder" = "Das ausgewählte Objekt ist kein Ordner.";
+"kind.applicationData" = "Programmdaten";
+"note.applicationData" = "%1$d Dateien kopiert, %2$d bereits identisch, %3$d vorhandene Dateien behalten.";
+
+/* Backup-Paket */
+"saved.titlePartial" = "Backup mit Lücken gesichert";
+"saved.partial.one" = "%1$d Objekt konnte nicht aufgenommen werden";
+"saved.partial.other" = "%1$d Objekte konnten nicht aufgenommen werden";
+"saved.partialMessage" = "Alles andere wurde gesichert und geprüft. Die fehlenden Objekte findest du unten und in der Anleitung zur Wiederherstellung.";
+"saved.moreIssues" = "und %1$d weitere";
+"saved.size" = "%1$@ · %2$@ Dateien";
+"saved.contents" = "Apps: %1$@ · Homebrew-Pakete: %2$@ · Python-Umgebungen: %3$@ · Datenordner: %4$@ · Schriften: %5$@ · ICC-Profile: %6$@";
+"saved.transfer.title" = "Backup auf den neuen Mac bringen";
+"saved.transfer.intro" = "Kopier den gesamten Backup-Ordner auf den neuen Mac. Jeder dieser Wege funktioniert:";
+"saved.transfer.drive" = "Ein externes Laufwerk oder ein USB-Stick";
+"saved.transfer.network" = "Ein freigegebener Ordner in deinem Netzwerk";
+"saved.transfer.cloud" = "Ein Cloud-Ordner wie iCloud Drive (warte, bis der Upload abgeschlossen ist)";
+"saved.transfer.airdrop" = "AirDrop, für kleinere Backups";
+"saved.openInstructions" = "Anleitung zur Wiederherstellung";
+"backupIssue.unreadable" = "konnte nicht gelesen werden";
+"backupIssue.refusedSensitive" = "ausgelassen (sieht nach einer Passwort-, Schlüssel- oder Cookie-Datei aus)";
+"backupIssue.tooLarge" = "ausgelassen (Ordner zu groß)";
+"backupIssue.changedDuringBackup" = "hat sich während des Kopierens geändert";
+"backup.readme" = "Dieser Ordner ist ein MacReplica-Backup (%1$@).\n\nSo stellst du es auf einem neuen Mac wieder her:\n1. Kopier diesen gesamten Ordner auf den neuen Mac.\n2. Öffne MacReplica und wähl „Wiederherstellen“.\n3. Wähl diesen Ordner aus.\n\nSchritt-für-Schritt-Anleitung: restore/RESTORE_INSTRUCTIONS.html\nÜbersicht über den Inhalt: reports/inventory.html\n\nBitte ändere oder benenne keine Dateien in diesem Ordner um; MacReplica prüft jede Datei, bevor es sie wiederherstellt.\n";
+
+/* Anleitung zur Wiederherstellung */
+"guide.title" = "So stellst du dieses Backup wieder her";
+"guide.intro" = "Dieses Backup wurde mit MacReplica erstellt. Es enthält eine Beschreibung deiner Apps und Einstellungen sowie Kopien von Schriften, Farbprofilen und den Dateien, die du ausgewählt hast. Diese Schritte führen dich vom alten zum neuen Mac.";
+"guide.contents" = "Was in diesem Backup steckt";
+"guide.automatic" = "Wird automatisch wiederhergestellt";
+"guide.complete" = "Alles Ausgewählte ist in diesem Backup enthalten und wurde geprüft.";
+"guide.partial.one" = "%1$d Objekt konnte nicht in dieses Backup aufgenommen werden:";
+"guide.partial.other" = "%1$d Objekte konnten nicht in dieses Backup aufgenommen werden:";
+"guide.oldMac.title" = "Auf dem alten Mac";
+"guide.oldMac.1" = "Öffne MacReplica.";
+"guide.oldMac.2" = "Wähl „Backup erstellen“ und warte, bis der Scan fertig ist.";
+"guide.oldMac.3" = "Wähl aus, was behalten werden soll, zum Beispiel Python-Umgebungen und Programmdaten.";
+"guide.oldMac.4" = "Sichere das Backup.";
+"guide.oldMac.5" = "Prüf das Backup (MacReplica macht das beim Sichern automatisch; mit „Backup prüfen“ kannst du es wiederholen).";
+"guide.oldMac.6" = "Kopier den Backup-Ordner sicher auf den neuen Mac.";
+"guide.transfer.title" = "Das Backup übertragen";
+"guide.transfer.intro" = "Kopier den gesamten Ordner „%1$@“, nicht nur Teile davon. Jeder dieser Wege funktioniert:";
+"guide.transfer.drive" = "ein externes Laufwerk oder ein USB-Stick";
+"guide.transfer.network" = "ein freigegebener Ordner in deinem Netzwerk";
+"guide.transfer.cloud" = "ein Cloud-Ordner wie iCloud Drive (warte, bis alle Dateien hoch- und heruntergeladen sind)";
+"guide.transfer.airdrop" = "AirDrop, für kleinere Backups";
+"guide.transfer.check" = "Auf dem neuen Mac kannst du in MacReplica „Backup prüfen“ wählen, um sicherzugehen, dass unterwegs nichts verloren gegangen ist.";
+"guide.newMac.title" = "Auf dem neuen Mac";
+"guide.newMac.1" = "Lade MacReplica, bewege es in den Ordner „Programme“ und öffne es.";
+"guide.newMac.2" = "Wähl „Wiederherstellen“ und dann den Backup-Ordner.";
+"guide.newMac.3" = "Sieh dir an, was MacReplica im Backup gefunden hat.";
+"guide.newMac.4" = "Wähl aus, was wiederhergestellt werden soll. Mit „Vorschau (Testlauf)“ siehst du vorab jeden Schritt.";
+"guide.newMac.5" = "Erlaube, wonach macOS fragt: die Installation der Command Line Tools und, falls nötig, dein Administratorpasswort.";
+"guide.newMac.6" = "Starte die Wiederherstellung und halte den Mac wach, bis sie fertig ist.";
+"guide.newMac.7" = "Sieh dir das Ergebnis an. Fehlgeschlagene Objekte kannst du erneut versuchen.";
+"guide.newMac.8" = "Installier die unter „Manuell zu installierende Apps“ aufgeführten Apps selbst.";
+"guide.python.title" = "Python-Umgebungen";
+"guide.python.intro" = "MacReplica baut diese Umgebungen automatisch neu auf: Es installiert die erfasste Python-Version mit Homebrew, erstellt eine neue virtuelle Umgebung und installiert die erfassten Pakete. Die Befehle unten machen dasselbe von Hand.";
+"guide.python.location" = "Ort: %1$@";
+"guide.python.packages.one" = "%1$d Paket erfasst";
+"guide.python.packages.other" = "%1$d Pakete erfasst";
+"guide.python.manualCommands" = "So baust du sie im Terminal von Hand neu auf:";
+"guide.python.backupFolder" = "Backup-Ordner";
+"guide.python.manualPackages" = "Installier diese Pakete selbst neu, weil sie aus lokalen Ordnern oder Repositorys stammen: %1$@";
+"guide.python.settings" = "Python-Einstellungen";
+"guide.python.settingsIntro" = "Diese Einstellungen wurden in deinem Shell-Profil gefunden. MacReplica ändert keine Shell-Profile; füg sie bei Bedarf selbst hinzu:";
+"guide.appData.intro" = "Diese Ordner werden an denselben Ort zurückkopiert. Bereits vorhandene Dateien mit anderem Inhalt werden behalten, es sei denn, du entscheidest dich, sie zu ersetzen.";
+"guide.appData.files.one" = "%1$d Datei";
+"guide.appData.files.other" = "%1$d Dateien";
+"guide.trouble.title" = "Falls etwas schiefgeht";
+"guide.trouble.1" = "Fehlgeschlagene Objekte kannst du am Ende der Wiederherstellung erneut versuchen, zum Beispiel nachdem du dich im App Store angemeldet hast oder wenn die Internetverbindung wieder da ist.";
+"guide.trouble.2" = "Die Protokolle liegen unter ~/Library/Logs/MacReplica. Wähl in MacReplica „Hilfe › Protokolle öffnen“ oder „Hilfe › Diagnosebericht exportieren“.";
+"guide.trouble.3" = "Eine unterbrochene Wiederherstellung wird beim nächsten Öffnen von MacReplica dort fortgesetzt, wo sie aufgehört hat.";
+
+/* Protokolle, Hilfe und Start */
+"help.openLogs" = "Protokolle öffnen";
+"help.exportDiagnostics" = "Diagnosebericht exportieren …";
+"help.support" = "MacReplica unterstützen";
+"logs.hint" = "Details stehen im Protokoll (%1$@).";
+"diagnostics.saveMessage" = "Der Bericht enthält technische Details und die letzten Protokolleinträge. Persönliche Pfade werden gekürzt, und es sind keine Backup-Inhalte enthalten.";
+"diagnostics.failed" = "Der Diagnosebericht konnte nicht gesichert werden";
+"safeMode.title" = "MacReplica ist beim letzten Mal nicht vollständig gestartet";
+"safeMode.message" = "Der Start brach beim Schritt „%1$@“ ab. MacReplica läuft jetzt im abgesicherten Modus: Unterbrochene Wiederherstellungen werden nicht automatisch geladen, und die Sprache ist Englisch. Die Protokolle helfen bei der Ursachensuche.";
+"safeMode.continue" = "Normal fortfahren";
+"startup.stage.launch" = "Starten";
+"startup.stage.configuration" = "Konfiguration laden";
+"startup.stage.localization" = "Sprachen laden";
+"startup.stage.storage" = "Gespeicherte Wiederherstellungen lesen";
+"startup.stage.environment" = "Diesen Mac prüfen";
+"startup.stage.userInterface" = "Fenster öffnen";
+
+/* Version und Updates */
+"about.versionBuild" = "Version %1$@ (Build %2$@)";
+"about.platform" = "Für macOS %1$@ oder neuer · Apple silicon und Intel";
+"update.check" = "Nach Updates suchen …";
+"update.upToDate" = "MacReplica ist auf dem neuesten Stand.";
+"update.currentVersion" = "Du verwendest Version %1$@.";
+"update.available" = "MacReplica %1$@ ist verfügbar. Du verwendest derzeit Version %2$@.";
+"update.availableHint" = "MacReplica installiert Updates nicht selbst. Öffne die Release-Seite, um die neue Version zu laden.";
+"update.unable" = "MacReplica konnte gerade nicht nach Updates suchen. Bitte versuch es später noch einmal.";
+"update.viewRelease" = "Release ansehen";
+"update.automatic" = "Einmal pro Woche nach Updates suchen";
+"update.prereleases" = "Vorabversionen einbeziehen";
+
+/* Zugriffsrechte und gescannte Orte */
+"access.section.title" = "Gescannte Orte";
+"access.blocked.title" = "Einige Orte konnten nicht gelesen werden";
+"access.blocked.message" = "macOS hat MacReplica nicht erlaubt, sie zu lesen, daher fehlt ihr Inhalt in diesem Backup. Alles andere wurde normal gescannt. Wenn du sie aufnehmen möchtest, kannst du den Zugriff unter „Systemeinstellungen › Datenschutz & Sicherheit“ erlauben und erneut scannen.";
+"access.openSettings" = "„Datenschutz & Sicherheit“ öffnen";
+"access.scanned" = "Gescannt";
+"access.notFound" = "Nicht auf diesem Mac";
+"access.noPermission" = "Keine Berechtigung";
+"access.unsupported" = "Nicht nutzbar";
+"access.area.applications" = "Programme";
+"access.area.userFonts" = "Schriften (deine Library)";
+"access.area.systemFonts" = "Schriften (gemeinsam)";
+"access.area.userColorProfiles" = "ICC-Profile (deine Library)";
+"access.area.systemColorProfiles" = "ICC-Profile (gemeinsam)";
+"access.area.homebrew" = "Homebrew";
+"access.area.appStore" = "Mac App Store";
+"access.area.python" = "Python-Umgebungen";
+"access.area.applicationData" = "Programmdaten";
+"report.locations" = "Gescannte Orte";
+"report.column.area" = "Bereich";
+
+/* Programmdaten-Profile */
+"appData.profileName" = "%1$@ – %2$@";
+"appData.category.actions" = "Aktionen";
+"appData.category.brushes" = "Pinsel";
+"appData.category.styles" = "Stile";
+"appData.category.gradients" = "Verläufe";
+"appData.category.patterns" = "Muster";
+"appData.category.swatches" = "Farbfelder";
+"appData.category.presets" = "Presets";
+"appData.category.shortcuts" = "Tastaturkurzbefehle";
+"appData.category.luts" = "LUTs";
+"appData.category.fusionTemplates" = "Fusion-Vorlagen";
+"appData.category.fusionMacros" = "Fusion-Makros";
+"note.applicationVersionDiffers" = "Die Daten wurden für %1$@ wiederhergestellt, das auf diesem Mac nicht installiert ist. Wenn du eine neuere Version nutzt, importier die Presets dort.";
+
+/* Entwicklereinstellungen */
+"component.developerSettings" = "Entwicklereinstellungen";
+"component.developerSettings.hint" = "Deine Git-Einstellungen, ohne Tokens oder private Serveradressen.";
+"developer.git" = "Git-Einstellungen";
+"developer.git.detail" = "Name, Aliasse und Einstellungen aus ~/.gitconfig. Abschnitte, die Tokens oder private Server enthalten können, werden ausgelassen.";
+"developer.git.email" = "Meine E-Mail-Adresse einbeziehen";
+"kind.gitConfiguration" = "Git-Einstellungen";
+
+/* Zugangsdaten */
+"component.credentials" = "Zugangsdaten (verschlüsselt)";
+"component.credentials.hint" = "Werden nur wiederhergestellt, wenn du das auswählst und die Passphrase eingibst, die du beim Erstellen des Backups festgelegt hast.";
+"credentials.section.title" = "Zugangsdaten (erweitert)";
+"credentials.section.message" = "Passwörter, Tokens, Cookies und der Schlüsselbund sind nie Teil eines Backups. SSH-Schlüssel sind die einzigen Zugangsdaten, die MacReplica übertragen kann, und nur, wenn du das hier einschaltest: Sie werden mit einer Passphrase verschlüsselt, die du selbst wählst.";
+"credentials.ssh.toggle" = "SSH-Schlüssel einbeziehen (verschlüsselt)";
+"credentials.ssh.none" = "Es wurden keine SSH-Schlüssel gefunden.";
+"credentials.ssh.description" = "MacReplica nimmt deine SSH-Schlüssel und deine SSH-Konfiguration aus ~/.ssh auf (private und öffentliche Schlüssel, config, known_hosts).";
+"credentials.ssh.risk" = "Wer das Backup und die Passphrase in die Hände bekommt, kann sich bei jedem Server anmelden, auf den diese Schlüssel Zugriff geben.";
+"credentials.enabled" = "SSH-Schlüssel werden verschlüsselt und im Zugangsdaten-Ordner des Backups gespeichert.";
+"credentials.optIn.title" = "SSH-Schlüssel einbeziehen?";
+"credentials.optIn.warningTitle" = "Dieses Backup wird sensible Daten enthalten";
+"credentials.optIn.warning" = "Die Übertragung von Zugangsdaten kann sensible Anmeldeinformationen umfassen. Wer dieses Backup und seine Passphrase in die Hände bekommt, kann möglicherweise auf die ausgewählten Accounts oder Dienste zugreifen. Aktiviere das nur, wenn du das Risiko verstehst und in Kauf nimmst.";
+"credentials.optIn.storage" = "Die Schlüssel werden mit einem aus deiner Passphrase abgeleiteten Schlüssel verschlüsselt (AES-256-GCM) und getrennt im Zugangsdaten-Ordner des Backups gespeichert. Die Passphrase selbst wird nirgends gespeichert. Wenn du sie vergisst, lassen sich die Schlüssel nicht aus dem Backup wiederherstellen.";
+"credentials.passphrase" = "Passphrase";
+"credentials.passphraseConfirm" = "Passphrase wiederholen";
+"credentials.passphraseRules" = "Mindestens %1$d Zeichen. Bewahr sie sicher und getrennt vom Backup auf.";
+"credentials.optIn.understood" = "Ich verstehe das Risiko und dass eine verlorene Passphrase nicht wiederhergestellt werden kann.";
+"credentials.optIn.enable" = "Verschlüsselt einbeziehen";
+"credentials.restore.title" = "Passphrase für Zugangsdaten";
+"credentials.restore.message" = "Dieses Backup enthält verschlüsselte SSH-Schlüssel. Gib die Passphrase ein, die du beim Erstellen des Backups gewählt hast. Vorhandene Schlüssel auf diesem Mac werden nur ersetzt, wenn du dich dafür entschieden hast, vorhandene Dateien zu ersetzen.";
+"credentials.restore.skip" = "Ohne Zugangsdaten wiederherstellen";
+"kind.credential" = "Verschlüsselte Zugangsdaten";
+"skip.passphraseNotProvided" = "Übersprungen, weil keine Passphrase eingegeben wurde";
+"failure.credentialCannotBeOpened.title" = "Zugangsdaten konnten nicht geöffnet werden";
+"failure.credentialCannotBeOpened.explanation" = "Die Passphrase ist falsch oder die verschlüsselte Datei ist beschädigt. Es wurde nichts verändert. Du kannst es mit der richtigen Passphrase erneut versuchen; andernfalls meld dich neu an oder erstelle auf diesem Mac neue Schlüssel.";
+
+/* Anleitung zur Wiederherstellung: Entwicklereinstellungen, Anmeldungen, Zugriffsrechte */
+"guide.developer.intro" = "Deine Git-Einstellungen werden nach ~/.gitconfig wiederhergestellt, falls diese Datei noch nicht existiert. Tokens, Credential-Helper für bestimmte Server und private Serveradressen wurden ausgelassen.";
+"guide.developer.removed" = "Ausgelassene Abschnitte, richte sie bei Bedarf neu ein: %1$@";
+"guide.accounts.title" = "Anmeldungen und Zugangsdaten";
+"guide.accounts.intro" = "Beim Wiederherstellen einer App kommen die App und ihre Einstellungen zurück, nicht aber deine Anmeldung. Bitte denk daran:";
+"guide.accounts.configuration" = "Die Konfiguration (App-Einstellungen, Presets, Git-Einstellungen) wird wiederhergestellt, wo MacReplica das unterstützt.";
+"guide.accounts.reauthentication" = "Anmeldungen werden nicht wiederhergestellt: Apps und Dienste wie Adobe, Microsoft, Google, GitHub, Cloud-Speicher und Abos bitten dich, dich erneut anzumelden, weil ihre Anmeldungen an den alten Mac gebunden sind.";
+"guide.accounts.keychain" = "Der macOS-Schlüsselbund wird nie kopiert. Verwende den iCloud-Schlüsselbund (App „Passwörter“), um deine gespeicherten Passwörter auf den neuen Mac zu bringen.";
+"guide.accounts.noCredentials" = "Dieses Backup enthält keine Zugangsdaten.";
+"guide.accounts.vault" = "Dieses Backup enthält verschlüsselte %1$@-Zugangsdaten (%2$@) in %3$@. Sie lassen sich nur mit der Passphrase wiederherstellen, die beim Erstellen des Backups gewählt wurde.";
+"guide.access.title" = "Orte, die nicht gelesen werden konnten";
+"guide.access.intro" = "macOS hat MacReplica nicht erlaubt, diese Orte zu lesen, daher fehlt ihr Inhalt in diesem Backup:";

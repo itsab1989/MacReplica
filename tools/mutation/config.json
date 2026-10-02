@@ -1,0 +1,21 @@
+{
+  "default_threshold": 80,
+  "modules": [
+    {"file": "Model/ManifestIO.swift", "tests": ["ManifestTests", "VerificationTests"], "area": "Manifest"},
+    {"file": "Matching/Matcher.swift", "tests": ["MatchingTests"], "area": "Matching"},
+    {"file": "Restore/RestorePlanner.swift", "tests": ["RestorePlannerTests", "EndToEndTests"], "area": "Restore"},
+    {"file": "Restore/RestoreExecutor.swift", "tests": ["RestoreExecutionTests", "DryRunTests", "ResumeTests", "FailureModeTests", "SecurityTests"], "area": "Restore, conflicts, dry run, verification", "threshold": 75},
+    {"file": "Restore/SessionStore.swift", "tests": ["ResumeTests", "CleanupTests"], "area": "Resume"},
+    {"file": "Backup/BackupVerifier.swift", "tests": ["VerificationTests"], "area": "Verification"},
+    {"file": "Support/SafeCleaner.swift", "tests": ["CleanupTests", "SecurityTests"], "area": "Cleanup, path safety"},
+    {"file": "System/CommandRunner.swift", "tests": ["SecurityTests"], "area": "Security", "threshold": 70},
+    {"file": "Restore/PrivilegedExecutor.swift", "tests": ["SecurityTests", "RestoreExecutionTests"], "area": "Security"},
+    {"file": "Restore/ErrorClassifier.swift", "tests": ["ClassifierAndProgressTests", "FailureModeTests"], "area": "Failure handling"}
+  ],
+  "exclusions": [
+    {"file": "System/CommandRunner.swift", "pattern": "readabilityHandler = nil", "reason": "Removing handler cleanup only leaks a callback after the process ended; not observable in tests."},
+    {"file": "System/CommandRunner.swift", "pattern": "guard !data.isEmpty else", "reason": "Empty reads are no-ops either way (equivalent mutant)."},
+    {"file": "Restore/RestoreExecutor.swift", "pattern": "log\\.(info|warning|error)", "reason": "Log-only lines."},
+    {"file": "Restore/RestoreExecutor.swift", "pattern": "onEvent\\(\\.activity", "reason": "Progress-only events; covered by eventsDescribeEveryStep for the main kinds."}
+  ]
+}

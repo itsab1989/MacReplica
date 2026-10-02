@@ -1,0 +1,653 @@
+/* MacReplica — norsk bokmål.
+   Plassholdere er posisjonsbaserte (%1$@ tekst, %1$d tall) og kan flyttes rundt.
+   Flertallsnøkler slutter på .one / .other; antallet er alltid %1$d. */
+
+/* Start */
+"home.tagline" = "Flytt appene, skriftene og fargeprofilene dine til en nyinstallert Mac.";
+"home.inventory.title" = "Lag sikkerhetskopi";
+"home.inventory.subtitle" = "Skann denne Macen og lagre alt MacReplica kan gjenopprette senere.";
+"home.restore.title" = "Gjenopprett";
+"home.restore.subtitle" = "Hent en sikkerhetskopi tilbake til denne Macen.";
+"home.verify.title" = "Kontroller sikkerhetskopi";
+"home.verify.subtitle" = "Sørg for at en sikkerhetskopi er fullstendig og uskadd.";
+"home.dryRunHint" = "Du kan forhåndsvise hver gjenoppretting før noe endres.";
+
+/* Felles */
+"common.back" = "Tilbake";
+"common.backToStart" = "Til start";
+"common.cancel" = "Avbryt";
+"common.continue" = "Fortsett";
+"common.done" = "Ferdig";
+"common.technicalDetails" = "Tekniske detaljer";
+"common.version" = "Versjon %1$@";
+
+/* Meny og Om */
+"menu.about" = "Om MacReplica";
+"menu.help" = "MacReplica-hjelp";
+"about.version" = "Versjon %1$@";
+"about.description" = "MacReplica registrerer appene, Homebrew-pakkene, skriftene og fargeprofilene dine og gjenoppretter dem på en ny eller nyinstallert Mac.";
+"about.kofi" = "MacReplica er gratis og kommer alltid til å være det. Er det nyttig for deg, er en kaffe på Ko-fi en hyggelig måte å si takk på — helt frivillig, og appen beholder alle funksjoner uansett.";
+"about.kofiButton" = "Støtt på Ko-fi";
+"about.github" = "Prosjektet på GitHub";
+"about.license" = "Åpen kildekode under GNU General Public License v3.0";
+
+/* Innstillinger */
+"settings.language" = "Språk";
+"settings.languageHint" = "Appen og rapportene bytter språk med en gang. Noen standard menykommandoer følger etter at MacReplica er startet på nytt.";
+"settings.logs" = "Loggfiler";
+"settings.openLogs" = "Vis i Finder";
+
+/* Skanning */
+"scan.title" = "Skanner denne Macen";
+"scan.subtitle" = "Dette tar vanligvis under ett minutt.";
+"scan.phase.applications" = "Ser gjennom programmer …";
+"scan.phase.homebrew" = "Sjekker Homebrew …";
+"scan.phase.appStore" = "Sjekker apper fra Mac App Store …";
+"scan.phase.matching" = "Ser etter passende Homebrew-pakker …";
+"scan.phase.fonts" = "Samler skrifter …";
+"scan.phase.colorProfiles" = "Samler fargeprofiler …";
+"scan.readOnly" = "Skanningen leser bare informasjon. Ingenting på denne Macen endres.";
+"inventory.failed.title" = "Skanningen kunne ikke fullføres";
+"inventory.failed.message" = "MacReplica støtte på et uventet problem under skanningen. Prøv igjen. Hvis det fortsetter å skje, kan de tekniske detaljene nedenfor hjelpe med å finne årsaken.";
+
+/* Skanneresultater */
+"results.title" = "Skanning fullført";
+"results.subtitle.one" = "%1$d program funnet";
+"results.subtitle.other" = "%1$d programmer funnet";
+"results.appsHeading" = "Slik blir appene gjenopprettet";
+"results.moreHeading" = "Også inkludert";
+"results.showApps" = "Vis alle programmer";
+"results.save" = "Lagre sikkerhetskopi …";
+"inventory.warning.homebrewNotInstalled" = "Homebrew er ikke installert på denne Macen. Appene blir likevel registrert, og MacReplica installerer Homebrew under gjenopprettingen ved behov.";
+"inventory.warning.homebrewBroken" = "Homebrew er installert, men svarer ikke. Homebrew-pakker kunne ikke registreres.";
+"inventory.warning.homebrewListFailed" = "Listen over Homebrew-pakker kunne ikke leses. Homebrew-pakker mangler i denne sikkerhetskopien.";
+"inventory.warning.masNotInstalled" = "Det ble funnet apper fra Mac App Store, men hjelpeverktøyet «mas» er ikke installert. Noen App Store-apper må kanskje lastes ned manuelt senere.";
+"inventory.warning.masListFailed" = "Listen over apper fra Mac App Store kunne ikke leses.";
+"inventory.warning.catalogUnavailable" = "Homebrew-katalogen kunne ikke lastes inn (ingen internettforbindelse?). Manuelt installerte apper ble ikke sjekket mot Homebrew-pakker.";
+
+/* Valg av treff */
+"match.title" = "Mulige treff funnet";
+"match.message" = "MacReplica fant Homebrew-pakker som kan passe til disse appene, men er ikke sikker nok til å velge en selv. Velg riktig pakke, eller installer appen selv senere.";
+"match.pickerLabel" = "Homebrew-pakke";
+"match.candidate" = "%1$@ (%2$@)";
+"match.none" = "Ingen av disse – jeg installerer selv";
+
+/* Lagring */
+"inventory.save.choose" = "Lagre her";
+"inventory.save.message" = "Velg hvor sikkerhetskopien skal lagres. En ekstern disk eller en skymappe er et godt valg, slik at sikkerhetskopien er tilgjengelig på den nye Macen.";
+"saving.title" = "Lagrer sikkerhetskopi";
+"saving.subtitle" = "Skrifter og fargeprofiler kopieres og kontrolleres.";
+"saved.title" = "Sikkerhetskopi lagret";
+"saved.verified" = "Sikkerhetskopien er fullstendig og er kontrollert.";
+"saved.message" = "Hver kopierte fil ble sammenlignet med originalen.";
+"saved.location" = "Plassering";
+"saved.nextSteps" = "På den nye Macen åpner du MacReplica, velger Gjenopprett og markerer denne mappen.";
+"saved.openReport" = "Åpne rapport";
+"saved.showInFinder" = "Vis i Finder";
+"backup.failed.title" = "Sikkerhetskopien kunne ikke lagres";
+"backup.failed.message" = "Ikke alle filer kunne kopieres eller kontrolleres. Den ufullstendige sikkerhetskopien ble fjernet. Prøv igjen, gjerne et annet sted.";
+"backup.failed.notWritable" = "MacReplica kan ikke skrive til denne mappen. Velg et annet sted.";
+
+/* Åpne en sikkerhetskopi */
+"backup.open.choose" = "Åpne sikkerhetskopi";
+"backup.open.message" = "Velg MacReplica-mappen med sikkerhetskopien (den inneholder en fil som heter manifest.json).";
+"backup.unreadable.title" = "Dette er ikke en lesbar MacReplica-sikkerhetskopi";
+"backup.unreadable.message" = "Mappen inneholder ikke en gyldig manifest.json. Velg mappen som MacReplica opprettet, for eksempel «MacReplica-Backup-2026-10-02-1530».";
+"backup.newerVersion.title" = "Denne sikkerhetskopien krever en nyere MacReplica";
+"backup.newerVersion.message" = "Sikkerhetskopien ble laget av en nyere versjon av MacReplica, med et format denne versjonen ikke forstår. Oppdater MacReplica og prøv igjen.";
+"backup.damaged.title" = "Sikkerhetskopien er skadet";
+"backup.damaged.checksum" = "Innholdslisten i sikkerhetskopien er endret eller skadet siden den ble laget, så MacReplica kan ikke stole på den. Bruk en annen kopi av sikkerhetskopien.";
+
+/* Fortsette */
+"resume.title" = "En tidligere gjenoppretting ble ikke fullført.";
+"resume.message" = "Vil du fortsette der MacReplica stoppet?";
+"resume.continue" = "Fortsett";
+"resume.discard" = "Forkast";
+"resume.backupMissing.title" = "Finner ikke sikkerhetskopien";
+"resume.backupMissing.message" = "Den uferdige gjenopprettingen brukte sikkerhetskopien i %1$@, som ikke er tilgjengelig. Koble til disken med sikkerhetskopien og prøv igjen.";
+
+/* Utvalg for gjenoppretting */
+"restore.select.title" = "Hva skal gjenopprettes?";
+"restore.select.subtitle" = "Sikkerhetskopi fra %1$@ · macOS %2$@ · %3$@";
+"restore.select.individual" = "Velg enkeltelementer …";
+"restore.select.summary.one" = "%1$d element valgt";
+"restore.select.summary.other" = "%1$d elementer valgt";
+"restore.select.dryRun" = "Forhåndsvisning (prøvekjøring)";
+"restore.select.start" = "Start gjenoppretting";
+"restore.select.conflictQuestion" = "Hvis en skrift eller fargeprofil finnes fra før:";
+"restore.select.conflictHint" = "Identiske filer blir alltid oppdaget og hoppet over. MacReplica spør før noe erstattes.";
+"restore.select.damaged.one" = "%1$d fil i denne sikkerhetskopien er skadet";
+"restore.select.damaged.other" = "%1$d filer i denne sikkerhetskopien er skadet";
+"restore.select.damagedHint" = "Skadede filer hoppes over. Alt annet kan gjenopprettes som normalt.";
+"restore.select.otherArchitecture" = "Denne sikkerhetskopien kommer fra en annen type Mac";
+"restore.select.otherArchitectureHint" = "Sikkerhetskopien ble laget på en Mac med %1$@, denne Macen bruker %2$@. MacReplica installerer riktig versjon av hver app der det er mulig, og sier fra om apper som ikke kan kjøre her.";
+
+"component.applications" = "Programmer";
+"component.applications.hint" = "Apper du har installert selv; MacReplica bruker Homebrew der det finnes en pålitelig pakke.";
+"component.brewFormulae" = "Homebrew Formulae";
+"component.brewFormulae.hint" = "Kommandolinjeverktøy installert med Homebrew.";
+"component.brewCasks" = "Homebrew Casks";
+"component.brewCasks.hint" = "Apper og andre pakker som ble installert med Homebrew.";
+"component.appStore" = "Mac App Store";
+"component.appStore.hint" = "Apper fra Mac App Store; du må være logget på App Store.";
+"component.fonts" = "Skrifter";
+"component.fonts.hint" = "Skrifter fra din personlige og den felles skriftmappen.";
+"component.colorProfiles" = "ICC-profiler";
+"component.colorProfiles.hint" = "Fargeprofiler for skjermer, skrivere og papirtyper.";
+
+"taps.title" = "Ekstra Homebrew-kilder";
+"taps.message" = "Noen pakker kommer fra kilder utenfor den offisielle Homebrew-samlingen (kalt «taps»). Tillat bare kilder du stoler på. Pakker fra kilder du ikke tillater, hoppes over.";
+
+"items.title" = "Velg enkeltelementer";
+"items.search" = "Søk";
+"items.selectAll" = "Alle";
+"items.selectNone" = "Ingen";
+
+/* Konflikter */
+"conflict.title.one" = "%1$d fil finnes allerede";
+"conflict.title.other" = "%1$d filer finnes allerede";
+"conflict.message" = "Disse skriftene eller fargeprofilene finnes allerede på denne Macen, men med annet innhold. Hva skal MacReplica gjøre?";
+"conflict.keep" = "Behold eksisterende";
+"conflict.replace" = "Erstatt";
+"conflict.skip" = "Hopp over";
+"conflict.applyToAll" = "Bruk for alle";
+"conflict.replaceHint" = "Når en fil erstattes, flyttes den eksisterende til ~/Library/Application Support/MacReplica/Replaced Files og slettes ikke.";
+
+/* Administratorrettigheter */
+"admin.title" = "Før gjenopprettingen starter";
+"admin.clt.title" = "macOS vil be om å installere Command Line Tools";
+"admin.clt.message" = "Homebrew trenger Command Line Tools fra Apple. Når macOS-vinduet vises, klikker du Installer. MacReplica venter og fortsetter automatisk.";
+"admin.password.message" = "macOS vil be om administratorpassordet ditt, fordi:";
+"admin.password.homebrew" = "Homebrew må installeres. Det installeres i en systemmappe.";
+"admin.password.files" = "Noen skrifter eller fargeprofiler skal legges i mapper som deles av alle brukere på denne Macen.";
+"admin.password.privacy" = "Passordet skrives inn i et vanlig macOS-vindu. MacReplica ser eller lagrer det aldri.";
+"admin.continue" = "Fortsett";
+"admin.reason.homebrew" = "MacReplica vil installere Homebrew, som krever administratorrettigheter.";
+"admin.reason.files" = "MacReplica vil kopiere skrifter og fargeprofiler til mapper som deles av alle brukere på denne Macen (skrifter: %1$d, fargeprofiler: %2$d).";
+"askpass.title" = "Administratorpassord kreves";
+"askpass.message" = "Homebrew trenger administratorpassordet ditt for å fullføre installeringen av en app som MacReplica gjenoppretter. Passordet går rett til macOS og lagres ikke.";
+"askpass.ok" = "OK";
+
+/* Forhåndsvisning */
+"dryRun.title" = "Forhåndsvisning";
+"dryRun.subtitle" = "Dette er hva en gjenoppretting ville gjort. Ingenting er endret.";
+"dryRun.checking" = "Sjekker hva som allerede finnes på denne Macen …";
+"dryRun.export" = "Eksporter rapport …";
+"dryRun.group.change.one" = "%1$d element blir installert eller kopiert";
+"dryRun.group.change.other" = "%1$d elementer blir installert eller kopiert";
+"dryRun.group.present.one" = "%1$d element finnes allerede på denne Macen";
+"dryRun.group.present.other" = "%1$d elementer finnes allerede på denne Macen";
+"dryRun.group.conflict.one" = "%1$d fil finnes allerede med annet innhold";
+"dryRun.group.conflict.other" = "%1$d filer finnes allerede med annet innhold";
+"dryRun.group.skip.one" = "%1$d element blir hoppet over";
+"dryRun.group.skip.other" = "%1$d elementer blir hoppet over";
+"dryRun.group.manual.one" = "%1$d app må installeres manuelt";
+"dryRun.group.manual.other" = "%1$d apper må installeres manuelt";
+
+"prediction.install" = "Blir installert med %1$@";
+"prediction.installCommandLineTools" = "Blir installert (macOS ber deg bekrefte)";
+"prediction.installHomebrew" = "Blir installert (krever administratorpassordet ditt)";
+"prediction.addTap" = "Blir lagt til som Homebrew-kilde";
+"prediction.copy" = "Blir kopiert";
+"prediction.alreadyPresent" = "Allerede installert – hoppes over";
+"prediction.alreadyPresentVersion" = "Versjon %1$@ er allerede installert – hoppes over";
+"prediction.identical" = "En identisk fil finnes allerede – hoppes over";
+"prediction.conflictKeep" = "En annen fil med dette navnet finnes – den beholdes";
+"prediction.conflictReplace" = "En annen fil med dette navnet finnes – den blir erstattet";
+"prediction.conflictSkip" = "En annen fil med dette navnet finnes – hoppes over";
+"prediction.damaged" = "Kopien i sikkerhetskopien er skadet – hoppes over";
+"prediction.afterPrerequisite" = "Blir installert når Homebrew er klart";
+
+/* Fremdrift */
+"progress.title" = "Gjenoppretter";
+"progress.subtitle" = "MacReplica går gjennom hvert element og kontrollerer resultatet.";
+"progress.position" = "%1$d / %2$d";
+"progress.remaining" = "%1$@ igjen";
+"progress.succeeded" = "Vellykket: %1$d";
+"progress.failed" = "Mislyktes: %1$d";
+"progress.skipped" = "Hoppet over: %1$d";
+"progress.recent" = "Fullført";
+"progress.finishing" = "Avslutter …";
+"progress.stopping" = "Stopper etter gjeldende trinn …";
+"progress.keepOpen" = "La MacReplica være åpen og hold Macen våken.";
+"progress.stop" = "Stopp";
+"progress.continue" = "Fortsett";
+"progress.stopConfirm.title" = "Vil du stoppe gjenopprettingen?";
+"progress.stopConfirm.message" = "MacReplica stopper etter gjeldende trinn. Du kan fortsette der den stoppet senere.";
+
+"activity.checking" = "Sjekker om det allerede er installert …";
+"activity.downloading" = "Laster ned …";
+"activity.installing" = "Installerer …";
+"activity.copying" = "Kopierer …";
+"activity.verifying" = "Kontrollerer resultatet …";
+"activity.waitingForCommandLineTools" = "Venter på Command Line Tools. Klikk Installer i macOS-vinduet og vent til installeringen er ferdig.";
+"activity.waitingForAdmin" = "Venter på administratorpassordet ditt …";
+
+"kind.commandLineTools" = "Apple Command Line Tools";
+"kind.homebrew" = "Homebrew";
+"kind.tap" = "Homebrew-kilde";
+"kind.masTool" = "Hjelpeverktøy for Mac App Store";
+"kind.font" = "Skrift";
+"kind.colorProfile" = "ICC-profil";
+
+/* Oppsummering */
+"summary.title.done" = "Gjenoppretting fullført";
+"summary.title.problems" = "Gjenoppretting fullført med problemer";
+"summary.title.stopped" = "Gjenoppretting stoppet";
+"summary.succeeded" = "vellykket";
+"summary.failed" = "mislyktes";
+"summary.skipped" = "hoppet over";
+"summary.stopped.title" = "Gjenopprettingen ble stoppet før alle elementene var ferdige.";
+"summary.stopped.message" = "Du kan fortsette nå eller senere; MacReplica husker hvor den stoppet.";
+"summary.failedHeading" = "Dette fungerte ikke";
+"summary.manualHeading" = "Installer disse appene selv";
+"summary.manualMessage" = "MacReplica fant ingen pålitelig automatisk kilde for disse appene.";
+"summary.notesHeading.one" = "%1$d merknad";
+"summary.notesHeading.other" = "%1$d merknader";
+"summary.skippedHeading.one" = "%1$d element hoppet over";
+"summary.skippedHeading.other" = "%1$d elementer hoppet over";
+"summary.allDone.title" = "Alt du valgte, ble gjenopprettet.";
+"summary.allDone.message" = "Hvert element ble kontrollert etter installering eller kopiering.";
+"summary.retry" = "Prøv mislykkede igjen";
+"summary.openReport" = "Åpne rapport";
+"summary.openWebsite" = "Åpne nettsted";
+
+"outcome.succeeded" = "Vellykket";
+"outcome.alreadyPresent" = "Allerede installert";
+
+"skip.keptExisting" = "Eksisterende fil beholdt";
+"skip.userSkipped" = "Hoppet over etter ditt valg";
+"skip.dependencyFailed" = "Hoppet over fordi %1$@ ikke er tilgjengelig";
+"skip.tapNotEnabled" = "Hoppet over fordi Homebrew-kilden %1$@ ikke ble tillatt";
+"skip.incompatibleArchitecture" = "Hoppet over: Denne appen kjører bare på Mac-maskiner med %1$@";
+"skip.cancelled" = "Ikke utført fordi gjenopprettingen ble stoppet";
+
+"note.newerVersion" = "Versjon %1$@ ble installert; sikkerhetskopien hadde %2$@, som ikke lenger er tilgjengelig.";
+"note.requiresRosetta" = "Denne appen er laget for Intel-baserte Mac-maskiner og trenger Rosetta 2 på denne Macen. macOS tilbyr å installere Rosetta første gang du åpner appen.";
+"note.movedAside" = "Den forrige filen ble flyttet til %1$@.";
+"note.identical" = "En identisk fil fantes allerede.";
+
+/* Feil */
+"failure.network.title" = "Ingen internettforbindelse";
+"failure.network.explanation" = "Nedlastingen fungerte ikke. Sjekk internettforbindelsen og bruk Prøv mislykkede igjen.";
+"failure.appStoreNotSignedIn.title" = "Ikke logget på App Store";
+"failure.appStoreNotSignedIn.explanation" = "Åpne App Store, logg på med Apple-kontoen din og bruk deretter Prøv mislykkede igjen. Du kan også laste ned appen fra kjøpene dine i App Store.";
+"failure.packageNotFound.title" = "Ikke lenger tilgjengelig";
+"failure.packageNotFound.explanation" = "Pakken finnes ikke lenger i Homebrew eller App Store. Installer appen fra produsentens nettsted.";
+"failure.adminRightsDenied.title" = "Administratorrettigheter ble ikke gitt";
+"failure.adminRightsDenied.explanation" = "Passordvinduet ble avbrutt, eller passordet ble ikke godtatt. Bruk Prøv mislykkede igjen for å prøve på nytt.";
+"failure.appAlreadyExists.title" = "En annen kopi er allerede installert";
+"failure.appAlreadyExists.explanation" = "En app med samme navn finnes allerede, men MacReplica kan ikke bekrefte at det er samme app. Fjern eller gi nytt navn til den eksisterende appen, og prøv igjen.";
+"failure.incompatible.title" = "Ikke kompatibel med denne Macen";
+"failure.incompatible.explanation" = "Denne appen støtter ikke denne Macen eller denne versjonen av macOS. Se etter en kompatibel versjon på produsentens nettsted.";
+"failure.diskFull.title" = "Ikke nok lagringsplass";
+"failure.diskFull.explanation" = "Frigjør litt plass på denne Macen og bruk deretter Prøv mislykkede igjen.";
+"failure.verificationFailed.title" = "Kunne ikke bekreftes";
+"failure.verificationFailed.explanation" = "Installeringen meldte at den var vellykket, men MacReplica fant ikke det forventede resultatet etterpå. Sjekk appen manuelt eller prøv igjen.";
+"failure.backupFileDamaged.title" = "Skadet i sikkerhetskopien";
+"failure.backupFileDamaged.explanation" = "Kopien i sikkerhetskopien stemmer ikke med kontrollsummen og ble ikke gjenopprettet, slik at ingen skadet fil havner på denne Macen.";
+"failure.homebrewUnavailable.title" = "Homebrew er ikke tilgjengelig";
+"failure.homebrewUnavailable.explanation" = "Dette elementet trenger Homebrew, som ikke kunne installeres eller startes.";
+"failure.homebrewBroken.title" = "Homebrew fungerer ikke";
+"failure.homebrewBroken.explanation" = "Homebrew er installert, men svarer ikke riktig. MacReplica endrer ikke en eksisterende Homebrew-installasjon. Reparer Homebrew (se feilsøkingsdelen i dokumentasjonen) og prøv igjen.";
+"failure.commandLineToolsUnavailable.title" = "Command Line Tools ble ikke installert";
+"failure.commandLineToolsUnavailable.explanation" = "Homebrew trenger Command Line Tools fra Apple. Installeringen ble ikke fullført. Bruk Prøv mislykkede igjen og klikk Installer i macOS-vinduet.";
+"failure.masUnavailable.title" = "Hjelpeverktøyet for App Store er ikke tilgjengelig";
+"failure.masUnavailable.explanation" = "Verktøyet «mas», som installerer App Store-apper, kunne ikke installeres. Du kan laste ned appen fra kjøpene dine i App Store.";
+"failure.timeout.title" = "Tok for lang tid";
+"failure.timeout.explanation" = "Installeringen ble ikke ferdig i tide og ble stoppet. Sjekk internettforbindelsen og prøv igjen.";
+"failure.cancelled.title" = "Stoppet";
+"failure.cancelled.explanation" = "Trinnet ble avbrutt fordi gjenopprettingen ble stoppet.";
+"failure.unknown.title" = "Uventet problem";
+"failure.unknown.explanation" = "Noe gikk galt som MacReplica ikke kunne identifisere. De tekniske detaljene kan hjelpe; du kan også prøve igjen.";
+
+/* Kontroll */
+"verify.progress.title" = "Kontrollerer sikkerhetskopi";
+"verify.progress.subtitle" = "Hver fil sammenlignes med den lagrede kontrollsummen.";
+"verify.result.title" = "Kontroll av sikkerhetskopi";
+"verify.result.intact" = "Sikkerhetskopien er fullstendig og uskadd.";
+"verify.result.intactMessage.one" = "%1$d fil ble kontrollert.";
+"verify.result.intactMessage.other" = "%1$d filer ble kontrollert.";
+"verify.result.issues.one" = "%1$d problem funnet";
+"verify.result.issues.other" = "%1$d problemer funnet";
+"verify.result.issuesMessage" = "Sikkerhetskopien kan fortsatt brukes. Berørte filer hoppes over under en gjenoppretting.";
+"verify.result.unusable" = "Sikkerhetskopien kan ikke brukes";
+"verify.result.unusableMessage" = "Innholdslisten mangler, er skadet eller kommer fra en nyere MacReplica.";
+"verify.result.contents" = "Innhold";
+"verify.result.restore" = "Gjenopprett denne sikkerhetskopien …";
+"verify.issue.manifestUnreadable" = "Innholdslisten (manifest.json) kan ikke leses.";
+"verify.issue.unsupportedVersion" = "Sikkerhetskopien bruker formatversjon %1$d; denne MacReplica støtter opptil versjon %2$d.";
+"verify.issue.checksumMissing" = "Sikkerhetskopien har ingen kontrollsum for innholdslisten, så endringer i den kan ikke oppdages.";
+"verify.issue.checksumMismatch" = "Innholdslisten ble endret etter at sikkerhetskopien ble laget.";
+"verify.issue.unsafePath" = "Usikker filbane avvist: %1$@";
+"verify.issue.fileMissing" = "Mangler: %1$@";
+"verify.issue.sizeMismatch" = "Feil størrelse: %1$@";
+"verify.issue.hashMismatch" = "Skadet (kontrollsummen avviker): %1$@";
+
+/* Kilder og metoder */
+"source.homebrew" = "Homebrew";
+"source.appStore" = "Mac App Store";
+"source.package" = "Installasjonspakke";
+"source.downloaded" = "Lastet ned med %1$@";
+"source.unknown" = "Ukjent";
+"method.homebrewCask" = "Homebrew Cask";
+"method.homebrewFormula" = "Homebrew Formula";
+"method.appStore" = "Mac App Store";
+"method.officialDownload" = "Nedlasting fra produsent";
+"method.manual" = "Manuell installering";
+"category.homebrew" = "Kan gjenopprettes med Homebrew";
+"category.appStore" = "Kan gjenopprettes fra Mac App Store";
+"category.officialDownload" = "Kan gjenopprettes fra produsentens nettsted";
+"category.manual" = "Må installeres manuelt";
+"manual.hint.appStore" = "Fra Mac App Store. Åpne App Store og last den ned fra kjøpene dine.";
+"manual.hint.candidates" = "Mulige Homebrew-pakker: %1$@. Velg én under gjenopprettingen, eller last ned appen fra produsenten.";
+"manual.hint.officialDownload" = "Last ned gjeldende versjon fra produsentens nettsted.";
+"manual.hint.manual" = "Fant ingen automatisk kilde. Installer den fra det opprinnelige installasjonsprogrammet eller fra produsentens nettsted.";
+"architecture.appleSilicon" = "Apple silicon";
+"architecture.intel" = "Intel";
+"architecture.unknown" = "ukjent";
+"location.user" = "Ditt bibliotek";
+"location.system" = "Felles bibliotek";
+
+/* Tid og størrelser */
+"time.lessThanMinute" = "under ett minutt";
+"time.minutes.one" = "omtrent %1$d minutt";
+"time.minutes.other" = "omtrent %1$d minutter";
+"time.hours.one" = "omtrent %1$d time";
+"time.hours.other" = "omtrent %1$d timer";
+"time.hoursMinutes" = "omtrent %1$d t %2$d min";
+"size.bytes" = "%1$@ byte";
+"size.kb" = "%1$@ KB";
+"size.mb" = "%1$@ MB";
+"size.gb" = "%1$@ GB";
+
+/* Rapporter */
+"report.footer" = "Laget med MacReplica %1$@";
+"report.subtitle" = "Sikkerhetskopi fra %1$@ · macOS %2$@ · %3$@";
+"report.none" = "Ingen";
+"report.inventory.title" = "MacReplica-oversikt";
+"report.card.applications" = "Programmer";
+"report.taps" = "Ekstra Homebrew-kilder";
+"report.manual.title" = "Apper som må installeres manuelt";
+"report.manual.intro.one" = "%1$d app kan ikke gjenopprettes automatisk. Lenkene går til produsentens offisielle nettsted der det er kjent.";
+"report.manual.intro.other" = "%1$d apper kan ikke gjenopprettes automatisk. Lenkene går til produsentens offisielle nettsted der det er kjent.";
+"report.openDownloadPage" = "Nedlastingsside";
+"report.dryRun.title" = "MacReplica-forhåndsvisning";
+"report.dryRun.intro" = "Denne forhåndsvisningen viser hva en gjenoppretting ville gjort. Ingenting ble endret.";
+"report.dryRun.steps" = "Trinn";
+"report.dryRun.willChange" = "Blir installert eller kopiert";
+"report.dryRun.alreadyPresent" = "Finnes allerede";
+"report.dryRun.conflicts" = "Konflikter";
+"report.dryRun.planned" = "Planlagte trinn";
+"report.dryRun.needsAdmin" = "Krever administratorpassordet ditt";
+"report.restore.title" = "MacReplica – oppsummering av gjenoppretting";
+"report.restore.steps" = "Alle trinn";
+"report.restore.notRun" = "Ikke utført ennå";
+"report.column.name" = "Navn";
+"report.column.version" = "Versjon";
+"report.column.vendor" = "Produsent";
+"report.column.source" = "Kilde";
+"report.column.restoreMethod" = "Gjenopprettingsmetode";
+"report.column.architecture" = "Arkitektur";
+"report.column.tap" = "Tap";
+"report.column.appStoreID" = "App Store-ID";
+"report.column.file" = "Fil";
+"report.column.family" = "Skriftfamilie";
+"report.column.description" = "Beskrivelse";
+"report.column.location" = "Plassering";
+"report.column.size" = "Størrelse";
+"report.column.bundleID" = "Bundle-ID";
+"report.column.recommended" = "Anbefalt metode";
+"report.column.vendorPage" = "Produsentens nettsted";
+"report.column.downloadPage" = "Nedlastingsside";
+"report.column.notes" = "Merknader";
+"report.column.method" = "Metode";
+"report.column.plannedAction" = "Planlagt handling";
+"report.column.result" = "Resultat";
+
+/* Felles tillegg */
+"common.ok" = "OK";
+
+/* Python-utviklingsmiljøer */
+"scan.phase.python" = "Ser etter Python-miljøer …";
+"component.python" = "Python-miljøer";
+"component.python.hint" = "Virtuelle miljøer bygges opp på nytt med samme Python-versjon og samme pakker.";
+"python.section.title" = "Utviklingsmiljøer";
+"python.section.message" = "MacReplica registrerer Python-miljøene dine og bygger dem opp på nytt på den nye Macen i stedet for å kopiere dem, fordi kopierte miljøer som regel slutter å fungere. Velg hvilke du vil beholde.";
+"python.none" = "Fant ingen Python-miljøer. Mapper som Dokumenter blir bare søkt gjennom hvis du legger dem til.";
+"python.search.button" = "Søk i en annen mappe …";
+"python.search.choose" = "Søk her";
+"python.search.message" = "Velg en mappe som inneholder Python-prosjekter, for eksempel i Dokumenter.";
+"python.environment" = "Virtuelt miljø: %1$@";
+"python.environmentDetail" = "Python %1$@ · %2$@ pakker · %3$@";
+"python.manualPackages" = "Installert fra lokale mapper eller repositorier, så de kan ikke installeres på nytt automatisk: %1$@";
+"python.settings.one" = "%1$d Python-innstilling fra skallprofilen din";
+"python.settings.other" = "%1$d Python-innstillinger fra skallprofilen din";
+"python.source.homebrew" = "fra Homebrew";
+"python.source.pyenv" = "fra pyenv";
+"python.source.pythonOrg" = "fra python.org";
+"python.source.system" = "følger med macOS";
+"python.requirements.header" = "Registrert av MacReplica for miljøet «%1$@» (Python %2$@).\nInstaller med: python -m pip install -r requirements.txt";
+"kind.pythonEnvironment" = "Python-miljø";
+"activity.creatingEnvironment" = "Oppretter det virtuelle miljøet …";
+"activity.installingPackages" = "Installerer Python-pakker. Dette kan ta noen minutter …";
+"prediction.recreateEnvironment" = "Blir opprettet på nytt med de registrerte pakkene";
+"prediction.completeEnvironment" = "Et kompatibelt miljø finnes – manglende pakker blir lagt til";
+"prediction.environmentConflict" = "Noe annet finnes allerede på dette stedet – det blir ikke rørt";
+"skip.projectFolderMissing" = "Hoppet over fordi prosjektmappen %1$@ ikke finnes ennå. Kopier prosjektet ditt til denne Macen og prøv igjen.";
+"note.pythonManualPackages" = "Installer disse pakkene på nytt selv (de kom fra lokale mapper eller repositorier): %1$@";
+"note.pythonPackagesUpdated.one" = "%1$d pakke var ikke tilgjengelig i den registrerte versjonen; gjeldende kompatible versjon ble installert.";
+"note.pythonPackagesUpdated.other" = "%1$d pakker var ikke tilgjengelige i de registrerte versjonene; gjeldende kompatible versjoner ble installert.";
+"note.pythonEnvironmentReused" = "Et eksisterende kompatibelt miljø ble beholdt og fullført.";
+"note.pythonSettings.one" = "%1$d Python-innstilling kan legges inn manuelt; se gjenopprettingsveiledningen.";
+"note.pythonSettings.other" = "%1$d Python-innstillinger kan legges inn manuelt; se gjenopprettingsveiledningen.";
+"failure.pythonVersionUnavailable.title" = "Python-versjonen er ikke tilgjengelig";
+"failure.pythonVersionUnavailable.explanation" = "Homebrew tilbyr ikke lenger denne Python-versjonen. Installer den med pyenv eller fra python.org, og opprett deretter miljøet slik det er beskrevet i gjenopprettingsveiledningen.";
+"failure.pythonPackagesIncomplete.title" = "Ikke alle Python-pakker kunne installeres";
+"failure.pythonPackagesIncomplete.explanation" = "Miljøet ble opprettet, men noen pakker mangler. Resten av gjenopprettingen påvirkes ikke. Du kan prøve igjen senere; de tekniske detaljene viser hvilke pakker som mangler.";
+"failure.pythonEnvironmentConflict.title" = "Noe annet er i veien";
+"failure.pythonEnvironmentConflict.explanation" = "En annen mappe eller et miljø med en annen Python-versjon finnes allerede på dette stedet. MacReplica endrer det ikke. Gi det nytt navn eller fjern det, og prøv igjen.";
+
+/* Programdata */
+"component.applicationData" = "Programdata";
+"component.applicationData.hint" = "Mapper med appdata som du har valgt. Eksisterende filer blir aldri overskrevet uten at du blir spurt.";
+"appData.section.title" = "Programdata";
+"appData.section.message" = "Legg til mapper med data du har laget i apper, for eksempel maler eller forhåndsinnstillinger i Application Support. Passord, nøkler og informasjonskapsler blir aldri tatt med.";
+"appData.add.button" = "Legg til mappe …";
+"appData.add.choose" = "Legg til";
+"appData.add.message" = "Velg en mappe med programdata som skal tas med i sikkerhetskopien.";
+"appData.summary" = "%1$@ filer · %2$@";
+"appData.remove" = "Fjern fra sikkerhetskopien";
+"appData.refused.one" = "%1$d fil ble utelatt fordi den ser ut som en passord-, nøkkel- eller informasjonskapselfil.";
+"appData.refused.other" = "%1$d filer ble utelatt fordi de ser ut som passord-, nøkkel- eller informasjonskapselfiler.";
+"appData.error.title" = "Denne mappen kan ikke legges til";
+"appData.error.outsideHome" = "Bare mapper i hjemmemappen din kan legges til.";
+"appData.error.tooBroad" = "Denne mappen er for omfattende. Velg mappen til én enkelt app, for eksempel i Application Support.";
+"appData.error.sensitive" = "Denne mappen inneholder passord, nøkler eller private meldinger og blir aldri tatt med i en sikkerhetskopi.";
+"appData.error.notAFolder" = "Det valgte objektet er ikke en mappe.";
+"kind.applicationData" = "Programdata";
+"note.applicationData" = "%1$d filer kopiert, %2$d var allerede identiske, %3$d eksisterende filer beholdt.";
+
+/* Sikkerhetskopipakke */
+"saved.titlePartial" = "Sikkerhetskopi lagret med mangler";
+"saved.partial.one" = "%1$d element kunne ikke tas med";
+"saved.partial.other" = "%1$d elementer kunne ikke tas med";
+"saved.partialMessage" = "Alt annet ble lagret og kontrollert. Elementene som mangler, står nedenfor og i gjenopprettingsveiledningen.";
+"saved.moreIssues" = "og %1$d til";
+"saved.size" = "%1$@ · %2$@ filer";
+"saved.contents" = "Apper: %1$@ · Homebrew-pakker: %2$@ · Python-miljøer: %3$@ · Datamapper: %4$@ · Skrifter: %5$@ · ICC-profiler: %6$@";
+"saved.transfer.title" = "Flytte sikkerhetskopien til den nye Macen";
+"saved.transfer.intro" = "Kopier hele sikkerhetskopimappen til den nye Macen. Alle disse fungerer:";
+"saved.transfer.drive" = "En ekstern disk eller minnepinne";
+"saved.transfer.network" = "En delt mappe på nettverket ditt";
+"saved.transfer.cloud" = "En skymappe som iCloud Drive (vent til opplastingen er ferdig)";
+"saved.transfer.airdrop" = "AirDrop, for mindre sikkerhetskopier";
+"saved.openInstructions" = "Gjenopprettingsveiledning";
+"backupIssue.unreadable" = "kunne ikke leses";
+"backupIssue.refusedSensitive" = "utelatt (ser ut som en passord-, nøkkel- eller informasjonskapselfil)";
+"backupIssue.tooLarge" = "utelatt (mappen er for stor)";
+"backupIssue.changedDuringBackup" = "ble endret mens den ble kopiert";
+"backup.readme" = "Denne mappen er en MacReplica-sikkerhetskopi (%1$@).\n\nSlik gjenoppretter du den på en ny Mac:\n1. Kopier hele denne mappen til den nye Macen.\n2. Åpne MacReplica og velg Gjenopprett.\n3. Velg denne mappen.\n\nTrinnvis veiledning: restore/RESTORE_INSTRUCTIONS.html\nOversikt over innholdet: reports/inventory.html\n\nIkke endre eller gi nytt navn til filer i denne mappen; MacReplica kontrollerer hver fil før den gjenopprettes.\n";
+
+/* Gjenopprettingsveiledning */
+"guide.title" = "Slik gjenoppretter du denne sikkerhetskopien";
+"guide.intro" = "Denne sikkerhetskopien ble laget av MacReplica. Den inneholder en beskrivelse av appene og innstillingene dine, pluss kopier av skrifter, fargeprofiler og filene du valgte. Disse trinnene tar deg fra den gamle Macen til den nye.";
+"guide.contents" = "Dette er i sikkerhetskopien";
+"guide.automatic" = "Gjenopprettes automatisk";
+"guide.complete" = "Alt som ble valgt, er med i denne sikkerhetskopien og er kontrollert.";
+"guide.partial.one" = "%1$d element kunne ikke tas med i denne sikkerhetskopien:";
+"guide.partial.other" = "%1$d elementer kunne ikke tas med i denne sikkerhetskopien:";
+"guide.oldMac.title" = "På den gamle Macen";
+"guide.oldMac.1" = "Åpne MacReplica.";
+"guide.oldMac.2" = "Velg Lag sikkerhetskopi og la skanningen bli ferdig.";
+"guide.oldMac.3" = "Velg hva som skal beholdes, for eksempel Python-miljøer og programdata.";
+"guide.oldMac.4" = "Lagre sikkerhetskopien.";
+"guide.oldMac.5" = "Kontroller sikkerhetskopien (MacReplica gjør dette automatisk ved lagring; du kan gjenta det med Kontroller sikkerhetskopi).";
+"guide.oldMac.6" = "Kopier sikkerhetskopimappen trygt til den nye Macen.";
+"guide.transfer.title" = "Flytte sikkerhetskopien";
+"guide.transfer.intro" = "Kopier hele mappen «%1$@», ikke bare deler av den. Alle disse fungerer:";
+"guide.transfer.drive" = "en ekstern disk eller minnepinne";
+"guide.transfer.network" = "en delt mappe på nettverket ditt";
+"guide.transfer.cloud" = "en skymappe som iCloud Drive (vent til alle filene er lastet opp og ned)";
+"guide.transfer.airdrop" = "AirDrop, for mindre sikkerhetskopier";
+"guide.transfer.check" = "På den nye Macen kan du velge Kontroller sikkerhetskopi i MacReplica for å sikre at ingenting gikk tapt underveis.";
+"guide.newMac.title" = "På den nye Macen";
+"guide.newMac.1" = "Last ned MacReplica, flytt det til Programmer-mappen og åpne det.";
+"guide.newMac.2" = "Velg Gjenopprett og marker sikkerhetskopimappen.";
+"guide.newMac.3" = "Se gjennom hva MacReplica fant i sikkerhetskopien.";
+"guide.newMac.4" = "Velg hva som skal gjenopprettes. Bruk Forhåndsvisning (prøvekjøring) for å se hvert trinn først.";
+"guide.newMac.5" = "Tillat det macOS ber om: installeringen av Command Line Tools og administratorpassordet ditt der det trengs.";
+"guide.newMac.6" = "Start gjenopprettingen og hold Macen våken til den er ferdig.";
+"guide.newMac.7" = "Se gjennom resultatet. Mislykkede elementer kan prøves igjen.";
+"guide.newMac.8" = "Installer appene som står under «Apper som må installeres manuelt», selv.";
+"guide.python.title" = "Python-miljøer";
+"guide.python.intro" = "MacReplica bygger opp disse miljøene på nytt automatisk: Den installerer den registrerte Python-versjonen med Homebrew, oppretter et nytt virtuelt miljø og installerer de registrerte pakkene. Kommandoene nedenfor gjør det samme manuelt.";
+"guide.python.location" = "Plassering: %1$@";
+"guide.python.packages.one" = "%1$d pakke registrert";
+"guide.python.packages.other" = "%1$d pakker registrert";
+"guide.python.manualCommands" = "Slik bygger du det opp på nytt manuelt i Terminal:";
+"guide.python.backupFolder" = "sikkerhetskopimappe";
+"guide.python.manualPackages" = "Installer disse pakkene på nytt selv, fordi de kom fra lokale mapper eller repositorier: %1$@";
+"guide.python.settings" = "Python-innstillinger";
+"guide.python.settingsIntro" = "Disse innstillingene ble funnet i skallprofilen din. MacReplica endrer ikke skallprofiler; legg dem til selv hvis du trenger dem:";
+"guide.appData.intro" = "Disse mappene kopieres tilbake til samme sted. Filer som allerede finnes med annet innhold, beholdes med mindre du velger å erstatte dem.";
+"guide.appData.files.one" = "%1$d fil";
+"guide.appData.files.other" = "%1$d filer";
+"guide.trouble.title" = "Hvis noe går galt";
+"guide.trouble.1" = "Mislykkede elementer kan prøves igjen på slutten av gjenopprettingen, for eksempel etter at du har logget på App Store, eller når internettforbindelsen er tilbake.";
+"guide.trouble.2" = "Loggene ligger i ~/Library/Logs/MacReplica. I MacReplica velger du Hjelp › Åpne logger eller Hjelp › Eksporter diagnoserapport.";
+"guide.trouble.3" = "En avbrutt gjenoppretting fortsetter der den stoppet neste gang MacReplica åpnes.";
+
+/* Logger, hjelp og oppstart */
+"help.openLogs" = "Åpne logger";
+"help.exportDiagnostics" = "Eksporter diagnoserapport …";
+"help.support" = "Støtt MacReplica";
+"logs.hint" = "Detaljer er registrert i loggen (%1$@).";
+"diagnostics.saveMessage" = "Rapporten inneholder tekniske detaljer og de siste loggoppføringene. Personlige filbaner forkortes, og ikke noe innhold fra sikkerhetskopier tas med.";
+"diagnostics.failed" = "Diagnoserapporten kunne ikke lagres";
+"safeMode.title" = "MacReplica startet ikke helt forrige gang";
+"safeMode.message" = "Oppstarten stoppet under trinnet «%1$@». MacReplica kjører nå i sikker modus: Uferdige gjenopprettinger lastes ikke inn automatisk, og språket er engelsk. Loggene kan hjelpe med å finne årsaken.";
+"safeMode.continue" = "Fortsett som normalt";
+"startup.stage.launch" = "oppstart";
+"startup.stage.configuration" = "laster inn konfigurasjonen";
+"startup.stage.localization" = "laster inn språk";
+"startup.stage.storage" = "leser lagrede gjenopprettingsøkter";
+"startup.stage.environment" = "sjekker denne Macen";
+"startup.stage.userInterface" = "åpner vinduet";
+
+/* Versjon og oppdateringer */
+"about.versionBuild" = "Versjon %1$@ (bygg %2$@)";
+"about.platform" = "For macOS %1$@ eller nyere · Apple silicon og Intel";
+"update.check" = "Se etter oppdateringer …";
+"update.upToDate" = "MacReplica er oppdatert.";
+"update.currentVersion" = "Du bruker versjon %1$@.";
+"update.available" = "MacReplica %1$@ er tilgjengelig. Du bruker for øyeblikket versjon %2$@.";
+"update.availableHint" = "MacReplica installerer ikke oppdateringer selv. Åpne utgivelsessiden for å laste ned den nye versjonen.";
+"update.unable" = "MacReplica kunne ikke se etter oppdateringer akkurat nå. Prøv igjen senere.";
+"update.viewRelease" = "Vis utgivelse";
+"update.automatic" = "Se etter oppdateringer én gang i uken";
+"update.prereleases" = "Ta med forhåndsversjoner";
+
+/* Tillatelser og skannede steder */
+"access.section.title" = "Skannede steder";
+"access.blocked.title" = "Noen steder kunne ikke leses";
+"access.blocked.message" = "macOS har ikke gitt MacReplica tillatelse til å lese dem, så innholdet deres er ikke med i denne sikkerhetskopien. Alt annet ble skannet som normalt. Hvis du vil ta dem med, kan du gi tilgang i «Systeminnstillinger › Personvern og sikkerhet» og skanne på nytt.";
+"access.openSettings" = "Åpne «Personvern og sikkerhet»";
+"access.scanned" = "Skannet";
+"access.notFound" = "Ikke på denne Macen";
+"access.noPermission" = "Ingen tillatelse";
+"access.unsupported" = "Kan ikke brukes";
+"access.area.applications" = "Programmer";
+"access.area.userFonts" = "Skrifter (ditt bibliotek)";
+"access.area.systemFonts" = "Skrifter (felles)";
+"access.area.userColorProfiles" = "ICC-profiler (ditt bibliotek)";
+"access.area.systemColorProfiles" = "ICC-profiler (felles)";
+"access.area.homebrew" = "Homebrew";
+"access.area.appStore" = "Mac App Store";
+"access.area.python" = "Python-miljøer";
+"access.area.applicationData" = "Programdata";
+"report.locations" = "Skannede steder";
+"report.column.area" = "Område";
+
+/* Programdataprofiler */
+"appData.profileName" = "%1$@ – %2$@";
+"appData.category.actions" = "Handlinger";
+"appData.category.brushes" = "Pensler";
+"appData.category.styles" = "Stiler";
+"appData.category.gradients" = "Overganger";
+"appData.category.patterns" = "Mønstre";
+"appData.category.swatches" = "Fargeprøver";
+"appData.category.presets" = "Forhåndsinnstillinger";
+"appData.category.shortcuts" = "Tastatursnarveier";
+"appData.category.luts" = "LUTs";
+"appData.category.fusionTemplates" = "Fusion-maler";
+"appData.category.fusionMacros" = "Fusion-makroer";
+"note.applicationVersionDiffers" = "Dataene ble gjenopprettet for %1$@, som ikke er installert på denne Macen. Hvis du bruker en nyere versjon, importerer du forhåndsinnstillingene der.";
+
+/* Utviklerinnstillinger */
+"component.developerSettings" = "Utviklerinnstillinger";
+"component.developerSettings.hint" = "Git-innstillingene dine, uten tokener eller private serveradresser.";
+"developer.git" = "Git-innstillinger";
+"developer.git.detail" = "Navn, aliaser og innstillinger fra ~/.gitconfig. Seksjoner som kan inneholde tokener eller private servere, utelates.";
+"developer.git.email" = "Ta med e-postadressen min";
+"kind.gitConfiguration" = "Git-innstillinger";
+
+/* Påloggingsinformasjon */
+"component.credentials" = "Påloggingsinformasjon (kryptert)";
+"component.credentials.hint" = "Gjenopprettes bare hvis du velger det og skriver inn passordfrasen du valgte da sikkerhetskopien ble laget.";
+"credentials.section.title" = "Påloggingsinformasjon (avansert)";
+"credentials.section.message" = "Passord, tokener, informasjonskapsler og nøkkelringen blir aldri tatt med i en sikkerhetskopi. SSH-nøkler er den eneste påloggingsinformasjonen MacReplica kan flytte, og bare hvis du slår dette på: De krypteres med en passordfrase du velger selv.";
+"credentials.ssh.toggle" = "Ta med SSH-nøkler (kryptert)";
+"credentials.ssh.none" = "Fant ingen SSH-nøkler.";
+"credentials.ssh.description" = "MacReplica tar med SSH-nøklene og SSH-konfigurasjonen din fra ~/.ssh (private og offentlige nøkler, config, known_hosts).";
+"credentials.ssh.risk" = "Alle som får tak i sikkerhetskopien og passordfrasen, kan logge på alle servere disse nøklene gir tilgang til.";
+"credentials.enabled" = "SSH-nøklene blir kryptert og lagret i mappen for påloggingsinformasjon i sikkerhetskopien.";
+"credentials.optIn.title" = "Vil du ta med SSH-nøkler?";
+"credentials.optIn.warningTitle" = "Denne sikkerhetskopien kommer til å inneholde sensitive data";
+"credentials.optIn.warning" = "Flytting av påloggingsinformasjon kan omfatte sensitive autentiseringsopplysninger. Alle som får tak i denne sikkerhetskopien og passordfrasen, kan muligens få tilgang til de valgte kontoene eller tjenestene. Slå dette på bare hvis du forstår og godtar risikoen.";
+"credentials.optIn.storage" = "Nøklene krypteres (AES-256-GCM) med en nøkkel som er avledet fra passordfrasen din, og lagres separat i mappen for påloggingsinformasjon i sikkerhetskopien. Selve passordfrasen lagres aldri noe sted. Hvis du glemmer den, kan nøklene ikke gjenopprettes fra sikkerhetskopien.";
+"credentials.passphrase" = "Passordfrase";
+"credentials.passphraseConfirm" = "Gjenta passordfrasen";
+"credentials.passphraseRules" = "Minst %1$d tegn. Oppbevar den et trygt sted, atskilt fra sikkerhetskopien.";
+"credentials.optIn.understood" = "Jeg forstår risikoen og at en tapt passordfrase ikke kan gjenopprettes.";
+"credentials.optIn.enable" = "Ta med kryptert";
+"credentials.restore.title" = "Passordfrase for påloggingsinformasjon";
+"credentials.restore.message" = "Denne sikkerhetskopien inneholder krypterte SSH-nøkler. Skriv inn passordfrasen du valgte da sikkerhetskopien ble laget. Eksisterende nøkler på denne Macen erstattes ikke med mindre du har valgt å erstatte eksisterende filer.";
+"credentials.restore.skip" = "Gjenopprett uten påloggingsinformasjon";
+"kind.credential" = "Kryptert påloggingsinformasjon";
+"skip.passphraseNotProvided" = "Hoppet over fordi ingen passordfrase ble skrevet inn";
+"failure.credentialCannotBeOpened.title" = "Påloggingsinformasjonen kunne ikke åpnes";
+"failure.credentialCannotBeOpened.explanation" = "Passordfrasen er feil, eller den krypterte filen er skadet. Ingenting ble endret. Du kan prøve igjen med riktig passordfrase; ellers logger du på nytt eller lager nye nøkler på denne Macen.";
+
+/* Gjenopprettingsveiledning: utviklerinnstillinger, pålogginger, tillatelser */
+"guide.developer.intro" = "Git-innstillingene dine gjenopprettes til ~/.gitconfig hvis den filen ikke finnes ennå. Tokener, credential-hjelpere for bestemte servere og private serveradresser ble utelatt.";
+"guide.developer.removed" = "Utelatte seksjoner, sett dem opp på nytt hvis du trenger dem: %1$@";
+"guide.accounts.title" = "Pålogginger og påloggingsinformasjon";
+"guide.accounts.intro" = "Når en app gjenopprettes, får du tilbake appen og innstillingene, men ikke påloggingen din. Ha dette i bakhodet:";
+"guide.accounts.configuration" = "Konfigurasjon (appinnstillinger, forhåndsinnstillinger, Git-innstillinger) gjenopprettes der MacReplica støtter det.";
+"guide.accounts.reauthentication" = "Pålogginger gjenopprettes ikke: Apper og tjenester som Adobe, Microsoft, Google, GitHub, skylagring og abonnementer ber deg logge på igjen, fordi påloggingene er knyttet til den gamle Macen.";
+"guide.accounts.keychain" = "Nøkkelringen i macOS kopieres aldri. Bruk iCloud-nøkkelring (appen «Passord») for å få de lagrede passordene dine over på den nye Macen.";
+"guide.accounts.noCredentials" = "Denne sikkerhetskopien inneholder ingen påloggingsinformasjon.";
+"guide.accounts.vault" = "Denne sikkerhetskopien inneholder kryptert %1$@-påloggingsinformasjon (%2$@) i %3$@. Den kan bare gjenopprettes med passordfrasen som ble valgt da sikkerhetskopien ble laget.";
+"guide.access.title" = "Steder som ikke kunne leses";
+"guide.access.intro" = "macOS lot ikke MacReplica lese disse stedene, så innholdet deres mangler i denne sikkerhetskopien:";
