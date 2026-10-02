@@ -34,8 +34,25 @@ jobs:
       - name: Package check
         run: |
           scripts/make-dmg.sh build
+          (cd build && shasum -a 256 -c MacReplica-*.dmg.sha256)
+          scripts/smoke-test.sh build/MacReplica.app
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' build/MacReplica.app/Contents/Info.plist)" = "io.github.itsab1989.MacReplica"
           lipo -info build/MacReplica.app/Contents/MacOS/MacReplica | grep -q "x86_64 arm64\|arm64 x86_64"
+
+  test-intel:
+    name: Tests on Intel (x86_64)
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: swift --version && sw_vers && uname -m
+      - name: Unit, integration and end-to-end tests (native x86_64)
+        run: scripts/test.sh
+      - name: Build and launch the app on Intel
+        run: |
+          MACREPLICA_ARCHS=x86_64 scripts/build-app.sh build
+          scripts/smoke-test.sh build/MacReplica.app
 
   secrets:
     name: Secret scan

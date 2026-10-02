@@ -1,32 +1,49 @@
 name: Release
 
+# A release needs only a version bump (MacReplicaVersion.current + CHANGELOG) and a pushed tag
+# "vX.Y.Z". Everything else happens here: tests, build, packaging, validation on several macOS
+# versions and on Intel, checksums and the GitHub release. "Run workflow" builds and validates
+# without publishing (dry run).
+
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  build:
+    name: Build and package
     runs-on: macos-15
     timeout-minutes: 60
     env:
       # Secrets cannot be used in `if:` directly; these only say whether they are configured.
       HAS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
       HAS_NOTARIZATION: ${{ secrets.APPLE_ID != '' && secrets.MACOS_SIGN_IDENTITY != '' }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Tag matches the app version
+      - name: Version from the source (tag must match)
+        id: version
         run: |
           version="$(sed -n 's/.*static let current = "\(.*\)".*/\1/p' Sources/MacReplicaCore/System/SystemInfo.swift)"
-          test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME does not match MacReplicaVersion.current $version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME does not match MacReplicaVersion.current $version"; exit 1; }
+          fi
           grep -q "## \[$version\]" CHANGELOG.md || { echo "CHANGELOG.md has no entry for $version"; exit 1; }
+      - name: Toolchain
+        run: swift --version && sw_vers
       - name: Tests
         run: scripts/test.sh
-      - name: Import signing certificate (optional)
+
+      # --- Optional signing (only when the secrets exist; see docs/RELEASE_PROCESS.md) ---
+      - name: Import signing certificate
         if: env.HAS_CERTIFICATE == 'true'
         env:
           CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12 }}
@@ -42,48 +59,92 @@ jobs:
           rm -f "$RUNNER_TEMP/cert.p12"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain"
           security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
-      - name: Build app and disk image
+
+      - name: Build app (universal) and disk image
         env:
           MACREPLICA_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
           MACREPLICA_BUILD_NUMBER: ${{ github.run_number }}
         run: |
           scripts/build-app.sh build
           scripts/make-dmg.sh build
-      - name: Notarize (optional)
+      - name: Notarize and staple
         if: env.HAS_NOTARIZATION == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: scripts/notarize.sh build/MacReplica-*.dmg
+      - name: Checksums
         run: |
-          scripts/notarize.sh build/MacReplica-*.dmg
-          # Stapling changes the disk image, so its checksum is written again.
-          cd build && for f in MacReplica-*.dmg; do shasum -a 256 "$f" > "$f.sha256"; done
-      - name: Release notes from the changelog
+          cd build
+          for f in MacReplica-*.dmg; do shasum -a 256 "$f" > "$f.sha256"; shasum -a 256 -c "$f.sha256"; done
+      - name: Release notes
+        run: scripts/release-notes.sh "${{ steps.version.outputs.version }}" "$HAS_NOTARIZATION" > build/release-notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            build/MacReplica-*.dmg
+            build/MacReplica-*.dmg.sha256
+            build/release-notes.md
+          if-no-files-found: error
+
+  validate:
+    name: Validate on ${{ matrix.os }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        # Apple silicon: macOS 14, 15, 26 · Intel: macOS 15
+        os: [macos-14, macos-15, macos-26, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+      - name: Checksum
+        run: cd release && shasum -a 256 -c MacReplica-*.dmg.sha256
+      - name: Disk image contents
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} on' CHANGELOG.md > build/notes.md
-          cat >> build/notes.md <<'NOTES'
+          dmg="$(ls release/MacReplica-*.dmg)"
+          hdiutil verify "$dmg"
+          mount="$(hdiutil attach -nobrowse -readonly "$dmg" | tail -1 | awk -F'\t' '{print $NF}')"
+          echo "MOUNT=$mount" >> "$GITHUB_ENV"
+          app="$mount/MacReplica.app"
+          test -d "$app"
+          test -L "$mount/Applications"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")" = "io.github.itsab1989.MacReplica"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")" = "${{ needs.build.outputs.version }}"
+          lipo -info "$app/Contents/MacOS/MacReplica" | tee /dev/stderr | grep -q "x86_64"
+          lipo -info "$app/Contents/MacOS/MacReplica" | grep -q "arm64"
+          codesign --verify --strict --verbose=1 "$app"
+          echo "Gatekeeper assessment (expected to reject an unsigned build):"
+          spctl --assess --type execute --verbose "$app" || true
+      - name: Install and launch
+        run: |
+          mkdir -p "$RUNNER_TEMP/Applications"
+          ditto "$MOUNT/MacReplica.app" "$RUNNER_TEMP/Applications/MacReplica.app"
+          hdiutil detach "$MOUNT"
+          scripts/smoke-test.sh "$RUNNER_TEMP/Applications/MacReplica.app" "${{ needs.build.outputs.version }}"
 
-          ## Download and install
-
-          1. Download `MacReplica-<version>.dmg` below (the `.sha256` file contains its checksum).
-          2. Open it and drag **MacReplica** into **Applications**.
-          NOTES
-          if [ "$HAS_NOTARIZATION" != "true" ]; then
-            echo '3. This build is not notarized: on first launch open **System Settings → Privacy & Security** and click **Open Anyway** (on macOS 13 and 14 you can also Control-click the app and choose **Open**).' >> build/notes.md
-          fi
-          cat >> build/notes.md <<'NOTES'
-
-          Requires macOS 13 or later; universal binary for Apple silicon and Intel. Known limitations: see the [README](https://github.com/itsab1989/MacReplica#known-limitations).
-
-          MacReplica is free and always will be. If it's useful to you, a coffee is a kind way to say thanks — completely optional: [Ko-fi](https://ko-fi.com/itsab1989).
-          NOTES
-      - name: Publish GitHub release
+  publish:
+    name: Publish GitHub release
+    needs: [build, validate]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+      - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           prerelease=""
           case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" build/MacReplica-*.dmg build/MacReplica-*.dmg.sha256 \
-            --title "MacReplica ${GITHUB_REF_NAME#v}" --notes-file build/notes.md $prerelease
+          gh release create "$GITHUB_REF_NAME" release/MacReplica-*.dmg release/MacReplica-*.dmg.sha256 \
+            --repo "$GITHUB_REPOSITORY" --title "MacReplica ${GITHUB_REF_NAME#v}" --notes-file release/release-notes.md $prerelease
