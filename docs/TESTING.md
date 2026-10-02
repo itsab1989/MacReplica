@@ -4,7 +4,7 @@ All tests use [Swift Testing](https://developer.apple.com/documentation/testing)
 Xcode Command Line Tools alone.
 
 ```sh
-scripts/test.sh                                  # everything (~300 tests, about half a minute)
+scripts/test.sh                                  # everything (~340 tests, about half a minute)
 scripts/test.sh --filter FontConflictTests       # one suite (struct name)
 scripts/test.sh --filter "Restore|DryRun"        # suites matching a pattern
 ```
@@ -22,6 +22,12 @@ Tests never read or change your own apps, fonts, profiles, Homebrew or settings:
   `xcode-select`, `pkgutil`, `mdls` and Homebrew's Python that behave like the real tools but only
   change files inside the sandbox. Failure switches simulate offline networks, an App Store that is
   not signed in, broken Homebrew, missing Python packages and slow installs.
+- **Simulated developer tools:** one stand-in (`FakeTools.toolchain`) behaves like uv, pyenv, pipx,
+  fnm, Volta, npm, pnpm, Yarn, rbenv, gem, rustup, Cargo, Go, .NET, Conda, Pixi, mise and Nix and
+  only creates the files MacReplica checks, inside the sandbox. The `developerMac` scenario adds
+  synthetic environments, a MacPorts registry, a Nix profile and an app from a nightly channel with a
+  signed vendor feed; vendor downloads are served from the sandbox (`LocalFetcher`,
+  `LocalDownloadTransport`), signed with a synthetic key.
 - **Synthetic fonts and profiles** are generated in code: `SyntheticFont` writes minimal TrueType
   fonts that Core Text can read; `SimulationBuilder.makeICCProfile` writes ICC profiles that
   ColorSync accepts.
@@ -35,6 +41,11 @@ Tests never read or change your own apps, fonts, profiles, Homebrew or settings:
 | Inventory: apps, Homebrew, App Store, fonts, profiles | `InventoryTests`, `HomebrewTests`, `MatchingTests` |
 | ICC and Git configuration parsers | `ICCHeaderTests`, `ICCComputedIDBoundaryTests`, `GitConfigSanitizerTests` |
 | Python environments | `PythonTests` |
+| Developer tools: scanners, commands, validation, TOML and Go build information | `ToolchainScannerTests`, `ToolchainSecurityTests`, `SmallParserTests` |
+| Developer environments end to end (backup, restore, guided steps, resume, retry, tap trust, `--HEAD`) | `DeveloperEnvironmentTests` |
+| Release channels and update feeds | `ChannelTests` |
+| Official download sources, download queue, verification and installation | `DownloadSourceTests`, `DownloadQueueTests`, `DownloadInstallerTests` |
+| Guided installation (sequence, user decisions, cancellation) | `GuidedInstallationTests` |
 | Application data and providers | `ApplicationDataTests`, `ProviderCatalogTests`, `ProviderTests`, `AppDataScannerEdgeTests` |
 | Credentials (vault, providers, opt-in) | `CredentialTests`, `FileCredentialProviderTests`, `CredentialEdgeTests` |
 | Restore planning and selection | `RestorePlannerTests`, `SelectionPlannerTests`, `TwoStageSelectionTests` |

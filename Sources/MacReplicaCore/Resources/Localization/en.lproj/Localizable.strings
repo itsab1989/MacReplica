@@ -974,3 +974,7 @@
 /* Guided step texts */
 "saved.developerTools" = "Developer tools: %1$@";
 "guidedStep.installYourself" = "MacReplica knows no official download for this app. Install it the way you got it originally (installer, vendor account or license portal), then click Done.";
+
+/* Restore instructions: developer tools */
+"guide.toolchains.title" = "Developer tools and package managers";
+"guide.toolchains.intro" = "MacReplica reinstalls these automatically where it can. Versions marked * were the default. Commands below are the steps you run yourself; for everything else, install the manager from its website and reinstall the listed versions and tools.";

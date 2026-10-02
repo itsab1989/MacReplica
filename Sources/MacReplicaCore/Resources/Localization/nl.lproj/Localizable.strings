@@ -972,3 +972,7 @@
 /* Guided step texts */
 "saved.developerTools" = "Ontwikkelaarstools: %1$@";
 "guidedStep.installYourself" = "MacReplica kent geen officiële download voor deze app. Installeer hem zoals je hem oorspronkelijk kreeg (installatieprogramma, leveranciersaccount of licentieportaal) en klik daarna op Klaar.";
+
+/* Restore instructions: developer tools */
+"guide.toolchains.title" = "Ontwikkelaarstools en pakketbeheerders";
+"guide.toolchains.intro" = "MacReplica installeert deze waar mogelijk automatisch opnieuw. Versies met * waren de standaard. De opdrachten hieronder zijn de stappen die je zelf uitvoert; installeer voor de rest de beheerder via de website en installeer de vermelde versies en tools opnieuw.";

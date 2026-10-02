@@ -7,6 +7,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Developer tools and package managers: pyenv, uv, pipx, Conda, nvm, fnm, Volta, npm/pnpm/Yarn global
+  packages, rbenv, RVM, gems, rustup, Cargo, Go, JDKs, SDKMAN, .NET, MacPorts, Nix, Pixi, mise, asdf
+  (pkgx and Fink listed only). Scans read files only; restores run the managers' own commands without
+  a shell; steps MacReplica cannot run are guided and verified.
+- Python: environments are rebuilt with exactly the recorded pyenv or uv Python; uv projects from
+  `uv.lock` with `uv sync --frozen`; `uv.lock`, `pylock.toml`, `environment.yml` and `hatch.toml` are kept.
+- Release channels (beta, nightly, insider, preview) with their evidence, the vendor's update feed and
+  the developer Team ID are recorded per app; casks keep their channel on restore.
+- Guided installation: official download sources (vendor update feed, Homebrew's vendor URL, App Store
+  page, vendor website), verification before installing (vendor signature or checksum, bundle
+  identifier, Team ID, code signature, architecture, macOS version), download queue with pause,
+  resume, retry and cancel, installation one after another, quarantine kept for Gatekeeper.
+- Steps that wait for the user, and steps skipped, postponed or cancelled by the user, are recorded as
+  such (not as failures) and offered again when the restore continues, also after quitting.
+- Backup selection for individual apps and for each developer tool.
+- Homebrew development builds (`--HEAD`) are reproduced unless the stable release is chosen.
+
+### Fixed
+- Mac App Store apps could not be reinstalled with current `mas` (7.0 requires root for `mas install`).
+  App Store apps are now installed from the App Store page MacReplica opens, and verified.
+- Third-party taps are trusted after the user allows them (`brew trust --tap`), as Homebrew 6 and
+  later require before loading their packages.
+
 ### Changed
 - Release pipeline: every release is built, installed and launched on macOS 14, 15 and 26 (Apple
   silicon) and macOS 15 (Intel) before it is published; release notes include download, checksum,

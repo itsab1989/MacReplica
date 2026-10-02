@@ -98,6 +98,22 @@ extension ReportBuilder {
                 body += "</code></pre>"
             }
         }
+        if !manifest.toolchains.isEmpty {
+            body += h2("guide.toolchains.title")
+            body += "<p>\(HTML.escape(l.t("guide.toolchains.intro")))</p>"
+            for record in manifest.toolchains {
+                let provider = ToolchainCatalog.provider(record.provider)
+                let descriptor = provider.descriptor
+                body += "<h3>\(HTML.escape(descriptor.name)) <span class=\"muted\">· \(HTML.escape(l.ecosystemText(descriptor.ecosystem)))</span></h3>"
+                var items = record.runtimes.map { $0.version + ($0.isDefault ? " *" : "") }
+                items += record.packages.map { [$0.name, $0.version].compactMap { $0 }.joined(separator: " ") }
+                items += record.environments.map { "\($0.name): \($0.requestedPackages.filter { !$0.hasPrefix("expose=") }.joined(separator: ", "))" }
+                if !items.isEmpty { body += "<p>\(HTML.escape(items.joined(separator: " · ")))</p>" }
+                let instructions = provider.restoreActions(for: record).compactMap { provider.manualInstruction(for: $0) }
+                if !instructions.isEmpty { body += "<pre><code>\(HTML.escape(instructions.joined(separator: "\n")))</code></pre>" }
+                body += "<p class=\"muted\">\(HTML.link(descriptor.website))</p>"
+            }
+        }
 
         if !manifest.applicationData.isEmpty {
             body += h2("component.applicationData")

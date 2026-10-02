@@ -972,3 +972,7 @@
 /* Guided step texts */
 "saved.developerTools" = "Strumenti per sviluppatori: %1$@";
 "guidedStep.installYourself" = "MacReplica non conosce alcun download ufficiale per questa app. Installala come l’avevi ottenuta (programma di installazione, account del produttore o portale licenze), poi fai clic su Fatto.";
+
+/* Restore instructions: developer tools */
+"guide.toolchains.title" = "Strumenti per sviluppatori e gestori di pacchetti";
+"guide.toolchains.intro" = "MacReplica li reinstalla automaticamente quando possibile. Le versioni contrassegnate con * erano quelle predefinite. I comandi seguenti sono i passaggi da eseguire tu; per il resto, installa il gestore dal suo sito e reinstalla le versioni e gli strumenti elencati.";

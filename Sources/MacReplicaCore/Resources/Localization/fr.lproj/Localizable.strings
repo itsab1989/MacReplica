@@ -972,3 +972,7 @@
 /* Guided step texts */
 "saved.developerTools" = "Outils de développement : %1$@";
 "guidedStep.installYourself" = "MacReplica ne connaît aucun téléchargement officiel pour cette app. Installez-la comme vous l’aviez obtenue (programme d’installation, compte éditeur ou portail de licences), puis cliquez sur Terminé.";
+
+/* Restore instructions: developer tools */
+"guide.toolchains.title" = "Outils de développement et gestionnaires de paquets";
+"guide.toolchains.intro" = "MacReplica les réinstalle automatiquement quand c’est possible. Les versions marquées * étaient celles par défaut. Les commandes ci-dessous sont les étapes à exécuter vous-même ; pour le reste, installez le gestionnaire depuis son site et réinstallez les versions et outils listés.";

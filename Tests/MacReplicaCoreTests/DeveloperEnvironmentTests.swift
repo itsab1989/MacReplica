@@ -48,6 +48,9 @@ struct DeveloperEnvironmentTests {
         let api = try #require(c.manifest.python.environments.first { $0.name == "api-service" })
         #expect(api.manager == .uv && api.baseSource == .pyenv && api.pythonVersion == "3.12.4")
         #expect(api.projectFiles.map(\.fileName).contains("uv.lock"))
+        let instructions = try String(contentsOf: c.backup.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html"), encoding: .utf8)
+        #expect(instructions.contains("nvm install v20.11.1") && instructions.contains("sudo port -N install ffmpeg +gpl2"),
+                "guided commands are in the restore instructions")
     }
 
     @Test func backupSelectionKeepsOnlyChosenManagers() async throws {

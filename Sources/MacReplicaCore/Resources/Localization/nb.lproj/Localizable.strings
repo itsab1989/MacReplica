@@ -972,3 +972,7 @@
 /* Guided step texts */
 "saved.developerTools" = "Utviklerverktøy: %1$@";
 "guidedStep.installYourself" = "MacReplica kjenner ingen offisiell nedlasting for denne appen. Installer den slik du opprinnelig fikk den (installasjonsprogram, leverandørkonto eller lisensportal), og klikk deretter Ferdig.";
+
+/* Restore instructions: developer tools */
+"guide.toolchains.title" = "Utviklerverktøy og pakkebehandlere";
+"guide.toolchains.intro" = "MacReplica installerer disse automatisk på nytt der det er mulig. Versjoner merket * var standard. Kommandoene nedenfor er trinnene du kjører selv; for alt annet installerer du behandleren fra nettstedet og installerer de oppførte versjonene og verktøyene på nytt.";

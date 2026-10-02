@@ -39,14 +39,6 @@ public struct ToolchainDescriptor: Sendable, Equatable {
         self.packages = packages
         self.environments = environments
     }
-
-    /// The best support level of anything this provider restores.
-    public var overallSupport: SupportLevel {
-        let levels = [runtimes, packages, environments]
-        if levels.contains(.automatic) { return .automatic }
-        if levels.contains(.guided) { return .guided }
-        return .inventoryOnly
-    }
 }
 
 /// One restore step for a provider, stored in the restore plan and the session.
