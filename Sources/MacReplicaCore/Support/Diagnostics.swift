@@ -104,8 +104,10 @@ public enum DiagnosticReport {
         if let data = try? Data(contentsOf: startupFile) {
             for record in StartupRecorder.decode(data) {
                 let stages = record.stages.map(\.rawValue).joined(separator: " → ")
-                lines.append("\(ISO8601DateFormatter().string(from: record.startedAt)) v\(record.version) completed=\(record.completed) "
-                             + "safeMode=\(record.safeMode) stages: \(stages)" + (record.failure.map { " failure: \($0)" } ?? ""))
+                var line = "\(ISO8601DateFormatter().string(from: record.startedAt)) v\(record.version) completed=\(record.completed) "
+                line += "safeMode=\(record.safeMode) stages: \(stages)"
+                if let failure = record.failure { line += " failure: \(failure)" }
+                lines.append(line)
             }
         } else {
             lines.append("(no startup record)")

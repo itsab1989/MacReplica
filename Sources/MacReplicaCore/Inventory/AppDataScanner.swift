@@ -78,7 +78,9 @@ public struct AppDataScanner: Sendable {
     public func scan(_ folder: URL, profile: AppDataProfileReference? = nil,
                      onlyFiles: [String]? = nil, excluding: [String] = []) throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
         let relative = try validate(folder)
-        let id = "appdata-" + Hashing.sha256Hex(of: Data((relative + (onlyFiles.map { ":" + $0.joined(separator: ",") } ?? "")).utf8)).prefix(12)
+        var identity = relative
+        if let onlyFiles { identity += ":" + onlyFiles.joined(separator: ",") }
+        let id = "appdata-" + String(Hashing.sha256Hex(of: Data(identity.utf8)).prefix(12))
         let base = folder.standardizedFileURL.resolvingSymlinksInPath()
         var files: [ScannedFile] = []
         var issues: [BackupIssue] = []

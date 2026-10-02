@@ -1,0 +1,4 @@
+# Findings reviewed and confirmed as synthetic test data (no real secrets).
+# The first commit contained the fake Git signing-key ID "ABCDEF0123456789" in a test fixture;
+# the value has since been replaced with "synthetic-signing-key".
+2ce7ba59ab5dcd2d951cd51282bf6bed2bb2b17e:Sources/MacReplicaTestSupport/SimulationPython.swift:generic-api-key:73

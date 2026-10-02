@@ -80,7 +80,10 @@ public struct ReportBuilder: Sendable {
     private func table(_ headers: [String], _ rows: [[String]]) -> String {
         guard !rows.isEmpty else { return "<p class=\"muted\">\(HTML.escape(l.t("report.none")))</p>" }
         let head = headers.map { "<th>\(HTML.escape($0))</th>" }.joined()
-        let body = rows.map { "<tr>" + $0.map { "<td>\($0)</td>" }.joined() + "</tr>" }.joined(separator: "\n")
+        let body = rows.map { (row: [String]) -> String in
+            let cells = row.map { (cell: String) -> String in "<td>\(cell)</td>" }.joined()
+            return "<tr>" + cells + "</tr>"
+        }.joined(separator: "\n")
         return "<table><thead><tr>\(head)</tr></thead><tbody>\n\(body)\n</tbody></table>"
     }
 

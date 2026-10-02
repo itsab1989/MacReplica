@@ -71,7 +71,7 @@ extension SimulationBuilder {
         try write("synthetic fusion title", to: support.appendingPathComponent("Blackmagic Design/DaVinci Resolve/Fusion/Templates/Edit/Titles/Synthetic Title.setting"), executable: false)
         try populateProviderFixtures(root)
         let gitconfig = [
-            "[user]", "\tname = Example Person", "\temail = person@example.com", "\tsigningkey = ABCDEF0123456789",
+            "[user]", "\tname = Example Person", "\temail = person@example.com", "\tsigningkey = synthetic-signing-key",
             "[alias]", "\tco = checkout", "\tst = status -sb",
             "[init]", "\tdefaultBranch = main",
             "[core]", "\texcludesfile = \(home.path)/.gitignore_global",

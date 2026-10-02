@@ -52,10 +52,14 @@ extension ReportBuilder {
         let manual = manifest.applications.filter { $0.restoreMethod.category == .manual || $0.restoreMethod.category == .officialDownload }
         if !manual.isEmpty {
             body += h2("report.manual.title")
-            body += "<ul>" + manual.map { app in
-                "<li><b>\(HTML.escape(app.name))</b> — \(HTML.escape(l.manualHint(for: app)))"
-                    + (app.homepage.map { " " + HTML.link($0) } ?? "") + "</li>"
-            }.joined() + "</ul>"
+            // Built step by step: long string expressions with closures are slow to type-check on older compilers.
+            body += "<ul>"
+            for app in manual {
+                var item = "<li><b>\(HTML.escape(app.name))</b> — \(HTML.escape(l.manualHint(for: app)))"
+                if let homepage = app.homepage { item += " " + HTML.link(homepage) }
+                body += item + "</li>"
+            }
+            body += "</ul>"
         }
 
         if !manifest.python.isEmpty {
@@ -80,10 +84,17 @@ extension ReportBuilder {
             }
             if !manifest.python.settings.isEmpty {
                 body += "<h3>\(HTML.escape(l.t("guide.python.settings")))</h3><p>\(HTML.escape(l.t("guide.python.settingsIntro")))</p><pre><code>"
-                body += manifest.python.settings.map { setting in
-                    HTML.escape(setting.key.contains(" ") ? "# \(setting.key): \(setting.value)  (\(setting.source))"
-                                                           : "export \(setting.key)=\"\(setting.value)\"  # \(setting.source)")
-                }.joined(separator: "\n")
+                var settingLines: [String] = []
+                for setting in manifest.python.settings {
+                    let line: String
+                    if setting.key.contains(" ") {
+                        line = "# \(setting.key): \(setting.value)  (\(setting.source))"
+                    } else {
+                        line = "export \(setting.key)=\"\(setting.value)\"  # \(setting.source)"
+                    }
+                    settingLines.append(HTML.escape(line))
+                }
+                body += settingLines.joined(separator: "\n")
                 body += "</code></pre>"
             }
         }
