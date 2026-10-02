@@ -412,7 +412,7 @@ published by GitHub Actions — see [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCE
 ## Testing
 
 ```sh
-scripts/test.sh                              # all tests (about 300, Swift Testing)
+scripts/test.sh                              # all tests (about 340, Swift Testing)
 scripts/test.sh --filter FontConflictTests   # one suite
 ```
 
@@ -420,6 +420,8 @@ The tests never touch your own apps or files: integration and end-to-end tests r
 **simulated Macs** — sandbox folders with stand-in versions of `brew`, `mas` and other tools — using
 synthetic apps, fonts and profiles generated in code. Restoring into real system folders, the real
 App Store and administrator dialogs are not covered by automated tests; they were validated by hand.
+What was validated for developer tools and the guided installation is in
+[docs/RECOVERY_REPORT.md](docs/RECOVERY_REPORT.md).
 
 **Mutation testing** checks that the tests really catch mistakes in the critical modules (selection,
 conflict decisions, restore, verification, clean-up, credentials). The last full run killed 85.5 %
