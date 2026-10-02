@@ -15,6 +15,9 @@ struct AppServices: Sendable {
     let defaultsSuite: String?
     let simulationRoot: URL?
     let releaseFetcher: ReleaseFetching
+    /// Appcasts and downloads for guided installations; the simulation serves them from its own folder.
+    let downloadFetcher: HTTPFetching
+    let downloadTransport: DownloadTransport
 
     static func make(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppServices {
         if let simulation = SimulationEnvironment.fromLaunchArguments(arguments) {
@@ -31,7 +34,9 @@ struct AppServices: Sendable {
                 defaultsSuite: "io.github.itsab1989.MacReplica.simulation",
                 simulationRoot: simulation.root,
                 // Update checks in the simulation read controlled release data, never GitHub.
-                releaseFetcher: LocalReleaseFetcher(file: simulation.root.appendingPathComponent("releases/releases.json")))
+                releaseFetcher: LocalReleaseFetcher(file: simulation.root.appendingPathComponent("releases/releases.json")),
+                downloadFetcher: LocalFetcher(root: simulation.root),
+                downloadTransport: LocalDownloadTransport(root: simulation.root, chunkSize: 16 * 1024, delayPerChunk: 0.02))
         }
         let layout = SystemLayout.live()
         let runner = ProcessCommandRunner(
@@ -49,7 +54,9 @@ struct AppServices: Sendable {
             askpassPath: FileManager.default.isExecutableFile(atPath: helper) ? helper : nil,
             defaultsSuite: nil,
             simulationRoot: nil,
-            releaseFetcher: GitHubReleaseFetcher())
+            releaseFetcher: GitHubReleaseFetcher(),
+            downloadFetcher: URLSessionFetcher(),
+            downloadTransport: URLSessionDownloadTransport())
     }
 
     var defaults: UserDefaults {

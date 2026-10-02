@@ -8,7 +8,6 @@ struct RestoreSelectionView: View {
     var body: some View {
         let l = model.l
         let items = model.candidateItems
-        let manualCount = model.currentPlan()?.manualApps.count ?? 0
         ScreenLayout(title: l.t("restore.select.title"), subtitle: backupSubtitle) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -25,7 +24,7 @@ struct RestoreSelectionView: View {
                     Card {
                         ForEach(RestoreComponent.allCases) { component in
                             let group = items.filter { $0.component == component }
-                            let count = group.count + (component == .applications ? manualCount : 0)
+                            let count = group.count
                             ComponentToggle(component: component, count: count, status: componentStatus(group))
                             if component != RestoreComponent.allCases.last { Divider() }
                         }
@@ -300,6 +299,7 @@ enum ItemStatus {
         case .willSkip(let reason): return (l.skipText(reason), .secondary)
         case .backupFileDamaged: return (l.t("items.status.cannotVerify"), .red)
         case .checkedWhenRestoring: return (l.t("items.status.checkedLater"), .secondary)
+        case .manualStep: return (l.t("items.status.guided"), .orange)
         default:
             if item.applicationData?.profile?.mustBeClosed == true { return (l.t("items.status.closeApp"), .green) }
             return (l.t(entry.requiresAdmin ? "items.status.readyAdmin" : "items.status.ready"), .green)
@@ -370,6 +370,21 @@ struct RestoreItemRow: View {
                     }
                     .padding(.leading, 22)
                 }
+            }
+            if item.kind == .formula, item.originalVersion?.hasPrefix("HEAD") == true, !locked,
+               !model.selection.excludedItemIDs.contains(item.id) {
+                HStack {
+                    Text(l.t("items.source")).font(.caption).foregroundStyle(.secondary)
+                    Picker(l.t("items.source"), selection: Binding(get: { model.selection.sourceChoices[item.id] ?? "head" },
+                                                                   set: { model.selection.sourceChoices[item.id] = $0 == "head" ? nil : $0 })) {
+                        Text(l.t("items.source.head")).tag("head")
+                        Text(l.t("items.source.stable")).tag("stable")
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("item.source.\(item.id)")
+                }
+                .padding(.leading, 22)
             }
             if showDetails, let entry, let assessment = entry.fileAssessment {
                 FileDetailsView(item: item, assessment: assessment)

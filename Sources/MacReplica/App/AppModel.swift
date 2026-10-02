@@ -13,6 +13,7 @@ enum Screen: Equatable {
     case dryRun
     case restoring
     case restoreSummary
+    case guidedInstall
     case verifying
     case verificationResult
     case problem
@@ -72,6 +73,15 @@ final class AppModel: ObservableObject {
     @Published var excludedApplicationData = Set<String>()
     /// Fonts and profiles the user left out of the backup (`InventoryResult.selectionID`).
     @Published var excludedBackupFiles = Set<String>()
+    /// Package and version managers and applications the user left out of the backup.
+    @Published var excludedToolchains = Set<ToolchainProviderID>()
+    @Published var excludedApplications = Set<String>()
+    /// Guided installations after the automatic restore.
+    @Published var guided = GuidedUIState()
+    var guidedInstallation: GuidedInstallation?
+    var downloadQueue: DownloadQueue?
+    var pendingDecision: CheckedContinuation<GuidedDecision, Never>?
+    var guidedTask: Task<Void, Never>?
     /// Passphrase for restoring encrypted credentials; requested right before the restore.
     @Published var askForRestorePassphrase = false
     var restorePassphrase: String?
@@ -134,7 +144,7 @@ final class AppModel: ObservableObject {
     @Published var verificationProgress: Double = 0
 
     private var task: Task<Void, Never>?
-    private var restoreLog: LogStore?
+    var restoreLog: LogStore?
 
     struct AdminNotice: Equatable {
         var installsHomebrew: Bool
@@ -247,6 +257,9 @@ final class AppModel: ObservableObject {
         credentialPassphrase = nil
         excludedApplicationData = []
         excludedBackupFiles = []
+        excludedToolchains = []
+        excludedApplications = []
+        resetGuided()
         manifest = nil
         backupURL = nil
         verification = nil
@@ -410,6 +423,8 @@ final class AppModel: ObservableObject {
         guard var inventory else { return }
         inventory.keepPythonEnvironments(selectedPythonEnvironments, includeSettings: includePythonSettings)
         applyDeveloperChoices(to: &inventory)
+        inventory.keepToolchains(Set(inventory.manifest.toolchains.map(\.provider)).subtracting(excludedToolchains))
+        inventory.excludeApplications(excludedApplications)
         for id in excludedApplicationData { inventory.removeApplicationData(id: id) }
         inventory.excludeFiles(excludedBackupFiles)
         let credentials = selectedCredentialProviders.isEmpty ? nil
@@ -808,7 +823,7 @@ final class AppModel: ObservableObject {
 
     @Published var lastReport: URL?
 
-    private func writeRestoreReport(plan: RestorePlan, session: RestoreSession) {
+    func writeRestoreReport(plan: RestorePlan, session: RestoreSession) {
         guard let manifest else { return }
         let html = ReportBuilder(localizer: l).restoreSummaryReport(plan: plan, session: session, manifest: manifest)
         let folder = services.layout.applicationSupport.appendingPathComponent("Reports")

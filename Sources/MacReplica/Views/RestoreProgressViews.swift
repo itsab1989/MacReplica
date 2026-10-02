@@ -216,11 +216,13 @@ struct RestoreSummaryView: View {
         let session = model.session
         let results = plan?.items.compactMap { item in session?.results[item.id].map { (item, $0) } } ?? []
         let failed = results.filter { $0.1.outcome.isFailure }
-        let skipped = results.filter { $0.1.outcome.isSkip }
+        let skipped = results.filter { $0.1.outcome.isSkip && !$0.1.outcome.isOpen }
         let notes = results.filter { !$0.1.notes.isEmpty && !$0.1.outcome.isFailure }
         let summary = RestoreSummary(results: results.map(\.1), total: plan?.items.count ?? 0)
         let complete = session?.status == .completed
-        let title = !complete ? l.t("summary.title.stopped") : (failed.isEmpty ? l.t("summary.title.done") : l.t("summary.title.problems"))
+        let waitingOnly = session?.onlyWaitingForUser == true
+        let title = waitingOnly ? l.t("summary.title.waiting")
+            : (!complete ? l.t("summary.title.stopped") : (failed.isEmpty ? l.t("summary.title.done") : l.t("summary.title.problems")))
 
         ScreenLayout(title: title, subtitle: nil) {
             ScrollView {
@@ -231,9 +233,16 @@ struct RestoreSummaryView: View {
                         SummaryTile(value: summary.failed, label: l.t("summary.failed"), color: summary.failed > 0 ? .red : .secondary)
                             .accessibilityIdentifier("summary.failed")
                         SummaryTile(value: summary.skipped, label: l.t("summary.skipped"), color: .secondary)
+                        if summary.waiting > 0 {
+                            SummaryTile(value: summary.waiting, label: l.t("summary.waiting"), color: .orange)
+                                .accessibilityIdentifier("summary.waiting")
+                        }
                     }
-                    if !complete {
+                    if !complete, session?.onlyWaitingForUser == true {
+                        GuidedStepsCard()
+                    } else if !complete {
                         NoticeView(style: .info, title: l.t("summary.stopped.title"), message: l.t("summary.stopped.message"))
+                        GuidedStepsCard()
                     } else if failed.isEmpty {
                         NoticeView(style: .success, title: l.t("summary.allDone.title"), message: l.t("summary.allDone.message"))
                     }
@@ -241,7 +250,7 @@ struct RestoreSummaryView: View {
                         Text(l.t("summary.failedHeading")).font(.headline)
                         ForEach(failed, id: \.0.id) { item, result in FailureRow(item: item, result: result) }
                     }
-                    if let manual = plan?.manualApps, !manual.isEmpty {
+                    if let manual = plan?.manualApps, !manual.isEmpty, complete {
                         Text(l.t("summary.manualHeading")).font(.headline)
                         Text(l.t("summary.manualMessage")).foregroundStyle(.secondary).font(.callout)
                             .fixedSize(horizontal: false, vertical: true)

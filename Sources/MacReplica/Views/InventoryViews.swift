@@ -59,6 +59,10 @@ struct InventoryResultsView: View {
                                 CountRow(symbol: Symbols.component(.colorProfiles), color: .secondary, label: l.t("component.colorProfiles"), value: counts.colorProfiles)
                                 CountRow(symbol: Symbols.component(.python), color: .secondary, label: l.t("component.python"),
                                          value: manifest?.python.environments.count ?? 0)
+                                CountRow(symbol: Symbols.component(.developerTools), color: .secondary, label: l.t("component.developerTools"),
+                                         value: manifest?.toolchains.filter { $0.ecosystem != .packageManagers }.count ?? 0)
+                                CountRow(symbol: Symbols.component(.packageManagers), color: .secondary, label: l.t("component.packageManagers"),
+                                         value: manifest?.toolchains.filter { $0.ecosystem == .packageManagers }.count ?? 0)
                             }
                         }
                     }
@@ -83,6 +87,7 @@ struct InventoryResultsView: View {
 
                     FontsAndProfilesSection()
                     PythonSection()
+                    DeveloperToolsSection()
                     DeveloperSettingsSection()
                     ApplicationDataSection()
                     CredentialsSection()
@@ -159,11 +164,22 @@ struct AppRow: View {
     var body: some View {
         let l = model.l
         HStack(spacing: 10) {
+            Toggle(isOn: Binding(get: { !model.excludedApplications.contains(app.id) },
+                                 set: { on in if on { model.excludedApplications.remove(app.id) } else { model.excludedApplications.insert(app.id) } })) {
+                EmptyView()
+            }
+            .toggleStyle(.checkbox)
+            .labelsHidden()
+            .help(l.t("results.includeApp"))
+            .accessibilityIdentifier("app.include.\(app.id)")
             Image(systemName: Symbols.category(app.restoreMethod.category))
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
             VStack(alignment: .leading, spacing: 1) {
-                Text(app.name)
+                HStack(spacing: 6) {
+                    Text(app.name)
+                    if let channel = app.channel, channel.isPrerelease { ChannelBadge(channel: channel) }
+                }
                 Text([app.version.map { l.t("common.version", $0) }, app.vendor].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption).foregroundStyle(.secondary)
                     .lineLimit(1)

@@ -126,6 +126,45 @@ extension Localizer {
 
     public func ecosystemText(_ ecosystem: Ecosystem) -> String { t("ecosystem.\(ecosystem.rawValue)") }
 
+    public func channelText(_ channel: ReleaseChannel) -> String { t("channel.\(channel.rawValue)") }
+
+    public func trustText(_ trust: DownloadOffer.Trust) -> String { t("trust.\(trust.rawValue)") }
+
+    /// "Vendor update feed: Nightly 130.0a2 (recommended)".
+    public func offerText(_ offer: DownloadOffer) -> String {
+        let version = offer.version ?? ""
+        let text: String
+        switch offer.kind {
+        case .vendorFeed: text = t("offer.vendorFeed", offer.channel.map(channelText) ?? channelText(.stable), version)
+        case .homebrewCask: text = t("offer.homebrewCask", offer.host, version)
+        case .vendorWebsite: text = t("offer.website", offer.host)
+        case .appStore: text = t("offer.appStore")
+        }
+        return offer.recommended ? t("offer.recommended", text) : text
+    }
+
+    public func guidedStepText(_ step: GuidedStep) -> String {
+        switch step {
+        case .finishInstaller: return t("guidedStep.finishInstaller")
+        case .installFromDiskImage: return t("guidedStep.installFromDiskImage")
+        case .installFromWebsite: return t("guidedStep.installFromWebsite")
+        case .installFromAppStore: return t("guidedStep.installFromAppStore")
+        case .runCommand(let command): return t("guidedStep.runCommand", command)
+        }
+    }
+
+    public func downloadErrorText(_ error: DownloadError) -> String {
+        switch error {
+        case .network, .httpStatus, .tooLarge: return t("downloadError.network")
+        case .cancelled: return t("skip.cancelledByUser")
+        case .incompatibleArchitecture: return t("downloadError.architecture")
+        case .requiresNewerMacOS(let version): return t("downloadError.macOS", version)
+        case .alreadyInstalled: return t("downloadError.alreadyInstalled")
+        case .licenseAgreement: return t("downloadError.license")
+        default: return t("downloadError.notTrusted")
+        }
+    }
+
     public func supportLevelText(_ level: SupportLevel) -> String { t("supportLevel.\(level.rawValue)") }
 
     public func architectureText(_ architecture: CPUArchitecture) -> String {
