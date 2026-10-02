@@ -137,19 +137,22 @@ struct RestoreExecutionTests {
         let session = await run(executor, plan, selection)
         let serif = fresh.url.appendingPathComponent("home/Library/Fonts/ExampleSerif.ttf")
         let result = try #require(session.results["font:user/ExampleSerif.ttf"])
+        let installedVersion = { FileScanner.fontIdentity(serif)?.shortVersion }
         switch resolution {
         case .keepExisting:
             #expect(result.outcome == .skipped(.keptExisting))
-            #expect(try String(contentsOf: serif, encoding: .utf8) == "an older Example Serif")
+            #expect(installedVersion() == "1.000")
         case .skip:
             #expect(result.outcome == .skipped(.userSkipped))
-            #expect(try String(contentsOf: serif, encoding: .utf8) == "an older Example Serif")
+            #expect(installedVersion() == "1.000")
         case .replace:
             #expect(result.outcome == .succeeded)
-            #expect(try String(contentsOf: serif, encoding: .utf8) == "synthetic font: Example Serif")
+            #expect(installedVersion() == "2.000")
             let aside = target.layout.applicationSupport.appendingPathComponent("Replaced Files/\(session.id)/fonts/user/ExampleSerif.ttf")
-            #expect(try String(contentsOf: aside, encoding: .utf8) == "an older Example Serif", "the old file is kept, never deleted")
+            #expect(FileScanner.fontIdentity(aside)?.shortVersion == "1.000", "the old file is kept, never deleted")
             #expect(result.notes == [.existingFileMovedAside(path: target.layout.displayPath(aside))])
+        case .keepBoth:
+            Issue.record("not offered for a different font version")
         }
         #expect(session.results["font:user/Example Sans/ExampleSans-Regular.otf"]?.outcome == .alreadyPresent)
         #expect(session.results["font:user/Example Sans/ExampleSans-Regular.otf"]?.notes == [.identicalFileExists])
@@ -198,7 +201,9 @@ struct RestoreExecutionTests {
         #expect(operations.count == 2)
         #expect(privileged.calls.first?.reason.contains("1") == true)
         #expect(session.results["font:system/ExampleMono.ttc"]?.outcome == .succeeded)
-        #expect(session.results["icc:system/Example Press Proof.icc"]?.outcome == .succeeded)
+        #expect(session.results["icc:system/Example Legacy Filter.icc"]?.outcome == .succeeded)
+        // Already present elsewhere on this Mac: no administrator operation for it.
+        #expect(session.results["icc:system/Example Press Proof.icc"]?.outcome == .alreadyPresent)
         #expect(session.results["font:user/Example Sans/ExampleSans-Bold.otf"]?.outcome == .succeeded)
     }
 
@@ -214,7 +219,7 @@ struct RestoreExecutionTests {
         let executor = RestoreExecutor(environment: TestEnvironment.restoreEnvironment(target, privileged: privileged), backupRoot: backup, sessionStore: nil)
         let session = await run(executor, plan)
         #expect(session.results["font:system/ExampleMono.ttc"]?.outcome.label == "failed(adminRightsDenied)")
-        #expect(session.results["icc:system/Example Press Proof.icc"]?.outcome == .succeeded)
+        #expect(session.results["icc:system/Example Legacy Filter.icc"]?.outcome == .succeeded)
         #expect(session.status == .completed)
     }
 

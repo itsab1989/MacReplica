@@ -17,6 +17,13 @@ Command Line Tools, so this small, dependency-free runner does the job:
 Usage:
   tools/mutation/mutate.py [--files Restore/RestorePlanner.swift ...]
                            [--max-per-file N] [--report DIR] [--check]
+                           [--shard K --shards N]
+  tools/mutation/mutate.py --merge DIR [DIR ...] --report DIR [--check]
+
+Each mutant needs a rebuild, so a full run takes hours. To run in parallel,
+copy the repository N times and start shard K (0 … N-1) in copy K; every
+shard processes every N-th mutant of each module. --merge combines the
+shard results into one report.
 
 With --check the exit code is non-zero if a module falls below its
 threshold (used in CI).
@@ -36,6 +43,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CORE = ROOT / "Sources" / "MacReplicaCore"
 CONFIG = Path(__file__).with_name("config.json")
+MUTATION_TMP = ROOT / ".build" / "mutation-tmp"
 
 # (name, regex, replacement). Applied one occurrence at a time.
 OPERATORS = [
@@ -112,11 +120,20 @@ def generate_mutants(path):
 
 
 def run(command, timeout):
-    env = dict(os.environ, MACREPLICA_CLT_TESTING=os.environ.get("MACREPLICA_CLT_TESTING", "1"))
+    # Tests run against mutated code may not clean up after themselves (a mutant can break the
+    # clean-up code, a hanging test is killed), so they get a temporary folder of their own.
+    MUTATION_TMP.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ, MACREPLICA_CLT_TESTING=os.environ.get("MACREPLICA_CLT_TESTING", "1"), TMPDIR=str(MUTATION_TMP) + "/")
+    # Own process group, so that a mutant that hangs is stopped together with the test helper
+    # processes `swift test` starts (killing only `swift test` would leave them running).
+    process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
+                               start_new_session=True)
     try:
-        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=timeout, env=env)
-        return result.returncode, result.stdout + result.stderr
+        output, _ = process.communicate(timeout=timeout)
+        return process.returncode, output
     except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.communicate()
         return None, "timeout"
 
 
@@ -127,6 +144,11 @@ def main():
     parser.add_argument("--report", default=str(ROOT / ".build" / "mutation"), help="report folder")
     parser.add_argument("--check", action="store_true", help="fail if a module is below its threshold")
     parser.add_argument("--seed", type=int, default=20261002)
+    parser.add_argument("--shard", type=int, default=0)
+    parser.add_argument("--shards", type=int, default=1)
+    parser.add_argument("--merge", nargs="*", help="combine mutation-results.json of these report folders")
+    parser.add_argument("--only-survivors", nargs="*",
+                        help="re-test only mutants that survived in these report folders (after adding tests; kills stay kills)")
     args = parser.parse_args()
 
     config = json.loads(CONFIG.read_text())
@@ -136,6 +158,23 @@ def main():
 
     report_dir = Path(args.report)
     report_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.merge:
+        # Later folders win for the same mutant (e.g. a survivors-only re-run after adding tests).
+        combined = {}
+        for folder in args.merge:
+            for r in json.loads((Path(folder) / "mutation-results.json").read_text())["mutants"]:
+                combined[(r["file"], r["line"], r["start"], r["operator"])] = r
+        results = list(combined.values())
+        present = {r["file"] for r in results}
+        failed = write_report([m for m in modules if m["file"] in present], results, config, report_dir)
+        sys.exit(1 if args.check and failed else 0)
+
+    survivor_keys = {}
+    for folder in args.only_survivors or []:
+        for r in json.loads((Path(folder) / "mutation-results.json").read_text())["mutants"]:
+            if r["status"] == "survived":
+                survivor_keys.setdefault(r["file"], set()).add((r["line"], r["start"], r["operator"]))
 
     code, output = run(["swift", "build", "--build-tests"], 1800)
     if code != 0:
@@ -163,11 +202,27 @@ def main():
             lines, mutants = generate_mutants(path)
             if args.max_per_file and len(mutants) > args.max_per_file:
                 mutants = sorted(rng.sample(mutants, args.max_per_file), key=lambda m: (m["line"], m["start"]))
+            if args.only_survivors:
+                mutants = [m for m in mutants if (m["line"], m["start"], m["operator"]) in survivor_keys.get(module["file"], set())]
+            if args.shards > 1:
+                mutants = [m for i, m in enumerate(mutants) if i % args.shards == args.shard]
             excluded = [re.compile(e["pattern"]) for e in config.get("exclusions", []) if e["file"] == module["file"]]
+            # A filter that matches nothing would run zero tests and let every mutant "survive".
+            known = set()
+            for test_file in (ROOT / "Tests").rglob("*.swift"):
+                known |= set(re.findall(r"^struct (\w+)", test_file.read_text(), re.M))
+            unknown = [suite for suite in module["tests"] if suite not in known]
+            if unknown:
+                sys.exit(f"unknown test suites for {module['file']}: {unknown}")
             filter_args = []
             for suite in module["tests"]:
                 filter_args += ["--filter", suite]
-            # Baseline: the covering tests must pass on the original code.
+            # Baseline: the covering tests must pass on the original code. Rebuild first, because
+            # the binary may still contain the last mutant of the previous module.
+            code, output = run(["swift", "build", "--build-tests"], 1800)
+            if code != 0:
+                print(output[-3000:])
+                sys.exit(f"baseline build failed before {module['file']}")
             code, output = run(["swift", "test", "--skip-build"] + filter_args, 600)
             if code != 0:
                 print(output[-3000:])
@@ -198,6 +253,12 @@ def main():
         restore()
         run(["swift", "build", "--build-tests"], 1800)
 
+    failed = write_report(modules, results, config, report_dir)
+    if args.check and failed:
+        sys.exit(1)
+
+
+def write_report(modules, results, config, report_dir):
     summary = []
     failed = False
     for module in modules:
@@ -233,8 +294,8 @@ def main():
             md.append(f"- `{r['file']}:{r['line']}` {r['operator']}: `{r['original'].strip()}` → `{r['mutated'].strip()}`")
     (report_dir / "mutation-report.md").write_text("\n".join(md) + "\n")
     print("\n".join(md))
-    if args.check and failed:
-        sys.exit(1)
+    return failed
+
 
 
 if __name__ == "__main__":

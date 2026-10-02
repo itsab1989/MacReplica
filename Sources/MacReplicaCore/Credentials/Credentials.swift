@@ -6,6 +6,7 @@ import Foundation
 /// defined provider; there is no general "search the Mac for secrets".
 public protocol CredentialProvider: Sendable {
     var id: String { get }
+    var titleKey: String { get }
     /// What exactly is handled, where it comes from, and the risks (localization keys).
     var descriptionKey: String { get }
     var riskKey: String { get }
@@ -121,6 +122,7 @@ public enum CredentialVault {
 /// switch it on explicitly and set a passphrase for the encrypted vault.
 public struct SSHKeyProvider: CredentialProvider {
     public let id = "ssh"
+    public let titleKey = "credentials.ssh.toggle"
     public let descriptionKey = "credentials.ssh.description"
     public let riskKey = "credentials.ssh.risk"
     public let isPortable = true
@@ -156,8 +158,66 @@ public struct SSHKeyProvider: CredentialProvider {
     }
 }
 
+/// A credential stored as a few well-known files with long-lived, portable secrets
+/// (for example `~/.aws/credentials`). Exactly these files are handled; nothing is searched.
+/// Device-bound, Keychain-held or short-lived logins are never handled this way; they are
+/// listed in `GuidanceCatalog` as "re-authentication required".
+public struct FileCredentialProvider: CredentialProvider {
+    public let id: String
+    public var titleKey: String { "credentials.\(id).title" }
+    public var descriptionKey: String { "credentials.\(id).description" }
+    public var riskKey: String { "credentials.\(id).risk" }
+    public let isPortable = true
+    /// Paths below the home folder.
+    public let files: [String]
+    public let evidence: [Evidence]
+
+    public init(id: String, files: [String], evidence: [Evidence]) {
+        self.id = id
+        self.files = files
+        self.evidence = evidence
+    }
+
+    public func detect(layout: SystemLayout) -> [String] {
+        files.filter { path in
+            guard PathSafety.isSafeRelativePath(path) else { return false }
+            let url = layout.homeDirectory.appendingPathComponent(path)
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            return values?.isRegularFile == true && values?.isSymbolicLink != true
+        }
+    }
+
+    public func export(layout: SystemLayout) throws -> [CredentialFile] {
+        try detect(layout: layout).map { path in
+            let url = layout.homeDirectory.appendingPathComponent(path)
+            let permissions = (try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int) ?? 0o600
+            // Never restore anything readable by others, whatever the source permissions were.
+            return CredentialFile(name: path, permissions: (permissions & 0o700) == 0 ? 0o600 : (permissions & 0o700), contents: try Data(contentsOf: url))
+        }
+    }
+
+    public func destination(for file: CredentialFile, layout: SystemLayout) -> URL? {
+        guard files.contains(file.name), PathSafety.isSafeRelativePath(file.name) else { return nil }
+        return layout.homeDirectory.appendingPathComponent(file.name)
+    }
+}
+
 public enum CredentialProviders {
-    public static let all: [CredentialProvider] = [SSHKeyProvider()]
+    public static let all: [CredentialProvider] = [
+        SSHKeyProvider(),
+        FileCredentialProvider(id: "aws", files: [".aws/credentials", ".aws/config"], evidence: [
+            Evidence(title: "AWS CLI: configuration and credential file settings",
+                     url: "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html")]),
+        FileCredentialProvider(id: "gitCredentials", files: [".git-credentials"], evidence: [
+            Evidence(title: "git-credential-store", url: "https://git-scm.com/docs/git-credential-store")]),
+        FileCredentialProvider(id: "npm", files: [".npmrc"], evidence: [
+            Evidence(title: "npm: npmrc", url: "https://docs.npmjs.com/cli/v10/configuring-npm/npmrc")]),
+        FileCredentialProvider(id: "kubernetes", files: [".kube/config"], evidence: [
+            Evidence(title: "Kubernetes: organizing cluster access using kubeconfig files",
+                     url: "https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/")]),
+        FileCredentialProvider(id: "terraform", files: [".terraform.d/credentials.tfrc.json"], evidence: [
+            Evidence(title: "Terraform CLI: terraform login", url: "https://developer.hashicorp.com/terraform/cli/commands/login")]),
+    ]
 
     public static func provider(id: String) -> CredentialProvider? { all.first { $0.id == id } }
 }

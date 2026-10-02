@@ -3,7 +3,7 @@
    Plural keys end in .one / .other; the count is always %1$d. */
 
 /* Home */
-"home.tagline" = "Move your apps, fonts and color profiles to a freshly installed Mac.";
+"home.tagline" = "Move your apps, settings and development environments to a freshly installed Mac.";
 "home.inventory.title" = "Create Backup";
 "home.inventory.subtitle" = "Scan this Mac and save everything MacReplica can restore later.";
 "home.restore.title" = "Restore";
@@ -25,7 +25,7 @@
 "menu.about" = "About MacReplica";
 "menu.help" = "MacReplica Help";
 "about.version" = "Version %1$@";
-"about.description" = "MacReplica records your apps, Homebrew packages, fonts and color profiles and restores them on a new or freshly installed Mac.";
+"about.description" = "MacReplica records your apps, settings, development environments and selected data, and restores them on a new or freshly installed Mac.";
 "about.kofi" = "MacReplica is free and always will be. If it's useful to you, a coffee is a kind way to say thanks — completely optional, and the app stays fully featured either way.";
 "about.kofiButton" = "Support on Ko-fi";
 "about.github" = "Project on GitHub";
@@ -51,7 +51,7 @@
 "inventory.failed.message" = "MacReplica ran into an unexpected problem while scanning. Please try again. If it keeps happening, the technical details below help to find the cause.";
 
 /* Scan results */
-"results.title" = "Scan Complete";
+"results.title" = "What Do You Want to Take with You?";
 "results.subtitle.one" = "%1$d application found";
 "results.subtitle.other" = "%1$d applications found";
 "results.appsHeading" = "How apps will be restored";
@@ -107,7 +107,7 @@
 "resume.backupMissing.message" = "The unfinished restore used the backup at %1$@, which is not available. Please connect the drive with the backup and try again.";
 
 /* Restore selection */
-"restore.select.title" = "What Should Be Restored?";
+"restore.select.title" = "What Do You Want to Put onto This Mac?";
 "restore.select.subtitle" = "Backup from %1$@ · macOS %2$@ · %3$@";
 "restore.select.individual" = "Choose Individual Items …";
 "restore.select.summary.one" = "%1$d item selected";
@@ -144,14 +144,14 @@
 "items.selectNone" = "None";
 
 /* Conflicts */
-"conflict.title.one" = "%1$d file already exists";
-"conflict.title.other" = "%1$d files already exist";
-"conflict.message" = "These fonts or color profiles already exist on this Mac with different content. What should MacReplica do?";
-"conflict.keep" = "Keep existing";
-"conflict.replace" = "Replace";
+"conflict.title.one" = "%1$d item needs a decision";
+"conflict.title.other" = "%1$d items need a decision";
+"conflict.message" = "These items already exist on this Mac in another version or with the same name. Choose what MacReplica should do with each — nothing is overwritten without your choice.";
+"conflict.keep" = "Keep this Mac's version";
+"conflict.replace" = "Replace with backup";
 "conflict.skip" = "Skip";
 "conflict.applyToAll" = "Apply to All";
-"conflict.replaceHint" = "When a file is replaced, the existing one is moved to ~/Library/Application Support/MacReplica/Replaced Files and is not deleted.";
+"conflict.replaceHint" = "Keep both installs the backup copy under a new name next to the existing file. When a file is replaced, the existing one is moved to ~/Library/Application Support/MacReplica/Replaced Files and is not deleted.";
 
 /* Administrator rights */
 "admin.title" = "Before the restore starts";
@@ -456,7 +456,7 @@
 "appData.add.button" = "Add Folder …";
 "appData.add.choose" = "Add";
 "appData.add.message" = "Choose a folder with application data to include in the backup.";
-"appData.summary" = "%1$@ files · %2$@";
+"appData.summary" = "%1$@ · %2$@";
 "appData.remove" = "Remove from backup";
 "appData.refused.one" = "%1$d file was left out because it looks like a password, key or cookie file.";
 "appData.refused.other" = "%1$d files were left out because they look like password, key or cookie files.";
@@ -616,12 +616,12 @@
 "component.credentials" = "Credentials (encrypted)";
 "component.credentials.hint" = "Only restored if you choose it and enter the passphrase you set when creating the backup.";
 "credentials.section.title" = "Credentials (advanced)";
-"credentials.section.message" = "Passwords, tokens, cookies and the Keychain are never part of a backup. SSH keys are the only credentials MacReplica can move, and only if you switch this on: they are encrypted with a passphrase you choose.";
+"credentials.section.message" = "Passwords, cookies and anything in the Keychain are never part of a backup. A few developer tools keep long-lived keys in plain files; MacReplica includes those only if you switch them on, encrypted with a passphrase you choose.";
 "credentials.ssh.toggle" = "Include SSH keys (encrypted)";
 "credentials.ssh.none" = "No SSH keys were found.";
 "credentials.ssh.description" = "MacReplica will include your SSH keys and SSH configuration from ~/.ssh (private and public keys, config, known_hosts).";
 "credentials.ssh.risk" = "Anyone who obtains the backup and the passphrase can log in to every server these keys give access to.";
-"credentials.enabled" = "SSH keys will be encrypted and stored in the backup’s credentials folder.";
+"credentials.enabled" = "The selected credentials will be encrypted and stored separately in the backup’s credentials folder.";
 "credentials.optIn.title" = "Include SSH keys?";
 "credentials.optIn.warningTitle" = "This backup will contain sensitive data";
 "credentials.optIn.warning" = "Credential migration can include sensitive authentication information. Anyone who obtains this backup and its passphrase may be able to access the selected accounts or services. Only enable this if you understand and accept the risk.";
@@ -651,3 +651,188 @@
 "guide.accounts.vault" = "This backup contains encrypted %1$@ credentials (%2$@) in %3$@. They can only be restored with the passphrase chosen when the backup was created.";
 "guide.access.title" = "Locations that could not be read";
 "guide.access.intro" = "macOS did not allow MacReplica to read these locations, so their contents are missing from this backup:";
+
+/* Main window */
+"home.support" = "Support MacReplica on Ko-fi";
+
+/* Application data providers */
+"appData.group.custom" = "Folders you added";
+"appData.compatibilityNote" = "May not work with a different version of the app, so it is not selected automatically.";
+"appData.secretsNote" = "Can contain API keys or passwords you entered in the app, so it is not selected automatically.";
+"appData.mustBeClosed" = "%1$@ must be closed while restoring.";
+"appData.category.settings" = "Settings and keyboard shortcuts";
+"appData.category.snippets" = "Snippets";
+"appData.category.profiles" = "Profiles";
+"appData.category.userPackage" = "User settings and packages list";
+"appData.category.keymaps" = "Keymaps";
+"appData.category.codeStyles" = "Code styles";
+"appData.category.colorSchemes" = "Color schemes";
+"appData.category.liveTemplates" = "Live templates";
+"appData.category.fileTemplates" = "File templates";
+"appData.category.inspectionProfiles" = "Inspection profiles";
+"appData.category.externalTools" = "External tools";
+"appData.category.codeSnippets" = "Code snippets";
+"appData.category.themes" = "Themes";
+"appData.category.keyBindings" = "Key bindings";
+"appData.category.templates" = "Templates";
+"appData.category.clippings" = "Clippings";
+"appData.category.textFilters" = "Text filters";
+"appData.category.scripts" = "Scripts";
+"appData.category.stationery" = "Stationery";
+"appData.category.languageModules" = "Language modules";
+"appData.category.dynamicProfiles" = "Dynamic profiles";
+"appData.category.shapes" = "Custom shapes";
+"appData.category.panelsAndWorkspaces" = "Panel contents";
+"appData.category.workspaces" = "Workspaces";
+"appData.category.developPresets" = "Develop presets";
+"appData.category.cameraProfiles" = "Camera profiles";
+"appData.category.fuses" = "Fusion fuses";
+"appData.category.preferences" = "Preferences and startup file";
+"appData.category.addons" = "Add-ons";
+"appData.category.extensions" = "Extensions";
+"appData.category.macros" = "Macros";
+"appData.category.preferencesBundle" = "Preferences and workflows";
+"failure.applicationRunning.title" = "The app is open";
+"failure.applicationRunning.explanation" = "This app saves its settings when it quits and would overwrite the restored files. Quit the app and use Retry Failed Items.";
+
+/* Credentials and accounts */
+"credentials.none" = "No supported credentials were found on this Mac.";
+"credentials.aws.title" = "AWS access keys (encrypted)";
+"credentials.aws.description" = "MacReplica will include ~/.aws/credentials and ~/.aws/config. Short-lived sign-in tokens (AWS SSO) are never included; sign in again with “aws sso login”.";
+"credentials.aws.risk" = "Long-lived access keys give full access to the AWS accounts they belong to.";
+"credentials.gitCredentials.title" = "Saved Git passwords (encrypted)";
+"credentials.gitCredentials.description" = "MacReplica will include ~/.git-credentials, the plain-text file used by Git’s “store” credential helper. Passwords kept in the Keychain are not included.";
+"credentials.gitCredentials.risk" = "The file contains passwords or tokens for your Git servers in readable form.";
+"credentials.npm.title" = "npm settings and tokens (encrypted)";
+"credentials.npm.description" = "MacReplica will include ~/.npmrc, which holds your npm settings and any registry tokens.";
+"credentials.npm.risk" = "Registry tokens can publish packages in your name.";
+"credentials.kubernetes.title" = "Kubernetes configuration (encrypted)";
+"credentials.kubernetes.description" = "MacReplica will include ~/.kube/config. Clusters that sign in through another tool (for example AWS, Google Cloud or Azure) still need that tool to be signed in again.";
+"credentials.kubernetes.risk" = "The file can contain certificates and tokens that give access to your clusters. Only restore it on a Mac you trust.";
+"credentials.terraform.title" = "Terraform API tokens (encrypted)";
+"credentials.terraform.description" = "MacReplica will include ~/.terraform.d/credentials.tfrc.json, written by “terraform login”.";
+"credentials.terraform.risk" = "The tokens give access to your Terraform Cloud or Enterprise organizations.";
+"guidance.reauth.title" = "Sign in again on the new Mac:";
+"guidance.reauth.message" = "These apps and tools keep their login in the Keychain or tie it to this Mac. MacReplica restores apps and settings, but not these logins.";
+"guidance.manual.title" = "Use the app’s own export:";
+"guidance.manual.raycast" = "Settings › Advanced › Export, then import the file on the new Mac (or use Raycast Cloud Sync).";
+"guidance.manual.betterTouchTool" = "Help › Export full BetterTouchTool backup, then import it on the new Mac.";
+"guidance.manual.hazel" = "Export your rules, then import them on the new Mac.";
+"guidance.manual.rectangle" = "Settings › Export, then import the JSON file on the new Mac.";
+"guidance.manual.terminal" = "Export your profiles (Settings › Profiles › … › Export), then double-click the .terminal files on the new Mac.";
+"guidance.manual.affinity" = "Export brushes, styles, assets and macros from each panel menu, then import them on the new Mac.";
+"guidance.manual.premierePro" = "Copy your keyboard shortcut (.kys) files and workspaces as described by Adobe, or let Premiere Pro migrate them on first launch.";
+"guidance.manual.resolveLibrary" = "Export PowerGrades (.drx) and back up the project library from within Resolve; copy custom LUTs from /Library/Application Support/Blackmagic Design/DaVinci Resolve/LUT.";
+"guide.extensions.title" = "%1$@ extensions";
+"guide.extensions.intro" = "Extensions are reinstalled from the marketplace, not copied. Run these commands in Terminal, or turn on Settings Sync:";
+
+/* Fonts, color profiles and the two-stage restore selection */
+"restore.select.intro" = "The backup is complete and stays unchanged. Everything in it is selected — leave out anything you don't want on this Mac.";
+"restore.select.backedUp.one" = "%1$d item in the backup";
+"restore.select.backedUp.other" = "%1$d items in the backup";
+"restore.select.selectedCount.one" = "%1$d selected";
+"restore.select.selectedCount.other" = "%1$d selected";
+"restore.select.presentCount.one" = "%1$d already on this Mac";
+"restore.select.presentCount.other" = "%1$d already on this Mac";
+"restore.select.checking" = "Checking this Mac …";
+"restore.select.status.ready.one" = "%1$d ready";
+"restore.select.status.ready.other" = "%1$d ready";
+"restore.select.status.present.one" = "%1$d already installed";
+"restore.select.status.present.other" = "%1$d already installed";
+"restore.select.status.decide.one" = "%1$d needs a decision";
+"restore.select.status.decide.other" = "%1$d need a decision";
+"restore.select.status.notRecommended.one" = "%1$d not recommended";
+"restore.select.status.notRecommended.other" = "%1$d not recommended";
+"restore.review.title" = "Continuing an interrupted restore";
+"restore.review.message.one" = "%1$d step is already finished and stays as it is. You can change everything that has not been restored yet.";
+"restore.review.message.other" = "%1$d steps are already finished and stay as they are. You can change everything that has not been restored yet.";
+"resume.review" = "Review …";
+"resume.review.help" = "Change what is still to be restored before continuing";
+"items.subtitle" = "Each item shows what restoring it would mean on this Mac.";
+"items.status.done" = "Done: %1$@";
+"items.status.checking" = "Checking …";
+"items.status.ready" = "Ready to restore";
+"items.status.readyAdmin" = "Ready · needs administrator permission";
+"items.status.present" = "Already present";
+"items.status.installed" = "Already installed";
+"items.status.conflict" = "Conflict detected";
+"items.status.cannotVerify" = "Could not verify";
+"items.status.checkedLater" = "Checked when restoring";
+"items.status.closeApp" = "Ready · app must be closed";
+"items.details" = "Details";
+"items.decision" = "On this Mac:";
+"items.decision.macOS" = "macOS provides this:";
+"conflict.keepBoth" = "Keep both";
+"conflict.macOS.keep" = "Use macOS's version";
+"conflict.macOS.restore" = "Also install backup copy";
+"prediction.equivalent" = "Already installed (same version, possibly under another file name) — nothing to copy";
+"prediction.keepsMacOSVersion" = "macOS already provides this — its own version is kept";
+"prediction.conflictKeepBoth" = "Another file with this name exists — the backup copy will be installed next to it under a new name";
+"prediction.checkedWhenRestoring" = "Checked when restoring";
+"skip.fileNotSupported" = "macOS on this Mac cannot read this file";
+"skip.displaySpecificProfile" = "Made for a display of the old Mac — macOS creates its own";
+"note.equivalentFile" = "The same font or profile was already installed";
+"note.providedByMacOS" = "macOS provides this itself; its version was kept";
+"note.installedUnderNewName" = "Installed as “%1$@” next to the existing file";
+"fileLocation.user" = "your library";
+"fileLocation.shared" = "the shared library";
+"fileLocation.macOS" = "macOS";
+"fileOrigin.userInstalled" = "Installed for you";
+"fileOrigin.sharedInstalled" = "Installed for all users";
+"fileOrigin.appleCreated" = "Made by Apple";
+"fileOrigin.displayGenerated" = "Generated for the old Mac's displays";
+"fileStatus.ready" = "Ready to restore";
+"fileStatus.identical" = "Already present";
+"fileStatus.equivalent.font" = "Already installed";
+"fileStatus.equivalent.profile" = "Already present";
+"fileStatus.providedByMacOS" = "Provided by macOS";
+"fileStatus.differentVersion" = "Different version on this Mac";
+"fileStatus.differentFile.font" = "Different font with this name";
+"fileStatus.differentFile.profile" = "Different profile with this name";
+"fileStatus.incompatible" = "Not compatible";
+"fileStatus.obsoleteAppleProfile" = "Older Apple profile";
+"fileStatus.displayProfile" = "Only for the old Mac";
+"fileStatus.legacyFormat" = "Legacy format";
+"fileDetail.ready" = "Not on this Mac yet. It will be copied and then checked.";
+"fileDetail.identical" = "The exact same file is already installed as “%1$@” in %2$@. Nothing is copied, so no duplicate is created.";
+"fileDetail.equivalent.font" = "The same font in the same version is already installed as “%1$@” in %2$@. Nothing is copied.";
+"fileDetail.equivalent.profile" = "A profile with the same content is already installed as “%1$@” in %2$@. Nothing is copied.";
+"fileDetail.providedByMacOS.font" = "macOS includes this font. A copy from the old Mac would take precedence over the system version, so it is not installed unless you choose to.";
+"fileDetail.providedByMacOS.profile" = "macOS includes this profile. macOS uses its own version even when a copy exists, so the copy from the old Mac is not installed unless you choose to.";
+"fileDetail.differentVersion" = "This Mac has version %1$@, the backup has version %2$@ (in %3$@).";
+"fileDetail.differentVersion.profile" = "A different profile with the same name is already installed as “%1$@” in %2$@.";
+"fileDetail.differentFile" = "A different file named “%1$@” already exists in %2$@. It is never overwritten without your choice.";
+"fileDetail.incompatible.font" = "macOS on this Mac cannot read this font file, so it cannot be restored.";
+"fileDetail.incompatible.profile" = "macOS on this Mac cannot read this file as a color profile, so it cannot be restored.";
+"fileDetail.obsoleteAppleProfile" = "Apple made this profile, but this macOS version does not include it any more. It is usually not needed; select it if you rely on it.";
+"fileDetail.displayProfile" = "macOS generated this profile for a display connected to the old Mac and creates new ones for the displays it sees here. It is not restored.";
+"fileDetail.legacyFormat" = "Classic suitcase and PostScript Type 1 fonts may work, but Apple no longer recommends them. MacReplica does not open these files; select it to restore it anyway.";
+"fileAdvisory.displayCalibration" = "Display profiles are only accurate for the display they were measured on. MacReplica installs the file but does not assign it.";
+"fileAdvisory.sameNameListedTwice" = "A profile with the same name stays installed, so apps will list two entries with this name.";
+"fileAdvisory.installedUnderNewName" = "With “Keep both”, the backup copy is installed under a new file name next to the existing file.";
+"profileClass.mntr" = "Display";
+"profileClass.prtr" = "Printer";
+"profileClass.scnr" = "Input device";
+"profileClass.spac" = "Color space";
+"profileClass.link" = "Device link";
+"profileClass.abst" = "Abstract";
+"profileClass.nmcl" = "Named colors";
+"details.file" = "File";
+"details.origin" = "On the old Mac";
+"details.styles" = "Styles";
+"details.version" = "Version";
+"details.format" = "Format";
+"details.postScript" = "PostScript names";
+"details.profileClass" = "Profile type";
+"details.colorSpace" = "Color space";
+"details.creator" = "Creator";
+"details.size" = "Size";
+"details.installedVersion" = "Version on this Mac";
+"files.section.title" = "Fonts and Color Profiles";
+"files.section.message" = "Choose the fonts and ICC profiles to take with you. On the new Mac you can still decide what is actually installed.";
+"files.displayGenerated.hint" = "macOS creates these automatically for each display. They are not selected because they do not fit another Mac.";
+"files.selectedOf" = "%1$d of %2$d selected";
+"files.styles.one" = "%1$d style";
+"files.styles.other" = "%1$d styles";
+"files.version" = "Version %1$@";
+"files.legacyOrUnreadable" = "Legacy or unreadable format";

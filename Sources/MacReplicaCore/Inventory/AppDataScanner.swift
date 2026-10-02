@@ -74,9 +74,11 @@ public struct AppDataScanner: Sendable {
         refusedFilePatterns.contains { name.range(of: $0, options: .regularExpression) != nil }
     }
 
-    public func scan(_ folder: URL, profile: AppDataProfileReference? = nil) throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
+    /// - Parameter onlyFiles: restrict to these file names directly inside `folder` (for providers that list files).
+    public func scan(_ folder: URL, profile: AppDataProfileReference? = nil,
+                     onlyFiles: [String]? = nil, excluding: [String] = []) throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
         let relative = try validate(folder)
-        let id = "appdata-" + Hashing.sha256Hex(of: Data(relative.utf8)).prefix(12)
+        let id = "appdata-" + Hashing.sha256Hex(of: Data((relative + (onlyFiles.map { ":" + $0.joined(separator: ",") } ?? "")).utf8)).prefix(12)
         let base = folder.standardizedFileURL.resolvingSymlinksInPath()
         var files: [ScannedFile] = []
         var issues: [BackupIssue] = []
@@ -88,6 +90,8 @@ public struct AppDataScanner: Sendable {
             if values.isSymbolicLink == true { continue }
             guard values.isRegularFile == true, url.lastPathComponent != ".DS_Store" else { continue }
             guard let fileRelative = FileScanner.relativePath(of: url, below: base) else { continue }
+            if let onlyFiles, !onlyFiles.contains(fileRelative) { continue }
+            if !excluding.isEmpty, fileRelative.split(separator: "/").contains(where: { excluding.contains(String($0)) }) { continue }
             if Self.isRefusedFile(url.lastPathComponent) {
                 issues.append(BackupIssue(path: layout.displayPath(url), reason: .refusedSensitive))
                 continue
@@ -108,7 +112,8 @@ public struct AppDataScanner: Sendable {
             files.append(ScannedFile(url: url, record: record))
         }
         files.sort { $0.record.relativePath < $1.record.relativePath }
-        let name = profile.map { [$0.appName, $0.appVersion.map { "(\($0))" }].compactMap { $0 }.joined(separator: " ") } ?? base.lastPathComponent
+        // "Adobe Photoshop 2025 · Actions": app (version) and the real folder name, language independent.
+        let name = profile.map { "\($0.appVersion ?? $0.appName) · \(base.lastPathComponent)" } ?? base.lastPathComponent
         let folderRecord = AppDataFolder(id: id, name: name, relativePath: relative, files: files.map(\.record), profile: profile)
         return (folderRecord, files, issues)
     }

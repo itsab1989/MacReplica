@@ -37,6 +37,9 @@ public struct RestoreEnvironment: Sendable {
     public var commandLineToolsTimeout: TimeInterval
     /// Passphrase for encrypted credentials, entered by the user for this restore only. Never stored or logged.
     public var credentialPassphrase: String?
+    /// Reports whether an app with this bundle identifier is running. Providers whose
+    /// app must be closed are not restored while it runs.
+    public var isApplicationRunning: @Sendable (String) -> Bool = { _ in false }
 
     public init(layout: SystemLayout, runner: CommandRunning, privileged: PrivilegedExecuting, homebrewSource: HomebrewPackageSource,
                 localizer: Localizer, log: LogStore, targetArchitecture: CPUArchitecture = SystemInfo.currentArchitecture,
@@ -72,6 +75,10 @@ public enum Prediction: Equatable, Sendable {
     case willCopy
     case alreadyPresent(version: String?)
     case identicalFileExists
+    /// The same font or profile is installed under another name or in an equal version.
+    case equivalentFileExists
+    /// macOS already provides this font or profile; its own version is kept.
+    case keepsMacOSVersion
     case conflict(resolution: ConflictResolution)
     case willSkip(SkipReason)
     case backupFileDamaged
@@ -83,6 +90,8 @@ public enum Prediction: Equatable, Sendable {
     case willCompleteEnvironment
     /// Something else already exists where the environment belongs; it is not touched.
     case environmentConflict
+    /// A Homebrew package; looked up only in the full dry run and during the restore.
+    case checkedWhenRestoring
 }
 
 public struct DryRunEntry: Equatable, Sendable, Identifiable {
@@ -91,6 +100,17 @@ public struct DryRunEntry: Equatable, Sendable, Identifiable {
     public var prediction: Prediction
     public var requiresAdmin: Bool
     public var notes: [ResultNote]
+    /// For fonts and profiles: how the backup copy relates to what this Mac has.
+    public var fileAssessment: FileAssessment?
+}
+
+extension RestoreSelection {
+    /// Items that should start deselected on this Mac according to a destination check: fonts and
+    /// profiles that cannot be read here, legacy formats, Apple profiles this macOS no longer ships and
+    /// display profiles of the old Mac. Everything else that was backed up stays selected.
+    public static func notRecommended(_ entries: [DryRunEntry]) -> Set<String> {
+        Set(entries.filter { $0.fileAssessment.map { !$0.selectedByDefault } ?? false }.map(\.item.id))
+    }
 }
 
 /// Read-only checks shared by the dry run and the real restore.
@@ -99,8 +119,24 @@ struct Inspector: Sendable {
     let backupRoot: URL
     let selection: RestoreSelection
     let damagedFiles: Set<String>
+    /// False for the quick check of the restore selection: Homebrew packages are not looked up one by one.
+    var checkPackages = true
+    let fileIndexes = FileIndexes()
 
     var layout: SystemLayout { environment.layout }
+
+    /// The destination's fonts and profiles, read on first use and kept up to date during a run.
+    final class FileIndexes: @unchecked Sendable {
+        private let lock = NSLock()
+        private var indexes: [BackupFileKind: DestinationFileIndex] = [:]
+
+        func index(_ kind: BackupFileKind, layout: SystemLayout) -> DestinationFileIndex {
+            if let index = lock.withLock({ indexes[kind] }) { return index }
+            let index = DestinationFileIndex.build(kind: kind, layout: layout)
+            lock.withLock { indexes[kind] = index }
+            return index
+        }
+    }
 
     func architectureSkip(_ item: RestoreItem) -> SkipReason? {
         guard !item.architectures.isEmpty, environment.targetArchitecture != .unknown else { return nil }
@@ -178,15 +214,42 @@ struct Inspector: Sendable {
         return !FileManager.default.isWritableFile(atPath: folder.path)
     }
 
+    static func fileKind(_ item: RestoreItem) -> BackupFileKind { item.kind == .font ? .font : .colorProfile }
+
+    /// Compares the backup copy with the fonts or profiles on this Mac; nil if the backup copy is missing or damaged.
+    func assessFile(_ item: RestoreItem) -> FileConflictAnalyzer.Result? {
+        guard let record = item.file, let targets = fileTargets(item), !damagedFiles.contains(record.backupPath),
+              FileManager.default.fileExists(atPath: targets.source.path) else { return nil }
+        let kind = Self.fileKind(item)
+        return FileConflictAnalyzer(index: fileIndexes.index(kind, layout: layout))
+            .assess(record: record, kind: kind, source: targets.source, destination: targets.destination,
+                    destinationLocation: record.domain == .user ? .user : .shared)
+    }
+
     func predictFile(_ item: RestoreItem) -> Prediction {
-        guard let record = item.file, let targets = fileTargets(item) else { return .backupFileDamaged }
-        if damagedFiles.contains(record.backupPath) { return .backupFileDamaged }
-        guard FileManager.default.fileExists(atPath: targets.source.path) else { return .backupFileDamaged }
-        if FileManager.default.fileExists(atPath: targets.destination.path) {
-            if (try? Hashing.sha256Hex(ofFile: targets.destination)) == record.sha256 { return .identicalFileExists }
-            return .conflict(resolution: selection.resolution(for: item.id))
+        guard let result = assessFile(item) else { return .backupFileDamaged }
+        return Self.prediction(for: result.assessment, item: item, selection: selection)
+    }
+
+    /// The same mapping is used by the restore selection, the dry run and the restore.
+    static func prediction(for assessment: FileAssessment, item: RestoreItem, selection: RestoreSelection) -> Prediction {
+        switch assessment.status {
+        case .identical: return .identicalFileExists
+        case .equivalent: return .equivalentFileExists
+        // macOS's own version is preferred; the backup copy is only added if the user asked for it.
+        case .providedByMacOS: return selection.conflictOverrides[item.id] == .replace ? .willCopy : .keepsMacOSVersion
+        case .differentVersion, .differentFile:
+            let allowed = assessment.conflictChoices(kind: item.kind)
+            // A per-item choice wins; a non-default general choice applies where it is allowed;
+            // otherwise the safe default for this kind of conflict.
+            let chosen = selection.conflictOverrides[item.id].flatMap { allowed.contains($0) ? $0 : nil }
+            let general = selection.conflictResolution != .keepExisting && allowed.contains(selection.conflictResolution)
+                ? selection.conflictResolution : nil
+            return .conflict(resolution: chosen ?? general ?? assessment.defaultResolution(kind: item.kind))
+        case .incompatible: return .willSkip(.fileNotSupported)
+        case .displayProfile: return .willSkip(.displaySpecificProfile)
+        case .ready, .obsoleteAppleProfile, .legacyFormat: return .willCopy
         }
-        return .willCopy
     }
 
     func predict(_ item: RestoreItem, brew: HomebrewInstallation?, taps: Set<String>?) async -> Prediction {
@@ -196,6 +259,13 @@ struct Inspector: Sendable {
         case .homebrew:
             if let brew { return .alreadyPresent(version: brew.version) }
             return .willInstall
+        case .tap where !checkPackages, .formula where !checkPackages:
+            if item.kind == .tap, !selection.enabledTaps.contains(item.identifier.lowercased()) { return .willSkip(.tapNotEnabled(tap: item.identifier)) }
+            return .checkedWhenRestoring
+        case .cask where !checkPackages:
+            if let reason = architectureSkip(item) { return .willSkip(reason) }
+            if let app = installedApp(for: item) { return .alreadyPresent(version: installedVersion(ofApp: app)) }
+            return .checkedWhenRestoring
         case .tap:
             if !selection.enabledTaps.contains(item.identifier.lowercased()) && !selection.enabledTaps.contains(item.identifier) {
                 return .willSkip(.tapNotEnabled(tap: item.identifier))
@@ -261,11 +331,19 @@ public final class RestoreExecutor: Sendable {
 
     // MARK: Dry run
 
+    /// What restoring a font or profile does with `selection`; the same rule the restore applies.
+    public static func filePrediction(for assessment: FileAssessment, item: RestoreItem, selection: RestoreSelection) -> Prediction {
+        Inspector.prediction(for: assessment, item: item, selection: selection)
+    }
+
     /// Describes what a restore would do. Only read-only checks are performed.
-    public func dryRun(plan: RestorePlan, selection: RestoreSelection) async -> [DryRunEntry] {
-        let inspector = Inspector(environment: environment, backupRoot: backupRoot, selection: selection, damagedFiles: damagedFiles)
+    /// With `checkPackages` false, Homebrew packages are not looked up one by one (used for the quick
+    /// check behind the restore selection); everything else is checked exactly as in the restore.
+    public func dryRun(plan: RestorePlan, selection: RestoreSelection, checkPackages: Bool = true) async -> [DryRunEntry] {
+        var inspector = Inspector(environment: environment, backupRoot: backupRoot, selection: selection, damagedFiles: damagedFiles)
+        inspector.checkPackages = checkPackages
         let brew = await environment.homebrew.locate().installation
-        let taps: Set<String>? = brew == nil ? nil : ((try? await environment.homebrew.installedTaps(brew!)) ?? [])
+        let taps: Set<String>? = brew == nil || !checkPackages ? nil : ((try? await environment.homebrew.installedTaps(brew!)) ?? [])
         var entries: [DryRunEntry] = []
         var blocked = Set<String>()
         for item in plan.items {
@@ -284,7 +362,9 @@ public final class RestoreExecutor: Sendable {
                 default: break
                 }
             }
-            entries.append(DryRunEntry(item: item, prediction: prediction, requiresAdmin: requiresAdmin, notes: inspector.notes(for: item)))
+            let assessment = item.kind.isFile ? inspector.assessFile(item)?.assessment : nil
+            entries.append(DryRunEntry(item: item, prediction: prediction, requiresAdmin: requiresAdmin, notes: inspector.notes(for: item),
+                                       fileAssessment: assessment))
         }
         return entries
     }
@@ -607,29 +687,89 @@ public final class RestoreExecutor: Sendable {
     // MARK: Fonts and color profiles
 
     /// Where an existing file is moved before it is replaced. It is never deleted.
-    func asideLocation(for item: RestoreItem, session: RestoreSession) -> URL? {
+    func asideLocation(for target: URL, item: RestoreItem, session: RestoreSession) -> URL? {
         guard let record = item.file else { return nil }
+        let base = layout.baseFolder(for: Inspector.fileKind(item), domain: record.domain)
+        guard let relative = FileScanner.relativePath(of: target, below: base) else { return nil }
         let folder = layout.applicationSupport.appendingPathComponent("Replaced Files/\(session.id)/\(item.kind == .font ? "fonts" : "icc_profiles")/\(record.domain.rawValue)")
-        return PathSafety.resolve(record.relativePath, inside: folder)
+        return PathSafety.resolve(relative, inside: folder)
     }
 
-    enum FileAction: Sendable { case copy, replace }
+    enum FileAction: Sendable, Equatable {
+        case copy
+        /// Move `existing` aside, then copy the backup file.
+        case replace(existing: URL, aside: URL)
+        /// Copy the backup file next to an existing file of the same name.
+        case copyAs(URL)
 
-    private func fileAction(_ item: RestoreItem, inspector: Inspector) -> (FileAction?, ItemResult?) {
-        switch inspector.predictFile(item) {
-        case .backupFileDamaged:
+        func destination(_ targets: Inspector.FileTargets) -> URL {
+            if case .copyAs(let url) = self { return url }
+            return targets.destination
+        }
+
+        var aside: URL? {
+            if case .replace(_, let aside) = self { return aside }
+            return nil
+        }
+    }
+
+    private func fileAction(_ item: RestoreItem, inspector: Inspector, session: RestoreSession) -> (FileAction?, ItemResult?) {
+        // A damaged backup copy is reported as such before anything is compared.
+        guard let targets = inspector.fileTargets(item), sourceIsIntact(item, targets), let analysis = inspector.assessFile(item) else {
             return (nil, failed(item, .backupFileDamaged, item.file?.backupPath ?? ""))
+        }
+        let assessment = analysis.assessment
+        func replacing(_ existing: URL?) -> (FileAction?, ItemResult?) {
+            guard let existing else { return (.copy, nil) }
+            guard let aside = asideLocation(for: existing, item: item, session: session) else {
+                return (nil, failed(item, .unknown, "no location for the replaced file"))
+            }
+            return (.replace(existing: existing, aside: aside), nil)
+        }
+        switch Inspector.prediction(for: assessment, item: item, selection: inspector.selection) {
         case .identicalFileExists:
             return (nil, ItemResult(itemID: item.id, outcome: .alreadyPresent, notes: [.identicalFileExists]))
+        case .equivalentFileExists:
+            return (nil, ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: assessment.installedVersion,
+                                    notes: [.equivalentFileInstalled]))
+        case .keepsMacOSVersion:
+            return (nil, ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: assessment.installedVersion,
+                                    notes: [.providedByMacOS]))
+        case .willSkip(let reason):
+            return (nil, ItemResult(itemID: item.id, outcome: .skipped(reason)))
         case .conflict(let resolution):
             switch resolution {
             case .keepExisting: return (nil, ItemResult(itemID: item.id, outcome: .skipped(.keptExisting)))
             case .skip: return (nil, ItemResult(itemID: item.id, outcome: .skipped(.userSkipped)))
-            case .replace: return (.replace, nil)
+            case .replace:
+                // Only a file in the folder MacReplica restores into is moved aside; a copy in another
+                // folder stays where it is.
+                return replacing(analysis.replaceTarget)
+            case .keepBoth:
+                if !FileManager.default.fileExists(atPath: targets.destination.path) { return (.copy, nil) }
+                guard let alternative = Self.alternativeName(for: targets.destination) else {
+                    return (nil, failed(item, .unknown, "no free file name"))
+                }
+                return (.copyAs(alternative), nil)
             }
         default:
-            return (.copy, nil)
+            // Anything already at the destination path is never overwritten in place.
+            return replacing(FileManager.default.fileExists(atPath: targets.destination.path) ? targets.destination : nil)
         }
+    }
+
+    /// "Example Paper.icc" → "Example Paper (MacReplica).icc", then "(MacReplica 2)" … in the same folder.
+    static func alternativeName(for url: URL) -> URL? {
+        let folder = url.deletingLastPathComponent()
+        let stem = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        for number in 1...99 {
+            let suffix = number == 1 ? " (MacReplica)" : " (MacReplica \(number))"
+            let name = stem + suffix + (ext.isEmpty ? "" : "." + ext)
+            let candidate = folder.appendingPathComponent(name)
+            if !FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+        }
+        return nil
     }
 
     private func sourceIsIntact(_ item: RestoreItem, _ targets: Inspector.FileTargets) -> Bool {
@@ -644,64 +784,68 @@ public final class RestoreExecutor: Sendable {
         }
         // Already handled by the batched administrator copy: only verify.
         if let batch = context.privilegedFileResults[item.id] {
-            return verifyPrivilegedCopy(item, record: record, targets: targets, batch: batch, session: session, onEvent: onEvent)
+            return verifyInstalledFile(item, record: record, targets: targets, batch: batch, inspector: inspector, onEvent: onEvent)
         }
-        let (action, early) = fileAction(item, inspector: inspector)
-        if let early { return early }
+        let (action, early) = fileAction(item, inspector: inspector, session: session)
+        if let early {
+            log.info("\(item.id): decision \(early.decisionCode)", component: item.kind.logComponent)
+            return early
+        }
         guard let action else { return failed(item, .unknown) }
         guard sourceIsIntact(item, targets) else { return failed(item, .backupFileDamaged, record.backupPath) }
-        let aside = action == .replace ? asideLocation(for: item, session: session) : nil
-        if action == .replace, aside == nil { return failed(item, .unknown, "no location for the replaced file") }
 
         if inspector.fileNeedsAdmin(targets) {
             if !context.privilegedBatchDone {
                 await runPrivilegedFileBatch(plan: plan, session: session, inspector: inspector, context: &context, onEvent: onEvent)
             }
             guard let batch = context.privilegedFileResults[item.id] else { return failed(item, .adminRightsDenied) }
-            return verifyPrivilegedCopy(item, record: record, targets: targets, batch: batch, session: session, onEvent: onEvent)
-        } else {
-            onEvent(.activity(itemID: item.id, .copying))
-            do {
-                let fm = FileManager.default
-                try fm.createDirectory(at: targets.destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-                if action == .replace, let aside {
-                    try fm.createDirectory(at: aside.deletingLastPathComponent(), withIntermediateDirectories: true)
-                    if fm.fileExists(atPath: aside.path) { try fm.removeItem(at: aside) }
-                    try fm.moveItem(at: targets.destination, to: aside)
-                }
-                try fm.copyItem(at: targets.source, to: targets.destination)
-            } catch {
-                let nsError = error as NSError
-                let category: FailureCategory = nsError.code == NSFileWriteOutOfSpaceError ? .diskFull : .unknown
-                return failed(item, category, layout.redact(nsError.localizedDescription))
+            return verifyInstalledFile(item, record: record, targets: targets, batch: batch, inspector: inspector, onEvent: onEvent)
+        }
+        onEvent(.activity(itemID: item.id, .copying))
+        do {
+            let fm = FileManager.default
+            try fm.createDirectory(at: action.destination(targets).deletingLastPathComponent(), withIntermediateDirectories: true)
+            if case .replace(let existing, let aside) = action {
+                try fm.createDirectory(at: aside.deletingLastPathComponent(), withIntermediateDirectories: true)
+                if fm.fileExists(atPath: aside.path) { try fm.removeItem(at: aside) }
+                try fm.moveItem(at: existing, to: aside)
+                inspector.fileIndexes.index(Inspector.fileKind(item), layout: layout).remove(existing)
             }
+            try fm.copyItem(at: targets.source, to: action.destination(targets))
+        } catch {
+            let nsError = error as NSError
+            let category: FailureCategory = nsError.code == NSFileWriteOutOfSpaceError ? .diskFull
+                : (nsError.code == NSFileWriteNoPermissionError ? .adminRightsDenied : .unknown)
+            return failed(item, category, layout.redact(nsError.localizedDescription))
         }
-
-        onEvent(.activity(itemID: item.id, .verifying))
-        guard (try? Hashing.sha256Hex(ofFile: targets.destination)) == record.sha256 else {
-            return failed(item, .verificationFailed, "checksum differs after copying")
-        }
-        var notes: [ResultNote] = []
-        if let aside { notes.append(.existingFileMovedAside(path: layout.displayPath(aside))) }
-        return ItemResult(itemID: item.id, outcome: .succeeded, notes: notes)
+        return verifyInstalledFile(item, record: record, targets: targets, batch: .success(action), inspector: inspector, onEvent: onEvent)
     }
 
-    private func verifyPrivilegedCopy(_ item: RestoreItem, record: FileRecord, targets: Inspector.FileTargets,
-                                      batch: Result<FileAction, PrivilegedError>, session: RestoreSession,
-                                      onEvent: @escaping @Sendable (RestoreEvent) -> Void) -> ItemResult {
+    /// A restored file counts only if its checksum matches and macOS on this Mac can read it.
+    private func verifyInstalledFile(_ item: RestoreItem, record: FileRecord, targets: Inspector.FileTargets,
+                                     batch: Result<FileAction, PrivilegedError>, inspector: Inspector,
+                                     onEvent: @escaping @Sendable (RestoreEvent) -> Void) -> ItemResult {
         switch batch {
         case .failure(.denied): return failed(item, .adminRightsDenied)
         case .failure(let error): return failed(item, .unknown, layout.redact(String(describing: error)))
         case .success(let action):
             onEvent(.activity(itemID: item.id, .verifying))
-            guard (try? Hashing.sha256Hex(ofFile: targets.destination)) == record.sha256 else {
+            let installed = action.destination(targets)
+            guard (try? Hashing.sha256Hex(ofFile: installed)) == record.sha256 else {
                 return failed(item, .verificationFailed, "checksum differs after copying")
             }
-            var notes: [ResultNote] = []
-            if action == .replace, let aside = asideLocation(for: item, session: session) {
-                notes.append(.existingFileMovedAside(path: layout.displayPath(aside)))
+            let kind = Inspector.fileKind(item)
+            guard FileVerification.isUsable(installed, kind: kind) else {
+                return failed(item, .verificationFailed, "macOS cannot read the restored file")
             }
-            return ItemResult(itemID: item.id, outcome: .succeeded, notes: notes)
+            inspector.fileIndexes.index(kind, layout: layout)
+                .record(installed: installed, location: record.domain == .user ? .user : .shared, kind: kind, sha256: record.sha256)
+            var notes: [ResultNote] = []
+            if let aside = action.aside { notes.append(.existingFileMovedAside(path: layout.displayPath(aside))) }
+            if case .copyAs(let url) = action { notes.append(.installedUnderNewName(name: url.lastPathComponent)) }
+            let result = ItemResult(itemID: item.id, outcome: .succeeded, notes: notes)
+            log.info("\(item.id): decision \(result.decisionCode)", component: item.kind.logComponent)
+            return result
         }
     }
 
@@ -715,17 +859,17 @@ public final class RestoreExecutor: Sendable {
         var createdFolders = Set<String>()
         for item in plan.items where item.kind.isFile && session.results[item.id] == nil {
             guard let targets = inspector.fileTargets(item), inspector.fileNeedsAdmin(targets) else { continue }
-            let (action, early) = fileAction(item, inspector: inspector)
+            let (action, early) = fileAction(item, inspector: inspector, session: session)
             guard early == nil, let action, sourceIsIntact(item, targets) else { continue }
             let folder = targets.destination.deletingLastPathComponent()
             if !FileManager.default.fileExists(atPath: folder.path), createdFolders.insert(folder.path).inserted {
                 operations.append(.createFolder(folder))
             }
-            if action == .replace, let aside = asideLocation(for: item, session: session) {
+            if case .replace(let existing, let aside) = action {
                 try? FileManager.default.createDirectory(at: aside.deletingLastPathComponent(), withIntermediateDirectories: true)
-                operations.append(.move(source: targets.destination, destination: aside))
+                operations.append(.move(source: existing, destination: aside))
             }
-            operations.append(.installFile(source: targets.source, destination: targets.destination))
+            operations.append(.installFile(source: targets.source, destination: action.destination(targets)))
             itemIDs.append(item.id)
             actions[item.id] = action
         }

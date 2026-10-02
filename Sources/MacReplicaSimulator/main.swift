@@ -30,6 +30,18 @@ func usage() -> Never {
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())
+// Read-only check of provider detection on this Mac. Prints provider, category and counts
+// only — no paths, file names or contents — and changes nothing.
+if arguments.first == "detect-live" {
+    let layout = SystemLayout.live()
+    for detected in AppDataProviders.detect(layout: layout) {
+        let count = (try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
+                                                              excluding: detected.excluding).files.count) ?? -1
+        print("appdata \(detected.profile.provider)/\(detected.profile.category) files=\(count)")
+    }
+    for provider in CredentialProviders.all { print("credential \(provider.id) detected=\(!provider.detect(layout: layout).isEmpty)") }
+    exit(0)
+}
 guard arguments.count >= 2 else { usage() }
 let folder = URL(fileURLWithPath: arguments[1]).standardizedFileURL
 let root = SimulationRoot(url: folder)

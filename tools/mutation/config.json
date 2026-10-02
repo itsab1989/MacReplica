@@ -1,21 +1,211 @@
 {
   "default_threshold": 80,
   "modules": [
-    {"file": "Model/ManifestIO.swift", "tests": ["ManifestTests", "VerificationTests"], "area": "Manifest"},
-    {"file": "Matching/Matcher.swift", "tests": ["MatchingTests"], "area": "Matching"},
-    {"file": "Restore/RestorePlanner.swift", "tests": ["RestorePlannerTests", "EndToEndTests"], "area": "Restore"},
-    {"file": "Restore/RestoreExecutor.swift", "tests": ["RestoreExecutionTests", "DryRunTests", "ResumeTests", "FailureModeTests", "SecurityTests"], "area": "Restore, conflicts, dry run, verification", "threshold": 75},
-    {"file": "Restore/SessionStore.swift", "tests": ["ResumeTests", "CleanupTests"], "area": "Resume"},
-    {"file": "Backup/BackupVerifier.swift", "tests": ["VerificationTests"], "area": "Verification"},
-    {"file": "Support/SafeCleaner.swift", "tests": ["CleanupTests", "SecurityTests"], "area": "Cleanup, path safety"},
-    {"file": "System/CommandRunner.swift", "tests": ["SecurityTests"], "area": "Security", "threshold": 70},
-    {"file": "Restore/PrivilegedExecutor.swift", "tests": ["SecurityTests", "RestoreExecutionTests"], "area": "Security"},
-    {"file": "Restore/ErrorClassifier.swift", "tests": ["ClassifierAndProgressTests", "FailureModeTests"], "area": "Failure handling"}
+    {
+      "file": "Model/ManifestIO.swift",
+      "tests": [
+        "ManifestTests",
+        "VerificationTests"
+      ],
+      "area": "Manifest"
+    },
+    {
+      "file": "Matching/Matcher.swift",
+      "tests": [
+        "MatchingTests"
+      ],
+      "area": "Matching"
+    },
+    {
+      "file": "Restore/RestorePlanner.swift",
+      "tests": [
+        "RestorePlannerTests",
+        "EndToEndTests",
+        "TwoStageSelectionTests",
+        "SelectionPlannerTests"
+      ],
+      "area": "Restore"
+    },
+    {
+      "file": "Restore/FileConflictAnalyzer.swift",
+      "tests": [
+        "FontConflictTests",
+        "ProfileConflictTests",
+        "FileDecisionRestoreTests",
+        "TwoStageSelectionTests",
+        "DestinationIndexTests",
+        "ExecutorPredictionTests"
+      ],
+      "area": "Font and ICC profile conflict decisions"
+    },
+    {
+      "file": "Restore/RestoreExecutor.swift",
+      "tests": [
+        "RestoreExecutionTests",
+        "DryRunTests",
+        "ResumeTests",
+        "FailureModeTests",
+        "SecurityTests",
+        "FileDecisionRestoreTests",
+        "TwoStageSelectionTests",
+        "FontConflictTests",
+        "ProfileConflictTests",
+        "ExecutorPredictionTests",
+        "EndToEndTests",
+        "ExecutorEdgeTests",
+        "RestorePlannerTests"
+      ],
+      "area": "Restore, conflicts, dry run, verification",
+      "threshold": 75
+    },
+    {
+      "file": "Restore/SessionStore.swift",
+      "tests": [
+        "ResumeTests",
+        "CleanupTests",
+        "SessionAndPrivilegeEdgeTests"
+      ],
+      "area": "Resume"
+    },
+    {
+      "file": "Backup/BackupVerifier.swift",
+      "tests": [
+        "VerificationTests",
+        "VerificationEdgeTests"
+      ],
+      "area": "Verification"
+    },
+    {
+      "file": "Support/SafeCleaner.swift",
+      "tests": [
+        "CleanupTests",
+        "SecurityTests",
+        "CleanupEdgeTests"
+      ],
+      "area": "Cleanup, path safety"
+    },
+    {
+      "file": "System/CommandRunner.swift",
+      "tests": [
+        "SecurityTests",
+        "CommandRunnerEdgeTests"
+      ],
+      "area": "Security",
+      "threshold": 70
+    },
+    {
+      "file": "Restore/PrivilegedExecutor.swift",
+      "tests": [
+        "SecurityTests",
+        "RestoreExecutionTests",
+        "SessionAndPrivilegeEdgeTests"
+      ],
+      "area": "Security"
+    },
+    {
+      "file": "Restore/ErrorClassifier.swift",
+      "tests": [
+        "ClassifierAndProgressTests",
+        "FailureModeTests"
+      ],
+      "area": "Failure handling"
+    },
+    {
+      "file": "Credentials/Credentials.swift",
+      "tests": [
+        "CredentialTests",
+        "FileCredentialProviderTests",
+        "CredentialEdgeTests"
+      ],
+      "area": "Security: credential encryption"
+    },
+    {
+      "file": "Inventory/DeveloperSettings.swift",
+      "tests": [
+        "ProviderTests",
+        "GitConfigSanitizerTests",
+        "ProviderCatalogTests"
+      ],
+      "area": "Security: Git configuration sanitizing"
+    },
+    {
+      "file": "Support/UpdateChecker.swift",
+      "tests": [
+        "VersionAndUpdateTests",
+        "VersionEdgeTests"
+      ],
+      "area": "Update detection"
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "tests": [
+        "PythonTests",
+        "ApplicationDataTests",
+        "ProviderTests",
+        "CredentialTests"
+      ],
+      "area": "Python, application data and credential restore",
+      "threshold": 75
+    },
+    {
+      "file": "Providers/AppDataProviders.swift",
+      "tests": [
+        "ProviderCatalogTests",
+        "ProviderTests"
+      ],
+      "area": "Provider selection and discovery"
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "tests": [
+        "ApplicationDataTests",
+        "ProviderCatalogTests",
+        "AppDataScannerEdgeTests"
+      ],
+      "area": "Application data path handling and refusal rules"
+    },
+    {
+      "file": "Inventory/ICCProfile.swift",
+      "tests": [
+        "InventoryTests",
+        "ProfileConflictTests",
+        "ICCHeaderTests",
+        "ICCComputedIDBoundaryTests"
+      ],
+      "area": "ICC profile identity (header, computed Profile ID)",
+      "threshold": 75
+    }
   ],
   "exclusions": [
-    {"file": "System/CommandRunner.swift", "pattern": "readabilityHandler = nil", "reason": "Removing handler cleanup only leaks a callback after the process ended; not observable in tests."},
-    {"file": "System/CommandRunner.swift", "pattern": "guard !data.isEmpty else", "reason": "Empty reads are no-ops either way (equivalent mutant)."},
-    {"file": "Restore/RestoreExecutor.swift", "pattern": "log\\.(info|warning|error)", "reason": "Log-only lines."},
-    {"file": "Restore/RestoreExecutor.swift", "pattern": "onEvent\\(\\.activity", "reason": "Progress-only events; covered by eventsDescribeEveryStep for the main kinds."}
+    {
+      "file": "System/CommandRunner.swift",
+      "pattern": "guard !data.isEmpty else",
+      "reason": "Empty reads are no-ops either way (equivalent mutant)."
+    },
+    {
+      "file": "Restore/RestoreExecutor.swift",
+      "pattern": "log\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Restore/RestoreExecutor.swift",
+      "pattern": "onEvent\\(\\.activity",
+      "reason": "Progress-only events; covered by eventsDescribeEveryStep for the main kinds."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "log\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "onEvent\\(\\.activity",
+      "reason": "Progress-only events."
+    },
+    {
+      "file": "Credentials/Credentials.swift",
+      "pattern": "minimumPassphraseLength = 12|defaultIterations = 600_000",
+      "reason": "Policy constants; boundaries are tested via the 'short' passphrase and iteration floor."
+    }
   ]
 }

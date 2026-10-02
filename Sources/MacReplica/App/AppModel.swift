@@ -65,12 +65,40 @@ final class AppModel: ObservableObject {
     @Published var notice: ProblemInfo?
     @Published var includeGitSettings = true
     @Published var includeGitEmail = false
-    /// Credentials are only included after explicit opt-in with a passphrase.
-    @Published var includeSSHKeys = false
+    /// Credential providers the user explicitly switched on (always empty by default).
+    @Published var selectedCredentialProviders = Set<String>()
     var credentialPassphrase: String?
+    /// Application data folders the user switched off (compatibility-sensitive ones start off).
+    @Published var excludedApplicationData = Set<String>()
+    /// Fonts and profiles the user left out of the backup (`InventoryResult.selectionID`).
+    @Published var excludedBackupFiles = Set<String>()
     /// Passphrase for restoring encrypted credentials; requested right before the restore.
     @Published var askForRestorePassphrase = false
     var restorePassphrase: String?
+    /// An interrupted restore that continues once the passphrase was asked again.
+    private var pendingResume: RestoreSession?
+
+    /// `nil` means the user chose to skip the credentials.
+    func restorePassphraseEntered(_ passphrase: String?) {
+        askForRestorePassphrase = false
+        if let session = pendingResume {
+            pendingResume = nil
+            // Without a passphrase the credential steps are recorded as skipped, nothing else changes.
+            restorePassphrase = passphrase
+            resumeRestore(session, askForPassphrase: false)
+            return
+        }
+        if let passphrase { restorePassphrase = passphrase } else { selection.components.remove(.credentials) }
+        startRestore()
+    }
+
+    func cancelRestorePassphrase() {
+        askForRestorePassphrase = false
+        if pendingResume != nil {
+            pendingResume = nil
+            screen = .home
+        }
+    }
     @Published var updateStatus: UpdateStatus?
     @Published var checkingForUpdates = false
 
@@ -91,7 +119,15 @@ final class AppModel: ObservableObject {
     @Published var dryRunInProgress = false
     @Published var progress = RestoreProgressState()
     @Published var session: RestoreSession?
-    @Published var pendingConflicts: [RestoreItem] = []
+    @Published var pendingConflicts: [DryRunEntry] = []
+    /// The quick destination check behind the restore selection: item ID → what restoring it would do here.
+    @Published var assessments: [String: DryRunEntry] = [:]
+    @Published var assessing = false
+    /// Items MacReplica deselected because restoring them is not recommended on this Mac.
+    @Published var notRecommendedItemIDs = Set<String>()
+    /// An interrupted restore whose remaining selection the user is reviewing before continuing.
+    @Published var reviewingSession: RestoreSession?
+    private var assessmentTask: Task<Void, Never>?
     @Published var adminNotice: AdminNotice?
 
     // Verification
@@ -207,11 +243,20 @@ final class AppModel: ObservableObject {
         savedBackup = nil
         backupOutcome = nil
         pythonSearchFolders = []
+        selectedCredentialProviders = []
+        credentialPassphrase = nil
+        excludedApplicationData = []
+        excludedBackupFiles = []
         manifest = nil
         backupURL = nil
         verification = nil
         plan = nil
         dryRunEntries = []
+        assessmentTask?.cancel()
+        assessments = [:]
+        notRecommendedItemIDs = []
+        reviewingSession = nil
+        pendingConflicts = []
         session = nil
         problem = nil
         selection = RestoreSelection()
@@ -242,6 +287,10 @@ final class AppModel: ObservableObject {
                 guard !Task.isCancelled else { return }
                 self?.inventory = result
                 self?.selectedPythonEnvironments = Set(result.manifest.python.environments.map(\.id))
+                // Data that may not work across app versions is offered, but not pre-selected.
+                self?.excludedApplicationData = Set(result.manifest.applicationData
+                    .filter { $0.profile.map { !$0.classification.selectedByDefault } ?? false }.map(\.id))
+                self?.excludedBackupFiles = result.filesNotSelectedByDefault
                 self?.appLog.info("Inventory finished: \(result.manifest.applications.count) apps, \(result.manifest.python.environments.count) Python environments, \(result.warnings.count) warnings", component: .inventory)
                 self?.screen = .inventoryResults
             } catch is CancellationError {
@@ -361,7 +410,10 @@ final class AppModel: ObservableObject {
         guard var inventory else { return }
         inventory.keepPythonEnvironments(selectedPythonEnvironments, includeSettings: includePythonSettings)
         applyDeveloperChoices(to: &inventory)
-        let credentials = includeSSHKeys ? credentialPassphrase.map { CredentialExportRequest(providerIDs: ["ssh"], passphrase: $0) } : nil
+        for id in excludedApplicationData { inventory.removeApplicationData(id: id) }
+        inventory.excludeFiles(excludedBackupFiles)
+        let credentials = selectedCredentialProviders.isEmpty ? nil
+            : credentialPassphrase.map { CredentialExportRequest(providerIDs: selectedCredentialProviders.sorted(), passphrase: $0) }
         screen = .savingBackup
         backupProgress = 0
         let writer = BackupWriter(layout: services.layout, localizer: l)
@@ -421,7 +473,7 @@ final class AppModel: ObservableObject {
 
     enum BackupPurpose { case restore, verify }
 
-    func openBackupForRestore(_ url: URL, resuming: RestoreSession? = nil) {
+    func openBackupForRestore(_ url: URL, resuming: RestoreSession? = nil, reviewing: Bool = false) {
         screen = .verifying
         verificationProgress = 0
         let verifier = BackupVerifier(layout: services.layout)
@@ -431,12 +483,12 @@ final class AppModel: ObservableObject {
                 Task { @MainActor in model.verificationProgress = fraction }
             }
             await MainActor.run { [weak self] in
-                self?.finishOpening(url: url, report: report, resuming: resuming)
+                self?.finishOpening(url: url, report: report, resuming: resuming, reviewing: reviewing)
             }
         }
     }
 
-    private func finishOpening(url: URL, report: VerificationReport, resuming: RestoreSession?) {
+    private func finishOpening(url: URL, report: VerificationReport, resuming: RestoreSession?, reviewing: Bool = false) {
         guard let manifest = report.manifest, report.isUsable else {
             showUnusableBackup(report)
             return
@@ -445,14 +497,24 @@ final class AppModel: ObservableObject {
         backupURL = url
         self.manifest = manifest
         verification = report
-        if let resuming {
+        assessments = [:]
+        notRecommendedItemIDs = []
+        if let resuming, reviewing {
+            // The earlier choices stay; only steps that have not run yet can be changed.
+            selection = resuming.selection
+            reviewingSession = resuming
+            screen = .restoreSelection
+            assessDestination(applyDefaults: false)
+        } else if let resuming {
             selection = resuming.selection
             resumeRestore(resuming)
         } else {
+            reviewingSession = nil
             selection = RestoreSelection()
             // Third-party taps stay off until the user allows them.
             selection.enabledTaps = []
             screen = .restoreSelection
+            assessDestination(applyDefaults: true)
         }
     }
 
@@ -505,8 +567,43 @@ final class AppModel: ObservableObject {
             homebrewSource: services.homebrewSource, localizer: l, log: log, targetArchitecture: services.architecture,
             askpassPath: services.askpassPath)
         environment.credentialPassphrase = restorePassphrase
+        environment.isApplicationRunning = { bundleID in
+            !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty
+        }
         return RestoreExecutor(environment: environment, backupRoot: backupURL, sessionStore: services.sessionStore,
                                damagedFiles: verification?.damagedFiles ?? [])
+    }
+
+    /// Checks every item of the backup against this Mac (read-only) for the restore selection. With
+    /// `applyDefaults`, items that should not be restored here (e.g. display profiles of the old Mac)
+    /// start deselected; the user can change that.
+    func assessDestination(applyDefaults: Bool) {
+        guard let manifest, let executor = makeExecutor(log: LogStore(fileURL: nil, homeDirectory: services.layout.homeDirectory)) else { return }
+        var everything = selection
+        everything.components = Set(RestoreComponent.allCases)
+        everything.excludedItemIDs = []
+        let plan = RestorePlanner().plan(manifest: manifest, selection: everything)
+        let current = selection
+        assessing = true
+        assessmentTask?.cancel()
+        assessmentTask = Task { [weak self] in
+            let entries = await executor.dryRun(plan: plan, selection: current, checkPackages: false)
+            guard let self, !Task.isCancelled else { return }
+            self.assessments = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            let notRecommended = RestoreSelection.notRecommended(entries)
+            self.notRecommendedItemIDs = notRecommended
+            if applyDefaults {
+                self.selection.excludedItemIDs.formUnion(notRecommended)
+                self.appLog.info("Destination check: \(entries.count) items, \(notRecommended.count) not recommended for this Mac", component: .restore)
+            }
+            self.assessing = false
+        }
+    }
+
+    /// What restoring a font or profile would do with the current choices.
+    func filePrediction(_ entry: DryRunEntry) -> Prediction? {
+        guard let assessment = entry.fileAssessment else { return nil }
+        return RestoreExecutor.filePrediction(for: assessment, item: entry.item, selection: selection)
     }
 
     func startDryRun() {
@@ -531,8 +628,12 @@ final class AppModel: ObservableObject {
         task = Task { [weak self] in
             let entries = await executor.dryRun(plan: plan, selection: selection)
             guard let self else { return }
-            let conflicts = entries.filter { if case .conflict = $0.prediction { return true }; return false }.map(\.item)
-            if !conflicts.isEmpty, self.selection.conflictOverrides.isEmpty {
+            // Every conflict needs a decision; choices made earlier in the item list count.
+            let conflicts = entries.filter { entry in
+                guard case .conflict = entry.prediction else { return false }
+                return self.selection.conflictOverrides[entry.item.id] == nil
+            }
+            if !conflicts.isEmpty {
                 self.pendingConflicts = conflicts
                 return
             }
@@ -541,7 +642,7 @@ final class AppModel: ObservableObject {
     }
 
     func resolveConflicts(_ choices: [String: ConflictResolution]) {
-        selection.conflictOverrides = choices
+        selection.conflictOverrides.merge(choices) { _, new in new }
         pendingConflicts = []
         guard let plan, let executor = makeExecutor(log: LogStore(fileURL: nil, homeDirectory: services.layout.homeDirectory)) else { return }
         let selection = self.selection
@@ -570,6 +671,15 @@ final class AppModel: ObservableObject {
             return
         }
         guard let plan = plan ?? currentPlan(), let backupURL else { return }
+        if let reviewing = reviewingSession, let manifest {
+            // Continue the interrupted restore with the reviewed choices; finished steps keep their results.
+            reviewingSession = nil
+            let (merged, session) = RestorePlanner().continuation(of: reviewing, manifest: manifest, selection: selection)
+            let finished = reviewing.results.keys
+            appLog.info("Continuing restore \(session.id) with a reviewed selection: \(finished.count) finished, \(session.remainingItemIDs.count) remaining", component: .restore)
+            run(plan: merged, session: session)
+            return
+        }
         let session = RestoreSession(backupPath: services.layout.displayPath(backupURL), selection: selection, itemIDs: plan.items.map(\.id))
         run(plan: plan, session: session)
     }
@@ -577,6 +687,11 @@ final class AppModel: ObservableObject {
     private func run(plan: RestorePlan, session: RestoreSession) {
         let log = LogStore.session(in: services.layout.logs, name: "restore", homeDirectory: services.layout.homeDirectory)
         restoreLog = log
+        // Items the user left out never reach the plan; their decision is still recorded.
+        let planned = Set(plan.items.map(\.id))
+        for item in candidateItems where !planned.contains(item.id) && session.selection.excludedItemIDs.contains(item.id) {
+            log.info("\(item.id): decision skipped_by_user", component: item.kind.logComponent)
+        }
         guard let executor = makeExecutor(log: log) else { return }
         self.plan = plan
         self.session = session
@@ -633,13 +748,20 @@ final class AppModel: ObservableObject {
         task?.cancel()
     }
 
-    func resumeRestore(_ session: RestoreSession) {
+    func resumeRestore(_ session: RestoreSession, askForPassphrase: Bool = true) {
         guard let manifest else {
             let url = services.layout.resolve(displayPath: session.backupPath)
             openBackupForRestore(url, resuming: session)
             return
         }
         selection = session.selection
+        // The passphrase is never stored, so it is asked again if credentials are still to be restored.
+        let credentialsPending = session.itemIDs.contains { $0.hasPrefix("credential:") && session.results[$0] == nil }
+        if session.selection.components.contains(.credentials), credentialsPending, !manifest.credentials.isEmpty, restorePassphrase == nil, askForPassphrase {
+            pendingResume = session
+            askForRestorePassphrase = true
+            return
+        }
         let plan = RestorePlanner().plan(manifest: manifest, selection: session.selection)
         run(plan: plan, session: session)
     }
@@ -652,6 +774,17 @@ final class AppModel: ObservableObject {
             return
         }
         openBackupForRestore(url, resuming: session)
+    }
+
+    /// Opens the interrupted restore's backup so the remaining choices can be changed before continuing.
+    func reviewUnfinished() {
+        guard let session = unfinishedSession else { return }
+        let url = services.layout.resolve(displayPath: session.backupPath)
+        guard FileManager.default.fileExists(atPath: url.appendingPathComponent(ManifestIO.fileName).path) else {
+            show(ProblemInfo(title: l.t("resume.backupMissing.title"), message: l.t("resume.backupMissing.message", session.backupPath), detail: nil))
+            return
+        }
+        openBackupForRestore(url, resuming: session, reviewing: true)
     }
 
     func discardUnfinished() {
@@ -762,12 +895,22 @@ extension AppModel {
         (inventory?.manifest.locations ?? []).filter { $0.status == .noPermission }
     }
 
-    var detectedSSHItems: [String] { SSHKeyProvider().detect(layout: services.layout) }
+    /// Credential providers with something to export on this Mac, and what they would export.
+    var detectedCredentials: [(provider: CredentialProvider, items: [String])] {
+        CredentialProviders.all.compactMap { provider in
+            let items = provider.detect(layout: services.layout)
+            return items.isEmpty ? nil : (provider, items)
+        }
+    }
 
     /// Applies the Git choices (include settings, include email) to the inventory before saving.
     func applyDeveloperChoices(to inventory: inout InventoryResult) {
-        inventory.manifest.developer = includeGitSettings
-            ? DeveloperSettingsScanner(layout: services.layout).scan(includeEmail: includeGitEmail)
-            : DeveloperSettings()
+        var developer = DeveloperSettingsScanner(layout: services.layout).scan(includeEmail: includeGitEmail)
+        if !includeGitSettings {
+            developer.gitConfig = nil
+            developer.gitConfigIncludesEmail = false
+            developer.removedGitSections = []
+        }
+        inventory.manifest.developer = developer
     }
 }

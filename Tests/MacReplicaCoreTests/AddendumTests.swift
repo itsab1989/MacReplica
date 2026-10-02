@@ -115,7 +115,7 @@ struct PermissionTests {
         #expect(status(.userFonts) == .scanned)
         #expect(status(.homebrew) == .scanned)
         #expect(status(.appStore) == .scanned)
-        #expect(manifest.fonts.count == 3, "everything readable is still included")
+        #expect(manifest.fonts.count == 8, "everything readable is still included")
         let html = ReportBuilder(localizer: TestEnvironment.english).restoreInstructions(manifest, folderName: "x")
         #expect(html.contains("Locations that could not be read"))
         #expect(ReportBuilder(localizer: TestEnvironment.english).inventoryReport(manifest).contains("No permission"))
@@ -124,22 +124,11 @@ struct PermissionTests {
 
 @Suite("Application data profiles and developer settings")
 struct ProviderTests {
-    @Test func profilesDetectOnlyUserCreatedCategories() throws {
-        let sandbox = try Sandbox("profiles")
-        let (_, simulation) = try TestEnvironment.sourceMac(sandbox)
-        let detected = AppDataProviders.detect(layout: simulation.layout)
-        let names = detected.map { "\($0.profile.provider)/\($0.profile.category)" }.sorted()
-        #expect(names == ["adobe-photoshop/actions", "adobe-photoshop/brushes", "davinci-resolve/luts"])
-        #expect(detected.first { $0.profile.category == "actions" }?.profile.appVersion == "Adobe Photoshop 2025")
-        #expect(!detected.contains { $0.folder.path.contains("Settings") }, "preferences are never suggested")
-        #expect(AppDataProviders.profiles.allSatisfy { !$0.categories.isEmpty })
-    }
-
     @Test func detectedDataIsBackedUpAndRestoredIntoTheVersionFolder() async throws {
         let sandbox = try Sandbox("profiles-restore")
         let (backup, manifest) = try await TestEnvironment.makeBackup(sandbox)
         let actions = try #require(manifest.applicationData.first { $0.profile?.category == "actions" })
-        #expect(actions.name == "Adobe Photoshop (Adobe Photoshop 2025)")
+        #expect(actions.name == "Adobe Photoshop 2025 · Actions")
         #expect(actions.files.map(\.relativePath) == ["My Actions.atn"])
         let (fresh, target) = try TestEnvironment.freshMac(sandbox)
         let selection = RestoreSelection(components: [.applicationData])
@@ -265,8 +254,9 @@ struct CredentialTests {
         #expect(!log.allLines.joined().contains(passphrase))
         #expect(BackupVerifier(layout: source.layout).verify(backupAt: outcome.url).isIntact)
 
-        // Not part of a default restore.
+        // Not part of a default restore, but offered so the user can switch it on.
         #expect(!RestoreSelection().components.contains(.credentials))
+        #expect(RestorePlanner().candidateItems(manifest: outcome.manifest, selection: RestoreSelection()).contains { $0.id == "credential:ssh" })
         #expect(!RestorePlanner().plan(manifest: outcome.manifest, selection: RestoreSelection()).items.contains { $0.kind == .credential })
 
         let (fresh, target) = try TestEnvironment.freshMac(sandbox)

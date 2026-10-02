@@ -73,6 +73,7 @@ enum FakeTools {
         echo "Homebrew 4.4.0"
         exit 0 ;;
       info)
+        if [ -f "$S/scan-delay" ]; then sleep "$(cat "$S/scan-delay")"; fi
         printf '{"formulae":['
         first=1
         for f in "$S"/brew/formulae/*; do

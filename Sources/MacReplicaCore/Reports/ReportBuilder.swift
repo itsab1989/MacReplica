@@ -204,7 +204,7 @@ public struct ReportBuilder: Sendable {
         let install = entries.filter { $0.prediction == .willInstall || $0.prediction == .willCopy }.count
         let present = entries.filter {
             if case .alreadyPresent = $0.prediction { return true }
-            return $0.prediction == .identicalFileExists
+            return [.identicalFileExists, .equivalentFileExists, .keepsMacOSVersion].contains($0.prediction)
         }.count
         let conflicts = entries.filter { if case .conflict = $0.prediction { return true }; return false }.count
         var body = "<p>\(HTML.escape(l.t("report.dryRun.intro")))</p><div class=\"cards\">"
@@ -217,9 +217,12 @@ public struct ReportBuilder: Sendable {
         body += table([l.t("report.column.name"), l.t("report.column.method"), l.t("report.column.plannedAction")],
                       entries.map { entry in
                           var action = HTML.escape(l.predictionText(entry.prediction, kind: entry.item.kind))
+                          if let assessment = entry.fileAssessment, assessment.status != .ready {
+                              action += "<br><span class=\"muted\">\(HTML.escape(l.fileStatusDetail(assessment, kind: entry.item.kind)))</span>"
+                          }
                           if entry.requiresAdmin { action += "<br><span class=\"warn\">\(HTML.escape(l.t("report.dryRun.needsAdmin")))</span>" }
                           for note in entry.notes { action += "<br><span class=\"muted\">\(HTML.escape(l.noteText(note)))</span>" }
-                          return [text(entry.item.title), HTML.escape(l.itemMethodText(entry.item.kind)), action]
+                          return [text(l.itemTitle(entry.item)), HTML.escape(l.itemMethodText(entry.item.kind)), action]
                       })
         if !manualApps.isEmpty {
             body += "<h2>\(HTML.escape(l.t("report.manual.title")))</h2>"
@@ -239,7 +242,7 @@ public struct ReportBuilder: Sendable {
         body += table([l.t("report.column.name"), l.t("report.column.method"), l.t("report.column.result"), l.t("report.column.notes")],
                       plan.items.map { item in
                           guard let result = session.results[item.id] else {
-                              return [text(item.title), HTML.escape(l.itemMethodText(item.kind)),
+                              return [text(l.itemTitle(item)), HTML.escape(l.itemMethodText(item.kind)),
                                       "<span class=\"muted\">\(HTML.escape(l.t("report.restore.notRun")))</span>", "—"]
                           }
                           let css = result.outcome.isFailure ? "bad" : (result.outcome.isSkip ? "warn" : "ok")
@@ -247,7 +250,7 @@ public struct ReportBuilder: Sendable {
                           if case .failed(let failure) = result.outcome {
                               notes.insert(HTML.escape(l.failureExplanation(failure.category)), at: 0)
                           }
-                          return [text(item.title), HTML.escape(l.itemMethodText(item.kind)),
+                          return [text(l.itemTitle(item)), HTML.escape(l.itemMethodText(item.kind)),
                                   "<span class=\"\(css)\">\(HTML.escape(l.outcomeText(result.outcome)))</span>",
                                   notes.isEmpty ? "—" : notes.joined(separator: "<br>")]
                       })

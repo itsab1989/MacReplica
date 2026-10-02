@@ -54,7 +54,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
 
     public var isFile: Bool { self == .font || self == .colorProfile }
 
-    var logComponent: LogStore.Component {
+    public var logComponent: LogStore.Component {
         switch self {
         case .commandLineTools, .homebrew, .tap, .formula, .cask: return .homebrew
         case .masTool, .appStoreApp: return .appStore
@@ -122,6 +122,8 @@ public enum ConflictResolution: String, Codable, Sendable, CaseIterable {
     case replace
     /// Do not process this file at all.
     case skip
+    /// Leave the existing file untouched and install the backup copy next to it under a new name.
+    case keepBoth
 }
 
 /// Everything the user chose on the restore screen.
@@ -173,6 +175,7 @@ public enum FailureCategory: String, Codable, Sendable, CaseIterable {
     case pythonPackagesIncomplete
     case pythonEnvironmentConflict
     case credentialCannotBeOpened
+    case applicationRunning
     case timeout
     case cancelled
     case unknown
@@ -197,6 +200,10 @@ public enum SkipReason: Codable, Equatable, Sendable {
     case incompatibleArchitecture(required: [CPUArchitecture])
     case projectFolderMissing(path: String)
     case passphraseNotProvided
+    /// macOS on this Mac cannot read the font or profile.
+    case fileNotSupported
+    /// A profile macOS generated for a display of the old Mac; macOS creates its own for this Mac.
+    case displaySpecificProfile
     case cancelled
 }
 
@@ -249,6 +256,12 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case requiresRosetta
     case existingFileMovedAside(path: String)
     case identicalFileExists
+    /// The same font or profile is already installed (same identity and version), possibly under another file name.
+    case equivalentFileInstalled
+    /// macOS provides this font or profile itself; its own version was kept.
+    case providedByMacOS
+    /// The backup copy was installed next to an existing file with the same name.
+    case installedUnderNewName(name: String)
     /// Packages installed from local folders or repositories must be reinstalled by hand.
     case pythonPackagesNeedManualSetup(names: [String])
     /// Exact versions were not available; current compatible versions were installed.
@@ -272,5 +285,30 @@ public struct RestoreSummary: Equatable, Sendable {
         failed = results.filter { $0.outcome.isFailure }.count
         skipped = results.filter { $0.outcome.isSkip }.count
         self.total = total
+    }
+}
+
+extension ItemResult {
+    /// A language-independent decision code for logs and reports, e.g. `conflict_kept_destination`.
+    public var decisionCode: String {
+        switch outcome {
+        case .succeeded:
+            if notes.contains(where: { if case .installedUnderNewName = $0 { return true }; return false }) { return "conflict_kept_both" }
+            return notes.contains { if case .existingFileMovedAside = $0 { return true }; return false } ? "conflict_restored_backup" : "restored"
+        case .alreadyPresent:
+            if notes.contains(.identicalFileExists) { return "identical_existing" }
+            if notes.contains(.equivalentFileInstalled) { return "equivalent_existing" }
+            if notes.contains(.providedByMacOS) { return "kept_macos_version" }
+            return "already_present"
+        case .skipped(let reason):
+            switch reason {
+            case .keptExisting: return "conflict_kept_destination"
+            case .userSkipped: return "skipped_by_user"
+            case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile: return "incompatible"
+            case .projectFolderMissing, .passphraseNotProvided: return "manual_action_required"
+            default: return "skipped"
+            }
+        case .failed: return "failed"
+        }
     }
 }

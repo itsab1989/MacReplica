@@ -143,14 +143,24 @@ struct InventoryTests {
         let sandbox = try Sandbox("fonts")
         let (_, simulation) = try TestEnvironment.sourceMac(sandbox)
         let fonts = FileScanner(layout: simulation.layout).scan(.font)
-        #expect(fonts.map(\.record.relativePath).sorted() == ["Example Sans/ExampleSans-Bold.otf", "Example Sans/ExampleSans-Regular.otf",
-                                                              "ExampleMono.ttc", "ExampleSerif.ttf"])
+        #expect(fonts.map(\.record.relativePath).sorted() == ["Broken.otf", "Example Sans/ExampleSans-Bold.otf", "Example Sans/ExampleSans-Regular.otf",
+                                                              "Example Script.otf", "ExampleMono.ttc", "ExampleSerif.ttf", "OldFace.pfb",
+                                                              "Studio Grotesk.ttf", "System Demo.ttf"])
         let serif = try #require(fonts.first { $0.record.fileName == "ExampleSerif.ttf" }).record
         #expect(serif.domain == .user)
         #expect(serif.originalPath == "~/Library/Fonts/ExampleSerif.ttf")
         #expect(serif.backupPath == "fonts/user/ExampleSerif.ttf")
-        #expect(serif.sha256 == Hashing.sha256Hex(of: Data("synthetic font: Example Serif".utf8)))
-        #expect(serif.size == Int64("synthetic font: Example Serif".utf8.count))
+        let expected = SyntheticFont.make(family: "Example Serif", version: "2.000")
+        #expect(serif.sha256 == Hashing.sha256Hex(of: expected))
+        #expect(serif.size == Int64(expected.count))
+        // Identity comes from the font itself, not from the file name.
+        #expect(serif.font == FontIdentity(postScriptNames: ["ExampleSerif-Regular"], families: ["Example Serif"], styles: ["Regular"],
+                                           version: "Version 2.000", format: "TrueType"))
+        #expect(serif.origin == .userInstalled)
+        #expect(fonts.first { $0.record.fileName == "ExampleMono.ttc" }?.record.origin == .sharedInstalled)
+        // Legacy formats are recorded but never opened; unreadable files have no identity.
+        #expect(fonts.first { $0.record.fileName == "OldFace.pfb" }?.record.font == nil)
+        #expect(fonts.first { $0.record.fileName == "Broken.otf" }?.record.font == nil)
         #expect(fonts.first { $0.record.fileName == "ExampleMono.ttc" }?.record.backupPath == "fonts/system/ExampleMono.ttc")
     }
 
@@ -170,7 +180,12 @@ struct InventoryTests {
         try Data("not a profile at all, but long enough to have forty bytes........".utf8)
             .write(to: root.url.appendingPathComponent("home/Library/ColorSync/Profiles/Fake.icc"))
         let profiles = FileScanner(layout: simulation.layout).scan(.colorProfile)
-        #expect(profiles.map(\.record.fileName).sorted() == ["Example Fine Art Paper.icm", "Example Press Proof.icc", "Example Studio Display.icc"])
+        #expect(profiles.map(\.record.fileName).sorted() == ["Example Display-00000000-0000-0000-0000-SYNTHETIC000.icc", "Example Fine Art Paper.icm",
+                                                            "Example Legacy Filter.icc", "Example Press Proof.icc", "Example Proof Flags.icc",
+                                                            "Example Studio Display.icc", "sRGB Copy.icc"])
+        #expect(profiles.first { $0.record.fileName.hasPrefix("Example Display-") }?.record.origin == .displayGenerated)
+        #expect(profiles.first { $0.record.fileName == "Example Legacy Filter.icc" }?.record.origin == .appleCreated)
+        #expect(profiles.first { $0.record.fileName == "Example Studio Display.icc" }?.record.origin == .userInstalled)
         let display = try #require(profiles.first { $0.record.fileName == "Example Studio Display.icc" }).record
         #expect(display.metadata["description"] == "Example Studio Display D65")
         #expect(display.metadata["device_class"] == "mntr")
@@ -199,6 +214,8 @@ struct InventoryTests {
         var tag: [UInt8] = Array("mluc".utf8) + [0, 0, 0, 0] + [0, 0, 0, 1] + [0, 0, 0, 12] + Array("enUS".utf8)
         tag += [0, 0, 0, UInt8(text.count)] + [0, 0, 0, 28] + text
         data = data.prefix(144) + Data(tag)
+        data.replaceSubrange(128..<132, with: [0, 0, 0, 1])
+        data.replaceSubrange(136..<140, with: [0, 0, 0, 144])
         data.replaceSubrange(140..<144, with: [0, 0, 0, UInt8(tag.count)])
         #expect(ICCProfileHeader.parse(data)?.description == "Ünïcode")
     }

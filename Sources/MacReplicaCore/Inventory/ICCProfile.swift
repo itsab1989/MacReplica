@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// A minimal, read-only parser for ICC profile headers (ICC.1:2022, section 7.2)
@@ -9,6 +10,17 @@ public struct ICCProfileHeader: Equatable, Sendable {
     public var colorSpace: String
     public var connectionSpace: String
     public var description: String?
+    public var creator: String?
+    public var manufacturer: String?
+    public var model: String?
+    /// Creation date (bytes 24–35) as ISO 8601, nil when unset.
+    public var created: String?
+    /// Profile ID (bytes 84–99) in hex, nil when all zero.
+    public var profileID: String?
+    /// The Profile ID computed as ICC.1:2022 §7.2.18 defines it: MD5 of the whole profile with the
+    /// flags (44–47), rendering intent (64–67) and Profile ID (84–99) fields set to zero. Most
+    /// profiles, including Apple's, leave the stored field empty, so this is what identifies content.
+    public var computedProfileID: String = ""
 
     public static func parse(_ data: Data) -> ICCProfileHeader? {
         guard data.count >= 132 else { return nil }
@@ -24,7 +36,51 @@ public struct ICCProfileHeader: Equatable, Sendable {
             deviceClass: string(data, at: 12, length: 4).trimmingCharacters(in: .whitespaces),
             colorSpace: string(data, at: 16, length: 4).trimmingCharacters(in: .whitespaces),
             connectionSpace: string(data, at: 20, length: 4).trimmingCharacters(in: .whitespaces),
-            description: profileDescription(data))
+            description: profileDescription(data),
+            creator: signature(data, at: 80),
+            manufacturer: signature(data, at: 48),
+            model: modelSignature(data),
+            created: creationDate(data),
+            profileID: profileID(data),
+            computedProfileID: computedProfileID(data))
+    }
+
+    public static func computedProfileID(_ data: Data) -> String {
+        var bytes = [UInt8](data)
+        for range in [44..<48, 64..<68, 84..<100] where range.upperBound <= bytes.count {
+            for index in range { bytes[index] = 0 }
+        }
+        return Insecure.MD5.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// A four-character signature, or nil when it is zero.
+    static func signature(_ data: Data, at offset: Int) -> String? {
+        guard uint32(data, at: offset) != 0 else { return nil }
+        let value = string(data, at: offset, length: 4).trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: "\0")))
+        guard !value.isEmpty, value.unicodeScalars.allSatisfy({ $0.isASCII && $0.value >= 0x20 }) else {
+            return String(format: "%08x", uint32(data, at: offset))
+        }
+        return value
+    }
+
+    /// The device model is a signature too, but often a plain number; both are only used for comparison.
+    static func modelSignature(_ data: Data) -> String? {
+        let value = uint32(data, at: 52)
+        guard value != 0 else { return nil }
+        return signature(data, at: 52)
+    }
+
+    static func creationDate(_ data: Data) -> String? {
+        let parts = (0..<6).map { Int(uint16(data, at: 24 + $0 * 2)) }
+        guard parts[0] >= 1900, (1...12).contains(parts[1]), (1...31).contains(parts[2]) else { return nil }
+        return String(format: "%04d-%02d-%02dT%02d:%02d:%02dZ", parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
+    }
+
+    static func profileID(_ data: Data) -> String? {
+        guard data.count >= 100 else { return nil }
+        let bytes = data[(data.startIndex + 84)..<(data.startIndex + 100)]
+        guard bytes.contains(where: { $0 != 0 }) else { return nil }
+        return bytes.map { String(format: "%02x", $0) }.joined()
     }
 
     public static func isProfile(_ data: Data) -> Bool { parse(data) != nil }
@@ -70,6 +126,12 @@ public struct ICCProfileHeader: Equatable, Sendable {
         guard offset + 4 <= data.count else { return 0 }
         let base = data.startIndex + offset
         return UInt32(data[base]) << 24 | UInt32(data[base + 1]) << 16 | UInt32(data[base + 2]) << 8 | UInt32(data[base + 3])
+    }
+
+    private static func uint16(_ data: Data, at offset: Int) -> UInt16 {
+        guard offset + 2 <= data.count else { return 0 }
+        let base = data.startIndex + offset
+        return UInt16(data[base]) << 8 | UInt16(data[base + 1])
     }
 
     private static func string(_ data: Data, at offset: Int, length: Int) -> String {

@@ -39,3 +39,6 @@ __pycache__/
 *.key
 *.mobileprovision
 .env
+
+# Local assistant/tooling state
+.claude/

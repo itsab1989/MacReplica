@@ -12,6 +12,12 @@ public struct SystemLayout: Sendable, Equatable {
     public var systemFonts: URL
     public var userColorProfiles: URL
     public var systemColorProfiles: URL
+    /// Fonts and profiles that come with macOS (read-only, protected by System Integrity Protection).
+    /// MacReplica only reads them to recognize what the destination Mac already provides.
+    public var macOSFonts: URL
+    public var macOSColorProfiles: URL
+    /// Downloadable fonts that macOS manages itself (`com_apple_MobileAsset_Font*` below this folder).
+    public var macOSFontAssets: URL
     /// Homebrew prefixes in order of preference for this Mac, e.g. `/opt/homebrew`.
     public var homebrewPrefixes: [URL]
     public var xcodeSelect: String
@@ -28,6 +34,9 @@ public struct SystemLayout: Sendable, Equatable {
     /// Where python.org installers put `Python.framework`.
     public var pythonFrameworks: URL
     public var isSimulation: Bool
+    /// In the simulation, the sandbox folder that stands in for `/`. Paths below it are
+    /// displayed as on a real Mac, so reports and screenshots never show the sandbox location.
+    public var simulationRoot: URL?
 
     public init(
         homeDirectory: URL,
@@ -48,8 +57,14 @@ public struct SystemLayout: Sendable, Equatable {
         caches: URL,
         logs: URL,
         pythonFrameworks: URL = URL(fileURLWithPath: "/Library/Frameworks"),
+        macOSFonts: URL = URL(fileURLWithPath: "/System/Library/Fonts"),
+        macOSColorProfiles: URL = URL(fileURLWithPath: "/System/Library/ColorSync/Profiles"),
+        macOSFontAssets: URL = URL(fileURLWithPath: "/System/Library/AssetsV2"),
         isSimulation: Bool
     ) {
+        self.macOSFontAssets = macOSFontAssets
+        self.macOSFonts = macOSFonts
+        self.macOSColorProfiles = macOSColorProfiles
         self.homeDirectory = homeDirectory
         self.applicationFolders = applicationFolders
         self.userFonts = userFonts
@@ -136,7 +151,9 @@ public struct SystemLayout: Sendable, Equatable {
     /// Replaces the home directory with `~` so that manifests, logs and reports
     /// never contain the user's account name.
     public func displayPath(_ url: URL) -> String {
-        Self.redactHome(url.standardizedFileURL.path, home: homeDirectory.standardizedFileURL.path)
+        let redacted = Self.redactHome(url.standardizedFileURL.path, home: homeDirectory.standardizedFileURL.path)
+        guard let root = simulationRoot?.standardizedFileURL.path, redacted.hasPrefix(root + "/") else { return redacted }
+        return String(redacted.dropFirst(root.count))
     }
 
     public static func redactHome(_ path: String, home: String) -> String {
@@ -151,7 +168,9 @@ public struct SystemLayout: Sendable, Equatable {
     public func redact(_ text: String) -> String {
         let home = homeDirectory.standardizedFileURL.path
         guard home.count > 1 else { return text }
-        return text.replacingOccurrences(of: home, with: "~")
+        var result = text.replacingOccurrences(of: home, with: "~")
+        if let root = simulationRoot?.standardizedFileURL.path { result = result.replacingOccurrences(of: root + "/", with: "/") }
+        return result
     }
 
     /// Resolves a display path (with `~`) back to a file URL on this Mac.
@@ -159,6 +178,9 @@ public struct SystemLayout: Sendable, Equatable {
         if displayPath == "~" { return homeDirectory }
         if displayPath.hasPrefix("~/") {
             return homeDirectory.appendingPathComponent(String(displayPath.dropFirst(2)))
+        }
+        if let root = simulationRoot, !FileManager.default.fileExists(atPath: displayPath) {
+            return root.appendingPathComponent(String(displayPath.drop { $0 == "/" }))
         }
         return URL(fileURLWithPath: displayPath)
     }

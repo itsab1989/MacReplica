@@ -171,6 +171,7 @@ struct SecurityTests {
         let manifest = try await TestEnvironment.inventory(source).run().manifest
         let json = String(decoding: try ManifestIO.encode(manifest), as: UTF8.self)
         #expect(!json.contains(source.layout.homeDirectory.path))
+        #expect(!json.contains(try #require(source.layout.simulationRoot).path), "no sandbox or account paths at all")
         #expect(!json.contains(NSUserName()))
         #expect(!json.contains(ProcessInfo.processInfo.hostName))
         #expect(!json.lowercased().contains("serial"))

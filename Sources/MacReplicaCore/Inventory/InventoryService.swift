@@ -43,6 +43,29 @@ public struct InventoryResult: Sendable {
         self.warnings = warnings
     }
 
+    /// The identifier used for choosing a font or profile for the backup, e.g. `font:user/Example.otf`.
+    public static func selectionID(_ record: FileRecord, kind: BackupFileKind) -> String {
+        (kind == .font ? "font:" : "icc:") + record.id
+    }
+
+    /// Fonts and profiles that are not pre-selected for the backup: display profiles macOS generated
+    /// for the old Mac's displays are never useful on another Mac.
+    public var filesNotSelectedByDefault: Set<String> {
+        Set(colorProfiles.filter { $0.record.origin == .displayGenerated }.map { Self.selectionID($0.record, kind: .colorProfile) })
+    }
+
+    /// Leaves out the fonts and profiles the user deselected and records the selection in the manifest.
+    public mutating func excludeFiles(_ ids: Set<String>) {
+        let fontsFound = fonts.count
+        let profilesFound = colorProfiles.count
+        fonts.removeAll { ids.contains(Self.selectionID($0.record, kind: .font)) }
+        colorProfiles.removeAll { ids.contains(Self.selectionID($0.record, kind: .colorProfile)) }
+        manifest.fonts.removeAll { ids.contains(Self.selectionID($0, kind: .font)) }
+        manifest.iccProfiles.removeAll { ids.contains(Self.selectionID($0, kind: .colorProfile)) }
+        manifest.backupSelection = BackupSelectionSummary(fontsFound: fontsFound, fontsSelected: fonts.count,
+                                                          profilesFound: profilesFound, profilesSelected: colorProfiles.count)
+    }
+
     /// Keeps only the chosen Python environments and their project files.
     public mutating func keepPythonEnvironments(_ ids: Set<String>, includeSettings: Bool) {
         let removed = manifest.python.environments.filter { !ids.contains($0.id) }
@@ -127,7 +150,7 @@ public struct InventoryService: Sendable {
             locations.append(LocationAccess(area: .homebrew, location: "Homebrew", status: .unsupported))
         case .ready(let brew):
             locations.append(LocationAccess(area: .homebrew, location: layout.displayPath(brew.prefix), status: .scanned))
-            snapshot = HomebrewSnapshot(version: brew.version, prefix: brew.prefix.path)
+            snapshot = HomebrewSnapshot(version: brew.version, prefix: layout.displayPath(brew.prefix))
             do {
                 packages = try await homebrew.installedPackages(brew)
                 taps = (try? await homebrew.taps(brew)) ?? []
@@ -227,10 +250,13 @@ public struct InventoryService: Sendable {
             locations: locations,
             developer: developer)
         manifest.macreplicaBuild = SystemInfo.buildNumber
+        manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)))
         var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)
         // Known user-created data of supported apps (presets, styles, LUTs …) is suggested automatically.
         for detected in detectedData {
-            if let scan = try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile) {
+            if let scan = try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
+                                                                     excluding: detected.excluding),
+               !scan.files.isEmpty {
                 result.addApplicationData(scan.folder, files: scan.files, issues: scan.issues)
             } else {
                 result.manifest.locations.append(LocationAccess(area: .applicationData, location: layout.displayPath(detected.folder),

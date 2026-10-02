@@ -159,6 +159,7 @@ public enum SimulationBuilder {
         }
 
         try writeReleases(root)
+        try populateMacOSFiles(root)
         switch scenario {
         case .sourceMac: try populateSourceMac(root)
         case .freshMac: try populateFreshMac(root)
@@ -194,13 +195,20 @@ public enum SimulationBuilder {
         try root.setFlag("brew/formula-tap/example-tool", true, content: "example/tools")
         try write("https://github.com/example/homebrew-tools", to: root.state.appendingPathComponent("brew/taps/example__tools"), executable: false)
 
-        // Fonts: synthetic files with font extensions.
+        // Fonts: synthetic TrueType fonts that Core Text can read (see SyntheticFont), plus files that
+        // exercise the conflict rules on the fresh Mac.
         let userFonts = url.appendingPathComponent("home/Library/Fonts")
         try FileManager.default.createDirectory(at: userFonts.appendingPathComponent("Example Sans"), withIntermediateDirectories: true)
-        try write("synthetic font: Example Sans Regular", to: userFonts.appendingPathComponent("Example Sans/ExampleSans-Regular.otf"), executable: false)
-        try write("synthetic font: Example Sans Bold", to: userFonts.appendingPathComponent("Example Sans/ExampleSans-Bold.otf"), executable: false)
-        try write("synthetic font: Example Serif", to: userFonts.appendingPathComponent("ExampleSerif.ttf"), executable: false)
-        try write("synthetic font: Example Mono", to: url.appendingPathComponent("Library/Fonts/ExampleMono.ttc"), executable: false)
+        try SyntheticFont.make(family: "Example Sans").write(to: userFonts.appendingPathComponent("Example Sans/ExampleSans-Regular.otf"))
+        try SyntheticFont.make(family: "Example Sans", style: "Bold", weight: 700).write(to: userFonts.appendingPathComponent("Example Sans/ExampleSans-Bold.otf"))
+        try SyntheticFont.make(family: "Example Serif", version: "2.000").write(to: userFonts.appendingPathComponent("ExampleSerif.ttf"))
+        try SyntheticFont.make(family: "Example Mono").write(to: url.appendingPathComponent("Library/Fonts/ExampleMono.ttc"))
+        try SyntheticFont.make(family: "Studio Grotesk").write(to: userFonts.appendingPathComponent("Studio Grotesk.ttf"))
+        try SyntheticFont.make(family: "Example Script").write(to: userFonts.appendingPathComponent("Example Script.otf"))
+        // The same PostScript name as a font that macOS itself provides on the fresh Mac.
+        try SyntheticFont.make(family: "System Demo", version: "1.500").write(to: userFonts.appendingPathComponent("System Demo.ttf"))
+        try write("synthetic PostScript Type 1 placeholder", to: userFonts.appendingPathComponent("OldFace.pfb"), executable: false)
+        try write("not really a font", to: userFonts.appendingPathComponent("Broken.otf"), executable: false)
         try write("not a font", to: userFonts.appendingPathComponent("readme.txt"), executable: false)
 
         try populatePython(root)
@@ -209,19 +217,50 @@ public enum SimulationBuilder {
 
         // ICC profiles: synthetic but structurally valid headers.
         let userProfiles = url.appendingPathComponent("home/Library/ColorSync/Profiles")
+        let sharedProfiles = url.appendingPathComponent("Library/ColorSync/Profiles")
         try makeICCProfile(description: "Example Studio Display D65").write(to: userProfiles.appendingPathComponent("Example Studio Display.icc"))
-        try makeICCProfile(description: "Example Fine Art Paper").write(to: userProfiles.appendingPathComponent("Example Fine Art Paper.icm"))
-        try makeICCProfile(description: "Example Press Proof").write(to: url.appendingPathComponent("Library/ColorSync/Profiles/Example Press Proof.icc"))
+        try makeICCProfile(description: "Example Fine Art Paper", deviceClass: "prtr").write(to: userProfiles.appendingPathComponent("Example Fine Art Paper.icm"))
+        try makeICCProfile(description: "Example Press Proof", deviceClass: "prtr", colorSpace: "CMYK").write(to: sharedProfiles.appendingPathComponent("Example Press Proof.icc"))
+        try makeICCProfile(description: "Example Proof Flags", deviceClass: "prtr").write(to: userProfiles.appendingPathComponent("Example Proof Flags.icc"))
+        // An old copy of a profile macOS provides, an Apple profile this macOS no longer ships and a
+        // profile macOS generated for a display of the old Mac.
+        try makeICCProfile(description: "sRGB IEC61966-2.1", copyright: "Synthetic older copy").write(to: userProfiles.appendingPathComponent("sRGB Copy.icc"))
+        try makeICCProfile(description: "Example Legacy Filter", deviceClass: "abst", colorSpace: "Lab ", creator: "appl")
+            .write(to: sharedProfiles.appendingPathComponent("Example Legacy Filter.icc"))
+        try FileManager.default.createDirectory(at: sharedProfiles.appendingPathComponent("Displays"), withIntermediateDirectories: true)
+        try makeICCProfile(description: "Example Display", creator: "appl")
+            .write(to: sharedProfiles.appendingPathComponent("Displays/Example Display-00000000-0000-0000-0000-SYNTHETIC000.icc"))
+    }
+
+    /// Fonts and profiles that macOS itself provides on a simulated Mac (normally read-only).
+    static func populateMacOSFiles(_ root: SimulationRoot) throws {
+        let fonts = root.url.appendingPathComponent("System/Library/Fonts")
+        let profiles = root.url.appendingPathComponent("System/Library/ColorSync/Profiles")
+        try FileManager.default.createDirectory(at: fonts, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: profiles, withIntermediateDirectories: true)
+        try SyntheticFont.make(family: "System Demo", version: "3.000").write(to: fonts.appendingPathComponent("SystemDemo.ttf"))
+        try makeICCProfile(description: "sRGB IEC61966-2.1", copyright: "Synthetic system copy").write(to: profiles.appendingPathComponent("sRGB Profile.icc"))
     }
 
     private static func populateFreshMac(_ root: SimulationRoot) throws {
         // The user already copied their project folder; its environment is missing.
         try write("print('hello')\n", to: root.url.appendingPathComponent("home/Projects/demo-app/main.py"), executable: false)
-        // A font that conflicts with the backup (same name, different content) and one that is identical.
+        // Fonts already on the new Mac: an older version, an identical copy, a different font under the
+        // same file name and the same font under another file name.
         let userFonts = root.url.appendingPathComponent("home/Library/Fonts")
-        try write("an older Example Serif", to: userFonts.appendingPathComponent("ExampleSerif.ttf"), executable: false)
+        try SyntheticFont.make(family: "Example Serif", version: "1.000").write(to: userFonts.appendingPathComponent("ExampleSerif.ttf"))
         try FileManager.default.createDirectory(at: userFonts.appendingPathComponent("Example Sans"), withIntermediateDirectories: true)
-        try write("synthetic font: Example Sans Regular", to: userFonts.appendingPathComponent("Example Sans/ExampleSans-Regular.otf"), executable: false)
+        try SyntheticFont.make(family: "Example Sans").write(to: userFonts.appendingPathComponent("Example Sans/ExampleSans-Regular.otf"))
+        try SyntheticFont.make(family: "Other Grotesk").write(to: userFonts.appendingPathComponent("Studio Grotesk.ttf"))
+        try SyntheticFont.make(family: "Example Script", weight: 410).write(to: userFonts.appendingPathComponent("ExampleScript-Copy.otf"))
+        // Profiles already on the new Mac: same name with other content, an identical copy in the other
+        // library, and the same profile (only header flags differ) under another name.
+        let userProfiles = root.url.appendingPathComponent("home/Library/ColorSync/Profiles")
+        try FileManager.default.createDirectory(at: userProfiles, withIntermediateDirectories: true)
+        try makeICCProfile(description: "Example Fine Art Paper", deviceClass: "prtr", copyright: "Synthetic newer measurement")
+            .write(to: userProfiles.appendingPathComponent("Example Fine Art Paper.icm"))
+        try makeICCProfile(description: "Example Press Proof", deviceClass: "prtr", colorSpace: "CMYK").write(to: userProfiles.appendingPathComponent("Example Press Proof.icc"))
+        try makeICCProfile(description: "Example Proof Flags", deviceClass: "prtr", flags: 1).write(to: userProfiles.appendingPathComponent("Proof Flags (installed).icc"))
         try root.setCommandLineToolsDelay(1)
     }
 
@@ -269,21 +308,67 @@ public enum SimulationBuilder {
     }
 
     /// A minimal ICC v2 profile with a valid header and a `desc` tag.
-    public static func makeICCProfile(description: String) -> Data {
-        let text = Array(description.utf8) + [0]
-        var desc = Array("desc".utf8) + [0, 0, 0, 0]
-        desc += [UInt8(text.count >> 24 & 0xFF), UInt8(text.count >> 16 & 0xFF), UInt8(text.count >> 8 & 0xFF), UInt8(text.count & 0xFF)]
-        desc += text
-        desc += [UInt8](repeating: 0, count: 12 + 67) // empty Unicode and ScriptCode parts
-        let tagOffset = 128 + 4 + 12
-        let size = tagOffset + desc.count
+    /// A small but valid ICC profile. `copyright` changes the content without changing the description;
+    /// `flags` and `renderingIntent` change the bytes but not the computed Profile ID.
+    public static func makeICCProfile(description: String, deviceClass: String = "mntr", colorSpace: String = "RGB ",
+                                      creator: String? = nil, copyright: String = "No copyright, synthetic test data",
+                                      flags: UInt32 = 0, renderingIntent: UInt32 = 0) -> Data {
         func be(_ value: Int) -> [UInt8] { [UInt8(value >> 24 & 0xFF), UInt8(value >> 16 & 0xFF), UInt8(value >> 8 & 0xFF), UInt8(value & 0xFF)] }
-        var header = be(size) + Array("appl".utf8) + [2, 0x10, 0, 0] + Array("mntr".utf8) + Array("RGB ".utf8) + Array("XYZ ".utf8)
-        header += [UInt8](repeating: 0, count: 12) // date
-        header += Array("acsp".utf8)
-        header += [UInt8](repeating: 0, count: 128 - header.count)
-        let table = be(1) + Array("desc".utf8) + be(tagOffset) + be(desc.count)
-        return Data(header + table + desc)
+        func textDescription(_ text: String) -> [UInt8] {
+            let bytes = Array(text.utf8) + [0]
+            return Array("desc".utf8) + [0, 0, 0, 0] + be(bytes.count) + bytes + [UInt8](repeating: 0, count: 12 + 67)
+        }
+        func padded(_ bytes: [UInt8]) -> [UInt8] { bytes + [UInt8](repeating: 0, count: (4 - bytes.count % 4) % 4) }
+        func s15(_ value: Double) -> [UInt8] { be(Int(Int32(value * 65536)) & 0xFFFF_FFFF) }
+        func xyz(_ x: Double, _ y: Double, _ z: Double) -> [UInt8] { Array("XYZ ".utf8) + [0, 0, 0, 0] + s15(x) + s15(y) + s15(z) }
+        let gamma = Array("curv".utf8) + [0, 0, 0, 0] + be(1) + [2, 0x33, 0, 0] // gamma 2.2, u8Fixed8
+        // lut8Type with identity tables and a 2-point grid: enough for ColorSync to accept device profiles.
+        func lut8(inputs: Int, outputs: Int) -> [UInt8] {
+            var t = Array("mft1".utf8) + [0, 0, 0, 0] + [UInt8(inputs), UInt8(outputs), 2, 0]
+            for row in 0..<3 { for column in 0..<3 { t += s15(row == column ? 1 : 0) } }
+            for _ in 0..<inputs { t += (0..<256).map { UInt8($0) } }
+            let points = 1 << inputs
+            for point in 0..<points { for output in 0..<outputs { t += [((point >> (inputs - 1 - min(output, inputs - 1))) & 1) == 1 ? 255 : 0] } }
+            for _ in 0..<outputs { t += (0..<256).map { UInt8($0) } }
+            return t
+        }
+        let channels = colorSpace == "CMYK" ? 4 : (colorSpace == "GRAY" ? 1 : 3)
+        var tags: [(String, [UInt8])] = [
+            ("desc", padded(textDescription(description))),
+            ("cprt", padded(Array("text".utf8) + [0, 0, 0, 0] + Array(copyright.utf8) + [0])),
+            ("wtpt", xyz(0.9642, 1.0, 0.8249)),
+        ]
+        switch deviceClass {
+        case "mntr" where channels == 3:
+            tags += [("rXYZ", xyz(0.4361, 0.2225, 0.0139)), ("gXYZ", xyz(0.3851, 0.7169, 0.0971)), ("bXYZ", xyz(0.1431, 0.0606, 0.7141)),
+                     ("rTRC", padded(gamma)), ("gTRC", padded(gamma)), ("bTRC", padded(gamma))]
+        case "abst":
+            tags += [("A2B0", padded(lut8(inputs: 3, outputs: 3)))]
+        default:
+            tags += [("A2B0", padded(lut8(inputs: channels, outputs: 3))), ("B2A0", padded(lut8(inputs: 3, outputs: channels)))]
+            if deviceClass == "prtr" { tags += [("gamt", padded(lut8(inputs: 3, outputs: 1)))] }
+        }
+        var offset = 128 + 4 + tags.count * 12
+        var table = be(tags.count)
+        var body: [UInt8] = []
+        for (signature, data) in tags {
+            table += Array(signature.utf8) + be(offset) + be(data.count)
+            body += data
+            offset += data.count
+        }
+        var header = [UInt8](repeating: 0, count: 128)
+        header.replaceSubrange(0..<4, with: be(offset))
+        header.replaceSubrange(4..<8, with: Array("appl".utf8))
+        header.replaceSubrange(8..<12, with: [2, 0x10, 0, 0])
+        header.replaceSubrange(12..<16, with: Array(deviceClass.utf8.prefix(4)))
+        header.replaceSubrange(16..<20, with: Array(colorSpace.utf8.prefix(4)))
+        header.replaceSubrange(20..<24, with: Array((deviceClass == "abst" ? "Lab " : "XYZ ").utf8))
+        header.replaceSubrange(68..<80, with: s15(0.9642) + s15(1.0) + s15(0.8249)) // PCS illuminant D50
+        header.replaceSubrange(36..<40, with: Array("acsp".utf8))
+        header.replaceSubrange(44..<48, with: be(Int(flags)))
+        header.replaceSubrange(64..<68, with: be(Int(renderingIntent)))
+        if let creator { header.replaceSubrange(80..<84, with: Array(creator.utf8.prefix(4))) }
+        return Data(header + table + body)
     }
 
     private static func writeCatalog(into url: URL) throws {

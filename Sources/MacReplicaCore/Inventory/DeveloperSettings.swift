@@ -8,14 +8,28 @@ public struct DeveloperSettings: Codable, Equatable, Sendable {
     public var gitConfigIncludesEmail: Bool
     /// Sections that were left out, e.g. `url`, `http` — listed so the user knows what to set up again.
     public var removedGitSections: [String]
+    /// Editor extension IDs by editor ("Visual Studio Code" → ["ms-python.python", …]), for reinstalling.
+    public var editorExtensions: [String: [String]]
 
-    public init(gitConfig: String? = nil, gitConfigIncludesEmail: Bool = false, removedGitSections: [String] = []) {
+    public init(gitConfig: String? = nil, gitConfigIncludesEmail: Bool = false, removedGitSections: [String] = [],
+                editorExtensions: [String: [String]] = [:]) {
         self.gitConfig = gitConfig
         self.gitConfigIncludesEmail = gitConfigIncludesEmail
         self.removedGitSections = removedGitSections
+        self.editorExtensions = editorExtensions
     }
 
-    public var isEmpty: Bool { gitConfig == nil }
+    private enum CodingKeys: String, CodingKey { case gitConfig, gitConfigIncludesEmail, removedGitSections, editorExtensions }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        gitConfig = try c.decodeIfPresent(String.self, forKey: .gitConfig)
+        gitConfigIncludesEmail = try c.decodeIfPresent(Bool.self, forKey: .gitConfigIncludesEmail) ?? false
+        removedGitSections = try c.decodeIfPresent([String].self, forKey: .removedGitSections) ?? []
+        editorExtensions = try c.decodeIfPresent([String: [String]].self, forKey: .editorExtensions) ?? [:]
+    }
+
+    public var isEmpty: Bool { gitConfig == nil && editorExtensions.isEmpty }
 }
 
 public struct DeveloperSettingsScanner: Sendable {
@@ -36,7 +50,27 @@ public struct DeveloperSettingsScanner: Sendable {
         }
         let result = Self.sanitize(text, includeEmail: includeEmail, layout: layout)
         return DeveloperSettings(gitConfig: result.text.isEmpty ? nil : result.text, gitConfigIncludesEmail: result.hasEmail,
-                                 removedGitSections: result.removed)
+                                 removedGitSections: result.removed, editorExtensions: editorExtensions())
+    }
+
+    /// Extension IDs from the editors' extension folders (folder names like `ms-python.python-2024.1.0`).
+    /// Only the IDs are recorded; the extensions themselves are reinstalled from the marketplace.
+    func editorExtensions() -> [String: [String]] {
+        var result: [String: [String]] = [:]
+        for (editor, folder) in [("Visual Studio Code", ".vscode/extensions"), ("Cursor", ".cursor/extensions")] {
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: layout.homeDirectory.appendingPathComponent(folder).path)) ?? []
+            let ids = Set(names.compactMap(Self.extensionID)).sorted()
+            if !ids.isEmpty { result[editor] = ids }
+        }
+        return result
+    }
+
+    /// "ms-python.python-2024.1.0" → "ms-python.python"; anything else → nil.
+    static func extensionID(_ folderName: String) -> String? {
+        guard let match = folderName.range(of: #"^[A-Za-z0-9][A-Za-z0-9-]*\.[A-Za-z0-9][A-Za-z0-9._-]*?(?=-\d+\.\d+)"#, options: .regularExpression) else {
+            return nil
+        }
+        return String(folderName[match])
     }
 
     /// Keeps allowed sections and harmless values; the email only when `includeEmail` is true.

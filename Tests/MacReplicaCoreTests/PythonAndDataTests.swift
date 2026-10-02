@@ -15,7 +15,7 @@ struct PythonTests {
 
         let scan = PythonScanner(layout: simulation.layout).scan()
         let snapshot = scan.snapshot
-        #expect(snapshot.installations == [PythonInstallation(version: "3.12.7", executable: root.url.appendingPathComponent("opt/homebrew/opt/python@3.12/bin/python3.12").path,
+        #expect(snapshot.installations == [PythonInstallation(version: "3.12.7", executable: "/opt/homebrew/opt/python@3.12/bin/python3.12",
                                                               source: .homebrew, architectures: [])])
         #expect(snapshot.environments.map(\.name).sorted() == ["demo-app", "tools"])
         let demo = try #require(snapshot.environments.first { $0.name == "demo-app" })

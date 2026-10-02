@@ -191,6 +191,11 @@ extension RestoreExecutor {
         guard let folder = item.applicationData, let plan = inspector.applicationDataPlan(folder) else {
             return failed(item, .backupFileDamaged, "unsafe paths in backup")
         }
+        // Some apps overwrite their files on quit; never write underneath a running app.
+        if let profile = folder.profile, profile.mustBeClosed,
+           let running = profile.bundleIdentifiers.first(where: environment.isApplicationRunning) {
+            return failed(item, .applicationRunning, "\(profile.appName) (\(running)) is running")
+        }
         let resolution = inspector.selection.resolution(for: item.id)
         let fm = FileManager.default
         var copied = 0, identical = 0, kept = 0

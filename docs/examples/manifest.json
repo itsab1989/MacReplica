@@ -1,0 +1,1210 @@
+{
+  "application_data" : [
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-f50ee24406f9/keybindings.json",
+          "domain" : "user",
+          "file_name" : "keybindings.json",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Code/User/keybindings.json",
+          "relative_path" : "keybindings.json",
+          "sha256" : "b5012f098c9e2620ca3c94d7d9bd50feaa93c7773d2a9db6b49bdccfbbc044ce",
+          "size" : 67
+        },
+        {
+          "backup_path" : "application-data/appdata-f50ee24406f9/settings.json",
+          "domain" : "user",
+          "file_name" : "settings.json",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Code/User/settings.json",
+          "relative_path" : "settings.json",
+          "sha256" : "29403e02236bf5a79d1fae833cd243f1894dd5c401df107fa2161c0f45d48038",
+          "size" : 23
+        }
+      ],
+      "id" : "appdata-f50ee24406f9",
+      "name" : "Visual Studio Code · User",
+      "profile" : {
+        "app_name" : "Visual Studio Code",
+        "bundle_identifiers" : [
+          "com.microsoft.VSCode"
+        ],
+        "category" : "settings",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "vscode"
+      },
+      "relative_path" : "Library/Application Support/Code/User"
+    },
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-ce31b0a06436/python.json",
+          "domain" : "user",
+          "file_name" : "python.json",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Code/User/snippets/python.json",
+          "relative_path" : "python.json",
+          "sha256" : "040bbf675ca3a72ee63129620b79e260f9a0179524e7c86920680684dc86772a",
+          "size" : 48
+        }
+      ],
+      "id" : "appdata-ce31b0a06436",
+      "name" : "Visual Studio Code · snippets",
+      "profile" : {
+        "app_name" : "Visual Studio Code",
+        "bundle_identifiers" : [
+          "com.microsoft.VSCode"
+        ],
+        "category" : "snippets",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "vscode"
+      },
+      "relative_path" : "Library/Application Support/Code/User/snippets"
+    },
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-36244599f356/Package Control.sublime-settings",
+          "domain" : "user",
+          "file_name" : "Package Control.sublime-settings",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Sublime Text/Packages/User/Package Control.sublime-settings",
+          "relative_path" : "Package Control.sublime-settings",
+          "sha256" : "6fa724f04c719e951de92c539c5f4ad494369ec2d6c34f53cf76adf1c3df4b23",
+          "size" : 39
+        },
+        {
+          "backup_path" : "application-data/appdata-36244599f356/Preferences.sublime-settings",
+          "domain" : "user",
+          "file_name" : "Preferences.sublime-settings",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings",
+          "relative_path" : "Preferences.sublime-settings",
+          "sha256" : "dcb4500b102e56fcf832709b0a1094d13d5706ece4b1c37fe7f3d89b8cbb2c7b",
+          "size" : 17
+        }
+      ],
+      "id" : "appdata-36244599f356",
+      "name" : "Sublime Text · User",
+      "profile" : {
+        "app_name" : "Sublime Text",
+        "app_version" : "Sublime Text",
+        "bundle_identifiers" : [
+          "com.sublimetext.4",
+          "com.sublimetext.3"
+        ],
+        "category" : "userPackage",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "sublime-text"
+      },
+      "relative_path" : "Library/Application Support/Sublime Text/Packages/User"
+    },
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-ec5f69b9f009/Synthetic.xml",
+          "domain" : "user",
+          "file_name" : "Synthetic.xml",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/JetBrains/IntelliJIdea2026.2/keymaps/Synthetic.xml",
+          "relative_path" : "Synthetic.xml",
+          "sha256" : "615230b601211bf6ec58f08530b937584a99002495703d138e54444b11a81d5b",
+          "size" : 26
+        }
+      ],
+      "id" : "appdata-ec5f69b9f009",
+      "name" : "IntelliJIdea2026.2 · keymaps",
+      "profile" : {
+        "app_name" : "JetBrains IDEs",
+        "app_version" : "IntelliJIdea2026.2",
+        "bundle_identifiers" : [
+          "com.jetbrains.intellij",
+          "com.jetbrains.intellij.ce",
+          "com.jetbrains.pycharm",
+          "com.jetbrains.pycharm.ce",
+          "com.jetbrains.WebStorm",
+          "com.jetbrains.PhpStorm",
+          "com.jetbrains.goland",
+          "com.jetbrains.rubymine",
+          "com.jetbrains.CLion",
+          "com.jetbrains.datagrip",
+          "com.jetbrains.rider",
+          "com.jetbrains.rustrover"
+        ],
+        "category" : "keymaps",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "jetbrains"
+      },
+      "relative_path" : "Library/Application Support/JetBrains/IntelliJIdea2026.2/keymaps"
+    },
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-794d3dda107a/Synthetic.xml",
+          "domain" : "user",
+          "file_name" : "Synthetic.xml",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/JetBrains/IntelliJIdea2026.2/codestyles/Synthetic.xml",
+          "relative_path" : "Synthetic.xml",
+          "sha256" : "edbd78991a275dd0fcd2666a0f6ac8910c152cfa4015adcecd79e3637753bc41",
+          "size" : 31
+        }
+      ],
+      "id" : "appdata-794d3dda107a",
+      "name" : "IntelliJIdea2026.2 · codestyles",
+      "profile" : {
+        "app_name" : "JetBrains IDEs",
+        "app_version" : "IntelliJIdea2026.2",
+        "bundle_identifiers" : [
+          "com.jetbrains.intellij",
+          "com.jetbrains.intellij.ce",
+          "com.jetbrains.pycharm",
+          "com.jetbrains.pycharm.ce",
+          "com.jetbrains.WebStorm",
+          "com.jetbrains.PhpStorm",
+          "com.jetbrains.goland",
+          "com.jetbrains.rubymine",
+          "com.jetbrains.CLion",
+          "com.jetbrains.datagrip",
+          "com.jetbrains.rider",
+          "com.jetbrains.rustrover"
+        ],
+        "category" : "codeStyles",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "jetbrains"
+      },
+      "relative_path" : "Library/Application Support/JetBrains/IntelliJIdea2026.2/codestyles"
+    },
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-e2440ea10c74/My Actions.atn",
+          "domain" : "user",
+          "file_name" : "My Actions.atn",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Adobe/Adobe Photoshop 2025/Presets/Actions/My Actions.atn",
+          "relative_path" : "My Actions.atn",
+          "sha256" : "6dbbf554499c9fb7cd63e861e22e4f0adcb75498dc062f83a30785f8a141a431",
+          "size" : 20
+        }
+      ],
+      "id" : "appdata-e2440ea10c74",
+      "name" : "Adobe Photoshop 2025 · Actions",
+      "profile" : {
+        "app_name" : "Adobe Photoshop",
+        "app_version" : "Adobe Photoshop 2025",
+        "bundle_identifiers" : [
+          "com.adobe.Photoshop"
+        ],
+        "category" : "actions",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "adobe-photoshop"
+      },
+      "relative_path" : "Library/Application Support/Adobe/Adobe Photoshop 2025/Presets/Actions"
+    },
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-23b7028eaf76/Ink.abr",
+          "domain" : "user",
+          "file_name" : "Ink.abr",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Adobe/Adobe Photoshop 2025/Presets/Brushes/Ink.abr",
+          "relative_path" : "Ink.abr",
+          "sha256" : "56e2d287858c70b4cf43562f7a5c003c2db23a53e0aa410bd8ada652435b063a",
+          "size" : 15
+        }
+      ],
+      "id" : "appdata-23b7028eaf76",
+      "name" : "Adobe Photoshop 2025 · Brushes",
+      "profile" : {
+        "app_name" : "Adobe Photoshop",
+        "app_version" : "Adobe Photoshop 2025",
+        "bundle_identifiers" : [
+          "com.adobe.Photoshop"
+        ],
+        "category" : "brushes",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "adobe-photoshop"
+      },
+      "relative_path" : "Library/Application Support/Adobe/Adobe Photoshop 2025/Presets/Brushes"
+    },
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-6725819494de/Edit/Titles/Synthetic Title.setting",
+          "domain" : "user",
+          "file_name" : "Synthetic Title.setting",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Templates/Edit/Titles/Synthetic Title.setting",
+          "relative_path" : "Edit/Titles/Synthetic Title.setting",
+          "sha256" : "1d0557f4f37658321a073afdf0893c946978a712e9d70907689363cb8a48cdb1",
+          "size" : 22
+        }
+      ],
+      "id" : "appdata-6725819494de",
+      "name" : "DaVinci Resolve · Templates",
+      "profile" : {
+        "app_name" : "DaVinci Resolve",
+        "bundle_identifiers" : [
+          "com.blackmagic-design.DaVinciResolve",
+          "com.blackmagic-design.DaVinciResolveLite"
+        ],
+        "category" : "fusionTemplates",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "davinci-resolve"
+      },
+      "relative_path" : "Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Templates"
+    },
+    {
+      "files" : [
+        {
+          "backup_path" : "application-data/appdata-47ae16c5c432/userpref.blend",
+          "domain" : "user",
+          "file_name" : "userpref.blend",
+          "metadata" : {
+
+          },
+          "modified_at" : "2026-10-02T16:45:44Z",
+          "original_path" : "~/Library/Application Support/Blender/4.2/config/userpref.blend",
+          "relative_path" : "userpref.blend",
+          "sha256" : "81c0e29942b6ae627cc84caa4554d512b0f7abdefab74480237e0b9363a9589b",
+          "size" : 21
+        }
+      ],
+      "id" : "appdata-47ae16c5c432",
+      "name" : "4.2 · config",
+      "profile" : {
+        "app_name" : "Blender",
+        "app_version" : "4.2",
+        "bundle_identifiers" : [
+          "org.blenderfoundation.blender"
+        ],
+        "category" : "preferences",
+        "classification" : "safe",
+        "must_be_closed" : true,
+        "provider" : "blender"
+      },
+      "relative_path" : "Library/Application Support/Blender/4.2/config"
+    }
+  ],
+  "applications" : [
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "build_version" : "5.1",
+      "bundle_identifier" : "com.example.ledgerlite",
+      "candidates" : [
+
+      ],
+      "minimum_system_version" : "13.0",
+      "name" : "Ledger Lite",
+      "path" : "/Applications/Ledger Lite.app",
+      "restore_method" : {
+        "id" : 1234567890,
+        "kind" : "app_store"
+      },
+      "source" : {
+        "kind" : "app_store"
+      },
+      "vendor" : "Example Finance AB",
+      "version" : "5.1"
+    },
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "build_version" : "3.2.1",
+      "bundle_identifier" : "com.example.nimbusnotes",
+      "candidates" : [
+
+      ],
+      "minimum_system_version" : "13.0",
+      "name" : "Nimbus Notes",
+      "path" : "/Applications/Nimbus Notes.app",
+      "restore_method" : {
+        "kind" : "homebrew_cask",
+        "token" : "nimbus-notes"
+      },
+      "source" : {
+        "kind" : "homebrew_cask",
+        "token" : "nimbus-notes"
+      },
+      "vendor" : "Nimbus Labs Ltd.",
+      "version" : "3.2.1"
+    },
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "build_version" : "128.0",
+      "bundle_identifier" : "org.example.orbit",
+      "candidates" : [
+        {
+          "evidence" : [
+            "appBundleName",
+            "bundleIdentifier",
+            "displayName",
+            "tokenName",
+            "vendor"
+          ],
+          "homepage" : "https://orbit.example.org/",
+          "kind" : "cask",
+          "name" : "Orbit Browser",
+          "score" : 160,
+          "token" : "orbit-browser"
+        },
+        {
+          "evidence" : [
+            "appBundleName",
+            "bundleIdentifier",
+            "vendor"
+          ],
+          "homepage" : "https://orbit.example.org/",
+          "kind" : "cask",
+          "name" : "Orbit Browser ESR",
+          "score" : 115,
+          "token" : "orbit-browser@esr"
+        }
+      ],
+      "homepage" : "https://orbit.example.org/",
+      "minimum_system_version" : "13.0",
+      "name" : "Orbit Browser",
+      "path" : "/Applications/Orbit Browser.app",
+      "restore_method" : {
+        "kind" : "official_download",
+        "url" : "https://orbit.example.org/"
+      },
+      "source" : {
+        "kind" : "unknown"
+      },
+      "vendor" : "Orbit Foundation",
+      "version" : "128.0"
+    },
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "build_version" : "2.4.0",
+      "bundle_identifier" : "com.example.pixelforge",
+      "candidates" : [
+
+      ],
+      "homepage" : "https://pixelforge.example.com/",
+      "minimum_system_version" : "13.0",
+      "name" : "Pixel Forge",
+      "path" : "/Applications/Pixel Forge.app",
+      "restore_method" : {
+        "kind" : "homebrew_cask",
+        "token" : "pixel-forge"
+      },
+      "source" : {
+        "kind" : "unknown"
+      },
+      "vendor" : "Forgeworks Inc.",
+      "version" : "2.4.0"
+    },
+    {
+      "architectures" : [
+        "arm64",
+        "x86_64"
+      ],
+      "build_version" : "7.0.2",
+      "bundle_identifier" : "com.example.quillwriter",
+      "candidates" : [
+        {
+          "evidence" : [
+            "displayName",
+            "tokenName",
+            "vendor"
+          ],
+          "homepage" : "https://quill.example.com/",
+          "kind" : "cask",
+          "name" : "Quill Writer",
+          "score" : 50,
+          "token" : "quill-writer"
+        }
+      ],
+      "homepage" : "https://quill.example.com/",
+      "minimum_system_version" : "13.0",
+      "name" : "Quill Writer",
+      "path" : "/Applications/Quill Writer.app",
+      "restore_method" : {
+        "kind" : "official_download",
+        "url" : "https://quill.example.com/"
+      },
+      "source" : {
+        "kind" : "unknown"
+      },
+      "vendor" : "Quill Software GmbH",
+      "version" : "7.0.2"
+    },
+    {
+      "architectures" : [
+        "x86_64"
+      ],
+      "build_version" : "11.4",
+      "bundle_identifier" : "com.example.studiomixer",
+      "candidates" : [
+
+      ],
+      "minimum_system_version" : "13.0",
+      "name" : "Studio Mixer",
+      "path" : "/Applications/Studio Mixer.app",
+      "restore_method" : {
+        "kind" : "manual"
+      },
+      "source" : {
+        "kind" : "unknown"
+      },
+      "vendor" : "Example Audio Co.",
+      "version" : "11.4"
+    },
+    {
+      "architectures" : [
+        "arm64"
+      ],
+      "build_version" : "1.9.3",
+      "bundle_identifier" : "com.example.terminalplus",
+      "candidates" : [
+
+      ],
+      "homepage" : "https://terminalplus.example.com/",
+      "minimum_system_version" : "13.0",
+      "name" : "Terminal Plus",
+      "path" : "/Applications/Terminal Plus.app",
+      "restore_method" : {
+        "kind" : "homebrew_cask",
+        "token" : "terminal-plus"
+      },
+      "source" : {
+        "kind" : "unknown"
+      },
+      "vendor" : "Shellcraft Software",
+      "version" : "1.9.3"
+    }
+  ],
+  "architecture" : "arm64",
+  "backup_issues" : [
+
+  ],
+  "backup_selection" : {
+    "fonts_found" : 9,
+    "fonts_selected" : 8,
+    "profiles_found" : 7,
+    "profiles_selected" : 6
+  },
+  "brew_casks" : [
+    {
+      "app_artifacts" : [
+
+      ],
+      "tap" : "homebrew/cask",
+      "token" : "font-example-mono",
+      "version" : "1.0.0"
+    },
+    {
+      "app_artifacts" : [
+        "Nimbus Notes.app"
+      ],
+      "tap" : "homebrew/cask",
+      "token" : "nimbus-notes",
+      "version" : "3.2.1"
+    }
+  ],
+  "brew_formulae" : [
+    {
+      "installed_on_request" : true,
+      "name" : "example-tool",
+      "tap" : "example/tools",
+      "version" : "0.9.0"
+    },
+    {
+      "installed_on_request" : true,
+      "name" : "git",
+      "tap" : "homebrew/core",
+      "version" : "2.46.0"
+    },
+    {
+      "installed_on_request" : true,
+      "name" : "jq",
+      "tap" : "homebrew/core",
+      "version" : "1.7.1"
+    },
+    {
+      "installed_on_request" : true,
+      "name" : "mas",
+      "tap" : "homebrew/core",
+      "version" : "1.8.7"
+    },
+    {
+      "installed_on_request" : false,
+      "name" : "openssl@3",
+      "tap" : "homebrew/core",
+      "version" : "3.3.2"
+    },
+    {
+      "installed_on_request" : false,
+      "name" : "python@3.12",
+      "tap" : "homebrew/core",
+      "version" : "3.12.7"
+    },
+    {
+      "installed_on_request" : true,
+      "name" : "wget",
+      "tap" : "homebrew/core",
+      "version" : "1.24.5"
+    }
+  ],
+  "brew_taps" : [
+    {
+      "name" : "example/tools",
+      "remote" : "https://github.com/example/homebrew-tools"
+    }
+  ],
+  "created_at" : "2026-10-02T16:52:53Z",
+  "credentials" : [
+
+  ],
+  "developer" : {
+    "editor_extensions" : {
+      "Visual Studio Code" : [
+        "esbenp.prettier-vscode",
+        "ms-python.python"
+      ]
+    },
+    "git_config" : "[user]\n\tname = Example Person\n[alias]\n\tco = checkout\n\tst = status -sb\n[init]\n\tdefaultBranch = main\n[core]\n\texcludesfile = ~/.gitignore_global\n[credential]\n\thelper = osxkeychain\n",
+    "git_config_includes_email" : false,
+    "removed_git_sections" : [
+      "credential",
+      "github",
+      "http",
+      "url"
+    ]
+  },
+  "fonts" : [
+    {
+      "backup_path" : "fonts/user/Example Sans/ExampleSans-Bold.otf",
+      "domain" : "user",
+      "file_name" : "ExampleSans-Bold.otf",
+      "font" : {
+        "families" : [
+          "Example Sans"
+        ],
+        "format" : "OpenType",
+        "post_script_names" : [
+          "ExampleSans-Bold"
+        ],
+        "styles" : [
+          "Bold"
+        ],
+        "version" : "Version 1.000"
+      },
+      "metadata" : {
+        "face_count" : "1",
+        "family" : "Example Sans",
+        "postscript_names" : "ExampleSans-Bold",
+        "styles" : "Bold"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/Fonts/Example Sans/ExampleSans-Bold.otf",
+      "relative_path" : "Example Sans/ExampleSans-Bold.otf",
+      "sha256" : "06b062cb5009207983e3b27c53b4ff1f346ac446f219f2c1db6748b7c06aa6bf",
+      "size" : 764
+    },
+    {
+      "backup_path" : "fonts/user/Example Sans/ExampleSans-Regular.otf",
+      "domain" : "user",
+      "file_name" : "ExampleSans-Regular.otf",
+      "font" : {
+        "families" : [
+          "Example Sans"
+        ],
+        "format" : "OpenType",
+        "post_script_names" : [
+          "ExampleSans-Regular"
+        ],
+        "styles" : [
+          "Regular"
+        ],
+        "version" : "Version 1.000"
+      },
+      "metadata" : {
+        "face_count" : "1",
+        "family" : "Example Sans",
+        "postscript_names" : "ExampleSans-Regular",
+        "styles" : "Regular"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/Fonts/Example Sans/ExampleSans-Regular.otf",
+      "relative_path" : "Example Sans/ExampleSans-Regular.otf",
+      "sha256" : "ba22c53e98134e54c928372600f33fa010eeb26d96eaa6e6eec60e669a38838b",
+      "size" : 772
+    },
+    {
+      "backup_path" : "fonts/user/Example Script.otf",
+      "domain" : "user",
+      "file_name" : "Example Script.otf",
+      "font" : {
+        "families" : [
+          "Example Script"
+        ],
+        "format" : "OpenType",
+        "post_script_names" : [
+          "ExampleScript-Regular"
+        ],
+        "styles" : [
+          "Regular"
+        ],
+        "version" : "Version 1.000"
+      },
+      "metadata" : {
+        "face_count" : "1",
+        "family" : "Example Script",
+        "postscript_names" : "ExampleScript-Regular",
+        "styles" : "Regular"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/Fonts/Example Script.otf",
+      "relative_path" : "Example Script.otf",
+      "sha256" : "00e319e53b8e9f6cb73cca3a89f37273259c6d0dc1a9a3c7be33aa2273342343",
+      "size" : 788
+    },
+    {
+      "backup_path" : "fonts/user/ExampleSerif.ttf",
+      "domain" : "user",
+      "file_name" : "ExampleSerif.ttf",
+      "font" : {
+        "families" : [
+          "Example Serif"
+        ],
+        "format" : "TrueType",
+        "post_script_names" : [
+          "ExampleSerif-Regular"
+        ],
+        "styles" : [
+          "Regular"
+        ],
+        "version" : "Version 2.000"
+      },
+      "metadata" : {
+        "face_count" : "1",
+        "family" : "Example Serif",
+        "postscript_names" : "ExampleSerif-Regular",
+        "styles" : "Regular"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/Fonts/ExampleSerif.ttf",
+      "relative_path" : "ExampleSerif.ttf",
+      "sha256" : "cf761248dc73887a0fb59f73451edd00f9bd76f92d3e8b54e68af60fb6c10b60",
+      "size" : 780
+    },
+    {
+      "backup_path" : "fonts/user/OldFace.pfb",
+      "domain" : "user",
+      "file_name" : "OldFace.pfb",
+      "metadata" : {
+
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/Fonts/OldFace.pfb",
+      "relative_path" : "OldFace.pfb",
+      "sha256" : "a9da0ba1d1eb4db7f6c2332af21882340eb44ef77fc87fbb435158f1332e929f",
+      "size" : 39
+    },
+    {
+      "backup_path" : "fonts/user/Studio Grotesk.ttf",
+      "domain" : "user",
+      "file_name" : "Studio Grotesk.ttf",
+      "font" : {
+        "families" : [
+          "Studio Grotesk"
+        ],
+        "format" : "TrueType",
+        "post_script_names" : [
+          "StudioGrotesk-Regular"
+        ],
+        "styles" : [
+          "Regular"
+        ],
+        "version" : "Version 1.000"
+      },
+      "metadata" : {
+        "face_count" : "1",
+        "family" : "Studio Grotesk",
+        "postscript_names" : "StudioGrotesk-Regular",
+        "styles" : "Regular"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/Fonts/Studio Grotesk.ttf",
+      "relative_path" : "Studio Grotesk.ttf",
+      "sha256" : "33b9501b1505008219316c46afa6eff6594e500fdfbf0ec13fd31ac418b18281",
+      "size" : 788
+    },
+    {
+      "backup_path" : "fonts/user/System Demo.ttf",
+      "domain" : "user",
+      "file_name" : "System Demo.ttf",
+      "font" : {
+        "families" : [
+          "System Demo"
+        ],
+        "format" : "TrueType",
+        "post_script_names" : [
+          "SystemDemo-Regular"
+        ],
+        "styles" : [
+          "Regular"
+        ],
+        "version" : "Version 1.500"
+      },
+      "metadata" : {
+        "face_count" : "1",
+        "family" : "System Demo",
+        "postscript_names" : "SystemDemo-Regular",
+        "styles" : "Regular"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/Fonts/System Demo.ttf",
+      "relative_path" : "System Demo.ttf",
+      "sha256" : "cac99b81e6da037c29a84bbc14a3fd2600ad2109717313fd8e5022f618f33d84",
+      "size" : 764
+    },
+    {
+      "backup_path" : "fonts/system/ExampleMono.ttc",
+      "domain" : "system",
+      "file_name" : "ExampleMono.ttc",
+      "font" : {
+        "families" : [
+          "Example Mono"
+        ],
+        "format" : "Collection",
+        "post_script_names" : [
+          "ExampleMono-Regular"
+        ],
+        "styles" : [
+          "Regular"
+        ],
+        "version" : "Version 1.000"
+      },
+      "metadata" : {
+        "face_count" : "1",
+        "family" : "Example Mono",
+        "postscript_names" : "ExampleMono-Regular",
+        "styles" : "Regular"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "sharedInstalled",
+      "original_path" : "/Library/Fonts/ExampleMono.ttc",
+      "relative_path" : "ExampleMono.ttc",
+      "sha256" : "a45b38ef77a8c9cdcc316c95839cdd200e479cce815b7ea38676a274387a0596",
+      "size" : 772
+    }
+  ],
+  "guidance" : [
+    {
+      "id" : "githubCLI",
+      "kind" : "reauthenticationRequired",
+      "name" : "GitHub CLI"
+    }
+  ],
+  "homebrew" : {
+    "prefix" : "/opt/homebrew",
+    "version" : "4.4.0"
+  },
+  "icc_profiles" : [
+    {
+      "backup_path" : "icc_profiles/user/Example Fine Art Paper.icm",
+      "domain" : "user",
+      "file_name" : "Example Fine Art Paper.icm",
+      "metadata" : {
+        "color_space" : "RGB",
+        "connection_space" : "XYZ",
+        "description" : "Example Fine Art Paper",
+        "device_class" : "prtr",
+        "icc_version" : "2.1.0"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/ColorSync/Profiles/Example Fine Art Paper.icm",
+      "profile" : {
+        "color_space" : "RGB",
+        "computed_id" : "7188835b69f08ca269566937dbc834a2",
+        "connection_space" : "XYZ",
+        "description" : "Example Fine Art Paper",
+        "device_class" : "prtr",
+        "version" : "2.1.0"
+      },
+      "relative_path" : "Example Fine Art Paper.icm",
+      "sha256" : "2960b762eb65fefb4218ad23bd0258663e810026b3f0ae5e074fe846bda8c305",
+      "size" : 4680
+    },
+    {
+      "backup_path" : "icc_profiles/user/Example Proof Flags.icc",
+      "domain" : "user",
+      "file_name" : "Example Proof Flags.icc",
+      "metadata" : {
+        "color_space" : "RGB",
+        "connection_space" : "XYZ",
+        "description" : "Example Proof Flags",
+        "device_class" : "prtr",
+        "icc_version" : "2.1.0"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/ColorSync/Profiles/Example Proof Flags.icc",
+      "profile" : {
+        "color_space" : "RGB",
+        "computed_id" : "d91557f530f66e1aef5f44da43447cdc",
+        "connection_space" : "XYZ",
+        "description" : "Example Proof Flags",
+        "device_class" : "prtr",
+        "version" : "2.1.0"
+      },
+      "relative_path" : "Example Proof Flags.icc",
+      "sha256" : "968282a4823a82c6a4e900d7a1ac976f719a6558d62f0e9ea4fad372f498be80",
+      "size" : 4676
+    },
+    {
+      "backup_path" : "icc_profiles/user/Example Studio Display.icc",
+      "domain" : "user",
+      "file_name" : "Example Studio Display.icc",
+      "metadata" : {
+        "color_space" : "RGB",
+        "connection_space" : "XYZ",
+        "description" : "Example Studio Display D65",
+        "device_class" : "mntr",
+        "icc_version" : "2.1.0"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/ColorSync/Profiles/Example Studio Display.icc",
+      "profile" : {
+        "color_space" : "RGB",
+        "computed_id" : "f03a994576aa480af77ee2ddbebf7b82",
+        "connection_space" : "XYZ",
+        "description" : "Example Studio Display D65",
+        "device_class" : "mntr",
+        "version" : "2.1.0"
+      },
+      "relative_path" : "Example Studio Display.icc",
+      "sha256" : "a88e870a1266d2190f6e55d5537e9c45143492bd2c41deae929bf4cd19b825ab",
+      "size" : 532
+    },
+    {
+      "backup_path" : "icc_profiles/user/sRGB Copy.icc",
+      "domain" : "user",
+      "file_name" : "sRGB Copy.icc",
+      "metadata" : {
+        "color_space" : "RGB",
+        "connection_space" : "XYZ",
+        "description" : "sRGB IEC61966-2.1",
+        "device_class" : "mntr",
+        "icc_version" : "2.1.0"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "userInstalled",
+      "original_path" : "~/Library/ColorSync/Profiles/sRGB Copy.icc",
+      "profile" : {
+        "color_space" : "RGB",
+        "computed_id" : "9bcd0ed80a81e4bfd3a8c17df97c237a",
+        "connection_space" : "XYZ",
+        "description" : "sRGB IEC61966-2.1",
+        "device_class" : "mntr",
+        "version" : "2.1.0"
+      },
+      "relative_path" : "sRGB Copy.icc",
+      "sha256" : "ccc2e9ce64ffa3039e01a09d163c4c779e54bacac32c86bb34eed2f62d42344f",
+      "size" : 512
+    },
+    {
+      "backup_path" : "icc_profiles/system/Example Legacy Filter.icc",
+      "domain" : "system",
+      "file_name" : "Example Legacy Filter.icc",
+      "metadata" : {
+        "color_space" : "Lab",
+        "connection_space" : "Lab",
+        "description" : "Example Legacy Filter",
+        "device_class" : "abst",
+        "icc_version" : "2.1.0"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "appleCreated",
+      "original_path" : "/Library/ColorSync/Profiles/Example Legacy Filter.icc",
+      "profile" : {
+        "color_space" : "Lab",
+        "computed_id" : "6adeb15ba6d7f0b875f8fefef40aa911",
+        "connection_space" : "Lab",
+        "creator" : "appl",
+        "description" : "Example Legacy Filter",
+        "device_class" : "abst",
+        "version" : "2.1.0"
+      },
+      "relative_path" : "Example Legacy Filter.icc",
+      "sha256" : "26e5b52e44b6140de9cfb2909010a6f9d04b499134bd5ba5b4ebf394596fba6a",
+      "size" : 1968
+    },
+    {
+      "backup_path" : "icc_profiles/system/Example Press Proof.icc",
+      "domain" : "system",
+      "file_name" : "Example Press Proof.icc",
+      "metadata" : {
+        "color_space" : "CMYK",
+        "connection_space" : "XYZ",
+        "description" : "Example Press Proof",
+        "device_class" : "prtr",
+        "icc_version" : "2.1.0"
+      },
+      "modified_at" : "2026-10-02T16:45:44Z",
+      "origin" : "sharedInstalled",
+      "original_path" : "/Library/ColorSync/Profiles/Example Press Proof.icc",
+      "profile" : {
+        "color_space" : "CMYK",
+        "computed_id" : "83d59a3c219812b6d224e9434207e33c",
+        "connection_space" : "XYZ",
+        "description" : "Example Press Proof",
+        "device_class" : "prtr",
+        "version" : "2.1.0"
+      },
+      "relative_path" : "Example Press Proof.icc",
+      "sha256" : "918c1fd20d1b95c5b182f836268da236ccfc8c3017e581a22395b1d5f23f2a82",
+      "size" : 5220
+    }
+  ],
+  "locations" : [
+    {
+      "area" : "applications",
+      "location" : "/Applications",
+      "status" : "scanned"
+    },
+    {
+      "area" : "applications",
+      "location" : "~/Applications",
+      "status" : "scanned"
+    },
+    {
+      "area" : "homebrew",
+      "location" : "/opt/homebrew",
+      "status" : "scanned"
+    },
+    {
+      "area" : "appStore",
+      "location" : "mas",
+      "status" : "scanned"
+    },
+    {
+      "area" : "python",
+      "location" : "~",
+      "status" : "scanned"
+    },
+    {
+      "area" : "userFonts",
+      "location" : "~/Library/Fonts",
+      "status" : "scanned"
+    },
+    {
+      "area" : "systemFonts",
+      "location" : "/Library/Fonts",
+      "status" : "scanned"
+    },
+    {
+      "area" : "userColorProfiles",
+      "location" : "~/Library/ColorSync/Profiles",
+      "status" : "scanned"
+    },
+    {
+      "area" : "systemColorProfiles",
+      "location" : "/Library/ColorSync/Profiles",
+      "status" : "scanned"
+    }
+  ],
+  "macos_version" : "15.1.0",
+  "macreplica_build" : "1",
+  "macreplica_version" : "1.0.0",
+  "manifest_version" : 1,
+  "mas_apps" : [
+    {
+      "app_store_id" : 1234567890,
+      "bundle_identifier" : "com.example.ledgerlite",
+      "name" : "Ledger Lite",
+      "version" : "5.1"
+    }
+  ],
+  "python" : {
+    "environments" : [
+      {
+        "architectures" : [
+          "arm64"
+        ],
+        "base_interpreter" : "/opt/homebrew/opt/python@3.12/bin",
+        "base_source" : "homebrew",
+        "id" : "env-670cb43d11b5",
+        "manager" : "virtualenvwrapper",
+        "name" : "tools",
+        "packages" : [
+          {
+            "name" : "black",
+            "origin" : "index",
+            "version" : "24.10.0"
+          },
+          {
+            "name" : "httpie",
+            "origin" : "index",
+            "version" : "3.2.4"
+          }
+        ],
+        "path" : "~/.virtualenvs/tools",
+        "project_files" : [
+
+        ],
+        "python_version" : "3.12.7",
+        "requirements_path" : "development/python/env-670cb43d11b5/requirements.txt"
+      },
+      {
+        "architectures" : [
+          "arm64"
+        ],
+        "base_interpreter" : "/opt/homebrew/opt/python@3.12/bin",
+        "base_source" : "homebrew",
+        "id" : "env-eda20339f455",
+        "manager" : "venv",
+        "name" : "demo-app",
+        "packages" : [
+          {
+            "name" : "demo-app",
+            "origin" : "editable",
+            "version" : "0.1.0"
+          },
+          {
+            "name" : "pip",
+            "origin" : "index",
+            "version" : "24.2"
+          },
+          {
+            "name" : "private-lib",
+            "origin" : "vcs",
+            "version" : "1.0"
+          },
+          {
+            "name" : "requests",
+            "origin" : "index",
+            "version" : "2.32.3"
+          },
+          {
+            "name" : "rich",
+            "origin" : "index",
+            "version" : "13.9.2"
+          },
+          {
+            "name" : "urllib3",
+            "origin" : "index",
+            "version" : "2.2.3"
+          }
+        ],
+        "path" : "~/Projects/demo-app/.venv",
+        "pip_version" : "24.2",
+        "project_files" : [
+          {
+            "backup_path" : "development/python/env-eda20339f455/project/pyproject.toml",
+            "domain" : "user",
+            "file_name" : "pyproject.toml",
+            "metadata" : {
+
+            },
+            "original_path" : "~/Projects/demo-app/pyproject.toml",
+            "relative_path" : "pyproject.toml",
+            "sha256" : "abc237752d5486897316f297cbe8a2dcc8583f0f550aba4c93077e6c2062f616",
+            "size" : 46
+          },
+          {
+            "backup_path" : "development/python/env-eda20339f455/project/requirements.txt",
+            "domain" : "user",
+            "file_name" : "requirements.txt",
+            "metadata" : {
+
+            },
+            "original_path" : "~/Projects/demo-app/requirements.txt",
+            "relative_path" : "requirements.txt",
+            "sha256" : "c64f65ab5ad1e71206e4ad48466103ae5492577d1ce54ba81ffec903a47e43b8",
+            "size" : 26
+          }
+        ],
+        "python_version" : "3.12.7",
+        "requirements_path" : "development/python/env-eda20339f455/requirements.txt"
+      }
+    ],
+    "installations" : [
+      {
+        "architectures" : [
+
+        ],
+        "executable" : "/opt/homebrew/opt/python@3.12/bin/python3.12",
+        "source" : "homebrew",
+        "version" : "3.12.7"
+      }
+    ],
+    "settings" : [
+      {
+        "key" : "PIP_REQUIRE_VIRTUALENV",
+        "source" : "~/.zshrc",
+        "value" : "true"
+      },
+      {
+        "key" : "WORKON_HOME",
+        "source" : "~/.zshrc",
+        "value" : "~/.virtualenvs"
+      }
+    ]
+  }
+}

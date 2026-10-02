@@ -111,35 +111,42 @@ public final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
         process.standardError = stderrPipe
 
         let collector = OutputCollector(onLine: onOutputLine)
-        stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
-            collector.append(handle.availableData, isError: false)
-        }
-        stderrPipe.fileHandleForReading.readabilityHandler = { handle in
-            collector.append(handle.availableData, isError: true)
+        // Each pipe is drained on its own thread until end-of-file; the result is only
+        // assembled after both readers finished, so no output can be lost.
+        let readers = DispatchGroup()
+        for (pipe, isError) in [(stdoutPipe, false), (stderrPipe, true)] {
+            readers.enter()
+            DispatchQueue.global(qos: .utility).async {
+                let handle = pipe.fileHandleForReading
+                while let data = try? handle.read(upToCount: 65_536), !data.isEmpty {
+                    collector.append(data, isError: isError)
+                }
+                readers.leave()
+            }
         }
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<CommandResult, Error>) in
                 let timeoutState = TimeoutState()
                 process.terminationHandler = { finished in
-                    stdoutPipe.fileHandleForReading.readabilityHandler = nil
-                    stderrPipe.fileHandleForReading.readabilityHandler = nil
-                    // Drain anything still buffered after the handlers were removed.
-                    collector.append(stdoutPipe.fileHandleForReading.readDataToEndOfFile(), isError: false)
-                    collector.append(stderrPipe.fileHandleForReading.readDataToEndOfFile(), isError: true)
-                    let output = collector.finish()
-                    continuation.resume(returning: CommandResult(
-                        exitCode: finished.terminationStatus,
-                        stdout: output.stdout,
-                        stderr: output.stderr,
-                        timedOut: timeoutState.fired
-                    ))
+                    readers.notify(queue: .global()) {
+                        let output = collector.finish()
+                        continuation.resume(returning: CommandResult(
+                            exitCode: finished.terminationStatus,
+                            stdout: output.stdout,
+                            stderr: output.stderr,
+                            timedOut: timeoutState.fired
+                        ))
+                    }
                 }
                 do {
                     try process.run()
+                    // The child holds the write ends now; close ours so the readers see end-of-file.
+                    try? stdoutPipe.fileHandleForWriting.close()
+                    try? stderrPipe.fileHandleForWriting.close()
                 } catch {
-                    stdoutPipe.fileHandleForReading.readabilityHandler = nil
-                    stderrPipe.fileHandleForReading.readabilityHandler = nil
+                    try? stdoutPipe.fileHandleForWriting.close()
+                    try? stderrPipe.fileHandleForWriting.close()
                     continuation.resume(throwing: CommandError.launchFailed(error.localizedDescription))
                     return
                 }

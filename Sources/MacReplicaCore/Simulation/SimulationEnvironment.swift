@@ -94,7 +94,11 @@ public struct SimulationEnvironment: Sendable {
             caches: home.appendingPathComponent("Library/Caches/MacReplica"),
             logs: home.appendingPathComponent("Library/Logs/MacReplica"),
             pythonFrameworks: root.appendingPathComponent("Library/Frameworks"),
+            macOSFonts: root.appendingPathComponent("System/Library/Fonts"),
+            macOSColorProfiles: root.appendingPathComponent("System/Library/ColorSync/Profiles"),
+            macOSFontAssets: root.appendingPathComponent("System/Library/AssetsV2"),
             isSimulation: true)
+        self.layout.simulationRoot = root
     }
 
     /// Reads `--simulation-root <folder>` from the launch arguments.

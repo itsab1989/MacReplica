@@ -152,7 +152,11 @@ struct FailureModeTests {
         try Data("different".utf8).write(to: c.fresh.url.appendingPathComponent("home/Library/ColorSync/Profiles/Example Fine Art Paper.icm"))
         let session = await restore(c, selection: RestoreSelection(components: [.fonts, .colorProfiles]))
         #expect(label(session, "icc:user/Example Studio Display.icc") == "alreadyPresent")
-        #expect(label(session, "icc:user/Example Fine Art Paper.icm") == "skipped(keptExisting)")
+        // An unreadable file with the same name is never overwritten: the backup copy goes next to it.
+        #expect(label(session, "icc:user/Example Fine Art Paper.icm") == "succeeded")
+        let profiles = c.fresh.url.appendingPathComponent("home/Library/ColorSync/Profiles")
+        #expect(try String(contentsOf: profiles.appendingPathComponent("Example Fine Art Paper.icm"), encoding: .utf8) == "different")
+        #expect(FileScanner.profileIdentity(profiles.appendingPathComponent("Example Fine Art Paper (MacReplica).icm"))?.description == "Example Fine Art Paper")
         #expect(label(session, "font:user/ExampleSerif.ttf") == "skipped(keptExisting)")
     }
 

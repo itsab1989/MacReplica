@@ -30,6 +30,7 @@ struct RootView: View {
         .sheet(isPresented: Binding(get: { model.updateStatus != nil }, set: { if !$0 { model.updateStatus = nil } })) {
             UpdateSheet()
         }
+        .sheet(isPresented: $model.askForRestorePassphrase) { RestorePassphraseSheet() }
         .alert(model.notice?.title ?? "", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
             Button(model.l.t("common.ok")) { model.notice = nil }
         } message: {
@@ -99,14 +100,16 @@ struct HomeView: View {
             }
             .frame(maxWidth: 520)
             .padding(.top, 22)
+            Text(l.t("home.dryRunHint"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 10)
 
             Spacer(minLength: 16)
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 LanguageMenu()
-                Spacer()
-                Text(l.t("home.dryRunHint"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Spacer(minLength: 12)
+                SupportLink()
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 14)
@@ -165,11 +168,33 @@ struct ResumeBanner: View {
                 Spacer()
                 Button(l.t("resume.discard")) { model.discardUnfinished() }
                     .accessibilityIdentifier("resume.discard")
+                Button(l.t("resume.review")) { model.reviewUnfinished() }
+                    .help(l.t("resume.review.help"))
+                    .accessibilityIdentifier("resume.review")
                 Button(l.t("resume.continue")) { model.resumeUnfinished() }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier("resume.continue")
             }
         }
+    }
+}
+
+/// A quiet, one-line support link at the bottom of the start window. No popup, no reminders.
+struct SupportLink: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        Button {
+            model.openWebPage(MacReplicaLinks.kofi.absoluteString)
+        } label: {
+            Label(model.l.t("home.support"), systemImage: "heart")
+                .font(.caption)
+                .lineLimit(1)
+        }
+        .buttonStyle(.link)
+        .foregroundStyle(.secondary)
+        .help(MacReplicaLinks.kofi.absoluteString)
+        .accessibilityIdentifier("home.support")
     }
 }
 

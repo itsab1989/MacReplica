@@ -16,9 +16,29 @@ public struct RestorePlanner: Sendable {
     /// All items the backup could restore, before the user's individual exclusions.
     /// The restore screen uses this list for the individual program selection.
     public func candidateItems(manifest: Manifest, selection: RestoreSelection) -> [RestoreItem] {
+        // Everything the backup could restore, independent of what is switched on right now,
+        // so that components that are off by default (credentials) can still be offered.
         var unrestricted = selection
         unrestricted.excludedItemIDs = []
+        unrestricted.components = Set(RestoreComponent.allCases)
         return plan(manifest: manifest, selection: unrestricted).items.filter { $0.component != nil }
+    }
+
+    /// Continues an interrupted restore with a changed selection. Steps that already finished stay in
+    /// the session with their results (they are not run again and cannot be deselected); the remaining
+    /// steps follow the new selection. Order and dependencies come from the full plan.
+    public func continuation(of session: RestoreSession, manifest: Manifest, selection: RestoreSelection) -> (RestorePlan, RestoreSession) {
+        let chosen = plan(manifest: manifest, selection: selection)
+        var everything = selection
+        everything.components = Set(RestoreComponent.allCases)
+        everything.excludedItemIDs = []
+        let full = plan(manifest: manifest, selection: everything)
+        let wanted = Set(chosen.items.map(\.id)).union(session.results.keys)
+        let merged = RestorePlan(items: full.items.filter { wanted.contains($0.id) }, manualApps: chosen.manualApps)
+        var continued = session
+        continued.selection = selection
+        continued.itemIDs = merged.items.map(\.id)
+        return (merged, continued)
     }
 
     public func plan(manifest: Manifest, selection: RestoreSelection) -> RestorePlan {

@@ -31,6 +31,10 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var locations: [LocationAccess]
     public var developer: DeveloperSettings
     public var credentials: [CredentialRecord]
+    /// Detected services that need a new sign-in or a manual export on the new Mac.
+    public var guidance: [GuidanceRecord]
+    /// How many fonts and profiles were found and how many the user chose to back up.
+    public var backupSelection: BackupSelectionSummary?
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -51,7 +55,8 @@ public struct Manifest: Codable, Equatable, Sendable {
         backupIssues: [BackupIssue] = [],
         locations: [LocationAccess] = [],
         developer: DeveloperSettings = DeveloperSettings(),
-        credentials: [CredentialRecord] = []
+        credentials: [CredentialRecord] = [],
+        guidance: [GuidanceRecord] = []
     ) {
         self.manifestVersion = manifestVersion
         self.macreplicaVersion = macreplicaVersion
@@ -72,12 +77,13 @@ public struct Manifest: Codable, Equatable, Sendable {
         self.locations = locations
         self.developer = developer
         self.credentials = credentials
+        self.guidance = guidance
     }
 
     private enum CodingKeys: String, CodingKey {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
-        case python, applicationData, backupIssues, locations, developer, credentials
+        case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -105,6 +111,24 @@ public struct Manifest: Codable, Equatable, Sendable {
         locations = try c.decodeIfPresent([LocationAccess].self, forKey: .locations) ?? []
         developer = try c.decodeIfPresent(DeveloperSettings.self, forKey: .developer) ?? DeveloperSettings()
         credentials = try c.decodeIfPresent([CredentialRecord].self, forKey: .credentials) ?? []
+        guidance = try c.decodeIfPresent([GuidanceRecord].self, forKey: .guidance) ?? []
+        backupSelection = try c.decodeIfPresent(BackupSelectionSummary.self, forKey: .backupSelection)
+    }
+}
+
+/// The selection made on the old Mac. The backup itself contains exactly the selected items that
+/// could be copied; items that could not be copied are listed in `backupIssues`.
+public struct BackupSelectionSummary: Codable, Equatable, Sendable {
+    public var fontsFound: Int
+    public var fontsSelected: Int
+    public var profilesFound: Int
+    public var profilesSelected: Int
+
+    public init(fontsFound: Int, fontsSelected: Int, profilesFound: Int, profilesSelected: Int) {
+        self.fontsFound = fontsFound
+        self.fontsSelected = fontsSelected
+        self.profilesFound = profilesFound
+        self.profilesSelected = profilesSelected
     }
 }
 
@@ -443,6 +467,10 @@ public struct FileRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var size: Int64
     public var modifiedAt: Date?
     public var metadata: [String: String]
+    /// Identity used to recognize the same font or profile on the destination Mac, independent of the file name.
+    public var font: FontIdentity?
+    public var profile: ProfileIdentity?
+    public var origin: FileOrigin?
 
     public init(
         fileName: String,
@@ -453,8 +481,14 @@ public struct FileRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
         sha256: String,
         size: Int64,
         modifiedAt: Date? = nil,
-        metadata: [String: String] = [:]
+        metadata: [String: String] = [:],
+        font: FontIdentity? = nil,
+        profile: ProfileIdentity? = nil,
+        origin: FileOrigin? = nil
     ) {
+        self.font = font
+        self.profile = profile
+        self.origin = origin
         self.fileName = fileName
         self.domain = domain
         self.relativePath = relativePath

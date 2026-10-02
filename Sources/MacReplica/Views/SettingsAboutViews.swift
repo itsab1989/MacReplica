@@ -49,8 +49,8 @@ struct SettingsView: View {
 struct AboutView: View {
     @EnvironmentObject var model: AppModel
 
-    static let repositoryURL = "https://github.com/itsab1989/MacReplica"
-    static let kofiURL = "https://ko-fi.com/itsab1989"
+    static let repositoryURL = MacReplicaLinks.repository.absoluteString
+    static let kofiURL = MacReplicaLinks.kofi.absoluteString
 
     var body: some View {
         let l = model.l
@@ -77,16 +77,18 @@ struct AboutView: View {
             HStack {
                 Button(l.t("about.kofiButton")) { model.openWebPage(Self.kofiURL) }
                 Button(l.t("about.github")) { model.openWebPage(Self.repositoryURL) }
-                Button(l.t("update.check")) { model.checkForUpdates(userInitiated: true) }
-                    .accessibilityIdentifier("about.checkUpdates")
             }
+            .fixedSize()
+            Button(l.t("update.check")) { model.checkForUpdates(userInitiated: true) }
+                .fixedSize()
+                .accessibilityIdentifier("about.checkUpdates")
             Text(l.t("about.license"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .padding(.top, 4)
         }
         .padding(24)
-        .frame(width: 400)
+        .frame(width: 460)
         .environment(\.locale, model.language.locale)
     }
 }

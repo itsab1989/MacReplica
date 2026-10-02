@@ -61,6 +61,14 @@ struct VerificationResultView: View {
                                 CountRow(symbol: Symbols.component(.appStore), color: .secondary, label: l.t("component.appStore"), value: manifest.masApps.count)
                                 CountRow(symbol: Symbols.component(.fonts), color: .secondary, label: l.t("component.fonts"), value: counts.fonts)
                                 CountRow(symbol: Symbols.component(.colorProfiles), color: .secondary, label: l.t("component.colorProfiles"), value: counts.colorProfiles)
+                                CountRow(symbol: Symbols.component(.python), color: .secondary, label: l.t("component.python"), value: manifest.python.environments.count)
+                                CountRow(symbol: Symbols.component(.applicationData), color: .secondary, label: l.t("component.applicationData"), value: manifest.applicationData.count)
+                                if manifest.developer.gitConfig != nil {
+                                    CountRow(symbol: Symbols.component(.developerSettings), color: .secondary, label: l.t("component.developerSettings"), value: 1)
+                                }
+                                if !manifest.credentials.isEmpty {
+                                    CountRow(symbol: Symbols.component(.credentials), color: .secondary, label: l.t("component.credentials"), value: manifest.credentials.count)
+                                }
                             }
                         }
                     }

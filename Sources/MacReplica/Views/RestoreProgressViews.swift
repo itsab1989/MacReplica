@@ -8,8 +8,8 @@ struct DryRunView: View {
 
     private func group(_ prediction: Prediction) -> Group {
         switch prediction {
-        case .willInstall, .willCopy, .dependsOnEarlierStep, .willRecreateEnvironment, .willCompleteEnvironment: return .change
-        case .alreadyPresent, .identicalFileExists: return .present
+        case .willInstall, .willCopy, .dependsOnEarlierStep, .checkedWhenRestoring, .willRecreateEnvironment, .willCompleteEnvironment: return .change
+        case .alreadyPresent, .identicalFileExists, .equivalentFileExists, .keepsMacOSVersion: return .present
         case .conflict, .environmentConflict: return .conflict
         case .willSkip, .backupFileDamaged: return .skip
         }
@@ -95,10 +95,15 @@ struct DryRunRow: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: Symbols.kind(entry.item.kind)).foregroundStyle(.secondary).frame(width: 18)
             VStack(alignment: .leading, spacing: 1) {
-                Text(entry.item.title)
+                Text(l.itemTitle(entry.item))
                 Text(l.predictionText(entry.prediction, kind: entry.item.kind))
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if let assessment = entry.fileAssessment, assessment.status != .ready {
+                    Text(l.fileStatusDetail(assessment, kind: entry.item.kind))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 ForEach(Array(entry.notes.enumerated()), id: \.offset) { _, note in
                     Text(l.noteText(note)).font(.caption).foregroundStyle(.orange)
                 }
@@ -137,7 +142,7 @@ struct RestoreProgressView: View {
                         HStack(spacing: 10) {
                             Image(systemName: Symbols.kind(item.kind)).font(.title2).foregroundStyle(Color.accentColor).frame(width: 30)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(item.title).font(.headline).lineLimit(1)
+                                Text(l.itemTitle(item)).font(.headline).lineLimit(1)
                                 Text(l.itemMethodText(item.kind)).foregroundStyle(.secondary)
                             }
                         }
@@ -167,7 +172,7 @@ struct RestoreProgressView: View {
                                 ForEach(Array(p.finished.enumerated()), id: \.offset) { index, entry in
                                     HStack(spacing: 8) {
                                         OutcomeIcon(outcome: entry.result.outcome)
-                                        Text(entry.item.title).lineLimit(1)
+                                        Text(l.itemTitle(entry.item)).lineLimit(1)
                                         Spacer()
                                         Text(l.outcomeText(entry.result.outcome))
                                             .font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -244,7 +249,7 @@ struct RestoreSummaryView: View {
                         DisclosureGroup(l.p("summary.notesHeading", notes.count)) {
                             ForEach(notes, id: \.0.id) { item, result in
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(item.title)
+                                    Text(l.itemTitle(item))
                                     ForEach(Array(result.notes.enumerated()), id: \.offset) { _, note in
                                         Text(l.noteText(note)).font(.caption).foregroundStyle(.secondary)
                                     }
@@ -254,6 +259,11 @@ struct RestoreSummaryView: View {
                             }
                         }
                     }
+                    if let guidance = model.manifest?.guidance, !guidance.isEmpty {
+                        GuidanceList(records: guidance)
+                            .padding(12)
+                            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+                    }
                     if !failed.isEmpty || !complete {
                         LogHint()
                     }
@@ -261,7 +271,7 @@ struct RestoreSummaryView: View {
                         DisclosureGroup(l.p("summary.skippedHeading", skipped.count)) {
                             ForEach(skipped, id: \.0.id) { item, result in
                                 HStack {
-                                    Text(item.title)
+                                    Text(l.itemTitle(item))
                                     Spacer()
                                     Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
                                 }
@@ -321,7 +331,7 @@ struct FailureRow: View {
                 HStack(alignment: .firstTextBaseline) {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(item.title) — \(l.failureTitle(failure.category))").fontWeight(.medium)
+                        Text("\(l.itemTitle(item)) — \(l.failureTitle(failure.category))").fontWeight(.medium)
                             .fixedSize(horizontal: false, vertical: true)
                         Text(l.failureExplanation(failure.category))
                             .foregroundStyle(.secondary)

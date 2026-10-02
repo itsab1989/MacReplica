@@ -68,7 +68,8 @@ extension SimulationBuilder {
         try write("synthetic action set", to: support.appendingPathComponent("Adobe/Adobe Photoshop 2025/Presets/Actions/My Actions.atn"), executable: false)
         try write("synthetic brush", to: support.appendingPathComponent("Adobe/Adobe Photoshop 2025/Presets/Brushes/Ink.abr"), executable: false)
         try write("synthetic prefs", to: support.appendingPathComponent("Adobe/Adobe Photoshop 2025/Adobe Photoshop 2025 Settings/prefs.psp"), executable: false)
-        try write("TITLE \"Synthetic\"\nLUT_3D_SIZE 2\n", to: support.appendingPathComponent("Blackmagic Design/DaVinci Resolve/LUT/Synthetic Film.cube"), executable: false)
+        try write("synthetic fusion title", to: support.appendingPathComponent("Blackmagic Design/DaVinci Resolve/Fusion/Templates/Edit/Titles/Synthetic Title.setting"), executable: false)
+        try populateProviderFixtures(root)
         let gitconfig = [
             "[user]", "\tname = Example Person", "\temail = person@example.com", "\tsigningkey = ABCDEF0123456789",
             "[alias]", "\tco = checkout", "\tst = status -sb",
@@ -108,5 +109,54 @@ extension SimulationBuilder {
         let url = root.url.appendingPathComponent("releases/releases.json")
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONSerialization.data(withJSONObject: releases, options: [.prettyPrinted]).write(to: url)
+    }
+}
+
+extension SimulationBuilder {
+    /// Synthetic data for the application data providers: what should be copied, and next to it
+    /// what must not be (caches, machine-specific options, state). Plus credential and guidance fixtures.
+    static func populateProviderFixtures(_ root: SimulationRoot) throws {
+        let home = root.url.appendingPathComponent("home")
+        let support = home.appendingPathComponent("Library/Application Support")
+        // VS Code
+        try write(#"{"editor.fontSize": 14}"#, to: support.appendingPathComponent("Code/User/settings.json"), executable: false)
+        try write(#"[{"key": "cmd+k cmd+t", "command": "workbench.action.selectTheme"}]"#,
+                  to: support.appendingPathComponent("Code/User/keybindings.json"), executable: false)
+        try write(#"{"Print": {"prefix": "pr", "body": "print($1)"}}"#, to: support.appendingPathComponent("Code/User/snippets/python.json"), executable: false)
+        try write("synthetic state database", to: support.appendingPathComponent("Code/User/globalStorage/state.vscdb"), executable: false)
+        try write("synthetic cache", to: support.appendingPathComponent("Code/CachedData/cache.bin"), executable: false)
+        for ext in ["ms-python.python-2024.1.0", "esbenp.prettier-vscode-10.4.0"] {
+            try write("{}", to: home.appendingPathComponent(".vscode/extensions/\(ext)/package.json"), executable: false)
+        }
+        try write("[]", to: home.appendingPathComponent(".vscode/extensions/extensions.json"), executable: false)
+        // JetBrains
+        let idea = support.appendingPathComponent("JetBrains/IntelliJIdea2026.2")
+        try write("<keymap name=\"Synthetic\"/>", to: idea.appendingPathComponent("keymaps/Synthetic.xml"), executable: false)
+        try write("<code_scheme name=\"Synthetic\"/>", to: idea.appendingPathComponent("codestyles/Synthetic.xml"), executable: false)
+        try write("<application>machine specific</application>", to: idea.appendingPathComponent("options/jdk.table.xml"), executable: false)
+        try write("plugin", to: idea.appendingPathComponent("plugins/synthetic/lib.jar"), executable: false)
+        // Sublime Text
+        let sublime = support.appendingPathComponent("Sublime Text/Packages/User")
+        try write(#"{"font_size": 13}"#, to: sublime.appendingPathComponent("Preferences.sublime-settings"), executable: false)
+        try write(#"{"installed_packages": ["A File Icon"]}"#, to: sublime.appendingPathComponent("Package Control.sublime-settings"), executable: false)
+        try write("1700000000", to: sublime.appendingPathComponent("Package Control.last-run"), executable: false)
+        try write("cache", to: sublime.appendingPathComponent("Package Control.cache/01234.json"), executable: false)
+        try write("licence", to: support.appendingPathComponent("Sublime Text/Local/License.sublime_license"), executable: false)
+        // Blender
+        let blender = support.appendingPathComponent("Blender/4.2")
+        try write("synthetic preferences", to: blender.appendingPathComponent("config/userpref.blend"), executable: false)
+        try write("/Users/someone/project.blend", to: blender.appendingPathComponent("config/recent-files.txt"), executable: false)
+        try write("synthetic addon", to: blender.appendingPathComponent("scripts/addons/synthetic_addon.py"), executable: false)
+        // Keyboard Maestro and Alfred
+        try write("synthetic macros", to: support.appendingPathComponent("Keyboard Maestro/Keyboard Maestro Macros.plist"), executable: false)
+        try write("synthetic workflow", to: support.appendingPathComponent("Alfred/Alfred.alfredpreferences/workflows/user.workflow.SYNTH/info.plist"),
+                  executable: false)
+        // Credentials (synthetic) and a tool whose login lives in the Keychain.
+        try write("[default]\naws_access_key_id = synthetic-access-key-id\naws_secret_access_key = synthetic-secret\n",
+                  to: home.appendingPathComponent(".aws/credentials"), executable: false)
+        try write("[default]\nregion = eu-north-1\n", to: home.appendingPathComponent(".aws/config"), executable: false)
+        try write("registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=synthetic-npm-token\n",
+                  to: home.appendingPathComponent(".npmrc"), executable: false)
+        try write("github.com:\n    user: example\n    git_protocol: https\n", to: home.appendingPathComponent(".config/gh/hosts.yml"), executable: false)
     }
 }

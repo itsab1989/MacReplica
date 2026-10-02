@@ -100,7 +100,14 @@ extension ReportBuilder {
 
         if !manifest.developer.isEmpty {
             body += h2("component.developerSettings")
-            body += "<p>\(HTML.escape(l.t("guide.developer.intro")))</p>"
+            if manifest.developer.gitConfig != nil {
+                body += "<p>\(HTML.escape(l.t("guide.developer.intro")))</p>"
+            }
+            for (editor, ids) in manifest.developer.editorExtensions.sorted(by: { $0.key < $1.key }) {
+                let cli = editor == "Cursor" ? "cursor" : "code"
+                body += "<h3>\(HTML.escape(l.t("guide.extensions.title", editor)))</h3><p>\(HTML.escape(l.t("guide.extensions.intro")))</p>"
+                body += "<pre><code>\(HTML.escape(ids.map { "\(cli) --install-extension \($0)" }.joined(separator: "\n")))</code></pre>"
+            }
             if !manifest.developer.removedGitSections.isEmpty {
                 body += "<p class=\"muted\">\(HTML.escape(l.t("guide.developer.removed", manifest.developer.removedGitSections.joined(separator: ", "))))</p>"
             }
@@ -110,6 +117,15 @@ extension ReportBuilder {
         body += h2("guide.accounts.title")
         body += "<p>\(HTML.escape(l.t("guide.accounts.intro")))</p>"
         body += list(["guide.accounts.configuration", "guide.accounts.reauthentication", "guide.accounts.keychain"], ordered: false)
+        let reauth = manifest.guidance.filter { $0.kind == .reauthenticationRequired }
+        if !reauth.isEmpty {
+            body += "<p><b>\(HTML.escape(l.t("guidance.reauth.title")))</b> \(HTML.escape(reauth.map(\.name).joined(separator: ", ")))</p>"
+        }
+        let manualServices = manifest.guidance.filter { $0.kind == .manualMigration }
+        if !manualServices.isEmpty {
+            body += "<p><b>\(HTML.escape(l.t("guidance.manual.title")))</b></p><ul>"
+            body += manualServices.map { "<li><b>\(HTML.escape($0.name))</b>: \(HTML.escape(l.t("guidance.manual.\($0.id)")))</li>" }.joined() + "</ul>"
+        }
         if manifest.credentials.isEmpty {
             body += "<p class=\"muted\">\(HTML.escape(l.t("guide.accounts.noCredentials")))</p>"
         } else {

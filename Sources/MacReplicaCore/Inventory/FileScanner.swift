@@ -38,6 +38,8 @@ public struct FileScanner: Sendable {
             guard let relative = Self.relativePath(of: url, below: base) else { continue }
             guard let hash = try? Hashing.sha256Hex(ofFile: url) else { continue }
             let folder = kind == .font ? "fonts" : "icc_profiles"
+            let font = kind == .font ? Self.fontIdentity(url) : nil
+            let profile = kind == .colorProfile ? Self.profileIdentity(url) : nil
             let record = FileRecord(
                 fileName: url.lastPathComponent,
                 domain: domain,
@@ -47,7 +49,10 @@ public struct FileScanner: Sendable {
                 sha256: hash,
                 size: Int64(values.fileSize ?? 0),
                 modifiedAt: values.contentModificationDate,
-                metadata: kind == .font ? Self.fontMetadata(url) : Self.profileMetadata(url))
+                metadata: kind == .font ? Self.fontMetadata(url) : Self.profileMetadata(url),
+                font: font,
+                profile: profile,
+                origin: Self.origin(kind: kind, domain: domain, relativePath: relative, profile: profile))
             result.append(ScannedFile(url: url, record: record))
         }
         return result.sorted { $0.record.relativePath.localizedStandardCompare($1.record.relativePath) == .orderedAscending }
@@ -68,6 +73,15 @@ public struct FileScanner: Sendable {
         }
     }
 
+    /// SHA-256 of the resource fork, or nil if there is none. Classic suitcases keep the font there.
+    static func resourceForkHash(_ url: URL) -> String? {
+        let size = getxattr(url.path, "com.apple.ResourceFork", nil, 0, 0, 0)
+        guard size > 0 else { return nil }
+        var buffer = [UInt8](repeating: 0, count: size)
+        guard getxattr(url.path, "com.apple.ResourceFork", &buffer, size, 0, 0) == size else { return nil }
+        return Hashing.sha256Hex(of: Data(buffer))
+    }
+
     static func hasResourceFork(_ url: URL) -> Bool {
         getxattr(url.path, "com.apple.ResourceFork", nil, 0, 0, 0) > 0
     }
@@ -82,8 +96,63 @@ public struct FileScanner: Sendable {
         return relative.isEmpty ? nil : relative
     }
 
-    static func fontMetadata(_ url: URL) -> [String: String] {
+    static func origin(kind: BackupFileKind, domain: FileDomain, relativePath: String, profile: ProfileIdentity?) -> FileOrigin {
+        if kind == .colorProfile {
+            if domain == .system, relativePath.lowercased().hasPrefix("displays/") { return .displayGenerated }
+            if profile?.isAppleCreated == true { return .appleCreated }
+        }
+        return domain == .user ? .userInstalled : .sharedInstalled
+    }
+
+    /// Classic resource-fork suitcases and PostScript Type 1 files. Apple: they "might work but aren't
+    /// recommended"; resource-fork fonts are never parsed, because reading them has been reported to
+    /// crash some macOS versions.
+    public static func isLegacyFontFormat(_ url: URL) -> Bool {
+        let ext = url.pathExtension.lowercased()
+        if ["pfb", "pfm", "afm", "suit"].contains(ext) { return true }
+        return ext.isEmpty && hasResourceFork(url)
+    }
+
+    /// Reads the identity of a font file; nil when Core Text on this Mac cannot read it.
+    /// Legacy formats are not opened at all.
+    public static func fontIdentity(_ url: URL) -> FontIdentity? {
+        guard !isLegacyFontFormat(url) else { return nil }
         guard let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor],
+              !descriptors.isEmpty
+        else { return nil }
+        var families: [String] = []
+        var styles: [String] = []
+        var postScriptNames: [String] = []
+        for descriptor in descriptors {
+            if let family = CTFontDescriptorCopyAttribute(descriptor, kCTFontFamilyNameAttribute) as? String, !families.contains(family) { families.append(family) }
+            if let style = CTFontDescriptorCopyAttribute(descriptor, kCTFontStyleNameAttribute) as? String, !styles.contains(style) { styles.append(style) }
+            if let name = CTFontDescriptorCopyAttribute(descriptor, kCTFontNameAttribute) as? String { postScriptNames.append(name) }
+        }
+        let font = CTFontCreateWithFontDescriptor(descriptors[0], 12, nil)
+        let version = CTFontCopyName(font, kCTFontVersionNameKey) as String?
+        return FontIdentity(postScriptNames: postScriptNames, families: families, styles: styles, version: version,
+                            format: fontFormat(url))
+    }
+
+    static func fontFormat(_ url: URL) -> String {
+        switch url.pathExtension.lowercased() {
+        case "otf": return "OpenType"
+        case "ttf": return "TrueType"
+        case "ttc", "otc": return "Collection"
+        case "pfb", "pfm", "afm": return "PostScript Type 1"
+        case "woff", "woff2": return "Web font"
+        case "dfont", "suit", "": return "Suitcase"
+        default: return url.pathExtension.uppercased()
+        }
+    }
+
+    public static func profileIdentity(_ url: URL) -> ProfileIdentity? {
+        guard let data = try? Data(contentsOf: url), let header = ICCProfileHeader.parse(data) else { return nil }
+        return ProfileIdentity(header: header)
+    }
+
+    static func fontMetadata(_ url: URL) -> [String: String] {
+        guard !isLegacyFontFormat(url), let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor],
               !descriptors.isEmpty
         else { return [:] }
         var families = Set<String>()

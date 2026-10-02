@@ -11,12 +11,14 @@ public enum PrivilegedOperation: Equatable, Sendable {
     /// Installs a signed installer package.
     case installPackage(URL)
 
-    /// The executable and arguments for this operation. Only these four
+    /// The executable and arguments for this operation. Only these five
     /// fixed system tools can ever be run with administrator rights.
     var argv: [String] {
         switch self {
         case .createFolder(let url): return ["/bin/mkdir", "-p", url.path]
         case .installFile(let source, let destination):
+            // Classic suitcase fonts keep their data in the resource fork, which `install` would drop.
+            if FileScanner.hasResourceFork(source) { return ["/usr/bin/ditto", "--rsrc", source.path, destination.path] }
             return ["/usr/bin/install", "-m", "0644", "-o", "root", "-g", "wheel", source.path, destination.path]
         case .move(let source, let destination): return ["/bin/mv", "-f", source.path, destination.path]
         case .installPackage(let url): return ["/usr/sbin/installer", "-pkg", url.path, "-target", "/"]

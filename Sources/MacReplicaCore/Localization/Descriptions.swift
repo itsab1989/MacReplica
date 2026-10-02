@@ -108,6 +108,8 @@ extension Localizer {
             return t("skip.incompatibleArchitecture", required.map(architectureText).joined(separator: ", "))
         case .projectFolderMissing(let path): return t("skip.projectFolderMissing", path)
         case .passphraseNotProvided: return t("skip.passphraseNotProvided")
+        case .fileNotSupported: return t("skip.fileNotSupported")
+        case .displaySpecificProfile: return t("skip.displaySpecificProfile")
         case .cancelled: return t("skip.cancelled")
         }
     }
@@ -126,6 +128,9 @@ extension Localizer {
         case .requiresRosetta: return t("note.requiresRosetta")
         case .existingFileMovedAside(let path): return t("note.movedAside", path)
         case .identicalFileExists: return t("note.identical")
+        case .equivalentFileInstalled: return t("note.equivalentFile")
+        case .providedByMacOS: return t("note.providedByMacOS")
+        case .installedUnderNewName(let name): return t("note.installedUnderNewName", name)
         case .pythonPackagesNeedManualSetup(let names): return t("note.pythonManualPackages", names.joined(separator: ", "))
         case .pythonPackagesUpdated(let count): return p("note.pythonPackagesUpdated", count)
         case .pythonEnvironmentReused: return t("note.pythonEnvironmentReused")
@@ -144,7 +149,83 @@ extension Localizer {
         }
     }
 
+    /// The name shown for a restore step: localized for application data, otherwise the item's own name.
+    public func itemTitle(_ item: RestoreItem) -> String {
+        if let file = item.file { return fileTitle(file) }
+        guard let profile = item.applicationData?.profile else { return item.title }
+        let version = profile.appVersion.flatMap { $0 == profile.appName ? nil : " (\($0))" } ?? ""
+        return profileText(profile) + version
+    }
+
+    /// "Example Sans Bold" for a font, the profile description for an ICC profile, else the file name.
+    public func fileTitle(_ file: FileRecord) -> String {
+        if let name = file.font?.displayName, !name.isEmpty { return name }
+        if let description = file.profile?.description, !description.isEmpty { return description }
+        return file.fileName
+    }
+
+    public func fileLocationText(_ location: FileLocation) -> String { t("fileLocation.\(location.rawValue)") }
+
+    public func fileOriginText(_ origin: FileOrigin) -> String { t("fileOrigin.\(origin.rawValue)") }
+
+    /// A short status such as "Already installed" or "Different version on this Mac".
+    public func fileStatusText(_ assessment: FileAssessment, kind: RestoreItemKind) -> String {
+        let suffix = kind == .font ? "font" : "profile"
+        switch assessment.status {
+        case .ready: return t("fileStatus.ready")
+        case .identical: return t("fileStatus.identical")
+        case .equivalent: return t("fileStatus.equivalent.\(suffix)")
+        case .providedByMacOS: return t("fileStatus.providedByMacOS")
+        case .differentVersion: return t("fileStatus.differentVersion")
+        case .differentFile: return t("fileStatus.differentFile.\(suffix)")
+        case .incompatible: return t("fileStatus.incompatible")
+        case .obsoleteAppleProfile: return t("fileStatus.obsoleteAppleProfile")
+        case .displayProfile: return t("fileStatus.displayProfile")
+        case .legacyFormat: return t("fileStatus.legacyFormat")
+        }
+    }
+
+    /// One or two sentences explaining the status and what MacReplica will do by default.
+    public func fileStatusDetail(_ assessment: FileAssessment, kind: RestoreItemKind) -> String {
+        let suffix = kind == .font ? "font" : "profile"
+        let location = assessment.existingLocation.map(fileLocationText) ?? ""
+        let name = assessment.existingFileName ?? ""
+        switch assessment.status {
+        case .ready: return t("fileDetail.ready")
+        case .identical: return t("fileDetail.identical", name, location)
+        case .equivalent: return t("fileDetail.equivalent.\(suffix)", name, location)
+        case .providedByMacOS: return t("fileDetail.providedByMacOS.\(suffix)")
+        case .differentVersion where kind == .colorProfile:
+            return t("fileDetail.differentVersion.profile", name, location)
+        case .differentVersion:
+            return t("fileDetail.differentVersion", assessment.installedVersion ?? "?", assessment.backupVersion ?? "?", location)
+        case .differentFile: return t("fileDetail.differentFile", name, location)
+        case .incompatible: return t("fileDetail.incompatible.\(suffix)")
+        case .obsoleteAppleProfile: return t("fileDetail.obsoleteAppleProfile")
+        case .displayProfile: return t("fileDetail.displayProfile")
+        case .legacyFormat: return t("fileDetail.legacyFormat")
+        }
+    }
+
+    /// "Display", "Printer", "Input device" … for an ICC profile class signature.
+    public func profileClassText(_ signature: String) -> String {
+        let known = ["mntr", "prtr", "scnr", "spac", "link", "abst", "nmcl"]
+        return known.contains(signature) ? t("profileClass.\(signature)") : signature
+    }
+
+    public func fileAdvisoryText(_ advisory: FileAssessment.Advisory) -> String { t("fileAdvisory.\(advisory.rawValue)") }
+
+    public func conflictChoiceText(_ resolution: ConflictResolution, kind: RestoreItemKind) -> String {
+        switch resolution {
+        case .keepExisting: return t("conflict.keep")
+        case .replace: return t("conflict.replace")
+        case .skip: return t("conflict.skip")
+        case .keepBoth: return t("conflict.keepBoth")
+        }
+    }
+
     public func predictionText(_ prediction: Prediction, kind: RestoreItemKind) -> String {
+        if prediction == .dependsOnEarlierStep, kind == .pythonEnvironment { return t("prediction.recreateEnvironment") }
         switch prediction {
         case .willInstall:
             switch kind {
@@ -158,11 +239,14 @@ extension Localizer {
             if let version { return t("prediction.alreadyPresentVersion", version) }
             return t("prediction.alreadyPresent")
         case .identicalFileExists: return t("prediction.identical")
+        case .equivalentFileExists: return t("prediction.equivalent")
+        case .keepsMacOSVersion: return t("prediction.keepsMacOSVersion")
         case .conflict(let resolution):
             switch resolution {
             case .keepExisting: return t("prediction.conflictKeep")
             case .replace: return t("prediction.conflictReplace")
             case .skip: return t("prediction.conflictSkip")
+            case .keepBoth: return t("prediction.conflictKeepBoth")
             }
         case .willSkip(let reason): return skipText(reason)
         case .backupFileDamaged: return t("prediction.damaged")
@@ -170,6 +254,7 @@ extension Localizer {
         case .willRecreateEnvironment: return t("prediction.recreateEnvironment")
         case .willCompleteEnvironment: return t("prediction.completeEnvironment")
         case .environmentConflict: return t("prediction.environmentConflict")
+        case .checkedWhenRestoring: return t("prediction.checkedWhenRestoring")
         }
     }
 

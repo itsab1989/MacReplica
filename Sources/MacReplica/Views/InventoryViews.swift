@@ -81,6 +81,7 @@ struct InventoryResultsView: View {
                         }
                     }
 
+                    FontsAndProfilesSection()
                     PythonSection()
                     DeveloperSettingsSection()
                     ApplicationDataSection()

@@ -38,8 +38,8 @@ struct EndToEndTests {
         #expect(manifest.brewTaps == [BrewTapRecord(name: "example/tools", remote: "https://github.com/example/homebrew-tools")])
         #expect(manifest.homebrew?.version == "4.4.0")
         #expect(manifest.masApps.map(\.appStoreID) == [1_234_567_890])
-        #expect(manifest.fonts.count == 4)
-        #expect(manifest.iccProfiles.count == 3)
+        #expect(manifest.fonts.count == 9)
+        #expect(manifest.iccProfiles.count == 7)
         #expect(manifest.iccProfiles.first { $0.fileName == "Example Studio Display.icc" }?.metadata["description"] == "Example Studio Display D65")
 
         // No absolute home paths in the manifest.
@@ -54,9 +54,9 @@ struct EndToEndTests {
         let (backup, manifest) = try await TestEnvironment.makeBackup(sandbox)
         let report = BackupVerifier(layout: try TestEnvironment.sourceMac(Sandbox("unused")).1.layout).verify(backupAt: backup)
         #expect(report.isIntact)
-        // 7 fonts/profiles + 2 Python project files + 3 detected app-data files
-        // + requirements, reports, instructions and README.
-        #expect(report.checkedFiles == 18)
+        // 16 fonts/profiles + 2 Python project files + 14 files from application data providers
+        // + 2 requirements files, 2 reports, the restore instructions and README.
+        #expect(report.checkedFiles == 38)
         #expect(FileManager.default.fileExists(atPath: backup.appendingPathComponent("reports/inventory.html").path))
         #expect(FileManager.default.fileExists(atPath: backup.appendingPathComponent("reports/manual_installations.html").path))
 
@@ -95,6 +95,18 @@ struct EndToEndTests {
         #expect(outcomes["font:user/Example Sans/ExampleSans-Bold.otf"] == "succeeded")
         #expect(outcomes["font:system/ExampleMono.ttc"] == "succeeded")
         #expect(outcomes["icc:user/Example Studio Display.icc"] == "succeeded")
+        // Destination-aware decisions for fonts and profiles (see FontAndProfileConflictTests for each rule).
+        #expect(outcomes["font:user/Studio Grotesk.ttf"] == "succeeded")
+        #expect(session.results["font:user/Studio Grotesk.ttf"]?.notes == [.installedUnderNewName(name: "Studio Grotesk (MacReplica).ttf")])
+        #expect(outcomes["font:user/Example Script.otf"] == "alreadyPresent")
+        #expect(outcomes["font:user/System Demo.ttf"] == "alreadyPresent")
+        #expect(session.results["font:user/System Demo.ttf"]?.notes == [.providedByMacOS])
+        #expect(outcomes["font:user/Broken.otf"] == "skipped(fileNotSupported)")
+        #expect(outcomes["icc:user/Example Fine Art Paper.icm"] == "succeeded")
+        #expect(outcomes["icc:system/Example Press Proof.icc"] == "alreadyPresent")
+        #expect(outcomes["icc:user/Example Proof Flags.icc"] == "alreadyPresent")
+        #expect(session.results["icc:user/sRGB Copy.icc"]?.notes == [.providedByMacOS])
+        #expect(outcomes["icc:system/Displays/Example Display-00000000-0000-0000-0000-SYNTHETIC000.icc"] == "skipped(displaySpecificProfile)")
         #expect(session.status == .completed)
         #expect(recorder.summary?.failed == 0)
 
@@ -108,7 +120,9 @@ struct EndToEndTests {
         fresh.clearCalls()
         let second = await executor.run(plan: plan, session: RestoreSession(backupPath: backup.path, selection: selection,
                                                                             itemIDs: plan.items.map(\.id)), onEvent: { _ in })
-        #expect(second.results.values.allSatisfy { $0.outcome == .alreadyPresent || $0.outcome == .skipped(.keptExisting) })
+        #expect(second.results.values.allSatisfy {
+            [.alreadyPresent, .skipped(.keptExisting), .skipped(.fileNotSupported), .skipped(.displaySpecificProfile)].contains($0.outcome)
+        })
         #expect(!fresh.calls().contains { $0.contains(" install ") || $0.hasPrefix("brew install") || $0.hasPrefix("mas install") })
     }
 }
