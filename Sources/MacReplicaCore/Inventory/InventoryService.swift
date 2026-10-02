@@ -290,6 +290,11 @@ public struct InventoryService: Sendable {
                 for index in apps.indices where apps[index].bundleFileName.caseInsensitiveCompare(artifact) == .orderedSame {
                     apps[index].source = .homebrewCask(token: cask.token)
                     apps[index].restoreMethod = .homebrewCask(token: cask.token)
+                    // The cask token names the channel exactly (`firefox@nightly`); restoring the same cask reproduces it.
+                    if let channel = ChannelDetector.channel(caskToken: cask.token) {
+                        apps[index].channel = channel
+                        apps[index].channelEvidence = .homebrewCask
+                    }
                 }
             }
         }

@@ -185,6 +185,17 @@ public struct HomebrewClient: Sendable {
         return try await runner.run(installCommand, onOutputLine: onOutputLine)
     }
 
+    /// Homebrew 6.0 and later only load formulae and casks from third-party taps the user trusts.
+    public static func requiresTapTrust(_ version: String) -> Bool {
+        (Int(version.split(separator: ".").first ?? "") ?? 0) >= 6
+    }
+
+    /// Marks a third-party tap as trusted (`brew trust --tap`). Only called for taps the user allowed in MacReplica.
+    public func trustTap(_ brew: HomebrewInstallation, name: String) async throws -> CommandResult {
+        try Self.validatePackageName(name)
+        return try await runner.run(command(brew, ["trust", "--tap", name], timeout: 120))
+    }
+
     /// Package names come from a backup file and must never be interpreted as options or paths.
     public static func validatePackageName(_ name: String) throws {
         let pattern = #"^[A-Za-z0-9][A-Za-z0-9@+._-]*(/[A-Za-z0-9][A-Za-z0-9@+._-]*){0,2}$"#

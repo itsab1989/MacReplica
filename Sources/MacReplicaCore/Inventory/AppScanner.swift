@@ -69,7 +69,7 @@ public struct AppScanner: Sendable {
         }
 
         let name = (bundle.lastPathComponent as NSString).deletingPathExtension
-        return AppRecord(
+        var record = AppRecord(
             name: name,
             version: Self.nonEmpty(info["CFBundleShortVersionString"] as? String),
             buildVersion: Self.nonEmpty(info["CFBundleVersion"] as? String),
@@ -80,6 +80,15 @@ public struct AppScanner: Sendable {
             minimumSystemVersion: Self.nonEmpty(info["LSMinimumSystemVersion"] as? String),
             source: source
         )
+        // Only vendor-provided values from Info.plist and the signature; nothing user-specific.
+        record.updateFeed = hasReceipt ? nil : UpdateFeed.from(info: info)
+        record.teamIdentifier = BundleInspection.signingIdentity(of: bundle)?.teamIdentifier
+        if let (channel, evidence) = ChannelDetector.detect(caskToken: nil, bundleIdentifier: record.bundleIdentifier, appName: name,
+                                                            version: record.version, feedURL: record.updateFeed?.url) {
+            record.channel = channel
+            record.channelEvidence = evidence
+        }
+        return record
     }
 
     /// Safari and other Apple apps in /Applications are part of macOS itself.

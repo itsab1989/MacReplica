@@ -597,10 +597,19 @@ public final class RestoreExecutor: Sendable {
         }
         guard let brew = context.brew else { return failed(item, .homebrewUnavailable) }
         let taps = try await environment.homebrew.installedTaps(brew)
-        if taps.contains(item.identifier.lowercased()) { return ItemResult(itemID: item.id, outcome: .alreadyPresent) }
+        if taps.contains(item.identifier.lowercased()) {
+            if HomebrewClient.requiresTapTrust(brew.version) { _ = try? await environment.homebrew.trustTap(brew, name: item.identifier) }
+            return ItemResult(itemID: item.id, outcome: .alreadyPresent)
+        }
         onEvent(.activity(itemID: item.id, .installing))
         let result = try await environment.homebrew.install(brew, package: .tap(name: item.identifier, remote: item.tapRemote), askpass: nil)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
+        // Homebrew 6+ loads packages from third-party taps only once they are trusted. The user allowed
+        // this tap on the restore screen, so MacReplica records that decision with Homebrew.
+        if HomebrewClient.requiresTapTrust(brew.version) {
+            let trusted = try await environment.homebrew.trustTap(brew, name: item.identifier)
+            guard trusted.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: trusted))) }
+        }
         onEvent(.activity(itemID: item.id, .verifying))
         guard try await environment.homebrew.installedTaps(brew).contains(item.identifier.lowercased()) else {
             return failed(item, .verificationFailed, "tap not listed after installation")

@@ -307,6 +307,13 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     /// Possible Homebrew packages when the match was not unambiguous.
     public var candidates: [MatchCandidate]
     public var homepage: String?
+    /// The release channel (beta, nightly …) when there is evidence for one; nil means none was found.
+    public var channel: ReleaseChannel?
+    public var channelEvidence: ChannelEvidence?
+    /// The vendor's update feed declared in the bundle, used to find an official download.
+    public var updateFeed: UpdateFeed?
+    /// Apple Developer Team ID of the bundle's signature; downloads must carry the same one.
+    public var teamIdentifier: String?
 
     public init(
         name: String,
@@ -338,7 +345,7 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case name, version, buildVersion, bundleIdentifier, path, vendor, architectures
-        case minimumSystemVersion, source, restoreMethod, candidates, homepage
+        case minimumSystemVersion, source, restoreMethod, candidates, homepage, channel, channelEvidence, updateFeed, teamIdentifier
     }
 
     public init(from decoder: Decoder) throws {
@@ -355,6 +362,10 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
         restoreMethod = try c.decodeIfPresent(RestoreMethod.self, forKey: .restoreMethod) ?? .manual
         candidates = try c.decodeIfPresent([MatchCandidate].self, forKey: .candidates) ?? []
         homepage = try c.decodeIfPresent(String.self, forKey: .homepage)
+        channel = try c.decodeIfPresent(ReleaseChannel.self, forKey: .channel)
+        channelEvidence = try c.decodeIfPresent(ChannelEvidence.self, forKey: .channelEvidence)
+        updateFeed = try c.decodeIfPresent(UpdateFeed.self, forKey: .updateFeed)
+        teamIdentifier = try c.decodeIfPresent(String.self, forKey: .teamIdentifier)
     }
 
     /// True when MacReplica found possible Homebrew packages but none was certain enough

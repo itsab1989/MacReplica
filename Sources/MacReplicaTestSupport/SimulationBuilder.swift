@@ -34,6 +34,8 @@ public struct SimulationRoot {
     public func failOnce(_ package: String, message: String) throws { try setFlag("fail-once/\(package)", true, content: message) }
     public func failAlways(_ package: String, message: String) throws { try setFlag("fail/\(package)", true, content: message) }
     public func setCommandLineToolsDelay(_ seconds: Double) throws { try setFlag("clt-delay", true, content: String(seconds)) }
+    /// The version the simulated `brew --version` reports (default 4.4.0).
+    public func setHomebrewVersion(_ version: String) throws { try setFlag("brew-version", true, content: version) }
 
     /// Simulates the user installing one of the sample apps by hand (from the App Store or a vendor download).
     public func simulateUserInstall(appNamed name: String) throws {
@@ -279,6 +281,20 @@ public enum SimulationBuilder {
         var parts = version.split(separator: ".").map(String.init)
         if let last = parts.last, let number = Int(last) { parts[parts.count - 1] = String(number + 1) }
         return parts.joined(separator: ".")
+    }
+
+    /// A synthetic, unsigned application bundle (Info.plist and a Mach-O header only).
+    @discardableResult
+    public static func makeSyntheticApp(name: String, bundleID: String, version: String, architectures: [CPUArchitecture] = [.arm64, .x86_64],
+                                        minimumSystemVersion: String = "13.0", extraInfo: [String: Any] = [:], in folder: URL) throws -> URL {
+        try makeAppBundle(SampleApp(name: name, bundleID: bundleID, version: version, vendor: "Example Vendor", architectures: architectures), in: folder)
+        let bundle = folder.appendingPathComponent("\(name).app")
+        let infoURL = bundle.appendingPathComponent("Contents/Info.plist")
+        var info = (NSDictionary(contentsOf: infoURL) as? [String: Any]) ?? [:]
+        info["LSMinimumSystemVersion"] = minimumSystemVersion
+        info.merge(extraInfo) { $1 }
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: infoURL)
+        return bundle
     }
 
     static func makeAppBundle(_ app: SampleApp, in folder: URL) throws {

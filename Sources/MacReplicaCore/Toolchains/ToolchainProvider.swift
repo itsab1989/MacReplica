@@ -281,7 +281,7 @@ enum ToolchainFiles {
             guard !name.hasPrefix(".") else { return false }
             var isDirectory: ObjCBool = false
             return fm.fileExists(atPath: folder.appendingPathComponent(name).path, isDirectory: &isDirectory) && isDirectory.boolValue
-        }.sorted { VersionComparison.compare($0, $1) == .orderedAscending }
+        }.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
     static func isSymbolicLink(_ url: URL) -> Bool {

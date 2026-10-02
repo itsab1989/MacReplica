@@ -12,10 +12,19 @@ public struct CaskInfo: Sendable, Equatable, Codable {
     public var disabled: Bool
     /// Architectures the cask is limited to; empty means no restriction.
     public var requiredArchitectures: [CPUArchitecture]
+    /// The vendor download Homebrew uses: the default (Apple silicon, newest macOS) plus per-platform overrides.
+    public var download: CaskDownload?
+    public var downloadVariations: [String: CaskDownload]
+    /// Minimum macOS major version from `depends_on.macos`, e.g. `13`.
+    public var minimumMacOS: String?
 
     public init(token: String, names: [String] = [], appArtifacts: [String] = [], bundleIdentifiers: [String] = [],
                 homepage: String? = nil, version: String? = nil, deprecated: Bool = false, disabled: Bool = false,
-                requiredArchitectures: [CPUArchitecture] = []) {
+                requiredArchitectures: [CPUArchitecture] = [], download: CaskDownload? = nil,
+                downloadVariations: [String: CaskDownload] = [:], minimumMacOS: String? = nil) {
+        self.download = download
+        self.downloadVariations = downloadVariations
+        self.minimumMacOS = minimumMacOS
         self.token = token
         self.names = names
         self.appArtifacts = appArtifacts
@@ -25,6 +34,48 @@ public struct CaskInfo: Sendable, Equatable, Codable {
         self.deprecated = deprecated
         self.disabled = disabled
         self.requiredArchitectures = requiredArchitectures
+    }
+}
+
+/// A download as Homebrew's cask JSON describes it.
+public struct CaskDownload: Sendable, Equatable, Codable, Hashable {
+    public var url: String
+    /// SHA-256 of the file; nil when the cask says `no_check` (the file changes with every release).
+    public var sha256: String?
+    /// The download needs browser-like request options (cookies, user agent); MacReplica sends the user to the website instead.
+    public var needsBrowser: Bool
+
+    public init(url: String, sha256: String?, needsBrowser: Bool = false) {
+        self.url = url
+        self.sha256 = sha256
+        self.needsBrowser = needsBrowser
+    }
+
+    static func parse(_ object: [String: Any]?) -> CaskDownload? {
+        guard let object, let url = object["url"] as? String, url.hasPrefix("https://") else { return nil }
+        let sha = (object["sha256"] as? String).flatMap { $0.range(of: #"^[0-9a-f]{64}$"#, options: .regularExpression) != nil ? $0 : nil }
+        let specs = object["url_specs"] as? [String: Any] ?? [:]
+        return CaskDownload(url: url, sha256: sha, needsBrowser: specs["cookies"] != nil || specs["referer"] != nil || specs["user_agent"] != nil
+                            || specs["data"] != nil || specs["header"] != nil)
+    }
+}
+
+extension CaskInfo {
+    /// Homebrew's platform key for a Mac: the macOS codename, prefixed with `arm64_` on Apple silicon.
+    public static func platformKey(macOSVersion: String, architecture: CPUArchitecture) -> String? {
+        let major = Int(macOSVersion.split(separator: ".").first ?? "") ?? 0
+        let names = [13: "ventura", 14: "sonoma", 15: "sequoia", 26: "tahoe", 27: "golden_gate"]
+        guard let name = names[major] else { return nil }
+        return architecture == .x86_64 ? name : "arm64_" + name
+    }
+
+    /// The download for this Mac: the platform's override if there is one, else the default.
+    public func download(macOSVersion: String, architecture: CPUArchitecture) -> CaskDownload? {
+        if let key = Self.platformKey(macOSVersion: macOSVersion, architecture: architecture), let variation = downloadVariations[key] {
+            return variation
+        }
+        // The default is built for Apple silicon; an Intel Mac needs an override unless the app is universal.
+        return download
     }
 }
 
@@ -62,8 +113,16 @@ public struct CaskCatalog: Sendable {
         return items.compactMap { item in
             guard let token = item["token"] as? String else { return nil }
             var architectures: [CPUArchitecture] = []
-            if let dependsOn = item["depends_on"] as? [String: Any], let arch = dependsOn["arch"] {
-                architectures = parseArchitectures(arch)
+            var minimumMacOS: String?
+            if let dependsOn = item["depends_on"] as? [String: Any] {
+                if let arch = dependsOn["arch"] { architectures = parseArchitectures(arch) }
+                if let macos = dependsOn["macos"] as? [String: Any], let values = macos[">="] as? [String] { minimumMacOS = values.first }
+            }
+            var variations: [String: CaskDownload] = [:]
+            for (key, value) in item["variations"] as? [String: Any] ?? [:] {
+                guard let object = value as? [String: Any], object["url"] != nil else { continue }
+                // Overrides may change only the URL; the checksum then comes from the override as well or is unknown.
+                variations[key] = CaskDownload.parse(object)
             }
             return CaskInfo(
                 token: token,
@@ -74,7 +133,10 @@ public struct CaskCatalog: Sendable {
                 version: item["version"] as? String,
                 deprecated: item["deprecated"] as? Bool ?? false,
                 disabled: item["disabled"] as? Bool ?? false,
-                requiredArchitectures: architectures)
+                requiredArchitectures: architectures,
+                download: CaskDownload.parse(item),
+                downloadVariations: variations,
+                minimumMacOS: minimumMacOS)
         }
     }
 

@@ -70,7 +70,12 @@ enum FakeTools {
 
     case "${1:-}" in
       --version)
-        echo "Homebrew 4.4.0"
+        if [ -f "$S/brew-version" ]; then echo "Homebrew $(cat "$S/brew-version")"; else echo "Homebrew 4.4.0"; fi
+        exit 0 ;;
+      trust)
+        [ "${2:-}" = "--tap" ] && [ -n "${3:-}" ] || { echo "Error: Invalid usage" >&2; exit 1; }
+        mkdir -p "$S/brew/trusted"
+        : > "$S/brew/trusted/$(echo "$3" | sed 's#/#__#')"
         exit 0 ;;
       info)
         if [ -f "$S/scan-delay" ]; then sleep "$(cat "$S/scan-delay")"; fi
@@ -135,6 +140,13 @@ enum FakeTools {
         kind="${2:-}"; name="${3:-}"
         sim_delay
         fail_if_needed "$name"
+        # Homebrew 6+: packages of third-party taps load only from trusted taps.
+        case "$name" in */*/*)
+          if [ -f "$S/brew-version" ] && [ "$(cut -d. -f1 < "$S/brew-version")" -ge 6 ]; then
+            t="$(echo "$name" | cut -d/ -f1-2 | sed 's#/#__#')"
+            [ -f "$S/brew/trusted/$t" ] || { echo "Error: Refusing to load untrusted tap $(echo "$name" | cut -d/ -f1-2)" >&2; exit 1; }
+          fi ;;
+        esac
         if [ "$kind" = "--formula" ]; then
           case "$name" in python@*)
             minor="${name#python@}"
