@@ -126,11 +126,12 @@ def run(command, timeout):
     env = dict(os.environ, MACREPLICA_CLT_TESTING=os.environ.get("MACREPLICA_CLT_TESTING", "1"), TMPDIR=str(MUTATION_TMP) + "/")
     # Own process group, so that a mutant that hangs is stopped together with the test helper
     # processes `swift test` starts (killing only `swift test` would leave them running).
-    process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
+    process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env,
                                start_new_session=True)
     try:
         output, _ = process.communicate(timeout=timeout)
-        return process.returncode, output
+        # Decoded leniently: a mutant can print anything, including bytes that are not valid UTF-8.
+        return process.returncode, output.decode("utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         os.killpg(process.pid, signal.SIGKILL)
         process.communicate()

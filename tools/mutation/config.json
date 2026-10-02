@@ -183,7 +183,8 @@
       "tests": [
         "ToolchainSecurityTests",
         "ToolchainScannerTests",
-        "ToolchainDetailTests"
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests"
       ],
       "area": "Toolchain validation and command policy"
     },
@@ -192,7 +193,8 @@
       "tests": [
         "ToolchainScannerTests",
         "DeveloperEnvironmentTests",
-        "ToolchainDetailTests"
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests"
       ],
       "area": "Node.js environments"
     },
@@ -202,7 +204,8 @@
         "ToolchainScannerTests",
         "SmallParserTests",
         "DeveloperEnvironmentTests",
-        "ToolchainDetailTests"
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests"
       ],
       "area": "Python tools (pyenv, uv, pipx, Conda)"
     },
@@ -212,7 +215,8 @@
         "ToolchainScannerTests",
         "SmallParserTests",
         "DeveloperEnvironmentTests",
-        "ToolchainDetailTests"
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests"
       ],
       "area": "Ruby, Rust, Go, Java, .NET"
     },
@@ -221,7 +225,8 @@
       "tests": [
         "ToolchainScannerTests",
         "DeveloperEnvironmentTests",
-        "ToolchainDetailTests"
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests"
       ],
       "area": "Package managers (MacPorts, Nix, Pixi, mise, asdf)"
     },
@@ -229,7 +234,8 @@
       "file": "Support/MiniTOML.swift",
       "tests": [
         "SmallParserTests",
-        "ToolchainScannerTests"
+        "ToolchainScannerTests",
+        "ToolchainEdgeTests"
       ],
       "area": "TOML reader"
     },
@@ -237,14 +243,16 @@
       "file": "Distribution/DistributionChannel.swift",
       "tests": [
         "ChannelTests",
-        "DeveloperEnvironmentTests"
+        "DeveloperEnvironmentTests",
+        "ToolchainEdgeTests"
       ],
       "area": "Distribution channels"
     },
     {
       "file": "Downloads/DownloadSourceFinder.swift",
       "tests": [
-        "DownloadSourceTests"
+        "DownloadSourceTests",
+        "DownloadEdgeTests"
       ],
       "area": "Download source selection"
     },
@@ -252,7 +260,8 @@
       "file": "Downloads/DownloadQueue.swift",
       "tests": [
         "DownloadQueueTests",
-        "GuidedInstallationTests"
+        "GuidedInstallationTests",
+        "DownloadEdgeTests"
       ],
       "area": "Download queue"
     },
@@ -260,14 +269,16 @@
       "file": "Downloads/DownloadInstaller.swift",
       "tests": [
         "DownloadInstallerTests",
-        "GuidedInstallationTests"
+        "GuidedInstallationTests",
+        "DownloadEdgeTests"
       ],
       "area": "Download verification"
     },
     {
       "file": "Downloads/GuidedInstallation.swift",
       "tests": [
-        "GuidedInstallationTests"
+        "GuidedInstallationTests",
+        "DownloadEdgeTests"
       ],
       "area": "Manual installation, cancellation"
     },
@@ -276,7 +287,8 @@
       "tests": [
         "DeveloperEnvironmentTests",
         "RestoreExecutionTests",
-        "FailureModeTests"
+        "FailureModeTests",
+        "RecoveryRestoreEdgeTests"
       ],
       "area": "Environment recovery, resume"
     }
@@ -331,6 +343,41 @@
       "file": "Downloads/DownloadInstaller.swift",
       "pattern": "log\\?*\\.(info|warning|error)",
       "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "http.statusCode == 200|willPerformHTTPRedirection|task.originalRequest",
+      "reason": "URLSessionFetcher talks to real servers; tests use LocalFetcher."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "task.originalRequest|NSURLErrorCancelled|totalBytesExpectedToWrite|statusCode != 200",
+      "reason": "URLSessionDownloadTransport needs a real server; tests use LocalDownloadTransport."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "if offset == 0 \\|\\|",
+      "reason": "Test-only local transport."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "withIntermediateDirectories: true",
+      "reason": "The parent folder always exists here (equivalent mutant)."
+    },
+    {
+      "file": "Toolchains/ToolchainProvider.swift",
+      "pattern": "data.count < 5_000_000",
+      "reason": "Size guard against huge metadata files; boundary not meaningful."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "data.count <= maxBytes",
+      "reason": "Size guard; boundary not meaningful."
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "pattern": "if await queue.state\\(item.id\\) == nil",
+      "reason": "Enqueueing again restarts an equivalent download (equivalent mutant)."
     }
   ]
 }
