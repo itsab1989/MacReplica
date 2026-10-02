@@ -41,4 +41,4 @@ advisory is published and you are credited if you wish.
 - Never commit certificates, private keys, provisioning profiles or `.env` files (`.gitignore`
   blocks the common ones; CI runs a secret scan).
 - Signing and notarization credentials live only in GitHub Actions secrets (see
-  [docs/BUILDING.md](docs/BUILDING.md)).
+  [BUILD.md](BUILD.md)).

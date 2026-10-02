@@ -66,5 +66,12 @@ files temporarily.
 
 ## Continuous integration
 
-`.github/workflows/tests.yml` runs the full suite, builds the universal app and the disk image, and
-runs a secret scan on every push and pull request; a sampled mutation test runs weekly.
+`.github/workflows/tests.yml` runs on every push and pull request: the full suite on Apple silicon
+(macOS 15) and natively on Intel (macOS 15), the universal app and disk image build with a checksum
+check and a launch test, and a secret scan (gitleaks over the full history). A sampled mutation test
+runs weekly. The release workflow additionally installs and launches the release disk image on
+macOS 14, 15 and 26 and on Intel before publishing ([RELEASE_PROCESS.md](RELEASE_PROCESS.md)).
+
+The Command Line Tools ship Swift Testing for arm64 only, so on an Apple silicon Mac the suite cannot
+be built for x86_64 locally; the Intel app can still be launched under Rosetta with
+`SMOKE_ARCH=x86_64 scripts/smoke-test.sh build/MacReplica.app`.

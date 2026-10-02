@@ -19,12 +19,14 @@ struct SecurityTests {
         }
     }
 
-    @Test func liveAllowlistContainsNoShells() {
-        let allowed = SystemLayout.live().allowedExecutables
+    @Test(arguments: [CPUArchitecture.arm64, .x86_64])
+    func liveAllowlistContainsNoShells(_ architecture: CPUArchitecture) {
+        let allowed = SystemLayout.live(architecture: architecture).allowedExecutables
         for shell in ["/bin/sh", "/bin/bash", "/bin/zsh", "/usr/bin/env", "/usr/bin/curl", "/bin/rm"] {
             #expect(!allowed.contains(shell))
         }
-        #expect(allowed.contains("/opt/homebrew/bin/brew"))
+        // Apple silicon Macs may have Homebrew in either location (Rosetta installs); Intel Macs only in /usr/local.
+        #expect(allowed.contains("/opt/homebrew/bin/brew") == (architecture == .arm64))
         #expect(allowed.contains("/usr/local/bin/brew"))
     }
 

@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- Release pipeline: every release is built, installed and launched on macOS 14, 15 and 26 (Apple
+  silicon) and macOS 15 (Intel) before it is published; release notes include download, checksum,
+  first-launch and compatibility information.
+- The full test suite also runs natively on Intel in CI.
+- Documentation: build guide, release process, troubleshooting, testing guide, code of conduct,
+  issue forms and screenshots of the current app.
+
 ## [1.0.0] - 2026-10-02
 
 First public release.

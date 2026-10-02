@@ -48,7 +48,7 @@ MacReplica is a native macOS app. You do not need the Terminal.
 - [What MacReplica can preserve](#what-macreplica-can-preserve)
 - [How it works](#how-it-works)
 - [Screenshots](#screenshots)
-- [Installation](#installation)
+- [Installation](#installation) · [Requirements and compatibility](#requirements-and-compatibility)
 - [Using MacReplica](#using-macreplica)
 - [Details](#details): apps · app data · Python · fonts and ICC profiles · dry run and resume
 - [Permissions, security and privacy](#permissions-security-and-privacy)
@@ -111,8 +111,10 @@ All screenshots show the real app with synthetic test data.
 |:---:|:---:|
 | <img src="docs/images/macreplica-backup-saved.png" alt="Backup saved and checked, with size, location and transfer instructions" width="420"> | <img src="docs/images/macreplica-conflicts.png" alt="Dialog asking how to handle files that already exist" width="420"> |
 | Backup saved and checked | Items that need a decision |
-| <img src="docs/images/macreplica-start-dark.png" alt="Start screen in dark mode" width="420"> | <img src="docs/images/macreplica-about.png" alt="About window with version, Ko-fi and GitHub links" width="300"> |
-| Dark mode | About MacReplica |
+| <img src="docs/images/macreplica-start-dark.png" alt="Start screen in dark mode" width="420"> | <img src="docs/images/macreplica-languages.png" alt="Language menu with seven languages" width="420"> |
+| Dark mode | Seven languages, switchable in the app |
+| <img src="docs/images/macreplica-settings.png" alt="Settings with language, logs, update options and support link" width="380"> | <img src="docs/images/macreplica-about.png" alt="About window with version, Ko-fi and GitHub links" width="300"> |
+| Settings | About MacReplica |
 
 </details>
 
@@ -124,14 +126,34 @@ All screenshots show the real app with synthetic test data.
 2. Open the disk image and drag **MacReplica** into **Applications**.
 3. Open MacReplica from Applications.
 
-**First launch:** releases are currently not signed with an Apple Developer ID or notarized, so
-macOS blocks the first launch. Open **System Settings → Privacy & Security**, scroll to the message
-about MacReplica and click **Open Anyway**, then confirm. On macOS 13 and 14 you can instead
-Control-click the app in Applications and choose **Open**. This is needed only once.
+**First launch.** MacReplica is not signed with an Apple Developer ID and not notarized (the project
+has no paid Apple Developer membership), so macOS blocks the first launch. To allow it:
 
-**Requirements:** macOS 13 Ventura or later. The app is a universal binary for Apple silicon and
-Intel Macs. It is developed and tested on Apple silicon with a current macOS release; the Intel
-version is built but has not been tested on an Intel Mac yet.
+1. Try to open MacReplica once and close the message.
+2. Open **Apple menu → System Settings → Privacy & Security**.
+3. In **Security**, next to the message about MacReplica, click **Open Anyway** (shown for about an
+   hour after the attempt), then enter your login password.
+
+macOS remembers this; later launches work normally. Control-click → **Open** no longer works for this
+since macOS 15. Details and sources: [Troubleshooting](docs/TROUBLESHOOTING.md#macos-says-macreplica-cannot-be-opened).
+
+### Requirements and compatibility
+
+MacReplica requires **macOS 13 Ventura or later** (the deployment target; the compiler checks every
+API against it) and is one **universal app** for Apple silicon and Intel. What has actually been
+run:
+
+| macOS | Mac | What was tested |
+|---|---|---|
+| 27.0 | Apple silicon | developer's Mac: full test suite, all workflows in the real app with simulated Macs, release disk image downloaded with Safari, installed and launched; Intel slice launched and a full scan run under Rosetta |
+| 26.6 | Apple silicon | CI: release disk image verified, installed and launched |
+| 15.7 | Apple silicon | CI: full test suite; release disk image verified, installed and launched |
+| 15.7 | Intel | CI: full test suite natively on x86_64; release disk image verified, installed and launched |
+| 14.8 | Apple silicon | CI: release disk image verified, installed and launched |
+| 13 | — | not tested (no test machine available); supported by the deployment target |
+
+“Launched” means the app started completely (`scripts/smoke-test.sh`). Restoring onto a real
+(non-simulated) Mac is done by users; please report problems on your macOS version.
 
 **Updating:** *MacReplica → Check for Updates …* compares your version with the latest GitHub
 release and opens the release page if there is a newer one. You can also let MacReplica check once a
@@ -299,7 +321,7 @@ contents). If MacReplica did not start completely the last time, it starts in a 
 | A backup is reported as damaged or incomplete | Copy the whole folder again from the old Mac; **Check Backup** shows which files are affected. |
 | The update check cannot reach GitHub | Check the connection; nothing else depends on it. |
 
-More in the [user guide](docs/USER_GUIDE.md#troubleshooting).
+More in [Troubleshooting](docs/TROUBLESHOOTING.md).
 
 ## Known limitations
 
@@ -319,7 +341,9 @@ More in the [user guide](docs/USER_GUIDE.md#troubleshooting).
 - **Other package managers** (MacPorts, Nix, npm global packages, …) are not supported.
 - Fonts in apps that are already running appear after the app is reopened.
 - Printer-driver colour profiles come back by reinstalling the printer driver.
-- Releases are not yet signed with a Developer ID or notarized (see [Installation](#installation)).
+- Releases are not signed with a Developer ID or notarized (see [Installation](#installation)).
+- macOS 13 has not been tested yet. The Intel version was tested on GitHub's hosted Intel runner and
+  under Rosetta, not on an Intel Mac at home.
 - No application-data provider has been verified by restoring into a real installation yet; all are
   tested with synthetic data that mirrors the documented layouts ([details](docs/PROVIDERS.md)).
 
@@ -338,8 +362,9 @@ scripts/make-dmg.sh build        # → build/MacReplica-<version>.dmg
 open build/MacReplica.app
 ```
 
-Signing, notarization and releasing are described in [docs/BUILDING.md](docs/BUILDING.md); the
-code structure in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Details, options and output locations: [BUILD.md](BUILD.md). Releases are built, validated and
+published by GitHub Actions — see [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md). Code structure:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Testing
 
@@ -361,7 +386,8 @@ of 712 mutants, with every module at or above its threshold. How to run it and t
 ## Contributing
 
 Bug reports, app support requests and pull requests are welcome — please read
-[CONTRIBUTING.md](CONTRIBUTING.md) first. New app-data providers must come with tests and must only
+[CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) first. Questions and
+ideas: [Discussions](https://github.com/itsab1989/MacReplica/discussions). New app-data providers must come with tests and must only
 copy documented, user-created data. Security problems: please report them privately as described in
 [SECURITY.md](SECURITY.md).
 
