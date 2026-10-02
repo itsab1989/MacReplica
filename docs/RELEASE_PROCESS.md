@@ -32,7 +32,7 @@ Release notes consist of the changelog section for the version plus download, ch
 first-launch, compatibility and support (Ko-fi) information. Tags with a suffix (`v1.1.0-beta.1`)
 become pre-releases, which the in-app update check only offers when the user enabled pre-releases.
 
-Mutation testing is not part of the release run (a full run takes hours); a sampled run happens weekly
+Mutation testing is not part of the release run (a full run takes hours); a sampled, report-only run happens weekly
 in `tests.yml`, and full runs are documented in [MUTATION_TESTING.md](MUTATION_TESTING.md).
 
 ## Artifact strategy: one universal disk image
