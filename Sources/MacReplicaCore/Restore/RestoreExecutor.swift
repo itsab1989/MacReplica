@@ -42,6 +42,8 @@ public struct RestoreEnvironment: Sendable {
     public var isApplicationRunning: @Sendable (String) -> Bool = { _ in false }
     /// Display profile access; nil uses the layout's (ColorSync, or the simulated one in a sandbox).
     public var displayColor: DisplayColorManaging?
+    /// macOS version of this Mac (compared with the minimum version of native code in saved environments).
+    public var macOSVersion: String = SystemInfo.macOSVersion
 
     public init(layout: SystemLayout, runner: CommandRunning, privileged: PrivilegedExecuting, homebrewSource: HomebrewPackageSource,
                 localizer: Localizer, log: LogStore, targetArchitecture: CPUArchitecture = SystemInfo.currentArchitecture,

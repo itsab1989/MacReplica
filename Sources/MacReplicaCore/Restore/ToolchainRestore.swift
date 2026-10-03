@@ -31,7 +31,13 @@ extension RestoreExecutor {
         // Python environments may be rebuilt with pyenv's or uv's exact interpreter, and uv projects with uv.
         let inspector = Inspector(environment: environment, backupRoot: backupRoot, selection: RestoreSelection(), damagedFiles: [])
         let environments = plan.items.compactMap(\.pythonEnvironment)
-        let interpreters = environments.flatMap { inspector.pythonInterpreters(for: $0, brewPrefix: nil) }
+        // Plus the environments' own Python (verification) and, for saved copies, their base interpreters.
+        let interpreters = environments.flatMap { environment -> [String] in
+            var paths = inspector.pythonInterpreters(for: environment, brewPrefix: nil)
+            if let target = inspector.pythonTarget(environment) { paths.append(target.appendingPathComponent("bin/python").path) }
+            if environment.preservation != nil { paths += inspector.baseInterpreters(for: environment) }
+            return paths
+        }
         if environments.contains(where: { $0.manager == .uv }) { actions.append(ToolchainAction(provider: .uv, kind: .package)) }
         guard !actions.isEmpty || !interpreters.isEmpty else { return }
         let executables = ToolchainCatalog.executables(for: actions, context: toolchainContext).union(interpreters)

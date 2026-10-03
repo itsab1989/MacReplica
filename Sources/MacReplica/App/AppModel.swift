@@ -61,6 +61,8 @@ final class AppModel: ObservableObject {
     /// Python environments the user wants in the backup.
     @Published var selectedPythonEnvironments = Set<String>()
     @Published var includePythonSettings = true
+    /// Environments of which a complete copy goes into the backup as well (off by default).
+    @Published var preservedPythonEnvironments = Set<String>()
     @Published var pythonSearchFolders: [URL] = []
     @Published var addingApplicationData = false
     @Published var notice: ProblemInfo?
@@ -262,6 +264,7 @@ final class AppModel: ObservableObject {
         excludedToolchains = []
         excludedApplications = []
         includeDisplayAssignments = true
+        preservedPythonEnvironments = []
         resetGuided()
         manifest = nil
         backupURL = nil
@@ -440,7 +443,20 @@ final class AppModel: ObservableObject {
         log.info("Inventory: \(inventory.manifest.applications.count) applications, \(inventory.fonts.count) fonts, \(inventory.colorProfiles.count) ICC profiles, \(inventory.manifest.python.environments.count) Python environments, \(inventory.manifest.applicationData.count) data folders", component: .inventory)
         for warning in inventory.warnings { log.warning("Inventory warning: \(warning)", component: .inventory) }
         let model = self
+        let preserved = selectedPythonEnvironments.intersection(preservedPythonEnvironments)
+        let layout = services.layout
+        let runner = services.runner
         task = Task.detached { [weak self] in
+            var inventory = inventory
+            // Saved copies of environments are packed in MacReplica's own work folder and removed afterwards.
+            let work = layout.caches.appendingPathComponent("Work/python-\(UUID().uuidString)")
+            if !preserved.isEmpty {
+                try? FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+                try? OwnershipMarker(kind: .temporary).write(into: work)
+                await inventory.preservePythonEnvironments(preserved, layout: layout, runner: runner, workFolder: work)
+                log.info("Saved copies of \(preserved.count) Python environments prepared", component: .python)
+            }
+            defer { if !preserved.isEmpty { try? SafeCleaner(homeDirectory: layout.homeDirectory).removeOwnedFolder(work, kind: .temporary) } }
             do {
                 let outcome = try writer.write(inventory, into: parent, log: log, credentials: credentials) { progress in
                     Task { @MainActor in model.backupProgress = progress.fraction }

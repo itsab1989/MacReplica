@@ -990,3 +990,21 @@
 "restore.select.otherMac" = "Denne sikkerhetskopien ble laget på en annen Mac";
 "restore.select.unknownMac" = "Tilordninger av skjermprofiler";
 "restore.select.displayHint" = "Skjermprofiler tilordnes bare de samme skjermene igjen. Profiler for den gamle Macens innebygde skjerm brukes bare hvis dette er samme Mac.";
+
+/* Python saved copies */
+"note.pythonEnvironmentPreserved" = "Den lagrede kopien av miljøet ble gjenopprettet og kontrollert ved å kjøre det";
+"note.pythonPreservationNotUsed" = "Den lagrede kopien ble ikke brukt (%1$@); miljøet ble i stedet bygget opp igjen fra pakkene";
+"preservation.differentHomeFolder" = "annen hjemmemappe";
+"preservation.incompatibleArchitecture" = "egen kode for en annen prosessor";
+"preservation.requiresNewerMacOS" = "krever nyere macOS";
+"preservation.baseInterpreterMissing" = "Python-installasjonen finnes ikke på denne Macen ennå";
+"preservation.archiveDamaged" = "den lagrede kopien er skadet";
+"preservation.extractionFailed" = "den kunne ikke pakkes ut";
+"preservation.verificationFailed" = "den besto ikke kontrollen";
+
+/* Python strategies */
+"python.keepCopy" = "Behold også en fullstendig kopi av dette miljøet";
+"python.keepCopy.hint" = "For ny installasjon av macOS på denne Macen med samme bruker: Kopien kan komme tilbake uendret hvis samme Python-installasjon finnes; MacReplica kontrollerer den ved å kjøre den og bygger ellers miljøet på nytt. Gjør sikkerhetskopien større.";
+"items.pythonStrategy" = "Gjenopprett";
+"items.pythonStrategy.rebuild" = "Bygg opp fra pakker (anbefalt)";
+"items.pythonStrategy.preserve" = "Lagret kopi – kontrollert, bygges på nytt hvis den ikke passer";

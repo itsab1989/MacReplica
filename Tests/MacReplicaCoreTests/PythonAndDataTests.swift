@@ -191,6 +191,9 @@ struct PythonTests {
             try Data("version = 3.12.2\n".utf8).write(to: env.appendingPathComponent("pyvenv.cfg"))
             try Data("Name: requests\nVersion: 2.32.3\n".utf8)
                 .write(to: env.appendingPathComponent("lib/python3.12/site-packages/requests-2.32.3.dist-info/METADATA"))
+            // Like every real environment, it has its own working interpreter.
+            try FileManager.default.createDirectory(at: env.appendingPathComponent("bin"), withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: fresh.url.appendingPathComponent("tools/python"), to: env.appendingPathComponent("bin/python"))
             // A different Python version where the second environment belongs.
             let other = fresh.url.appendingPathComponent("home/.virtualenvs/tools")
             try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)

@@ -346,6 +346,10 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case pythonEnvironmentReused
     /// The environment was rebuilt exactly from the project's lock file.
     case pythonLockFileUsed(file: String)
+    /// The saved copy of the environment was restored and verified by running it.
+    case pythonEnvironmentPreserved
+    /// The saved copy could not be used; the environment was rebuilt from its packages instead.
+    case pythonPreservationNotUsed(reason: PythonPreservationProblem)
     case pythonSettingsToApply(count: Int)
     case applicationDataCopied(copied: Int, identical: Int, kept: Int)
     /// Data was restored into the folder of a different app version than the one installed.

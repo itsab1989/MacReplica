@@ -75,6 +75,26 @@ public struct InventoryResult: Sendable {
         if !includeSettings { manifest.python.settings = [] }
     }
 
+    /// Adds a saved copy of the chosen environments to the backup (archives created in `workFolder`).
+    /// Environments that contain files that look like credentials are not copied; that is recorded.
+    public mutating func preservePythonEnvironments(_ ids: Set<String>, layout: SystemLayout, runner: CommandRunning, workFolder: URL) async {
+        guard !ids.isEmpty else { return }
+        let keys = manifest.hardwareKeys ?? HardwareKeys.make(platformIdentifier: nil)
+        manifest.hardwareKeys = keys
+        for index in manifest.python.environments.indices where ids.contains(manifest.python.environments[index].id) {
+            let environment = manifest.python.environments[index]
+            switch (try? await PythonPreserver.preserve(environment, layout: layout, runner: runner, workFolder: workFolder, keys: keys)) {
+            case .preserved(let file, let preservation)?:
+                extraFiles.append(file)
+                manifest.python.environments[index].preservation = preservation
+            case .refused(let issue)?:
+                manifest.backupIssues.append(issue)
+            case nil:
+                manifest.backupIssues.append(BackupIssue(path: environment.path, reason: .unreadable))
+            }
+        }
+    }
+
     /// Keeps only the chosen package and version managers (by provider).
     public mutating func keepToolchains(_ providers: Set<ToolchainProviderID>) {
         manifest.toolchains.removeAll { !providers.contains($0.provider) }

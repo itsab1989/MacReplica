@@ -193,6 +193,8 @@ extension Localizer {
         case .pythonPackagesUpdated(let count): return p("note.pythonPackagesUpdated", count)
         case .pythonEnvironmentReused: return t("note.pythonEnvironmentReused")
         case .pythonLockFileUsed(let file): return t("note.pythonLockFileUsed", file)
+        case .pythonEnvironmentPreserved: return t("note.pythonEnvironmentPreserved")
+        case .pythonPreservationNotUsed(let reason): return t("note.pythonPreservationNotUsed", t("preservation.\(reason.rawValue)"))
         case .pythonSettingsToApply(let count): return p("note.pythonSettings", count)
         case .applicationDataCopied(let copied, let identical, let kept): return t("note.applicationData", copied, identical, kept)
         case .applicationVersionDiffers(let original): return t("note.applicationVersionDiffers", original)

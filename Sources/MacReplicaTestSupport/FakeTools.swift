@@ -373,12 +373,37 @@ enum FakeTools {
     self="$0"
     minor="$(basename "$self" | sed 's/^python//')"
     full="$(cat "$S/python-full-version" 2>/dev/null || echo "$minor.7")"
+    here="$(cd "$(dirname "$self")/.." && pwd)"
+    prefix="$here"
+    # Inside a virtual environment: its own version and prefix.
+    if [ -f "$here/pyvenv.cfg" ]; then
+      full="$(sed -n 's/^version = //p' "$here/pyvenv.cfg" | head -n 1)"
+      [ -n "$full" ] || full="$(sed -n 's/^version_info = //p' "$here/pyvenv.cfg" | head -n 1)"
+      minor="$(echo "$full" | cut -d. -f1-2)"
+    fi
+    # The environment probe (see PythonPreserver.probeScript), answered from the package metadata.
+    for a in "$@"; do case "$a" in *MACREPLICA_PROBE*)
+      [ -f "$S/python/probe-broken" ] && { echo "dyld: Library not loaded" >&2; exit 1; }
+      names="${!#}"
+      dists=""; for d in "$prefix"/lib/python"$minor"/site-packages/*.dist-info; do
+        [ -d "$d" ] || continue
+        n="$(sed -n 's/^Name: //p' "$d/METADATA" 2>/dev/null | head -n 1 | tr '[:upper:]' '[:lower:]' | sed -E 's/[-_.]+/-/g')"
+        v="$(sed -n 's/^Version: //p' "$d/METADATA" 2>/dev/null | head -n 1)"
+        [ -n "$n" ] && dists="$dists${dists:+,}\"$n\":\"$v\""
+      done
+      failed=""; for m in $(echo "$names" | tr -d '[]"' | tr ',' ' '); do
+        [ -f "$S/python/import-fails/$m" ] && failed="$failed${failed:+,}\"$m\""
+      done
+      machine="$(cat "$S/python/machine" 2>/dev/null || echo arm64)"
+      printf '{"version": "%s", "prefix": "%s", "machine": "%s", "dists": {%s}, "failed": [%s]}\n' "$full" "$prefix" "$machine" "$dists" "$failed"
+      exit 0 ;;
+    esac; done
     if [ "${1:-}" = "-m" ] && [ "${2:-}" = "venv" ]; then
       env="${3:?}"
       sim_delay
       mkdir -p "$env/bin" "$env/lib/python$minor/site-packages"
       printf 'home = %s\ninclude-system-site-packages = false\nversion = %s\n' "$(dirname "$self")" "$full" > "$env/pyvenv.cfg"
-      printf 'simulated' > "$env/bin/python"
+      cp "$ROOT/tools/python" "$env/bin/python"; chmod 755 "$env/bin/python"
       for p in pip:24.2 setuptools:75.1.0; do
         n="${p%%:*}"; v="${p##*:}"
         mkdir -p "$env/lib/python$minor/site-packages/$n-$v.dist-info"

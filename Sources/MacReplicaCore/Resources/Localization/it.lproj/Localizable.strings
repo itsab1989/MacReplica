@@ -990,3 +990,21 @@
 "restore.select.otherMac" = "Questo backup è stato creato su un altro Mac";
 "restore.select.unknownMac" = "Assegnazioni dei profili del monitor";
 "restore.select.displayHint" = "I profili dei monitor vengono riassegnati solo agli stessi monitor. I profili del monitor integrato del vecchio Mac vengono usati solo se si tratta dello stesso Mac.";
+
+/* Python saved copies */
+"note.pythonEnvironmentPreserved" = "La copia salvata dell’ambiente è stata ripristinata e verificata eseguendolo";
+"note.pythonPreservationNotUsed" = "La copia salvata non è stata usata (%1$@); l’ambiente è stato ricostruito dai suoi pacchetti";
+"preservation.differentHomeFolder" = "cartella Inizio diversa";
+"preservation.incompatibleArchitecture" = "codice nativo per un altro processore";
+"preservation.requiresNewerMacOS" = "richiede un macOS più recente";
+"preservation.baseInterpreterMissing" = "la sua installazione di Python non è ancora su questo Mac";
+"preservation.archiveDamaged" = "la copia salvata è danneggiata";
+"preservation.extractionFailed" = "non è stato possibile estrarla";
+"preservation.verificationFailed" = "non ha superato la verifica";
+
+/* Python strategies */
+"python.keepCopy" = "Conserva anche una copia completa di questo ambiente";
+"python.keepCopy.hint" = "Per reinstallare macOS su questo Mac con lo stesso utente: la copia può tornare invariata se è presente la stessa installazione di Python; MacReplica la verifica eseguendola e altrimenti ricostruisce l’ambiente. Rende il backup più grande.";
+"items.pythonStrategy" = "Ripristina";
+"items.pythonStrategy.rebuild" = "Ricostruisci dai pacchetti (consigliato)";
+"items.pythonStrategy.preserve" = "Copia salvata – verificata, altrimenti ricostruita";

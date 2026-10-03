@@ -122,6 +122,8 @@ public struct PythonEnvironment: Codable, Equatable, Hashable, Sendable, Identif
     public var requirementsPath: String
     /// Dependency files found in the project, copied into the backup for reference.
     public var projectFiles: [FileRecord]
+    /// A copy of the whole environment, when the user chose to keep one (see `PythonPreservation`).
+    public var preservation: PythonPreservation?
 
     public init(id: String, name: String, path: String, manager: EnvironmentManager, pythonVersion: String, baseInterpreter: String?,
                 baseSource: PythonSource, architectures: [CPUArchitecture] = [], packages: [PythonPackage] = [], pipVersion: String? = nil,

@@ -990,3 +990,21 @@
 "restore.select.otherMac" = "Deze reservekopie is op een andere Mac gemaakt";
 "restore.select.unknownMac" = "Toewijzingen van beeldschermprofielen";
 "restore.select.displayHint" = "Beeldschermprofielen worden alleen opnieuw toegewezen aan dezelfde beeldschermen. Profielen van het ingebouwde beeldscherm van de oude Mac worden alleen gebruikt als dit dezelfde Mac is.";
+
+/* Python saved copies */
+"note.pythonEnvironmentPreserved" = "De bewaarde kopie van de omgeving is hersteld en gecontroleerd door hem uit te voeren";
+"note.pythonPreservationNotUsed" = "De bewaarde kopie is niet gebruikt (%1$@); de omgeving is in plaats daarvan opnieuw opgebouwd uit de pakketten";
+"preservation.differentHomeFolder" = "andere thuismap";
+"preservation.incompatibleArchitecture" = "native code voor een andere processor";
+"preservation.requiresNewerMacOS" = "vereist een nieuwere macOS";
+"preservation.baseInterpreterMissing" = "de bijbehorende Python-installatie staat nog niet op deze Mac";
+"preservation.archiveDamaged" = "de bewaarde kopie is beschadigd";
+"preservation.extractionFailed" = "hij kon niet worden uitgepakt";
+"preservation.verificationFailed" = "hij doorstond de controle niet";
+
+/* Python strategies */
+"python.keepCopy" = "Ook een volledige kopie van deze omgeving bewaren";
+"python.keepCopy.hint" = "Voor een herinstallatie van macOS op deze Mac met dezelfde gebruiker: de kopie kan ongewijzigd terugkomen als dezelfde Python-installatie aanwezig is; MacReplica controleert hem door hem uit te voeren en bouwt de omgeving anders opnieuw op. Maakt de reservekopie groter.";
+"items.pythonStrategy" = "Herstellen";
+"items.pythonStrategy.rebuild" = "Opnieuw opbouwen uit pakketten (aanbevolen)";
+"items.pythonStrategy.preserve" = "Bewaarde kopie – gecontroleerd, anders opnieuw opgebouwd";

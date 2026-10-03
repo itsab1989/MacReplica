@@ -990,3 +990,21 @@
 "restore.select.otherMac" = "Diese Sicherung wurde auf einem anderen Mac erstellt";
 "restore.select.unknownMac" = "Zuordnungen von Bildschirmprofilen";
 "restore.select.displayHint" = "Bildschirmprofile werden nur denselben Bildschirmen wieder zugewiesen. Profile des eingebauten Bildschirms des alten Macs werden nur verwendet, wenn es derselbe Mac ist.";
+
+/* Python saved copies */
+"note.pythonEnvironmentPreserved" = "Die gesicherte Kopie der Umgebung wurde wiederhergestellt und durch Ausführen geprüft";
+"note.pythonPreservationNotUsed" = "Die gesicherte Kopie wurde nicht verwendet (%1$@); die Umgebung wurde stattdessen aus ihren Paketen neu aufgebaut";
+"preservation.differentHomeFolder" = "anderer Benutzerordner";
+"preservation.incompatibleArchitecture" = "nativer Code für einen anderen Prozessor";
+"preservation.requiresNewerMacOS" = "benötigt ein neueres macOS";
+"preservation.baseInterpreterMissing" = "die zugehörige Python-Installation fehlt auf diesem Mac";
+"preservation.archiveDamaged" = "die gesicherte Kopie ist beschädigt";
+"preservation.extractionFailed" = "sie konnte nicht entpackt werden";
+"preservation.verificationFailed" = "sie hat die Prüfung nicht bestanden";
+
+/* Python strategies */
+"python.keepCopy" = "Zusätzlich eine vollständige Kopie dieser Umgebung behalten";
+"python.keepCopy.hint" = "Für eine Neuinstallation von macOS auf diesem Mac mit demselben Benutzer: Die Kopie kann unverändert zurückkommen, wenn dieselbe Python-Installation vorhanden ist; MacReplica prüft sie durch Ausführen und baut die Umgebung sonst neu auf. Macht die Sicherung größer.";
+"items.pythonStrategy" = "Wiederherstellen";
+"items.pythonStrategy.rebuild" = "Aus Paketen neu aufbauen (empfohlen)";
+"items.pythonStrategy.preserve" = "Gesicherte Kopie – geprüft, sonst neu aufgebaut";

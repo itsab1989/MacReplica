@@ -990,3 +990,21 @@
 "restore.select.otherMac" = "Esta copia se hizo en otro Mac";
 "restore.select.unknownMac" = "Asignaciones de perfiles de pantalla";
 "restore.select.displayHint" = "Los perfiles de pantalla solo se vuelven a asignar a las mismas pantallas. Los perfiles de la pantalla integrada del Mac anterior solo se usan si es el mismo Mac.";
+
+/* Python saved copies */
+"note.pythonEnvironmentPreserved" = "La copia guardada del entorno se restauró y se comprobó ejecutándolo";
+"note.pythonPreservationNotUsed" = "No se usó la copia guardada (%1$@); el entorno se reconstruyó a partir de sus paquetes";
+"preservation.differentHomeFolder" = "carpeta de inicio distinta";
+"preservation.incompatibleArchitecture" = "código nativo para otro procesador";
+"preservation.requiresNewerMacOS" = "necesita un macOS más reciente";
+"preservation.baseInterpreterMissing" = "su instalación de Python aún no está en este Mac";
+"preservation.archiveDamaged" = "la copia guardada está dañada";
+"preservation.extractionFailed" = "no se pudo descomprimir";
+"preservation.verificationFailed" = "no superó la comprobación";
+
+/* Python strategies */
+"python.keepCopy" = "Guardar también una copia completa de este entorno";
+"python.keepCopy.hint" = "Para reinstalar macOS en este Mac con el mismo usuario: la copia puede volver sin cambios si está la misma instalación de Python; MacReplica la comprueba ejecutándola y, si no, reconstruye el entorno. Aumenta el tamaño de la copia.";
+"items.pythonStrategy" = "Restaurar";
+"items.pythonStrategy.rebuild" = "Reconstruir a partir de los paquetes (recomendado)";
+"items.pythonStrategy.preserve" = "Copia guardada: se comprueba y, si no encaja, se reconstruye";

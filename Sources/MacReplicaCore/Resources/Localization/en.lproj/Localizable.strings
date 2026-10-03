@@ -992,3 +992,21 @@
 "restore.select.otherMac" = "This backup was made on another Mac";
 "restore.select.unknownMac" = "Display profile assignments";
 "restore.select.displayHint" = "Display profiles are assigned again only to the same displays. Profiles of the old Mac's built-in display are only used when this is the same Mac.";
+
+/* Python saved copies */
+"note.pythonEnvironmentPreserved" = "The saved copy of the environment was restored and checked by running it";
+"note.pythonPreservationNotUsed" = "The saved copy was not used (%1$@); the environment was rebuilt from its packages instead";
+"preservation.differentHomeFolder" = "different home folder";
+"preservation.incompatibleArchitecture" = "native code for another processor";
+"preservation.requiresNewerMacOS" = "needs a newer macOS";
+"preservation.baseInterpreterMissing" = "its Python installation is not on this Mac yet";
+"preservation.archiveDamaged" = "the saved copy is damaged";
+"preservation.extractionFailed" = "it could not be unpacked";
+"preservation.verificationFailed" = "it did not pass the check";
+
+/* Python strategies */
+"python.keepCopy" = "Also keep a complete copy of this environment";
+"python.keepCopy.hint" = "For reinstalling macOS on this Mac with the same user: the copy can come back unchanged if the same Python installation is there; MacReplica checks it by running it and otherwise rebuilds the environment. Makes the backup larger.";
+"items.pythonStrategy" = "Restore";
+"items.pythonStrategy.rebuild" = "Rebuild from packages (recommended)";
+"items.pythonStrategy.preserve" = "Saved copy – checked, rebuilt if it does not fit";

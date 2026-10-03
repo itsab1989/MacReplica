@@ -16,6 +16,13 @@ extension Inspector {
 
     /// Interpreters that can rebuild the environment, best first: exactly the recorded version from
     /// pyenv or uv, then Homebrew's Python of the same minor version.
+    /// The base interpreter a saved copy links to (`pyvenv.cfg` `home`), as executables to check.
+    func baseInterpreters(for environment: PythonEnvironment) -> [String] {
+        guard let home = environment.baseInterpreter else { return [] }
+        let folder = layout.resolve(displayPath: home)
+        return ["python\(environment.minorVersion)", "python3", "python"].map { folder.appendingPathComponent($0).path }
+    }
+
     func pythonInterpreters(for environment: PythonEnvironment, brewPrefix: URL?) -> [String] {
         let minor = environment.minorVersion
         var candidates: [String] = []
@@ -122,7 +129,94 @@ extension RestoreExecutor {
                 timeout: timeout)
     }
 
+    /// Restores an environment: from its saved copy when the user chose that and it fits this Mac (verified by
+    /// running it), otherwise — and as fallback — by rebuilding it from the recorded packages.
     func restorePythonEnvironment(_ item: RestoreItem, inspector: Inspector, brew: HomebrewInstallation?, context: RunContext,
+                                  onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
+        guard let environment = item.pythonEnvironment, let target = inspector.pythonTarget(environment) else {
+            return try await rebuildPythonEnvironment(item, inspector: inspector, brew: brew, context: context, onEvent: onEvent)
+        }
+        var fallback: ResultNote?
+        if inspector.selection.sourceChoices[item.id] == "preserve", let preservation = environment.preservation,
+           !FileManager.default.fileExists(atPath: target.path) {
+            switch try await restorePreservedCopy(item, environment: environment, preservation: preservation, target: target,
+                                                  inspector: inspector, context: context, onEvent: onEvent) {
+            case .restored(let result): return result
+            case .notUsed(let problem):
+                log.warning("\(item.id): saved copy not used (\(problem.rawValue)); rebuilding from the package list", component: .python)
+                fallback = .pythonPreservationNotUsed(reason: problem)
+            }
+        }
+        var result = try await rebuildPythonEnvironment(item, inspector: inspector, brew: brew, context: context, onEvent: onEvent)
+        if let fallback { result.notes.insert(fallback, at: 0) }
+        return result
+    }
+
+    enum PreservedOutcome { case restored(ItemResult), notUsed(PythonPreservationProblem) }
+
+    /// The saved copy is only used for the same home folder, an existing base interpreter, a compatible
+    /// architecture and macOS, and an intact archive. After unpacking, the environment's own Python must
+    /// report the expected version, location and packages and import them; otherwise the copy is removed.
+    func restorePreservedCopy(_ item: RestoreItem, environment: PythonEnvironment, preservation: PythonPreservation, target: URL,
+                              inspector: Inspector, context: RunContext,
+                              onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> PreservedOutcome {
+        let fm = FileManager.default
+        guard let keys = item.hardwareKeys, keys.key(for: layout.homeDirectory.standardizedFileURL.path) == preservation.homeKey else {
+            return .notUsed(.differentHomeFolder)
+        }
+        if !preservation.nativeArchitectures.isEmpty, !preservation.nativeArchitectures.contains(self.environment.targetArchitecture) {
+            return .notUsed(.incompatibleArchitecture)
+        }
+        if let minimum = preservation.minimumMacOS, VersionComparison.compare(self.environment.macOSVersion, minimum) == .orderedAscending {
+            return .notUsed(.requiresNewerMacOS)
+        }
+        guard inspector.baseInterpreters(for: environment).contains(where: { fm.isExecutableFile(atPath: $0) }) else {
+            return .notUsed(.baseInterpreterMissing)
+        }
+        guard let archive = PathSafety.resolve(preservation.archivePath, inside: backupRoot), !inspector.damagedFiles.contains(preservation.archivePath),
+              (try? Hashing.sha256Hex(ofFile: archive)) == preservation.sha256 else { return .notUsed(.archiveDamaged) }
+        let parent = target.deletingLastPathComponent()
+        guard fm.fileExists(atPath: parent.path) || inspector.mayCreateParent(environment) else { return .notUsed(.extractionFailed) }
+        try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        let runner = context.toolchainRunner ?? self.environment.runner
+        onEvent(.activity(itemID: item.id, .copying))
+        let unpack = try await runner.run(Command(executable: layout.ditto, arguments: ["-x", "-k", archive.path, parent.path],
+                                                  environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 3600))
+        guard unpack.succeeded, fm.fileExists(atPath: target.appendingPathComponent("pyvenv.cfg").path) else {
+            removeUnpacked(target)
+            return .notUsed(.extractionFailed)
+        }
+        onEvent(.activity(itemID: item.id, .verifying))
+        let names = PythonPreserver.importNames(in: target, packages: environment.installablePackages)
+        let probe = try await runProbe(target: target, names: names, runner: runner)
+        guard let probe, PythonPreserver.verify(probe, environment: environment, target: target) else {
+            removeUnpacked(target)
+            return .notUsed(.verificationFailed)
+        }
+        log.info("\(item.id): saved copy restored and verified (Python \(probe.version), \(probe.dists.count) packages, \(names.count) imports)",
+                 component: .python)
+        var notes: [ResultNote] = [.pythonEnvironmentPreserved]
+        if !environment.manualPackages.isEmpty { notes.append(.pythonPackagesNeedManualSetup(names: environment.manualPackages.map(\.name).sorted())) }
+        return .restored(ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: probe.version, notes: notes))
+    }
+
+    /// Runs the probe with the environment's own Python.
+    func runProbe(target: URL, names: [String], runner: CommandRunning) async throws -> PythonPreserver.ProbeResult? {
+        let python = target.appendingPathComponent("bin/python").path
+        guard FileManager.default.isExecutableFile(atPath: python) else { return nil }
+        let arguments = try String(decoding: JSONEncoder().encode(names), as: UTF8.self)
+        let result = try await runner.run(Command(executable: python, arguments: ["-I", "-c", PythonPreserver.probeScript, arguments],
+                                                  environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 600))
+        guard result.succeeded else { return nil }
+        return PythonPreserver.parseProbe(result.stdout)
+    }
+
+    /// Removes an environment MacReplica unpacked in this step (the location was empty before).
+    private func removeUnpacked(_ target: URL) {
+        try? FileManager.default.removeItem(at: target)
+    }
+
+    func rebuildPythonEnvironment(_ item: RestoreItem, inspector: Inspector, brew: HomebrewInstallation?, context: RunContext,
                                   onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
         guard let environment = item.pythonEnvironment else { return failed(item, .unknown) }
         guard let target = inspector.pythonTarget(environment) else {
@@ -223,7 +317,14 @@ extension RestoreExecutor {
         if !environment.manualPackages.isEmpty {
             notes.append(.pythonPackagesNeedManualSetup(names: environment.manualPackages.map(\.name).sorted()))
         }
-        return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: inspector.existingMinorVersion(of: target), notes: notes)
+        // The rebuilt environment must also run: its own Python reports the expected version and location.
+        guard let probe = try await runProbe(target: target, names: [], runner: context.toolchainRunner ?? self.environment.runner),
+              PythonVersion.minor(probe.version) == environment.minorVersion,
+              URL(fileURLWithPath: probe.prefix).resolvingSymlinksInPath().path == target.resolvingSymlinksInPath().path else {
+            return ItemResult(itemID: item.id, outcome: .failed(RestoreFailure(category: .verificationFailed,
+                                                                              technicalDetail: "the environment's Python does not run as expected")), notes: notes)
+        }
+        return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: probe.version, notes: notes)
     }
 
     private func runPython(_ python: String, _ arguments: [String], timeout: TimeInterval, brew: HomebrewInstallation?,

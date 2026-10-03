@@ -376,6 +376,21 @@ struct RestoreItemRow: View {
                     .padding(.leading, 22)
                 }
             }
+            if item.kind == .pythonEnvironment, item.pythonEnvironment?.preservation != nil, !locked,
+               !model.selection.excludedItemIDs.contains(item.id) {
+                HStack {
+                    Text(l.t("items.pythonStrategy")).font(.caption).foregroundStyle(.secondary)
+                    Picker(l.t("items.pythonStrategy"), selection: Binding(get: { model.selection.sourceChoices[item.id] ?? "rebuild" },
+                                                                           set: { model.selection.sourceChoices[item.id] = $0 == "rebuild" ? nil : $0 })) {
+                        Text(l.t("items.pythonStrategy.rebuild")).tag("rebuild")
+                        Text(l.t("items.pythonStrategy.preserve")).tag("preserve")
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("item.pythonStrategy.\(item.id)")
+                }
+                .padding(.leading, 22)
+            }
             if item.kind == .formula, item.originalVersion?.hasPrefix("HEAD") == true, !locked,
                !model.selection.excludedItemIDs.contains(item.id) {
                 HStack {

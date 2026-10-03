@@ -247,10 +247,12 @@ public struct RestorePlanner: Sendable {
                     }
                     dependsOn = [runtimeID]
                 }
-                python.append(RestoreItem(
+                var item = RestoreItem(
                     id: "python:\(environment.id)", kind: .pythonEnvironment, title: environment.name, identifier: environment.path,
                     originalVersion: environment.pythonVersion, architectures: environment.architectures,
-                    dependsOn: dependsOn, component: .python, pythonEnvironment: environment))
+                    dependsOn: dependsOn, component: .python, pythonEnvironment: environment)
+                item.hardwareKeys = manifest.hardwareKeys
+                python.append(item)
             }
         }
         if components.contains(.developerSettings), manifest.developer.gitConfig != nil {

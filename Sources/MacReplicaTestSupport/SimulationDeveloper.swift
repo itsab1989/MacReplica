@@ -49,6 +49,19 @@ extension SimulationBuilder {
                  "==> 2026-01-02 00:00:00 <==\n# update specs: ['python=3.11', 'numpy', 'pandas']\n")
         try file("miniforge3/envs/datasci/conda-meta/python-3.11.9-h0.json",
                  #"{"name":"python","version":"3.11.9","channel":"https://conda.anaconda.org/conda-forge/osx-arm64"}"#)
+        // A carefully configured environment with a working interpreter (for the saved-copy strategy).
+        let analysis = home.appendingPathComponent("Projects/analysis/.venv")
+        let homebrewPython = root.url.appendingPathComponent("opt/homebrew/opt/python@3.12/bin")
+        try file("pyvenv.cfg", "home = \(homebrewPython.path)\ninclude-system-site-packages = false\nversion = 3.12.7\n", base: analysis)
+        try FileManager.default.createDirectory(at: analysis.appendingPathComponent("bin"), withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: root.url.appendingPathComponent("tools/python"), to: analysis.appendingPathComponent("bin/python"))
+        for (name, version) in [("rich", "13.9.2"), ("pyyaml", "6.0.2")] {
+            let info = analysis.appendingPathComponent("lib/python3.12/site-packages/\(name)-\(version).dist-info")
+            try file("METADATA", "Metadata-Version: 2.1\nName: \(name)\nVersion: \(version)\n", base: info)
+            try file("top_level.txt", name == "pyyaml" ? "yaml\n" : "\(name)\n", base: info)
+        }
+        try file("pyproject.toml", "[project]\nname = \"analysis\"\nversion = \"0.1.0\"\n", base: analysis.deletingLastPathComponent())
+
         // A uv project whose environment is rebuilt from its lock file.
         let project = home.appendingPathComponent("Projects/api-service")
         try file(".venv/pyvenv.cfg", "home = \(home.path)/.pyenv/versions/3.12.4/bin\nuv = 0.12.22\nversion_info = 3.12.4\n", base: project)

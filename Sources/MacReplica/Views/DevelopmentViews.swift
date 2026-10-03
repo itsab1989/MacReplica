@@ -53,6 +53,22 @@ struct PythonSection: View {
                             }
                         }
                         .toggleStyle(.checkbox)
+                        if model.selectedPythonEnvironments.contains(environment.id) {
+                            Toggle(isOn: Binding(
+                                get: { model.preservedPythonEnvironments.contains(environment.id) },
+                                set: { on in
+                                    if on { model.preservedPythonEnvironments.insert(environment.id) } else { model.preservedPythonEnvironments.remove(environment.id) }
+                                })) {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(l.t("python.keepCopy"))
+                                    Text(l.t("python.keepCopy.hint")).font(.caption).foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .toggleStyle(.checkbox)
+                            .padding(.leading, 22)
+                            .accessibilityIdentifier("python.keepCopy.\(environment.id)")
+                        }
                     }
                     if !python.settings.isEmpty {
                         Divider()
