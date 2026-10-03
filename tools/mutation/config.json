@@ -151,7 +151,8 @@
         "PythonRestoreEdgeTests",
         "PythonPreservationEdgeTests",
         "DataRestoreEdgeTests",
-        "CreativeAppProviderTests"
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests"
       ],
       "area": "Python, application data and credential restore",
       "threshold": 75
@@ -161,7 +162,8 @@
       "tests": [
         "ProviderCatalogTests",
         "ProviderTests",
-        "CreativeAppProviderTests"
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests"
       ],
       "area": "Provider selection and discovery"
     },
@@ -171,7 +173,8 @@
         "ApplicationDataTests",
         "ProviderCatalogTests",
         "AppDataScannerEdgeTests",
-        "CreativeAppProviderTests"
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests"
       ],
       "area": "Application data path handling and refusal rules"
     },
@@ -490,6 +493,30 @@
       "pattern": "profile\\.bundleIdentifiers\\.first\\(where: environment\\.isApplicationRunning\\)",
       "operator": "first → last",
       "reason": "Any running identifier blocks the restore (tested); which one the detail names when several run at once is not specified."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "var isDirectory: ObjCBool = false",
+      "operator": "false → true",
+      "reason": "fileExists(atPath:isDirectory:) always sets the flag when the path exists, and a missing path fails the same guard (equivalent mutant)."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "files\\.sort \\{ \\$0\\.record\\.relativePath < \\$1\\.record\\.relativePath \\}",
+      "operator": "< → <=",
+      "reason": "Relative paths inside one folder are unique, so < and <= give the same order (equivalent mutant)."
+    },
+    {
+      "file": "Providers/AppDataProviders.swift",
+      "pattern": "providers\\.first \\{ \\$0\\.id == id \\}",
+      "operator": "first → last",
+      "reason": "Provider identifiers are unique (tested in ProviderCatalogTests), so the first and the last match are the same provider (equivalent mutant)."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "if values\\.isSymbolicLink == true \\{ continue \\}",
+      "operator": "remove continue",
+      "reason": "URL resource values describe the link itself, so a symbolic link is never a regular file and the next guard skips it too (equivalent mutant; the rule is tested in AppDataVersionTargetTests)."
     }
   ]
 }

@@ -111,6 +111,36 @@ copies, which running bundle identifier the message names), sorting a set, the c
 whose parent is always the home folder, and the moved-aside check's fallback value that is never
 read.
 
+### Application data: version folders, shared locations, app requirements (2026-10-03)
+
+Run on 2026-10-03 (macOS 27, Swift 6.4, 6 shards) for the three application-data modules after
+Photoshop (release and beta), DaVinci Resolve LUTs and preferences, version-folder retargeting and
+the per-item conflict choice were added. First run of the extended modules:
+`PythonAndDataRestore.swift` 95.5 % (128 of 134), `AppDataProviders.swift` 89.5 % (17 of 19),
+`AppDataScanner.swift` 81.1 % (30 of 37) — all above threshold, but with real gaps. Tests were added
+(suite `AppDataVersionTargetTests`), equivalent mutants were excluded, and the survivors were run again
+(`--only-survivors`).
+
+| Module | Killed | Survived | Invalid | Excluded | Score | Threshold | Result |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Restore/PythonAndDataRestore.swift` | 134 | 0 | 4 | 4 | 100.0 % | 75 % | ✅ |
+| `Providers/AppDataProviders.swift` | 18 | 0 | 2 | 1 | 100.0 % | 80 % | ✅ |
+| `Inventory/AppDataScanner.swift` | 33 | 0 | 5 | 4 | 100.0 % | 80 % | ✅ |
+
+Gaps these survivors showed (now covered): choosing the newest other version by version number
+rather than by name ("Editor 11" before "Editor 9") with several versions on the new Mac; a user
+choice that is not an offered version (another app's folder, a version not on this Mac, a path) being
+ignored; the new/identical file counts of the restore selection's comparison; data that requires only
+`appMustBeInstalled` or only `notForOlderApp` (each alone, not just both together); providers that list
+files being detected only when one of those files is there; the stable identifier of home-folder data
+and the `/Library/` prefix of shared data's identifier, and the `.user`/`.system` file domain;
+`shippedFilesLeftOut` staying empty when nothing came with an app.
+
+Exclusions: the initial value of the `isDirectory` flag (`fileExists(atPath:isDirectory:)` always sets
+it when the path exists), sorting unique relative paths (`<` vs `<=`), `first` → `last` for unique
+provider IDs, and the symbolic-link `continue` in the scanner (URL resource values describe the link
+itself, so the next guard skips it too; the rule is still tested).
+
 ### Gaps the first run revealed (now covered)
 
 - Deselected Python environments and app-data folders, and credentials without opt-in, could have
@@ -143,7 +173,7 @@ which met their thresholds in the first run) were reviewed from the list. They f
 | Not testable without real system services | administrator dialog parsing inside the AppleScript, HTTP status of the live GitHub API, Command Line Tools timeout at the exact deadline | would need real admin rights, network or timing |
 | Low value | error category for a disk-full copy outside the administrator path, cosmetic progress values | documented, not worth a dedicated test |
 
-Per module: `BackupVerifier.swift` 1, `Credentials.swift` 1, `AppDataScanner.swift` 3, `DeveloperSettings.swift` 3, `ICCProfile.swift` 9, `Matcher.swift` 10, `AppDataProviders.swift` 2, `FileConflictAnalyzer.swift` 12, `PrivilegedExecutor.swift` 1, `PythonAndDataRestore.swift` 17 (0 since the run of 2026-10-03, see above), `RestoreExecutor.swift` 25, `RestorePlanner.swift` 11, `SessionStore.swift` 1, `SafeCleaner.swift` 2, `UpdateChecker.swift` 5.
+Per module: `BackupVerifier.swift` 1, `Credentials.swift` 1, `AppDataScanner.swift` 3 (0 since the application-data run of 2026-10-03), `DeveloperSettings.swift` 3, `ICCProfile.swift` 9, `Matcher.swift` 10, `AppDataProviders.swift` 2 (0 since that run), `FileConflictAnalyzer.swift` 12, `PrivilegedExecutor.swift` 1, `PythonAndDataRestore.swift` 17 (0 since the run of 2026-10-03, see above), `RestoreExecutor.swift` 25, `RestorePlanner.swift` 11, `SessionStore.swift` 1, `SafeCleaner.swift` 2, `UpdateChecker.swift` 5.
 
 The complete list of every remaining mutant (file, line, operator, original and mutated line) is in
 [mutation-survivors.md](mutation-survivors.md); re-run the runner as described above to reproduce it.
