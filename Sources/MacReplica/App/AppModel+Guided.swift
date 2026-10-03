@@ -65,7 +65,7 @@ extension AppModel {
     var openApps: [RestoreItem] { openItems.filter { $0.kind == .manualApp || $0.kind == .appStoreApp } }
 
     /// Developer tool steps the user performs (commands MacReplica cannot run).
-    var openToolchainSteps: [RestoreItem] { openItems.filter { $0.kind == .toolchainStep } }
+    var openToolchainSteps: [RestoreItem] { openItems.filter { $0.kind == .toolchainStep || $0.kind == .displayProfile } }
 
     func resetGuided() {
         guidedTask?.cancel()
@@ -233,6 +233,10 @@ extension AppModel {
 
     /// The instruction for a guided developer-tool step, or the website for installing its manager.
     func instruction(for item: RestoreItem) -> String? {
+        if let assignment = item.displayAssignment {
+            let profile = assignment.profileDescription ?? assignment.macOSProfile ?? ""
+            return l.t("guided.display.instruction", assignment.displayName ?? item.title, profile)
+        }
         guard let action = item.toolchain else { return nil }
         return ToolchainCatalog.provider(action.provider).manualInstruction(for: action)
     }

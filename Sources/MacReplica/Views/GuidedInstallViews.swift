@@ -207,7 +207,9 @@ struct GuidedToolchainRow: View {
                     Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            if let instruction, instruction.hasPrefix("https://") {
+            if item.kind == .displayProfile, let instruction {
+                Text(instruction).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            } else if let instruction, instruction.hasPrefix("https://") {
                 Button(instruction) { model.openWebPage(instruction) }.buttonStyle(.link).font(.caption)
             } else if let instruction {
                 HStack(alignment: .top) {

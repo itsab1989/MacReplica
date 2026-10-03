@@ -139,23 +139,38 @@ struct DownloadEdgeTests {
         #expect(offers.first?.url == "https://dl.example.com/new.dmg", "a disabled cask is skipped when matching by bundle identifier")
     }
 
+    /// Counts downloads that are running at the same time, at the transport itself.
+    actor Concurrency { var running = 0; var peak = 0
+        func start() { running += 1; peak = max(peak, running) }
+        func end() { running -= 1 } }
+    struct CountingTransport: DownloadTransport {
+        let inner: LocalDownloadTransport
+        let counter: Concurrency
+        func download(from url: URL, resumeData: Data?, to destination: URL,
+                      progress: @escaping @Sendable (Int64, Int64?) -> Void) async throws -> URL {
+            await counter.start()
+            do {
+                let file = try await inner.download(from: url, resumeData: resumeData, to: destination, progress: progress)
+                await counter.end()
+                return file
+            } catch {
+                await counter.end()
+                throw error
+            }
+        }
+    }
+
     @Test func theQueueRespectsItsConcurrencyLimit() async throws {
         let sandbox = try Sandbox("queue-limit")
         for name in ["a", "b", "c"] { try Data(repeating: 1, count: 60_000).write(to: try sandbox.file("downloads/dl.example.com/\(name).zip")) }
-        actor Peak { var running = Set<String>(); var peak = 0
-            func update(_ id: String, _ state: DownloadState) {
-                if case .downloading = state { running.insert(id) } else { running.remove(id) }
-                peak = max(peak, running.count)
-            } }
-        let peak = Peak()
-        let queue = DownloadQueue(transport: LocalDownloadTransport(root: sandbox.url, chunkSize: 5_000, delayPerChunk: 0.005),
-                                  folder: sandbox.url.appendingPathComponent("dl"), maxConcurrent: 1, observer: { id, state in Task { await peak.update(id, state) } })
+        let counter = Concurrency()
+        let transport = CountingTransport(inner: LocalDownloadTransport(root: sandbox.url, chunkSize: 5_000, delayPerChunk: 0.005), counter: counter)
+        let queue = DownloadQueue(transport: transport, folder: sandbox.url.appendingPathComponent("dl"), maxConcurrent: 1)
         for name in ["a", "b", "c"] {
             await queue.enqueue(DownloadOffer(id: name, itemID: name, kind: .vendorFeed, url: "https://dl.example.com/\(name).zip", trust: .checksum))
         }
         await queue.waitUntilIdle()
-        try await Task.sleep(nanoseconds: 50_000_000)
-        #expect(await peak.peak == 1)
+        #expect(await counter.peak == 1)
         for name in ["a", "b", "c"] { if case .finished? = await queue.state(name) {} else { Issue.record("\(name) not finished") } }
     }
 

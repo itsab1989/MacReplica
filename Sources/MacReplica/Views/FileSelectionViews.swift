@@ -26,6 +26,22 @@ struct FontsAndProfilesSection: View {
                     if !profiles.isEmpty {
                         FileGroupDisclosure(kind: .colorProfile, records: profiles, expanded: $showProfiles)
                     }
+                    let assignments = model.inventory?.manifest.displayProfiles ?? []
+                    if !assignments.isEmpty {
+                        Divider()
+                        Toggle(isOn: $model.includeDisplayAssignments) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(l.p("files.displayAssignments", assignments.count))
+                                Text(assignments.map { "\($0.displayName ?? "–"): \($0.profileDescription ?? $0.macOSProfile ?? "")" }
+                                    .joined(separator: " · "))
+                                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                Text(l.t("files.displayAssignments.hint")).font(.caption).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .toggleStyle(.checkbox)
+                        .accessibilityIdentifier("files.displayAssignments")
+                    }
                 }
             }
         }

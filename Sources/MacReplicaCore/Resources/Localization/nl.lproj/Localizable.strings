@@ -976,3 +976,17 @@
 /* Restore instructions: developer tools */
 "guide.toolchains.title" = "Ontwikkelaarstools en pakketbeheerders";
 "guide.toolchains.intro" = "MacReplica installeert deze waar mogelijk automatisch opnieuw. Versies met * waren de standaard. De opdrachten hieronder zijn de stappen die je zelf uitvoert; installeer voor de rest de beheerder via de website en installeer de vermelde versies en tools opnieuw.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Beeldschermprofiel";
+"skip.displayNotConnected" = "Wacht op %1$@ – sluit hem aan en controleer opnieuw";
+"skip.displayOfAnotherMac" = "Hoorde bij het ingebouwde beeldscherm van de oude Mac";
+"skip.profileNotAvailable" = "Het toegewezen profiel staat niet in de reservekopie en niet op deze Mac";
+"guided.display.instruction" = "Sluit %1$@ aan en klik op Opnieuw controleren – MacReplica wijst er ‘%2$@’ aan toe. Of kies het profiel zelf: Systeeminstellingen › Beeldschermen › kies het beeldscherm › Kleurprofiel.";
+"files.displayAssignments.one" = "%1$d toewijzing van beeldschermprofielen behouden";
+"files.displayAssignments.other" = "%1$d toewijzingen van beeldschermprofielen behouden";
+"files.displayAssignments.hint" = "Welk profiel elk beeldscherm gebruikt. Op de nieuwe Mac wijst MacReplica het opnieuw toe aan hetzelfde beeldscherm zodra het is aangesloten. Beeldschermen worden alleen herkend aan gezouten controlesommen, nooit aan hun serienummer.";
+"restore.select.sameMac" = "Deze reservekopie is op deze Mac gemaakt";
+"restore.select.otherMac" = "Deze reservekopie is op een andere Mac gemaakt";
+"restore.select.unknownMac" = "Toewijzingen van beeldschermprofielen";
+"restore.select.displayHint" = "Beeldschermprofielen worden alleen opnieuw toegewezen aan dezelfde beeldschermen. Profielen van het ingebouwde beeldscherm van de oude Mac worden alleen gebruikt als dit dezelfde Mac is.";

@@ -76,6 +76,8 @@ final class AppModel: ObservableObject {
     /// Package and version managers and applications the user left out of the backup.
     @Published var excludedToolchains = Set<ToolchainProviderID>()
     @Published var excludedApplications = Set<String>()
+    /// Profile assignments of displays (System Settings › Displays › Color profile) go into the backup.
+    @Published var includeDisplayAssignments = true
     /// Guided installations after the automatic restore.
     @Published var guided = GuidedUIState()
     var guidedInstallation: GuidedInstallation?
@@ -259,6 +261,7 @@ final class AppModel: ObservableObject {
         excludedBackupFiles = []
         excludedToolchains = []
         excludedApplications = []
+        includeDisplayAssignments = true
         resetGuided()
         manifest = nil
         backupURL = nil
@@ -425,6 +428,7 @@ final class AppModel: ObservableObject {
         applyDeveloperChoices(to: &inventory)
         inventory.keepToolchains(Set(inventory.manifest.toolchains.map(\.provider)).subtracting(excludedToolchains))
         inventory.excludeApplications(excludedApplications)
+        if !includeDisplayAssignments { inventory.manifest.displayProfiles = [] }
         for id in excludedApplicationData { inventory.removeApplicationData(id: id) }
         inventory.excludeFiles(excludedBackupFiles)
         let credentials = selectedCredentialProviders.isEmpty ? nil

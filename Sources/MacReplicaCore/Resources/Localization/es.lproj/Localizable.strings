@@ -976,3 +976,17 @@
 /* Restore instructions: developer tools */
 "guide.toolchains.title" = "Herramientas de desarrollo y gestores de paquetes";
 "guide.toolchains.intro" = "MacReplica los reinstala automáticamente cuando puede. Las versiones marcadas con * eran las predeterminadas. Los comandos siguientes son los pasos que ejecutas tú; para lo demás, instala el gestor desde su sitio web y reinstala las versiones y herramientas indicadas.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Perfil de pantalla";
+"skip.displayNotConnected" = "Esperando %1$@: conéctala y comprueba de nuevo";
+"skip.displayOfAnotherMac" = "Pertenecía a la pantalla integrada del Mac anterior";
+"skip.profileNotAvailable" = "El perfil asignado no está en la copia ni en este Mac";
+"guided.display.instruction" = "Conecta %1$@ y haz clic en Comprobar de nuevo: MacReplica le asigna “%2$@”. O elige el perfil tú: Ajustes del Sistema › Pantallas › selecciona la pantalla › Perfil de color.";
+"files.displayAssignments.one" = "Conservar %1$d asignación de perfil de pantalla";
+"files.displayAssignments.other" = "Conservar %1$d asignaciones de perfiles de pantalla";
+"files.displayAssignments.hint" = "Qué perfil usa cada pantalla. En el Mac nuevo, MacReplica lo vuelve a asignar a la misma pantalla cuando está conectada. Las pantallas solo se reconocen por sumas de comprobación con sal, nunca por su número de serie.";
+"restore.select.sameMac" = "Esta copia se hizo en este Mac";
+"restore.select.otherMac" = "Esta copia se hizo en otro Mac";
+"restore.select.unknownMac" = "Asignaciones de perfiles de pantalla";
+"restore.select.displayHint" = "Los perfiles de pantalla solo se vuelven a asignar a las mismas pantallas. Los perfiles de la pantalla integrada del Mac anterior solo se usan si es el mismo Mac.";

@@ -978,3 +978,17 @@
 /* Restore instructions: developer tools */
 "guide.toolchains.title" = "Developer tools and package managers";
 "guide.toolchains.intro" = "MacReplica reinstalls these automatically where it can. Versions marked * were the default. Commands below are the steps you run yourself; for everything else, install the manager from its website and reinstall the listed versions and tools.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Display profile";
+"skip.displayNotConnected" = "Waiting for %1$@ – connect it, then check again";
+"skip.displayOfAnotherMac" = "Belonged to the built-in display of the old Mac";
+"skip.profileNotAvailable" = "The assigned profile is not in the backup or on this Mac";
+"guided.display.instruction" = "Connect %1$@ and click Check Again – MacReplica assigns “%2$@” to it. Or choose the profile yourself: System Settings › Displays › select the display › Color profile.";
+"files.displayAssignments.one" = "Keep %1$d display profile assignment";
+"files.displayAssignments.other" = "Keep %1$d display profile assignments";
+"files.displayAssignments.hint" = "Which profile each display uses. On the new Mac MacReplica assigns it again to the same display when it is connected. Displays are recognised by salted checksums only, never by their serial numbers.";
+"restore.select.sameMac" = "This backup was made on this Mac";
+"restore.select.otherMac" = "This backup was made on another Mac";
+"restore.select.unknownMac" = "Display profile assignments";
+"restore.select.displayHint" = "Display profiles are assigned again only to the same displays. Profiles of the old Mac's built-in display are only used when this is the same Mac.";

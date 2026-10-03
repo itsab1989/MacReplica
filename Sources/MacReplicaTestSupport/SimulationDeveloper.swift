@@ -8,8 +8,17 @@ extension SimulationBuilder {
     public static var vendorPublicKey: String { vendorSigningKey.publicKey.rawRepresentation.base64EncodedString() }
     public static let nightlyFeed = "https://updates.example.com/orbit-nightly/appcast.xml"
 
+    public static let builtInDisplay = "00000000-0000-4000-8000-00000000B111"
+    public static let externalDisplay = "00000000-0000-4000-8000-00000000E222"
+
     /// Version managers, runtimes, global tools and other package managers on the old Mac, all synthetic.
     static func populateDeveloperEnvironments(_ root: SimulationRoot) throws {
+        // Displays: a calibrated profile on the built-in display, the studio display's own profile on the external one.
+        try makeICCProfile(description: "Built-in Calibrated").write(to: root.url.appendingPathComponent("home/Library/ColorSync/Profiles/Built-in Calibrated.icc"))
+        try root.configureDisplays(platform: "SIMULATED-MAC-A", displays: [
+            (builtInDisplay, "Built-in Display", true, true, "home/Library/ColorSync/Profiles/Built-in Calibrated.icc"),
+            (externalDisplay, "Example Studio Display", false, true, "home/Library/ColorSync/Profiles/Example Studio Display.icc"),
+        ])
         let home = root.url.appendingPathComponent("home")
         func file(_ path: String, _ text: String = "", base: URL? = nil, executable: Bool = false) throws {
             try write(text, to: (base ?? home).appendingPathComponent(path), executable: executable)

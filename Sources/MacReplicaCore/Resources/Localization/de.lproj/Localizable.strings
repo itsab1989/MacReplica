@@ -976,3 +976,17 @@
 /* Restore instructions: developer tools */
 "guide.toolchains.title" = "Entwicklerwerkzeuge und Paketverwaltungen";
 "guide.toolchains.intro" = "MacReplica installiert diese wenn möglich automatisch neu. Mit * markierte Versionen waren die Standardversion. Die Befehle unten sind die Schritte, die du selbst ausführst; für alles andere installier die Verwaltung von ihrer Website und installier die aufgeführten Versionen und Werkzeuge neu.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Bildschirmprofil";
+"skip.displayNotConnected" = "Wartet auf %1$@ – anschließen und erneut prüfen";
+"skip.displayOfAnotherMac" = "Gehörte zum eingebauten Bildschirm des alten Macs";
+"skip.profileNotAvailable" = "Das zugewiesene Profil ist weder in der Sicherung noch auf diesem Mac";
+"guided.display.instruction" = "Schließ %1$@ an und klick auf „Erneut prüfen“ – MacReplica weist ihm „%2$@“ zu. Oder wähl das Profil selbst: Systemeinstellungen › Displays › Bildschirm auswählen › Farbprofil.";
+"files.displayAssignments.one" = "%1$d Zuordnung von Bildschirmprofilen behalten";
+"files.displayAssignments.other" = "%1$d Zuordnungen von Bildschirmprofilen behalten";
+"files.displayAssignments.hint" = "Welches Profil jeder Bildschirm verwendet. Auf dem neuen Mac weist MacReplica es demselben Bildschirm wieder zu, sobald er angeschlossen ist. Bildschirme werden nur über gesalzene Prüfsummen erkannt, nie über ihre Seriennummern.";
+"restore.select.sameMac" = "Diese Sicherung wurde auf diesem Mac erstellt";
+"restore.select.otherMac" = "Diese Sicherung wurde auf einem anderen Mac erstellt";
+"restore.select.unknownMac" = "Zuordnungen von Bildschirmprofilen";
+"restore.select.displayHint" = "Bildschirmprofile werden nur denselben Bildschirmen wieder zugewiesen. Profile des eingebauten Bildschirms des alten Macs werden nur verwendet, wenn es derselbe Mac ist.";

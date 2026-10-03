@@ -84,6 +84,7 @@ extension Localizer {
         case .credential: return t("kind.credential")
         case .toolchainStep: return t("kind.toolchainStep")
         case .manualApp: return t("kind.manualApp")
+        case .displayProfile: return t("kind.displayProfile")
         }
     }
 
@@ -121,6 +122,9 @@ extension Localizer {
         case .waitingForManualStep(let title): return t("skip.waitingForManualStep", title)
         case .postponedByUser: return t("skip.postponedByUser")
         case .cancelledByUser: return t("skip.cancelledByUser")
+        case .displayNotConnected(let name): return t("skip.displayNotConnected", name)
+        case .displayOfAnotherMac: return t("skip.displayOfAnotherMac")
+        case .profileNotAvailable: return t("skip.profileNotAvailable")
         }
     }
 

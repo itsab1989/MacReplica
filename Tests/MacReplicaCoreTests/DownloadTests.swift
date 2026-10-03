@@ -224,19 +224,28 @@ struct DownloadQueueTests {
         DownloadOffer(id: "feed", itemID: id, kind: .vendorFeed, url: "https://dl.example.com/\(path)", sha256: sha, trust: .checksum)
     }
 
+    /// Waits until a download has received its first bytes (independent of machine load).
+    func waitUntilRunning(_ queue: DownloadQueue, _ id: String) async throws {
+        for _ in 0..<400 {
+            if case .downloading(let received, _)? = await queue.state(id), received > 0 { return }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        Issue.record("\(id) did not start")
+    }
+
     @Test func downloadsPauseResumeRetryAndCancel() async throws {
         let sandbox = try Sandbox("queue")
         let payload = Data((0..<200_000).map { UInt8($0 % 251) })
         try sandbox.file("downloads/dl.example.com/big.zip")
         try payload.write(to: sandbox.url.appendingPathComponent("downloads/dl.example.com/big.zip"))
         let recorder = Recorder()
-        let transport = LocalDownloadTransport(root: sandbox.url, chunkSize: 10_000, delayPerChunk: 0.01)
+        let transport = LocalDownloadTransport(root: sandbox.url, chunkSize: 5_000, delayPerChunk: 0.01)
         let queue = DownloadQueue(transport: transport, folder: sandbox.url.appendingPathComponent("dl"), observer: { id, state in
             Task { await recorder.record(id, state) }
         })
 
         await queue.enqueue(offer("a", path: "big.zip"))
-        try await Task.sleep(nanoseconds: 50_000_000)
+        try await waitUntilRunning(queue, "a")
         await queue.pause("a")
         try await Task.sleep(nanoseconds: 100_000_000)
         #expect(await queue.state("a") == .paused)
@@ -255,7 +264,7 @@ struct DownloadQueueTests {
         guard case .finished? = await queue.state("missing") else { Issue.record("retry did not finish"); return }
 
         await queue.enqueue(offer("c", path: "big.zip"))
-        try await Task.sleep(nanoseconds: 30_000_000)
+        try await waitUntilRunning(queue, "c")
         await queue.cancel("c")
         await queue.waitUntilIdle()
         #expect(await queue.state("c") == .cancelled)

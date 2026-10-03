@@ -40,6 +40,8 @@ public struct RestoreEnvironment: Sendable {
     /// Reports whether an app with this bundle identifier is running. Providers whose
     /// app must be closed are not restored while it runs.
     public var isApplicationRunning: @Sendable (String) -> Bool = { _ in false }
+    /// Display profile access; nil uses the layout's (ColorSync, or the simulated one in a sandbox).
+    public var displayColor: DisplayColorManaging?
 
     public init(layout: SystemLayout, runner: CommandRunning, privileged: PrivilegedExecuting, homebrewSource: HomebrewPackageSource,
                 localizer: Localizer, log: LogStore, targetArchitecture: CPUArchitecture = SystemInfo.currentArchitecture,
@@ -313,6 +315,8 @@ struct Inspector: Sendable {
         case .manualApp:
             if let app = installedApp(for: item) { return .alreadyPresent(version: installedVersion(ofApp: app)) }
             return .manualStep
+        case .displayProfile:
+            return predictDisplayProfile(item)
         }
     }
 }
@@ -516,6 +520,8 @@ public final class RestoreExecutor: Sendable {
                 return try await restoreToolchainStep(item, inspector: inspector, context: context, onEvent: onEvent)
             case .manualApp:
                 return checkGuidedInstall(item, inspector: inspector)
+            case .displayProfile:
+                return restoreDisplayProfile(item, inspector: inspector, onEvent: onEvent)
             }
         } catch is CancellationError {
             return failed(item, .cancelled)

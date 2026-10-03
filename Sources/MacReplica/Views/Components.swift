@@ -179,6 +179,7 @@ enum Symbols {
         case .credential: return "key"
         case .toolchainStep: return "hammer"
         case .manualApp: return "arrow.down.circle"
+        case .displayProfile: return "display"
         }
     }
 

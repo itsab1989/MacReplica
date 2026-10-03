@@ -976,3 +976,17 @@
 /* Restore instructions: developer tools */
 "guide.toolchains.title" = "Strumenti per sviluppatori e gestori di pacchetti";
 "guide.toolchains.intro" = "MacReplica li reinstalla automaticamente quando possibile. Le versioni contrassegnate con * erano quelle predefinite. I comandi seguenti sono i passaggi da eseguire tu; per il resto, installa il gestore dal suo sito e reinstalla le versioni e gli strumenti elencati.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Profilo del monitor";
+"skip.displayNotConnected" = "In attesa di %1$@ – collegalo e controlla di nuovo";
+"skip.displayOfAnotherMac" = "Apparteneva al monitor integrato del vecchio Mac";
+"skip.profileNotAvailable" = "Il profilo assegnato non è nel backup né su questo Mac";
+"guided.display.instruction" = "Collega %1$@ e fai clic su Controlla di nuovo – MacReplica gli assegna «%2$@». Oppure scegli tu il profilo: Impostazioni di Sistema › Monitor › seleziona il monitor › Profilo colore.";
+"files.displayAssignments.one" = "Mantieni %1$d assegnazione del profilo del monitor";
+"files.displayAssignments.other" = "Mantieni %1$d assegnazioni dei profili del monitor";
+"files.displayAssignments.hint" = "Quale profilo usa ogni monitor. Sul nuovo Mac MacReplica lo riassegna allo stesso monitor quando è collegato. I monitor vengono riconosciuti solo tramite checksum con salt, mai tramite il numero di serie.";
+"restore.select.sameMac" = "Questo backup è stato creato su questo Mac";
+"restore.select.otherMac" = "Questo backup è stato creato su un altro Mac";
+"restore.select.unknownMac" = "Assegnazioni dei profili del monitor";
+"restore.select.displayHint" = "I profili dei monitor vengono riassegnati solo agli stessi monitor. I profili del monitor integrato del vecchio Mac vengono usati solo se si tratta dello stesso Mac.";

@@ -49,6 +49,7 @@ public struct RestorePlanner: Sendable {
         var files: [RestoreItem] = []
         var manual: [AppRecord] = []
         var manualItems: [RestoreItem] = []
+        var displaySteps: [RestoreItem] = []
         var caskTokens = Set<String>()
         let components = selection.components
 
@@ -277,6 +278,15 @@ public struct RestorePlanner: Sendable {
         }
         if components.contains(.colorProfiles) {
             files += manifest.iccProfiles.map { fileItem($0, kind: .colorProfile, component: .colorProfiles) }
+            for assignment in manifest.displayProfiles {
+                var item = RestoreItem(id: "display:\(assignment.displayKey.prefix(16))", kind: .displayProfile,
+                                       title: assignment.displayName ?? "Display", identifier: assignment.profileDescription ?? assignment.macOSProfile ?? "",
+                                       component: .colorProfiles)
+                if let fileID = assignment.profileFileID { item.dependsOn = ["icc:\(fileID)"] }
+                item.displayAssignment = assignment
+                item.hardwareKeys = manifest.hardwareKeys
+                displaySteps.append(item)
+            }
         }
 
         let excluded = selection.excludedItemIDs
@@ -284,6 +294,10 @@ public struct RestorePlanner: Sendable {
         casks.removeAll { excluded.contains($0.id) }
         appStore.removeAll { excluded.contains($0.id) }
         files.removeAll { excluded.contains($0.id) }
+        displaySteps.removeAll { excluded.contains($0.id) }
+        // A display step only waits for its profile while that profile is restored at all.
+        let restoredFiles = Set(files.map(\.id))
+        for index in displaySteps.indices { displaySteps[index].dependsOn = displaySteps[index].dependsOn.filter { restoredFiles.contains($0) } }
         python.removeAll { excluded.contains($0.id) }
         applicationData.removeAll { excluded.contains($0.id) }
         toolchainItems.removeAll { excluded.contains($0.id) }
@@ -315,6 +329,7 @@ public struct RestorePlanner: Sendable {
         items += python
         items += applicationData
         items += files
+        items += displaySteps
         // Guided installs come last: everything automatic runs first, then the user is asked to act.
         items += appStore.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         items += manualItems.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }

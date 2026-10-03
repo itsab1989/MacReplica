@@ -976,3 +976,17 @@
 /* Restore instructions: developer tools */
 "guide.toolchains.title" = "Outils de développement et gestionnaires de paquets";
 "guide.toolchains.intro" = "MacReplica les réinstalle automatiquement quand c’est possible. Les versions marquées * étaient celles par défaut. Les commandes ci-dessous sont les étapes à exécuter vous-même ; pour le reste, installez le gestionnaire depuis son site et réinstallez les versions et outils listés.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Profil d’écran";
+"skip.displayNotConnected" = "En attente de %1$@ – branchez-le puis vérifiez à nouveau";
+"skip.displayOfAnotherMac" = "Appartenait à l’écran intégré de l’ancien Mac";
+"skip.profileNotAvailable" = "Le profil attribué ne se trouve ni dans la sauvegarde ni sur ce Mac";
+"guided.display.instruction" = "Branchez %1$@ et cliquez sur Vérifier à nouveau – MacReplica lui attribue « %2$@ ». Ou choisissez le profil vous-même : Réglages Système › Moniteurs › sélectionnez l’écran › Profil colorimétrique.";
+"files.displayAssignments.one" = "Conserver %1$d attribution de profil d’écran";
+"files.displayAssignments.other" = "Conserver %1$d attributions de profils d’écran";
+"files.displayAssignments.hint" = "Le profil utilisé par chaque écran. Sur le nouveau Mac, MacReplica l’attribue de nouveau au même écran lorsqu’il est branché. Les écrans ne sont reconnus que par des sommes de contrôle salées, jamais par leur numéro de série.";
+"restore.select.sameMac" = "Cette sauvegarde a été créée sur ce Mac";
+"restore.select.otherMac" = "Cette sauvegarde a été créée sur un autre Mac";
+"restore.select.unknownMac" = "Attributions de profils d’écran";
+"restore.select.displayHint" = "Les profils d’écran ne sont réattribués qu’aux mêmes écrans. Les profils de l’écran intégré de l’ancien Mac ne sont utilisés que s’il s’agit du même Mac.";

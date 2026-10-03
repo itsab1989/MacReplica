@@ -34,6 +34,29 @@ public struct SimulationRoot {
     public func failOnce(_ package: String, message: String) throws { try setFlag("fail-once/\(package)", true, content: message) }
     public func failAlways(_ package: String, message: String) throws { try setFlag("fail/\(package)", true, content: message) }
     public func setCommandLineToolsDelay(_ seconds: Double) throws { try setFlag("clt-delay", true, content: String(seconds)) }
+    /// The simulated Mac's displays and ColorSync assignments (`state/colorsync.json`).
+    /// `profile` paths are relative to the simulation root.
+    public func configureDisplays(platform: String?, displays: [(uuid: String, name: String, builtIn: Bool, connected: Bool, profile: String?)],
+                                  refuseAssignments: Bool = false) throws {
+        let state = SimulatedDisplayColorManager.State(
+            platform: platform,
+            displays: displays.map { .init(uuid: $0.uuid, name: $0.name, builtIn: $0.builtIn, connected: $0.connected,
+                                           profile: $0.profile.map { url.appendingPathComponent($0).path }) },
+            refuseAssignments: refuseAssignments)
+        try FileManager.default.createDirectory(at: self.state, withIntermediateDirectories: true)
+        try JSONEncoder().encode(state).write(to: self.state.appendingPathComponent("colorsync.json"))
+    }
+
+    /// The profile currently assigned to a simulated display (relative to the root), if any.
+    public func assignedProfile(display uuid: String) -> String? {
+        let manager = SimulatedDisplayColorManager(file: state.appendingPathComponent("colorsync.json"))
+        guard let path = manager.load()?.displays.first(where: { $0.uuid == uuid })?.profile else { return nil }
+        for root in [url.path, url.resolvingSymlinksInPath().path] where path.hasPrefix(root + "/") { return String(path.dropFirst(root.count + 1)) }
+        let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        let base = url.resolvingSymlinksInPath().path
+        return resolved.hasPrefix(base + "/") ? String(resolved.dropFirst(base.count + 1)) : path
+    }
+
     /// The version the simulated `brew --version` reports (default 4.4.0).
     public func setHomebrewVersion(_ version: String) throws { try setFlag("brew-version", true, content: version) }
 

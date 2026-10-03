@@ -42,6 +42,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
     case toolchainStep
     /// An application without automatic installation: guided download and installation.
     case manualApp
+    /// A profile assigned to a display on the old Mac, assigned again here.
+    case displayProfile
 
     /// Rough relative duration, used to estimate the remaining time before real timings exist.
     var weight: Double {
@@ -58,7 +60,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .applicationData: return 5
         case .gitConfiguration, .credential: return 1
         case .toolchainStep: return 60
-        case .manualApp: return 1
+        case .manualApp, .displayProfile: return 1
         }
     }
 
@@ -74,6 +76,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .credential: return .permissions
         case .toolchainStep: return .developerTools
         case .manualApp: return .downloads
+        case .displayProfile: return .restore
         }
     }
 }
@@ -104,6 +107,9 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     public var toolchain: ToolchainAction?
     /// For `manualApp` and guided App Store installs: the application as recorded on the old Mac.
     public var app: AppRecord?
+    /// For `displayProfile`: the assignment and the keys to recognise the display.
+    public var displayAssignment: DisplayProfileAssignment?
+    public var hardwareKeys: HardwareKeys?
 
     public init(id: String, kind: RestoreItemKind, title: String, identifier: String, originalVersion: String? = nil,
                 bundleIdentifier: String? = nil, appBundleNames: [String] = [], tapRemote: String? = nil, file: FileRecord? = nil,
@@ -260,6 +266,12 @@ public enum SkipReason: Codable, Equatable, Sendable {
     case postponedByUser
     /// The user cancelled an installation that was in progress (not a technical failure).
     case cancelledByUser
+    /// The display is not connected; it is assigned when it is (or in System Settings).
+    case displayNotConnected(name: String)
+    /// The profile belonged to the built-in display of the Mac the backup was made on.
+    case displayOfAnotherMac
+    /// The assigned profile is neither in the backup nor on this Mac.
+    case profileNotAvailable
 }
 
 public enum ItemOutcome: Codable, Equatable, Sendable {
@@ -289,7 +301,7 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
     public var isOpen: Bool {
         guard case .skipped(let reason) = self else { return false }
         switch reason {
-        case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser: return true
+        case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected: return true
         default: return false
         }
     }
@@ -373,8 +385,9 @@ extension ItemResult {
             switch reason {
             case .keptExisting: return "conflict_kept_destination"
             case .userSkipped: return "skipped_by_user"
-            case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile: return "incompatible"
-            case .projectFolderMissing, .passphraseNotProvided, .manualStepRequired, .waitingForManualStep: return "manual_action_required"
+            case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile, .displayOfAnotherMac: return "incompatible"
+            case .projectFolderMissing, .passphraseNotProvided, .manualStepRequired, .waitingForManualStep, .displayNotConnected,
+                 .profileNotAvailable: return "manual_action_required"
             case .postponedByUser: return "postponed_by_user"
             case .cancelledByUser: return "cancelled_by_user"
             default: return "skipped"

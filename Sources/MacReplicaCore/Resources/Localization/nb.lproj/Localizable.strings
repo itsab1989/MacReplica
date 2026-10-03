@@ -976,3 +976,17 @@
 /* Restore instructions: developer tools */
 "guide.toolchains.title" = "Utviklerverktøy og pakkebehandlere";
 "guide.toolchains.intro" = "MacReplica installerer disse automatisk på nytt der det er mulig. Versjoner merket * var standard. Kommandoene nedenfor er trinnene du kjører selv; for alt annet installerer du behandleren fra nettstedet og installerer de oppførte versjonene og verktøyene på nytt.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Skjermprofil";
+"skip.displayNotConnected" = "Venter på %1$@ – koble den til og sjekk på nytt";
+"skip.displayOfAnotherMac" = "Hørte til den innebygde skjermen på den gamle Macen";
+"skip.profileNotAvailable" = "Den tilordnede profilen finnes verken i sikkerhetskopien eller på denne Macen";
+"guided.display.instruction" = "Koble til %1$@ og klikk på Sjekk på nytt – MacReplica tilordner «%2$@» til den. Eller velg profilen selv: Systeminnstillinger › Skjermer › velg skjermen › Fargeprofil.";
+"files.displayAssignments.one" = "Behold %1$d tilordning av skjermprofil";
+"files.displayAssignments.other" = "Behold %1$d tilordninger av skjermprofiler";
+"files.displayAssignments.hint" = "Hvilken profil hver skjerm bruker. På den nye Macen tilordner MacReplica den igjen til samme skjerm når den er tilkoblet. Skjermer gjenkjennes bare med saltede sjekksummer, aldri med serienumre.";
+"restore.select.sameMac" = "Denne sikkerhetskopien ble laget på denne Macen";
+"restore.select.otherMac" = "Denne sikkerhetskopien ble laget på en annen Mac";
+"restore.select.unknownMac" = "Tilordninger av skjermprofiler";
+"restore.select.displayHint" = "Skjermprofiler tilordnes bare de samme skjermene igjen. Profiler for den gamle Macens innebygde skjerm brukes bare hvis dette er samme Mac.";

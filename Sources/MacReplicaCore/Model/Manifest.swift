@@ -37,6 +37,10 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var backupSelection: BackupSelectionSummary?
     /// Package managers, version managers, runtimes and global tools besides Homebrew and the App Store.
     public var toolchains: [ToolchainRecord]
+    /// Salted hashes that let a restore recognise the same Mac and the same displays (no identifiers are stored).
+    public var hardwareKeys: HardwareKeys?
+    /// Profiles the user assigned to displays (System Settings › Displays › Color profile).
+    public var displayProfiles: [DisplayProfileAssignment]
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -62,6 +66,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         toolchains: [ToolchainRecord] = []
     ) {
         self.toolchains = toolchains
+        self.displayProfiles = []
         self.manifestVersion = manifestVersion
         self.macreplicaVersion = macreplicaVersion
         self.createdAt = createdAt
@@ -88,6 +93,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
         case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
+        case hardwareKeys, displayProfiles
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -119,6 +125,8 @@ public struct Manifest: Codable, Equatable, Sendable {
         backupSelection = try c.decodeIfPresent(BackupSelectionSummary.self, forKey: .backupSelection)
         // Providers added by later versions are dropped instead of failing the whole manifest.
         toolchains = try c.decodeIfPresent(LenientList<ToolchainRecord>.self, forKey: .toolchains)?.elements ?? []
+        hardwareKeys = try c.decodeIfPresent(HardwareKeys.self, forKey: .hardwareKeys)
+        displayProfiles = try c.decodeIfPresent(LenientList<DisplayProfileAssignment>.self, forKey: .displayProfiles)?.elements ?? []
     }
 }
 

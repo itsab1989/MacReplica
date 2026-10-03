@@ -266,6 +266,12 @@ public struct InventoryService: Sendable {
             developer: developer,
             toolchains: toolchains)
         manifest.macreplicaBuild = SystemInfo.buildNumber
+        // Display profile assignments (read-only); identifiers only as salted hashes.
+        let displayManager = layout.displayColorManager
+        let keys = HardwareKeys.make(platformIdentifier: displayManager.platformIdentifier())
+        manifest.hardwareKeys = keys
+        manifest.displayProfiles = DisplayProfileScanner.assignments(displays: displayManager.displays(), profiles: profiles.map(\.record),
+                                                                     layout: layout, keys: keys)
         manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)))
         var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)
         // Known user-created data of supported apps (presets, styles, LUTs …) is suggested automatically.

@@ -108,6 +108,11 @@ struct RestoreSelectionView: View {
         if let damaged = model.verification?.damagedFiles, !damaged.isEmpty {
             NoticeView(style: .warning, title: l.p("restore.select.damaged", damaged.count), message: l.t("restore.select.damagedHint"))
         }
+        if let manifest = model.manifest, !manifest.displayProfiles.isEmpty, let keys = manifest.hardwareKeys {
+            let same = keys.isSameMac(platformIdentifier: model.services.layout.displayColorManager.platformIdentifier())
+            NoticeView(style: .info, title: l.t(same == true ? "restore.select.sameMac" : (same == false ? "restore.select.otherMac" : "restore.select.unknownMac")),
+                       message: l.t("restore.select.displayHint"))
+        }
         if let manifest = model.manifest, manifest.architecture != .unknown, manifest.architecture != model.services.architecture {
             NoticeView(style: .info, title: l.t("restore.select.otherArchitecture"),
                        message: l.t("restore.select.otherArchitectureHint", l.architectureText(manifest.architecture),
