@@ -156,6 +156,29 @@ struct DisplayProfileTests {
         #expect(fresh2.assignedProfile(display: Self.external) == nil, "nothing is assigned without the profile")
     }
 
+    @Test func theSimulatedManagerOnlyAssignsToConnectedDisplaysAndReportsWriteFailures() throws {
+        let sandbox = try Sandbox("display-simulated")
+        let state = try sandbox.folder("state")
+        let file = state.appendingPathComponent("colorsync.json")
+        try JSONEncoder().encode(SimulatedDisplayColorManager.State(platform: "SIMULATED-MAC-A", displays: [
+            .init(uuid: "A", name: "Built-in Display", builtIn: true, connected: true, profile: nil),
+            .init(uuid: "B", name: "Example Studio Display", builtIn: false, connected: false, profile: nil),
+        ], refuseAssignments: nil)).write(to: file)
+        let manager = SimulatedDisplayColorManager(file: file)
+        let profile = sandbox.url.appendingPathComponent("Calibrated.icc")
+        #expect(!manager.assign(profile, toDisplay: "B"), "a display that is not connected")
+        #expect(!manager.assign(profile, toDisplay: "C"), "an unknown display")
+        #expect(manager.displays().allSatisfy { $0.customProfile == nil }, "nothing was assigned")
+        #expect(manager.assign(profile, toDisplay: "A"))
+        #expect(manager.displays().first { $0.uuid == "A" }?.customProfile == profile)
+        #expect(manager.displays().first { $0.uuid == "B" }?.customProfile == nil)
+        // An assignment that cannot be saved did not happen.
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: state.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: state.path) }
+        #expect(!manager.assign(sandbox.url.appendingPathComponent("Other.icc"), toDisplay: "A"))
+        #expect(manager.displays().first { $0.uuid == "A" }?.customProfile == profile)
+    }
+
     @Test func macOSProfilesAndGeneratedProfilesInAssignments() throws {
         let sandbox = try Sandbox("display-scanner")
         var layout = toolchainLayout(sandbox)
