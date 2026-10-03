@@ -66,3 +66,31 @@ jobs:
             *.json
             launchpad.png
             dbs/
+
+  # A layout recorded on macOS 14 (Knut's Sonoma) is rebuilt on a fresh macOS 15.
+  cross-version:
+    needs: validate
+    runs-on: macos-15
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: simulator
+      - uses: actions/download-artifact@v8
+        with:
+          name: launchpad-macos-14
+          path: from14
+      - name: Apply the macOS 14 recording on macOS 15
+        run: |
+          chmod +x simulator; sw_vers
+          defaults write com.apple.dock ResetLaunchPad -bool true; killall Dock; sleep 12
+          defaults delete com.apple.dock ResetLaunchPad 2>/dev/null || true
+          ./simulator launchpad-apply from14/restart.json
+          killall Dock; sleep 10; ./simulator launchpad-export restart15.json
+          open -a Launchpad; sleep 4; screencapture -x launchpad15.png || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: launchpad-cross-version
+          path: |
+            *.json
+            launchpad15.png
