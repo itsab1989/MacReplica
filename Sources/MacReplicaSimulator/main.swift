@@ -6,6 +6,8 @@
 //
 //   MacReplicaSimulator create <folder> source|fresh|developer
 //   MacReplicaSimulator install-app <folder> <sample app name>   (simulates the user installing an app)
+//   MacReplicaSimulator reinstall <folder>                        (simulates erasing macOS on the same Mac)
+//   MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
 //   MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
 //   MacReplicaSimulator set <folder> delay <seconds>
 //   MacReplicaSimulator fail-once <folder> <package> <message>
@@ -22,6 +24,8 @@ func usage() -> Never {
     FileHandle.standardError.write(Data("""
     usage: MacReplicaSimulator create <folder> source|fresh|developer
            MacReplicaSimulator install-app <folder> <sample app name>
+           MacReplicaSimulator reinstall <folder>
+           MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
            MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
            MacReplicaSimulator set <folder> delay <seconds>
            MacReplicaSimulator fail-once <folder> <package> <message>
@@ -55,6 +59,23 @@ do {
         let scenario: SimulationBuilder.Scenario = ["source": .sourceMac, "developer": .developerMac][arguments[2]] ?? .freshMac
         try SimulationBuilder.create(at: folder, scenario: scenario)
         print("Created \(scenario.rawValue) simulation at \(folder.path)")
+    case "reinstall":
+        try root.simulateReinstall()
+        print("Simulated a macOS reinstall on the same Mac")
+    case "displays":
+        guard arguments.count == 3 else { usage() }
+        let builtIn = SimulationBuilder.builtInDisplay, external = SimulationBuilder.externalDisplay
+        switch arguments[2] {
+        case "same-mac":
+            try root.configureDisplays(platform: "SIMULATED-MAC-A", displays: [(builtIn, "Built-in Display", true, true, nil), (external, "Example Studio Display", false, true, nil)])
+        case "other-mac":
+            try root.configureDisplays(platform: "SIMULATED-MAC-B", displays: [("00000000-0000-4000-8000-00000000C333", "Built-in Display", true, true, nil),
+                                                                                (external, "Example Studio Display", false, true, nil)])
+        case "external-unplugged":
+            try root.configureDisplays(platform: "SIMULATED-MAC-A", displays: [(builtIn, "Built-in Display", true, true, nil), (external, "Example Studio Display", false, false, nil)])
+        default: usage()
+        }
+        print("Displays: \(arguments[2])")
     case "install-app":
         guard arguments.count == 3 else { usage() }
         try root.simulateUserInstall(appNamed: arguments[2])

@@ -151,3 +151,26 @@ extension SimulationBuilder {
         try write(appcast, to: downloads.appendingPathComponent("appcast.xml"), executable: false)
     }
 }
+
+extension SimulationRoot {
+    /// Simulates erasing and reinstalling macOS on the same Mac for the same user: Homebrew, the Command
+    /// Line Tools, the configured Python environment, the user's colour profiles and the display
+    /// assignments are gone; paths, displays and the Mac itself stay the same.
+    public func simulateReinstall() throws {
+        let fm = FileManager.default
+        for path in ["opt/homebrew", "CommandLineTools", "home/Projects/analysis/.venv", "home/Library/ColorSync/Profiles"] {
+            let target = url.appendingPathComponent(path)
+            if fm.fileExists(atPath: target.path) { try fm.removeItem(at: target) }
+        }
+        try fm.createDirectory(at: url.appendingPathComponent("opt/homebrew/bin"), withIntermediateDirectories: true)
+        try fm.createDirectory(at: url.appendingPathComponent("home/Library/ColorSync/Profiles"), withIntermediateDirectories: true)
+        for folder in ["brew/formulae", "brew/casks", "brew/taps"] {
+            let target = state.appendingPathComponent(folder)
+            if fm.fileExists(atPath: target.path) { try fm.removeItem(at: target) }
+            try fm.createDirectory(at: target, withIntermediateDirectories: true)
+        }
+        try configureDisplays(platform: "SIMULATED-MAC-A", displays: [
+            (SimulationBuilder.builtInDisplay, "Built-in Display", true, true, nil),
+            (SimulationBuilder.externalDisplay, "Example Studio Display", false, true, nil)])
+    }
+}
