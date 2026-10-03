@@ -61,7 +61,6 @@
 "inventory.warning.homebrewNotInstalled" = "Homebrew no está instalado en este Mac. Las apps se registran igualmente, y MacReplica instalará Homebrew durante la restauración si hace falta.";
 "inventory.warning.homebrewBroken" = "Homebrew está instalado, pero no responde. No se han podido registrar los paquetes de Homebrew.";
 "inventory.warning.homebrewListFailed" = "No se ha podido leer la lista de paquetes de Homebrew. Faltan los paquetes de Homebrew en esta copia de seguridad.";
-"inventory.warning.masNotInstalled" = "Se han encontrado apps del Mac App Store, pero la herramienta auxiliar «mas» no está instalada. Puede que tengas que descargar a mano algunas apps del App Store más adelante.";
 "inventory.warning.masListFailed" = "No se ha podido leer la lista de apps del Mac App Store.";
 "inventory.warning.catalogUnavailable" = "No se ha podido cargar el catálogo de Homebrew (¿no hay conexión a Internet?). No se han buscado paquetes de Homebrew para las apps instaladas a mano.";
 
@@ -1062,3 +1061,9 @@
 "adminPassword.title" = "Contraseña de administrador";
 "adminPassword.message" = "Homebrew necesita permisos de administrador para instalar algunas de las apps que restauras. MacReplica lo pide una vez, comprueba la contraseña, la usa solo para esta restauración y después la olvida. Nunca se guarda.";
 "adminPassword.wrong" = "Esa contraseña no se aceptó. Introduce la contraseña de una cuenta de administrador de este Mac.";
+"inventory.warning.masNeeded.one" = "No se pudo identificar 1 app del App Store. La herramienta «mas» puede buscarla; sin ella, tendrás que descargar esa app tú mismo del App Store más tarde.";
+"inventory.warning.masNeeded.other" = "No se pudieron identificar %1$d apps del App Store. La herramienta «mas» puede buscarlas; sin ella, tendrás que descargarlas tú mismo del App Store más tarde.";
+"inventory.mas.install" = "Instalar «mas» con Homebrew y volver a analizar";
+"inventory.mas.installing" = "Instalando «mas»…";
+"inventory.mas.failed" = "No se pudo instalar «mas»";
+"apps.otherCopy" = "Otra copia: %1$@ (versión %2$@): se muestra y se restaura una sola vez";

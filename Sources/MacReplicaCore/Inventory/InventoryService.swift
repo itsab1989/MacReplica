@@ -21,7 +21,9 @@ public enum InventoryWarning: Equatable, Sendable {
     case homebrewNotInstalled
     case homebrewBroken(reason: String)
     case homebrewListFailed
-    case masNotInstalled
+    /// App Store apps that could not be identified (Spotlight had no App Store ID) and `mas` is not
+    /// installed to look them up. `homebrewAvailable`: MacReplica can offer to install `mas`.
+    case masNeeded(unidentifiedApps: Int, homebrewAvailable: Bool)
     case masListFailed
     case catalogUnavailable
 }
@@ -165,6 +167,7 @@ public struct InventoryService: Sendable {
                 bundleByPath[record.path] = bundle
             }
         }
+        apps = Self.mergeCopies(apps, applicationFolders: layout.applicationFolders.map { layout.displayPath($0) })
 
         // 2. Homebrew (30 – 45 %)
         progress(InventoryProgress(phase: .homebrew, fraction: 0.3, detail: nil))
@@ -211,16 +214,17 @@ public struct InventoryService: Sendable {
                 warnings.append(.masListFailed)
                 locations.append(LocationAccess(area: .appStore, location: "mas", status: .unsupported))
             }
-        } else if apps.contains(where: { $0.source == .appStore }) {
-            warnings.append(.masNotInstalled)
-            locations.append(LocationAccess(area: .appStore, location: "mas", status: .notFound))
         }
+        // App Store IDs come from Spotlight (`kMDItemAppStoreAdamID`); `mas` is only needed for apps Spotlight
+        // has no ID for. Without it, those apps are reported; everything else needs no warning.
+        var unidentifiedAppStoreApps = 0
         for index in apps.indices where apps[index].source == .appStore {
             var identifier: Int?
             if let bundle = bundleByPath[apps[index].path] { identifier = await masClient.appStoreID(ofBundle: bundle) }
             if identifier == nil {
                 identifier = masApps.first { Matcher.normalize($0.name) == Matcher.normalize(apps[index].name) }?.appStoreID
             }
+            if identifier == nil { unidentifiedAppStoreApps += 1 }
             if let identifier {
                 apps[index].restoreMethod = .appStore(id: identifier)
                 if let existing = masApps.firstIndex(where: { $0.appStoreID == identifier }) {
@@ -230,6 +234,12 @@ public struct InventoryService: Sendable {
                                                 version: apps[index].version, bundleIdentifier: apps[index].bundleIdentifier))
                 }
             }
+        }
+
+        if masClient.locate() == nil, unidentifiedAppStoreApps > 0 {
+            let homebrew = await HomebrewClient(layout: layout, runner: runner).locate().installation != nil
+            warnings.append(.masNeeded(unidentifiedApps: unidentifiedAppStoreApps, homebrewAvailable: homebrew))
+            locations.append(LocationAccess(area: .appStore, location: "mas", status: .notFound))
         }
 
         // 4. Homebrew matching for everything else (55 – 70 %)
@@ -312,6 +322,35 @@ public struct InventoryService: Sendable {
             }
         }
         progress(InventoryProgress(phase: .colorProfiles, fraction: 1, detail: nil))
+        return result
+    }
+
+    /// One record per app: copies with the same bundle identifier (e.g. Zoom in `/Applications` and in
+    /// `~/Applications`, or a copy left in a subfolder) are merged. The copy that is kept is the one in the
+    /// first application folder (`/Applications`), then the newest version; the others are listed in
+    /// `otherCopies`. Apps without a bundle identifier are never merged.
+    static func mergeCopies(_ apps: [AppRecord], applicationFolders: [String]) -> [AppRecord] {
+        func folderRank(_ app: AppRecord) -> Int {
+            applicationFolders.firstIndex { app.path.hasPrefix($0 + "/") } ?? applicationFolders.count
+        }
+        var result: [AppRecord] = []
+        var indexByIdentifier: [String: Int] = [:]
+        for app in apps {
+            guard let key = app.bundleIdentifier?.lowercased(), !key.isEmpty else { result.append(app); continue }
+            guard let index = indexByIdentifier[key] else {
+                indexByIdentifier[key] = result.count
+                result.append(app)
+                continue
+            }
+            var kept = result[index], other = app
+            let otherIsBetter = folderRank(other) < folderRank(kept)
+                || (folderRank(other) == folderRank(kept)
+                    && VersionComparison.compare(other.version ?? "0", kept.version ?? "0") == .orderedDescending)
+            if otherIsBetter { swap(&kept, &other) }
+            kept.otherCopies = (kept.otherCopies ?? []) + (other.otherCopies ?? []) + [AppRecord.OtherCopy(path: other.path, version: other.version)]
+            other.otherCopies = nil
+            result[index] = kept
+        }
         return result
     }
 

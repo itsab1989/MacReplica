@@ -69,6 +69,15 @@ struct InventoryResultsView: View {
 
                     ForEach(Array((model.inventory?.warnings ?? []).enumerated()), id: \.offset) { _, warning in
                         NoticeView(style: .warning, title: l.inventoryWarningText(warning))
+                        if case .masNeeded(_, true) = warning {
+                            HStack {
+                                Spacer()
+                                if model.installingMas { ProgressView().controlSize(.small); Text(l.t("inventory.mas.installing")).font(.callout) }
+                                Button(l.t("inventory.mas.install")) { model.installMasAndRescan() }
+                                    .disabled(model.installingMas)
+                                    .accessibilityIdentifier("inventory.installMas")
+                            }
+                        }
                     }
 
                     // Apps with possible matches stay listed after a choice so it can be changed.
@@ -183,6 +192,11 @@ struct AppRow: View {
                 Text([app.version.map { l.t("common.version", $0) }, app.vendor].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption).foregroundStyle(.secondary)
                     .lineLimit(1)
+                ForEach(app.otherCopies ?? [], id: \.path) { copy in
+                    Text(l.t("apps.otherCopy", copy.path, copy.version ?? "–"))
+                        .font(.caption).foregroundStyle(.orange)
+                        .lineLimit(1).truncationMode(.middle)
+                }
             }
             Spacer()
             Text(l.methodText(app.restoreMethod))

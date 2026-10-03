@@ -327,6 +327,15 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var updateFeed: UpdateFeed?
     /// Apple Developer Team ID of the bundle's signature; downloads must carry the same one.
     public var teamIdentifier: String?
+    /// Further copies of the same app (same bundle identifier) found in other places, e.g. an older one in
+    /// `~/Applications`. The app is listed and restored once; these are shown so the user knows about them.
+    public var otherCopies: [OtherCopy]? = nil
+
+    public struct OtherCopy: Codable, Equatable, Hashable, Sendable {
+        public var path: String
+        public var version: String?
+        public init(path: String, version: String?) { self.path = path; self.version = version }
+    }
 
     public init(
         name: String,

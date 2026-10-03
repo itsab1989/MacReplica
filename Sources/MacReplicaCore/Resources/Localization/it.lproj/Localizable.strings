@@ -61,7 +61,6 @@
 "inventory.warning.homebrewNotInstalled" = "Homebrew non è installato su questo Mac. Le app vengono comunque registrate e, se necessario, MacReplica installa Homebrew durante il ripristino.";
 "inventory.warning.homebrewBroken" = "Homebrew è installato ma non risponde. Non è stato possibile registrare i pacchetti Homebrew.";
 "inventory.warning.homebrewListFailed" = "Impossibile leggere l’elenco dei pacchetti Homebrew. I pacchetti Homebrew mancano in questo backup.";
-"inventory.warning.masNotInstalled" = "Sono state trovate app del Mac App Store, ma lo strumento di supporto «mas» non è installato. Alcune app dell’App Store potrebbero dover essere scaricate a mano in seguito.";
 "inventory.warning.masListFailed" = "Impossibile leggere l’elenco delle app del Mac App Store.";
 "inventory.warning.catalogUnavailable" = "Impossibile caricare il catalogo Homebrew (nessuna connessione a Internet?). Per le app installate a mano non sono stati cercati pacchetti Homebrew.";
 
@@ -1062,3 +1061,9 @@
 "adminPassword.title" = "Password amministratore";
 "adminPassword.message" = "Homebrew ha bisogno dei diritti di amministratore per installare alcune delle app che stai ripristinando. MacReplica la chiede una volta, controlla la password, la usa solo per questo ripristino e poi la dimentica. Non viene mai salvata.";
 "adminPassword.wrong" = "Questa password non è stata accettata. Inserisci la password di un account amministratore di questo Mac.";
+"inventory.warning.masNeeded.one" = "1 app dell’App Store non è stata identificata. Lo strumento «mas» può cercarla; senza, dovrai scaricare tu quell’app dall’App Store in seguito.";
+"inventory.warning.masNeeded.other" = "%1$d app dell’App Store non sono state identificate. Lo strumento «mas» può cercarle; senza, dovrai scaricarle tu dall’App Store in seguito.";
+"inventory.mas.install" = "Installa «mas» con Homebrew e ripeti la scansione";
+"inventory.mas.installing" = "Installazione di «mas»…";
+"inventory.mas.failed" = "Impossibile installare «mas»";
+"apps.otherCopy" = "Un’altra copia: %1$@ (versione %2$@) – elencata e ripristinata una sola volta";

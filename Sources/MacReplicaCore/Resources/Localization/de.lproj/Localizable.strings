@@ -61,7 +61,6 @@
 "inventory.warning.homebrewNotInstalled" = "Homebrew ist auf diesem Mac nicht installiert. Die Apps werden trotzdem erfasst, und MacReplica installiert Homebrew bei Bedarf während der Wiederherstellung.";
 "inventory.warning.homebrewBroken" = "Homebrew ist installiert, reagiert aber nicht. Homebrew-Pakete konnten nicht erfasst werden.";
 "inventory.warning.homebrewListFailed" = "Die Liste der Homebrew-Pakete konnte nicht gelesen werden. Homebrew-Pakete fehlen in diesem Backup.";
-"inventory.warning.masNotInstalled" = "Es wurden Apps aus dem Mac App Store gefunden, aber das Hilfsprogramm „mas“ ist nicht installiert. Einige App-Store-Apps musst du später eventuell selbst laden.";
 "inventory.warning.masListFailed" = "Die Liste der Apps aus dem Mac App Store konnte nicht gelesen werden.";
 "inventory.warning.catalogUnavailable" = "Der Homebrew-Katalog konnte nicht geladen werden (keine Internetverbindung?). Selbst installierte Apps wurden nicht auf Homebrew-Pakete geprüft.";
 
@@ -1062,3 +1061,9 @@
 "adminPassword.title" = "Administratorpasswort";
 "adminPassword.message" = "Homebrew braucht Administratorrechte, um einige der wiederhergestellten Apps zu installieren. MacReplica fragt einmal, prüft das Passwort, nutzt es nur für diese Wiederherstellung und vergisst es danach. Es wird nie gespeichert.";
 "adminPassword.wrong" = "Dieses Passwort wurde nicht akzeptiert. Gib das Passwort eines Administratorkontos auf diesem Mac ein.";
+"inventory.warning.masNeeded.one" = "1 App-Store-App konnte nicht erkannt werden. Das Hilfsprogramm „mas“ kann sie nachschlagen; ohne es lädst du diese App später selbst aus dem App Store.";
+"inventory.warning.masNeeded.other" = "%1$d App-Store-Apps konnten nicht erkannt werden. Das Hilfsprogramm „mas“ kann sie nachschlagen; ohne es lädst du diese Apps später selbst aus dem App Store.";
+"inventory.mas.install" = "„mas“ mit Homebrew installieren und neu scannen";
+"inventory.mas.installing" = "„mas“ wird installiert …";
+"inventory.mas.failed" = "„mas“ konnte nicht installiert werden";
+"apps.otherCopy" = "Weitere Kopie: %1$@ (Version %2$@) – nur einmal aufgeführt und wiederhergestellt";

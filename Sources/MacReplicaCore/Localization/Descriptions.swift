@@ -342,7 +342,7 @@ extension Localizer {
         case .homebrewNotInstalled: return t("inventory.warning.homebrewNotInstalled")
         case .homebrewBroken: return t("inventory.warning.homebrewBroken")
         case .homebrewListFailed: return t("inventory.warning.homebrewListFailed")
-        case .masNotInstalled: return t("inventory.warning.masNotInstalled")
+        case .masNeeded(let count, _): return p("inventory.warning.masNeeded", count)
         case .masListFailed: return t("inventory.warning.masListFailed")
         case .catalogUnavailable: return t("inventory.warning.catalogUnavailable")
         }

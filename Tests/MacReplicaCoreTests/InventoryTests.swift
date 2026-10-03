@@ -103,11 +103,23 @@ struct InventoryTests {
         let simulation = try root.environment
         let result = try await TestEnvironment.inventory(simulation).run()
         #expect(result.warnings.contains(.homebrewNotInstalled))
-        #expect(result.warnings.contains(.masNotInstalled))
         #expect(result.warnings.contains(.catalogUnavailable))
         #expect(result.manifest.homebrew == nil)
-        // Without Homebrew data the App Store app is still identified through Spotlight.
+        // Without Homebrew data the App Store app is still identified through Spotlight, so mas is not needed.
         #expect(result.manifest.applications.first { $0.name == "Ledger Lite" }?.restoreMethod == .appStore(id: 1_234_567_890))
+        #expect(!result.warnings.contains { if case .masNeeded = $0 { return true }; return false })
+    }
+
+    @Test func masIsOnlyAskedForWhenAnAppStoreAppCannotBeIdentified() async throws {
+        let sandbox = try Sandbox("inventory-mas")
+        let root = try SimulationBuilder.create(at: sandbox.url.appendingPathComponent("sim"), scenario: .sourceMac)
+        try FileManager.default.removeItem(at: root.url.appendingPathComponent("opt/homebrew/bin/mas"))
+        for name in try FileManager.default.contentsOfDirectory(atPath: root.state.appendingPathComponent("adam").path) {
+            try FileManager.default.removeItem(at: root.state.appendingPathComponent("adam/\(name)"))
+        }
+        let result = try await TestEnvironment.inventory(try root.environment).run()
+        #expect(result.warnings.contains(.masNeeded(unidentifiedApps: 1, homebrewAvailable: true)))
+        #expect(TestEnvironment.english.inventoryWarningText(.masNeeded(unidentifiedApps: 1, homebrewAvailable: true)).contains("1 App Store app"))
     }
 
     @Test func inventoryReportsBrokenHomebrew() async throws {
@@ -234,5 +246,41 @@ struct InventoryTests {
         try big.write(to: file)
         #expect(try Hashing.sha256Hex(ofFile: file) == Hashing.sha256Hex(of: big))
         #expect(Hashing.sha256Hex(of: Data()) == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+    }
+}
+
+@Suite("Duplicate applications")
+struct DuplicateAppTests {
+    static func app(_ name: String, _ id: String?, _ path: String, _ version: String) -> AppRecord {
+        AppRecord(name: name, version: version, bundleIdentifier: id, path: path, architectures: [.arm64], source: .unknown, restoreMethod: .manual)
+    }
+
+    @Test func copiesWithTheSameBundleIdentifierAreListedOnce() {
+        let folders = ["/Applications", "~/Applications"]
+        let apps = [Self.app("zoom.us", "us.zoom.xos", "~/Applications/zoom.us.app", "6.4.1"),
+                    Self.app("zoom.us", "us.zoom.xos", "/Applications/zoom.us.app", "6.3.0"),
+                    Self.app("Zoom", "US.ZOOM.XOS", "/Applications/Old/zoom.us.app", "5.0.0"),
+                    Self.app("Tool", nil, "/Applications/Tool.app", "1"),
+                    Self.app("Tool", nil, "~/Applications/Tool.app", "1"),
+                    Self.app("Other", "com.example.other", "/Applications/Other.app", "2")]
+        let merged = InventoryService.mergeCopies(apps, applicationFolders: folders)
+        #expect(merged.map(\.path) == ["/Applications/zoom.us.app", "/Applications/Tool.app", "~/Applications/Tool.app", "/Applications/Other.app"])
+        let zoom = merged[0]
+        #expect(zoom.version == "6.3.0", "the copy in /Applications is kept, even if the one in ~/Applications is newer")
+        #expect(Set(zoom.otherCopies ?? []) == [AppRecord.OtherCopy(path: "~/Applications/zoom.us.app", version: "6.4.1"),
+                                                AppRecord.OtherCopy(path: "/Applications/Old/zoom.us.app", version: "5.0.0")])
+        #expect(Set(merged.map(\.id)).count == merged.count, "every listed app has its own id")
+    }
+
+    @Test func theScanListsAnAppInstalledTwiceOnce() async throws {
+        let sandbox = try Sandbox("duplicate-apps")
+        let root = try SimulationBuilder.create(at: sandbox.url.appendingPathComponent("sim"), scenario: .sourceMac)
+        try SimulationBuilder.makeSyntheticApp(name: "zoom.us", bundleID: "us.zoom.xos", version: "6.3.0", in: root.url.appendingPathComponent("Applications"))
+        try SimulationBuilder.makeSyntheticApp(name: "zoom.us", bundleID: "us.zoom.xos", version: "6.4.1", in: root.url.appendingPathComponent("home/Applications"))
+        let manifest = try await TestEnvironment.inventory(try root.environment).run().manifest
+        let zoom = manifest.applications.filter { $0.bundleIdentifier == "us.zoom.xos" }
+        #expect(zoom.count == 1)
+        #expect(zoom.first?.path == "/Applications/zoom.us.app")
+        #expect(zoom.first?.otherCopies == [AppRecord.OtherCopy(path: "~/Applications/zoom.us.app", version: "6.4.1")])
     }
 }

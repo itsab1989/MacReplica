@@ -61,7 +61,6 @@
 "inventory.warning.homebrewNotInstalled" = "Homebrew is niet geïnstalleerd op deze Mac. De apps worden toch vastgelegd en MacReplica installeert Homebrew indien nodig tijdens het herstel.";
 "inventory.warning.homebrewBroken" = "Homebrew is geïnstalleerd, maar reageert niet. Homebrew-pakketten konden niet worden vastgelegd.";
 "inventory.warning.homebrewListFailed" = "De lijst met Homebrew-pakketten kon niet worden gelezen. Homebrew-pakketten ontbreken in deze reservekopie.";
-"inventory.warning.masNotInstalled" = "Er zijn Mac App Store-apps gevonden, maar het hulpprogramma ‘mas’ is niet geïnstalleerd. Sommige App Store-apps moet je later misschien handmatig downloaden.";
 "inventory.warning.masListFailed" = "De lijst met Mac App Store-apps kon niet worden gelezen.";
 "inventory.warning.catalogUnavailable" = "De Homebrew-catalogus kon niet worden geladen (geen internetverbinding?). Voor handmatig geïnstalleerde apps is niet gezocht naar Homebrew-pakketten.";
 
@@ -1062,3 +1061,9 @@
 "adminPassword.title" = "Beheerderswachtwoord";
 "adminPassword.message" = "Homebrew heeft beheerdersrechten nodig om sommige apps te installeren die je herstelt. MacReplica vraagt één keer, controleert het wachtwoord, gebruikt het alleen voor dit herstel en vergeet het daarna. Het wordt nooit bewaard.";
 "adminPassword.wrong" = "Dat wachtwoord is niet geaccepteerd. Voer het wachtwoord in van een beheerdersaccount op deze Mac.";
+"inventory.warning.masNeeded.one" = "1 App Store-app kon niet worden herkend. Het hulpprogramma ‘mas’ kan hem opzoeken; zonder moet je die app later zelf uit de App Store downloaden.";
+"inventory.warning.masNeeded.other" = "%1$d App Store-apps konden niet worden herkend. Het hulpprogramma ‘mas’ kan ze opzoeken; zonder moet je die apps later zelf uit de App Store downloaden.";
+"inventory.mas.install" = "‘mas’ installeren met Homebrew en opnieuw scannen";
+"inventory.mas.installing" = "‘mas’ wordt geïnstalleerd …";
+"inventory.mas.failed" = "‘mas’ kon niet worden geïnstalleerd";
+"apps.otherCopy" = "Nog een kopie: %1$@ (versie %2$@) – één keer vermeld en hersteld";

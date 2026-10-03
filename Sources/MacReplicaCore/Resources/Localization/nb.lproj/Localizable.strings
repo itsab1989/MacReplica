@@ -61,7 +61,6 @@
 "inventory.warning.homebrewNotInstalled" = "Homebrew er ikke installert på denne Macen. Appene blir likevel registrert, og MacReplica installerer Homebrew under gjenopprettingen ved behov.";
 "inventory.warning.homebrewBroken" = "Homebrew er installert, men svarer ikke. Homebrew-pakker kunne ikke registreres.";
 "inventory.warning.homebrewListFailed" = "Listen over Homebrew-pakker kunne ikke leses. Homebrew-pakker mangler i denne sikkerhetskopien.";
-"inventory.warning.masNotInstalled" = "Det ble funnet apper fra Mac App Store, men hjelpeverktøyet «mas» er ikke installert. Noen App Store-apper må kanskje lastes ned manuelt senere.";
 "inventory.warning.masListFailed" = "Listen over apper fra Mac App Store kunne ikke leses.";
 "inventory.warning.catalogUnavailable" = "Homebrew-katalogen kunne ikke lastes inn (ingen internettforbindelse?). Manuelt installerte apper ble ikke sjekket mot Homebrew-pakker.";
 
@@ -1062,3 +1061,9 @@
 "adminPassword.title" = "Administratorpassord";
 "adminPassword.message" = "Homebrew trenger administratorrettigheter for å installere noen av appene du gjenoppretter. MacReplica spør én gang, kontrollerer passordet, bruker det bare til denne gjenopprettingen og glemmer det etterpå. Det lagres aldri.";
 "adminPassword.wrong" = "Passordet ble ikke godtatt. Skriv inn passordet til en administratorkonto på denne Macen.";
+"inventory.warning.masNeeded.one" = "1 App Store-app kunne ikke identifiseres. Hjelpeverktøyet «mas» kan slå den opp; uten det laster du ned appen fra App Store selv senere.";
+"inventory.warning.masNeeded.other" = "%1$d App Store-apper kunne ikke identifiseres. Hjelpeverktøyet «mas» kan slå dem opp; uten det laster du ned appene fra App Store selv senere.";
+"inventory.mas.install" = "Installer «mas» med Homebrew og skann på nytt";
+"inventory.mas.installing" = "Installerer «mas» …";
+"inventory.mas.failed" = "«mas» kunne ikke installeres";
+"apps.otherCopy" = "En kopi til: %1$@ (versjon %2$@) – vises og gjenopprettes bare én gang";

@@ -61,7 +61,6 @@
 "inventory.warning.homebrewNotInstalled" = "Homebrew n’est pas installé sur ce Mac. Les apps sont tout de même enregistrées, et MacReplica installera Homebrew pendant la restauration si nécessaire.";
 "inventory.warning.homebrewBroken" = "Homebrew est installé mais ne répond pas. Les paquets Homebrew n’ont pas pu être enregistrés.";
 "inventory.warning.homebrewListFailed" = "La liste des paquets Homebrew n’a pas pu être lue. Les paquets Homebrew manquent dans cette sauvegarde.";
-"inventory.warning.masNotInstalled" = "Des apps du Mac App Store ont été trouvées, mais l’outil d’aide « mas » n’est pas installé. Certaines apps de l’App Store devront peut-être être téléchargées à la main plus tard.";
 "inventory.warning.masListFailed" = "La liste des apps du Mac App Store n’a pas pu être lue.";
 "inventory.warning.catalogUnavailable" = "Le catalogue Homebrew n’a pas pu être chargé (pas de connexion Internet ?). Les apps installées à la main n’ont pas été comparées aux paquets Homebrew.";
 
@@ -1062,3 +1061,9 @@
 "adminPassword.title" = "Mot de passe administrateur";
 "adminPassword.message" = "Homebrew a besoin des droits d’administrateur pour installer certaines des apps que tu restaures. MacReplica le demande une seule fois, vérifie le mot de passe, ne l’utilise que pour cette restauration et l’oublie ensuite. Il n’est jamais enregistré.";
 "adminPassword.wrong" = "Ce mot de passe n’a pas été accepté. Saisis le mot de passe d’un compte administrateur de ce Mac.";
+"inventory.warning.masNeeded.one" = "1 app de l’App Store n’a pas pu être identifiée. L’outil « mas » peut la rechercher ; sans lui, tu téléchargeras cette app toi-même depuis l’App Store plus tard.";
+"inventory.warning.masNeeded.other" = "%1$d apps de l’App Store n’ont pas pu être identifiées. L’outil « mas » peut les rechercher ; sans lui, tu les téléchargeras toi-même depuis l’App Store plus tard.";
+"inventory.mas.install" = "Installer « mas » avec Homebrew et relancer l’analyse";
+"inventory.mas.installing" = "Installation de « mas »…";
+"inventory.mas.failed" = "« mas » n’a pas pu être installé";
+"apps.otherCopy" = "Autre copie : %1$@ (version %2$@) – listée et restaurée une seule fois";

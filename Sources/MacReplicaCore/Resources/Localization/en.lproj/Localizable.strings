@@ -61,7 +61,6 @@
 "inventory.warning.homebrewNotInstalled" = "Homebrew is not installed on this Mac. Apps are still recorded, and MacReplica installs Homebrew during the restore if needed.";
 "inventory.warning.homebrewBroken" = "Homebrew is installed but does not respond. Homebrew packages could not be recorded.";
 "inventory.warning.homebrewListFailed" = "The list of Homebrew packages could not be read. Homebrew packages are missing from this backup.";
-"inventory.warning.masNotInstalled" = "Mac App Store apps were found, but the helper tool “mas” is not installed. Some App Store apps may need to be downloaded by hand later.";
 "inventory.warning.masListFailed" = "The list of Mac App Store apps could not be read.";
 "inventory.warning.catalogUnavailable" = "The Homebrew catalog could not be loaded (no internet connection?). Apps installed by hand were not checked for Homebrew packages.";
 
@@ -1064,3 +1063,9 @@
 "adminPassword.title" = "Administrator password";
 "adminPassword.message" = "Homebrew needs administrator rights to install some of the apps you are restoring. MacReplica asks once, checks the password, uses it only for this restore and forgets it afterwards. It is never stored.";
 "adminPassword.wrong" = "That password was not accepted. Enter the password of an administrator account on this Mac.";
+"inventory.warning.masNeeded.one" = "1 App Store app could not be identified. The helper tool “mas” can look it up; without it, you download that app from the App Store yourself later.";
+"inventory.warning.masNeeded.other" = "%1$d App Store apps could not be identified. The helper tool “mas” can look them up; without it, you download those apps from the App Store yourself later.";
+"inventory.mas.install" = "Install “mas” with Homebrew and scan again";
+"inventory.mas.installing" = "Installing “mas” …";
+"inventory.mas.failed" = "“mas” could not be installed";
+"apps.otherCopy" = "Another copy: %1$@ (version %2$@) – listed and restored once";

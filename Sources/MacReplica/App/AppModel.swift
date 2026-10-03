@@ -65,6 +65,7 @@ final class AppModel: ObservableObject {
     @Published var preservedPythonEnvironments = Set<String>()
     @Published var pythonSearchFolders: [URL] = []
     @Published var addingApplicationData = false
+    @Published var installingMas = false
     @Published var notice: ProblemInfo?
     @Published var includeGitSettings = true
     @Published var includeGitEmail = false
@@ -289,6 +290,32 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Inventory
+
+    /// Installs `mas` with Homebrew after the user asked for it on the scan results screen, then scans again
+    /// so that App Store apps Spotlight could not identify are looked up.
+    func installMasAndRescan() {
+        guard !installingMas else { return }
+        installingMas = true
+        let layout = services.layout, runner = services.runner
+        appLog.info("Installing mas with Homebrew at the user's request", component: .inventory)
+        Task { [weak self] in
+            let client = HomebrewClient(layout: layout, runner: runner)
+            var succeeded = false
+            if let brew = await client.locate().installation,
+               let result = try? await client.install(brew, package: .formula("mas"), askpass: nil) {
+                succeeded = result.succeeded && MASClient(layout: layout, runner: runner).locate() != nil
+            }
+            guard let self else { return }
+            self.installingMas = false
+            if succeeded {
+                self.appLog.info("mas installed; scanning again", component: .inventory)
+                self.startInventory()
+            } else {
+                self.appLog.warning("mas could not be installed", component: .inventory)
+                self.notice = ProblemInfo(title: self.l.t("inventory.mas.failed"), message: self.l.t("failure.masUnavailable.explanation"), detail: nil)
+            }
+        }
+    }
 
     func startInventory() {
         screen = .scanning
