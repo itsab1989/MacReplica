@@ -76,7 +76,16 @@ if arguments.first == "launchpad-export" || arguments.first == "launchpad-apply"
         exit(0)
     }
     let layout = try JSONDecoder().decode(LaunchpadLayout.self, from: Data(contentsOf: file))
-    let placed = try store.applyAndReloadDock(layout)
+    var written: LaunchpadLayout?
+    let placed = try store.applyAndReloadDock(layout, signal: { signal in
+        if signal == SIGKILL { written = try? store.read(macOSVersion: SystemInfo.macOSVersion, work: work) }
+        LaunchpadStore.signalDock(signal)
+    })
+    if let written {
+        try encoder.encode(written).write(to: file.deletingPathExtension().appendingPathExtension("written.json"))
+        print("written (before the Dock restart): \(written.pages.count) pages, folders: \(written.folderNames); "
+              + (layout.matches(written, installed: Set(written.pages.flatMap { $0 }.compactMap { if case .app(let id) = $0 { return id }; return nil })) ? "as recorded" : "differs"))
+    }
     try await Task.sleep(nanoseconds: 10_000_000_000)
     let after = try store.read(macOSVersion: SystemInfo.macOSVersion, work: work)
     try encoder.encode(after).write(to: file.deletingPathExtension().appendingPathExtension("after.json"))

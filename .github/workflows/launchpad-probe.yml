@@ -41,6 +41,8 @@ jobs:
           # A fresh installation: Launchpad in Apple's default arrangement.
           defaults write com.apple.dock ResetLaunchPad -bool true; killall Dock; sleep 12
           ./simulator launchpad-export fresh.json
+          DB="$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db"
+          mkdir -p dbs/fresh && cp "$DB"/db* dbs/fresh/
           cat > recorded.json <<'JSON'
           {"macOSVersion": "14", "pages": [
             [{"folder": {"name": "MacReplica Test", "pages": [["com.apple.Safari", "com.apple.Notes", "com.apple.TextEdit"]]}},
@@ -48,7 +50,8 @@ jobs:
             [{"folder": {"name": "Werkzeuge & Co", "pages": [["com.apple.calculator", "com.apple.Preview"]]}}]
           ]}
           JSON
-          ./simulator launchpad-apply recorded.json
+          ./simulator launchpad-apply recorded.json || true
+          mkdir -p dbs/after && cp "$DB"/db* dbs/after/
           open -a Launchpad; sleep 4; screencapture -x launchpad.png || true
           osascript -e 'tell application "System Events" to key code 53' || true
       - uses: actions/upload-artifact@v7
@@ -58,3 +61,4 @@ jobs:
           path: |
             *.json
             launchpad.png
+            dbs/
