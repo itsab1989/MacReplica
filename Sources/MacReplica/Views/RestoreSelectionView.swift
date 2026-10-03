@@ -8,7 +8,6 @@ struct RestoreSelectionView: View {
     var body: some View {
         let l = model.l
         let items = model.candidateItems
-        let manualCount = model.currentPlan()?.manualApps.count ?? 0
         ScreenLayout(title: l.t("restore.select.title"), subtitle: backupSubtitle) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -25,7 +24,7 @@ struct RestoreSelectionView: View {
                     Card {
                         ForEach(RestoreComponent.allCases) { component in
                             let group = items.filter { $0.component == component }
-                            let count = group.count + (component == .applications ? manualCount : 0)
+                            let count = group.count
                             ComponentToggle(component: component, count: count, status: componentStatus(group))
                             if component != RestoreComponent.allCases.last { Divider() }
                         }
@@ -108,6 +107,11 @@ struct RestoreSelectionView: View {
         let l = model.l
         if let damaged = model.verification?.damagedFiles, !damaged.isEmpty {
             NoticeView(style: .warning, title: l.p("restore.select.damaged", damaged.count), message: l.t("restore.select.damagedHint"))
+        }
+        if let manifest = model.manifest, !manifest.displayProfiles.isEmpty, let keys = manifest.hardwareKeys {
+            let same = keys.isSameMac(platformIdentifier: model.services.layout.displayColorManager.platformIdentifier())
+            NoticeView(style: .info, title: l.t(same == true ? "restore.select.sameMac" : (same == false ? "restore.select.otherMac" : "restore.select.unknownMac")),
+                       message: l.t("restore.select.displayHint"))
         }
         if let manifest = model.manifest, manifest.architecture != .unknown, manifest.architecture != model.services.architecture {
             NoticeView(style: .info, title: l.t("restore.select.otherArchitecture"),
@@ -249,6 +253,7 @@ struct ItemSelectionSheet: View {
                 Spacer()
                 Button(l.t("common.done")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("individual.done")
             }
             .padding(12)
         }
@@ -297,9 +302,12 @@ enum ItemStatus {
         case .alreadyPresent, .identicalFileExists, .equivalentFileExists, .keepsMacOSVersion:
             return (l.t(item.kind.isFile || item.kind == .applicationData || item.kind == .gitConfiguration ? "items.status.present" : "items.status.installed"), .secondary)
         case .conflict, .environmentConflict: return (l.t("items.status.conflict"), .orange)
+        case .willSkip(.applicationNotInstalled(let name)): return (l.t("items.status.waitsForApp", name), .orange)
+        case .willSkip(.applicationVersionOlder(let name, _, let backup)): return (l.t("items.status.needsNewerApp", name, backup), .orange)
         case .willSkip(let reason): return (l.skipText(reason), .secondary)
         case .backupFileDamaged: return (l.t("items.status.cannotVerify"), .red)
         case .checkedWhenRestoring: return (l.t("items.status.checkedLater"), .secondary)
+        case .manualStep: return (l.t("items.status.guided"), .orange)
         default:
             if item.applicationData?.profile?.mustBeClosed == true { return (l.t("items.status.closeApp"), .green) }
             return (l.t(entry.requiresAdmin ? "items.status.readyAdmin" : "items.status.ready"), .green)
@@ -341,6 +349,15 @@ struct RestoreItemRow: View {
                     Text(text).font(.caption).foregroundStyle(color).lineLimit(1)
                         .accessibilityIdentifier("item.status.\(item.id)")
                 }
+                if item.kind == .applicationData, let comparison = entry?.appDataComparison, !comparison.differentFiles.isEmpty {
+                    Button { showDetails.toggle() } label: {
+                        Image(systemName: showDetails ? "chevron.up.circle" : "info.circle")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(l.t("items.details"))
+                    .accessibilityLabel(l.t("items.details"))
+                    .accessibilityIdentifier("item.details.\(item.id)")
+                }
                 if item.kind.isFile, entry?.fileAssessment != nil {
                     Button { showDetails.toggle() } label: {
                         Image(systemName: showDetails ? "chevron.up.circle" : "info.circle")
@@ -371,6 +388,41 @@ struct RestoreItemRow: View {
                     .padding(.leading, 22)
                 }
             }
+            if item.kind == .pythonEnvironment, item.pythonEnvironment?.preservation != nil, !locked,
+               !model.selection.excludedItemIDs.contains(item.id) {
+                HStack {
+                    Text(l.t("items.pythonStrategy")).font(.caption).foregroundStyle(.secondary)
+                    Picker(l.t("items.pythonStrategy"), selection: Binding(get: { model.selection.sourceChoices[item.id] ?? "rebuild" },
+                                                                           set: { model.selection.sourceChoices[item.id] = $0 == "rebuild" ? nil : $0 })) {
+                        Text(l.t("items.pythonStrategy.rebuild")).tag("rebuild")
+                        Text(l.t("items.pythonStrategy.preserve")).tag("preserve")
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("item.pythonStrategy.\(item.id)")
+                }
+                .padding(.leading, 22)
+            }
+            if item.kind == .applicationData, let comparison = entry?.appDataComparison, !locked,
+               !model.selection.excludedItemIDs.contains(item.id) {
+                AppDataChoicesView(item: item, comparison: comparison, showDetails: showDetails)
+                    .padding(.leading, 22)
+            }
+            if item.kind == .formula, item.originalVersion?.hasPrefix("HEAD") == true, !locked,
+               !model.selection.excludedItemIDs.contains(item.id) {
+                HStack {
+                    Text(l.t("items.source")).font(.caption).foregroundStyle(.secondary)
+                    Picker(l.t("items.source"), selection: Binding(get: { model.selection.sourceChoices[item.id] ?? "head" },
+                                                                   set: { model.selection.sourceChoices[item.id] = $0 == "head" ? nil : $0 })) {
+                        Text(l.t("items.source.head")).tag("head")
+                        Text(l.t("items.source.stable")).tag("stable")
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("item.source.\(item.id)")
+                }
+                .padding(.leading, 22)
+            }
             if showDetails, let entry, let assessment = entry.fileAssessment {
                 FileDetailsView(item: item, assessment: assessment)
                     .padding(.leading, 22)
@@ -390,6 +442,81 @@ struct RestoreItemRow: View {
 }
 
 /// Technical details of a font or profile, shown on request.
+/// For application data: which app version the data goes into, what happens with files that differ
+/// from this Mac's, and (with details) which files those are.
+struct AppDataChoicesView: View {
+    @EnvironmentObject var model: AppModel
+    var item: RestoreItem
+    var comparison: AppDataComparison
+    var showDetails: Bool
+
+    var body: some View {
+        let l = model.l
+        VStack(alignment: .leading, spacing: 4) {
+            if let version = comparison.version, !version.alternatives.isEmpty {
+                HStack {
+                    Text(l.t("items.appVersion")).font(.caption).foregroundStyle(.secondary)
+                    Picker(l.t("items.appVersion"), selection: Binding(
+                        get: { version.chosen },
+                        set: { choice in
+                            model.selection.sourceChoices[item.id] = choice
+                            model.assessDestination(applyDefaults: false)
+                        })) {
+                        ForEach(version.alternatives + [version.original], id: \.self) { name in
+                            Text(name == version.original && !version.originalExists ? l.t("items.appVersion.notInstalled", name) : name).tag(name)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("item.appVersion.\(item.id)")
+                }
+            }
+            if !comparison.differentFiles.isEmpty {
+                HStack {
+                    Text(l.p("items.differ", comparison.differentFiles.count)).font(.caption).foregroundStyle(.secondary)
+                    Picker(l.t("items.decision"), selection: Binding(
+                        get: { model.selection.conflictOverrides[item.id] ?? .keepExisting },
+                        set: { model.selection.conflictOverrides[item.id] = $0 })) {
+                        Text(l.t("items.decision.appData.keep")).tag(ConflictResolution.keepExisting)
+                        Text(l.t("items.decision.appData.replace")).tag(ConflictResolution.replace)
+                        Text(l.t("items.decision.appData.skip")).tag(ConflictResolution.skip)
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("item.decision.\(item.id)")
+                }
+            }
+            if showDetails, !comparison.differentFiles.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(l.t("items.appData.summary", comparison.newFiles, comparison.identicalFiles, comparison.differentFiles.count))
+                        .font(.caption).fixedSize(horizontal: false, vertical: true)
+                    ForEach(comparison.differentFiles.prefix(20), id: \.path) { file in
+                        Text(l.t("items.appData.differentFile", file.path, l.fileSize(file.backupSize), date(file.backupModified, l),
+                                 l.fileSize(file.existingSize), date(file.existingModified, l)))
+                            .font(.caption.monospaced()).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if comparison.differentFiles.count > 20 {
+                        Text(l.t("items.appData.moreFiles", comparison.differentFiles.count - 20)).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.secondary.opacity(0.08)))
+            }
+        }
+    }
+
+    private func date(_ value: Date?, _ l: Localizer) -> String {
+        guard let value else { return "–" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: l.language.rawValue)
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: value)
+    }
+}
+
 struct FileDetailsView: View {
     @EnvironmentObject var model: AppModel
     var item: RestoreItem

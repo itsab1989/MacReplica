@@ -81,6 +81,35 @@ public enum BundleInspection {
         return agent.isEmpty ? nil : agent
     }
 
+    /// The Team ID and signing identifier of a signed bundle (read locally, no network).
+    /// Ad-hoc and Apple platform signatures have no Team ID.
+    public static func signingIdentity(of bundle: URL) -> (teamIdentifier: String?, identifier: String?)? {
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(bundle as CFURL, [], &staticCode) == errSecSuccess, let staticCode else { return nil }
+        var info: CFDictionary?
+        guard SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
+              let dictionary = info as? [String: Any] else { return nil }
+        let team = dictionary[kSecCodeInfoTeamIdentifier as String] as? String
+        let identifier = dictionary[kSecCodeInfoIdentifier as String] as? String
+        guard team != nil || identifier != nil else { return nil }
+        return (team.flatMap { $0.range(of: #"^[A-Z0-9]{10}$"#, options: .regularExpression) != nil ? $0 : nil }, identifier)
+    }
+
+    /// True if the bundle's code signature is intact (all architectures, nested code, strict) and, when
+    /// `teamIdentifier` is given, issued by Apple to that developer team (Developer ID or App Store).
+    public static func hasValidSignature(_ bundle: URL, teamIdentifier: String?) -> Bool {
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(bundle as CFURL, [], &staticCode) == errSecSuccess, let staticCode else { return false }
+        var requirement: SecRequirement?
+        if let team = teamIdentifier {
+            guard team.range(of: #"^[A-Z0-9]{10}$"#, options: .regularExpression) != nil,
+                  SecRequirementCreateWithString("anchor apple generic and certificate leaf[subject.OU] = \"\(team)\"" as CFString, [], &requirement)
+                    == errSecSuccess else { return false }
+        }
+        let flags = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSStrictValidate | kSecCSCheckNestedCode)
+        return SecStaticCodeCheckValidity(staticCode, flags, requirement) == errSecSuccess
+    }
+
     public static func hasAppStoreReceipt(_ bundle: URL) -> Bool {
         FileManager.default.fileExists(atPath: bundle.appendingPathComponent("Contents/_MASReceipt/receipt").path)
     }

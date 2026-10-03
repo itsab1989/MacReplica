@@ -62,6 +62,23 @@ struct SecurityTests {
         #expect(lines.values.contains("Applications"))
     }
 
+    /// A busy Mac (GCD's global queues blocked, many commands with blocking output readers) must not
+    /// delay a timeout: the command is stopped after 0.3 s, not when it ends on its own 3 s later.
+    @Test func timeoutsFireWhileManyCommandsRun() async throws {
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: ["/bin/sleep"]), baseEnvironment: [:])
+        for _ in 0..<256 { DispatchQueue.global().async { usleep(6_000_000) } }
+        let timedOut = try await withThrowingTaskGroup(of: Bool?.self) { group in
+            for _ in 0..<20 {
+                group.addTask { _ = try await runner.run(Command(executable: "/bin/sleep", arguments: ["1"], timeout: 30)); return nil }
+            }
+            group.addTask { try await runner.run(Command(executable: "/bin/sleep", arguments: ["3"], timeout: 0.3)).timedOut }
+            var result: Bool?
+            for try await value in group where value != nil { result = value }
+            return result
+        }
+        #expect(timedOut == true)
+    }
+
     @Test func pathSafetyRejectsTraversal() {
         for good in ["a.otf", "Family/Bold.otf", "Displays/Color LCD.icc", "ünïcode/ß.ttf"] {
             #expect(PathSafety.isSafeRelativePath(good))

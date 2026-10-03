@@ -129,7 +129,7 @@
 "component.brewCasks" = "Homebrew Casks";
 "component.brewCasks.hint" = "Apps en andere pakketten die met Homebrew zijn geïnstalleerd.";
 "component.appStore" = "Mac App Store";
-"component.appStore.hint" = "Apps uit de Mac App Store; je moet ingelogd zijn bij de App Store.";
+"component.appStore.hint" = "Apps uit de Mac App Store. MacReplica opent de App Store-pagina van elke app; je installeert hem daar en MacReplica controleert het resultaat.";
 "component.fonts" = "Lettertypen";
 "component.fonts.hint" = "Lettertypen uit je persoonlijke en de gedeelde lettertypemap.";
 "component.colorProfiles" = "ICC-profielen";
@@ -722,7 +722,7 @@
 "guidance.manual.terminal" = "Exporteer je profielen (Instellingen › Profielen › … › Exporteer) en dubbelklik daarna op de nieuwe Mac op de .terminal-bestanden.";
 "guidance.manual.premierePro" = "Kopieer je bestanden met toetscombinaties (.kys) en werkruimten zoals Adobe beschrijft, of laat Premiere Pro ze bij de eerste start overzetten.";
 "guidance.manual.affinity" = "Exporteer penselen, stijlen, assets en macro’s via het menu van elk paneel en importeer ze daarna op de nieuwe Mac.";
-"guidance.manual.resolveLibrary" = "Exporteer PowerGrades (.drx) en maak vanuit Resolve een reservekopie van de projectbibliotheek; kopieer eigen LUT’s uit /Library/Application Support/Blackmagic Design/DaVinci Resolve/LUT.";
+"guidance.manual.resolveLibrary" = "PowerGrades, render-presets en projectpresets staan in de projectbibliotheek van Resolve. Maak een reservekopie van de bibliotheek in de Project Manager (Back Up) en zet die terug op de nieuwe Mac, of exporteer PowerGrades uit de Gallery (DRX) en render-presets vanaf de Deliver-pagina. Je eigen LUT’s en sneltoets- en lay-outpresets staan onder Appgegevens als de reservekopie ze bevat.";
 
 /* Fonts, color profiles and the two-stage restore selection */
 "restore.select.intro" = "De reservekopie is compleet en blijft ongewijzigd. Alles erin is geselecteerd – laat weg wat je niet op deze Mac wilt hebben.";
@@ -834,3 +834,228 @@
 "files.styles.other" = "%1$d stijlen";
 "files.version" = "Versie %1$@";
 "files.legacyOrUnreadable" = "Verouderde of onleesbare indeling";
+
+/* Developer tools, package managers and guided steps */
+"component.developerTools" = "Ontwikkelaarstools";
+"component.developerTools.hint" = "Versiebeheerders, taalversies en globale tools voor Python, Node.js, Ruby, Rust, Go, Java en .NET.";
+"component.packageManagers" = "Andere pakketbeheerders";
+"component.packageManagers.hint" = "MacPorts, Nix, Pixi, mise en asdf. Stappen die MacReplica niet zelf kan uitvoeren, worden als begeleide stappen getoond.";
+"kind.toolchainStep" = "Ontwikkelaarstool";
+"kind.manualApp" = "Begeleide installatie";
+"skip.manualStepRequired" = "Wacht op jou – zie de begeleide stappen";
+"skip.waitingForManualStep" = "Wacht tot %1$@ klaar is";
+"skip.postponedByUser" = "Door jou uitgesteld";
+"skip.cancelledByUser" = "Door jou geannuleerd";
+"ecosystem.packageManagers" = "Pakketbeheerders";
+"ecosystem.python" = "Python";
+"ecosystem.node" = "Node.js";
+"ecosystem.ruby" = "Ruby";
+"ecosystem.rust" = "Rust";
+"ecosystem.go" = "Go";
+"ecosystem.java" = "Java";
+"ecosystem.dotnet" = ".NET";
+"supportLevel.automatic" = "Wordt automatisch hersteld";
+"supportLevel.guided" = "Begeleide stap";
+"supportLevel.inventoryOnly" = "Ter informatie vermeld";
+"prediction.manualStep" = "Begeleide stap: MacReplica laat zien wat je moet doen en controleert het resultaat";
+"prediction.manualAppStore" = "Installeren via de App Store – MacReplica opent de pagina en controleert het resultaat";
+"prediction.afterToolchain" = "Wordt geïnstalleerd na de stappen die nodig zijn";
+"dryRun.group.guided.one" = "%1$d begeleide stap";
+"dryRun.group.guided.other" = "%1$d begeleide stappen";
+"scan.phase.developerTools" = "Ontwikkelaarstools en pakketbeheerders worden gezocht …";
+"failure.toolUnavailable.title" = "Benodigde tool ontbreekt";
+"failure.toolUnavailable.explanation" = "Voor deze stap is een versie- of pakketbeheerder nodig die niet op deze Mac is geïnstalleerd. Installeer hem (of selecteer hem voor het herstel) en probeer het opnieuw.";
+"failure.downloadNotTrusted.title" = "Download kon niet worden geverifieerd";
+"failure.downloadNotTrusted.explanation" = "Het gedownloade bestand kwam niet overeen met de handtekening, controlesom of ontwikkelaar van de leverancier. MacReplica heeft het niet geïnstalleerd en het bestand verwijderd.";
+
+/* Python lock files */
+"note.pythonLockFileUsed" = "Precies opnieuw opgebouwd uit het bestand %1$@ van het project";
+
+/* Guided installation, downloads and developer tools */
+"developerTools.section.title" = "Ontwikkelaarstools";
+"developerTools.section.message" = "Versiebeheerders, taalversies, globale tools en andere pakketbeheerders. MacReplica noteert wat er geïnstalleerd is – nooit de tools zelf en nooit inloggegevens – en installeert het opnieuw op de nieuwe Mac.";
+"developerTools.none" = "Geen versiebeheerders of andere pakketbeheerders gevonden.";
+"developerTools.runtimes.one" = "%1$d versie";
+"developerTools.runtimes.other" = "%1$d versies";
+"developerTools.packages.one" = "%1$d tool";
+"developerTools.packages.other" = "%1$d tools";
+"developerTools.environments.one" = "%1$d omgeving";
+"developerTools.environments.other" = "%1$d omgevingen";
+"results.includeApp" = "Deze app opnemen in de reservekopie";
+"channel.stable" = "Stabiel";
+"channel.beta" = "Bèta";
+"channel.nightly" = "Nightly";
+"channel.insider" = "Insider";
+"channel.preview" = "Preview";
+"trust.vendorSignature" = "Voor de installatie gecontroleerd: de handtekening van de leverancier op het bestand, de ontwikkelaar en de app.";
+"trust.checksum" = "Voor de installatie gecontroleerd: de controlesom van het bestand volgens Homebrew, de ontwikkelaar en de app.";
+"trust.developerSignature" = "De leverancier publiceert geen controlesom: de app moet dezelfde ontwikkelaarshandtekening hebben als op de oude Mac.";
+"trust.none" = "Deze download kan niet worden geverifieerd, daarom opent MacReplica alleen de pagina van de leverancier.";
+"offer.vendorFeed" = "Updatefeed van de leverancier: %1$@ %2$@";
+"offer.homebrewCask" = "Download van de leverancier (%1$@) %2$@";
+"offer.website" = "Website van de leverancier (%1$@)";
+"offer.appStore" = "Mac App Store";
+"offer.recommended" = "%1$@ (aanbevolen)";
+"guidedStep.finishInstaller" = "Het installatieprogramma van Apple is geopend. Rond de installatie daar af.";
+"guidedStep.installFromDiskImage" = "De download wordt in de Finder getoond. Open hem en sleep de app naar de map Apps; accepteer de licentie als daarom wordt gevraagd.";
+"guidedStep.installFromWebsite" = "Download en installeer de app via de website van de leverancier die MacReplica heeft geopend.";
+"guidedStep.installFromAppStore" = "De App Store-pagina is geopend. Klik op Download of de downloadknop, ingelogd met je Apple Account.";
+"guidedStep.runCommand" = "Voer dit uit in Terminal: %1$@";
+"downloadError.network" = "Download mislukt – controleer de verbinding";
+"downloadError.notTrusted" = "Niet geverifieerd – niet geïnstalleerd";
+"downloadError.architecture" = "Werkt niet op de processor van deze Mac";
+"downloadError.macOS" = "Vereist macOS %1$@ of nieuwer";
+"downloadError.alreadyInstalled" = "Er is al een app met deze naam geïnstalleerd";
+"downloadError.license" = "Licentieovereenkomst – geopend in de Finder";
+"guided.title" = "Begeleide installatie";
+"guided.subtitle" = "Apps en stappen die MacReplica niet zelf kan afronden";
+"guided.allDone.title" = "Niets meer te doen";
+"guided.allDone.message" = "Alle begeleide stappen zijn klaar, overgeslagen of uitgesteld.";
+"guided.apps.heading.one" = "%1$d app te installeren";
+"guided.apps.heading.other" = "%1$d apps te installeren";
+"guided.tools.heading.one" = "%1$d stap voor ontwikkelaarstools";
+"guided.tools.heading.other" = "%1$d stappen voor ontwikkelaarstools";
+"guided.tools.message" = "Hiervoor is een tool nodig die MacReplica niet uitvoert (bijvoorbeeld een shellfunctie zoals nvm, of beheerdersrechten). Kopieer de opdracht naar Terminal en klik daarna op Opnieuw controleren – MacReplica controleert het resultaat en gaat verder met wat ervan afhangt.";
+"guided.find.title" = "Officiële downloads zoeken";
+"guided.find.message" = "MacReplica vraagt de eigen updatefeeds van de leveranciers (vermeld in de apps) en de catalogus van Homebrew waar elke app te downloaden is. Er wordt niets gedownload tot je het kiest, en niets komt van downloadportalen of mirrors.";
+"guided.find.button" = "Downloads zoeken";
+"guided.source" = "Bron";
+"guided.noSource" = "Geen officiële download gevonden – installeer hem zelf en klik op Opnieuw controleren.";
+"guided.downloadSelected" = "Selectie downloaden";
+"guided.installSequence" = "Selectie één voor één installeren";
+"guided.installOne" = "Installeren";
+"guided.later" = "Later";
+"guided.skip" = "Overslaan";
+"guided.pause" = "Pauze";
+"guided.resume" = "Hervatten";
+"guided.retry" = "Opnieuw proberen";
+"guided.cancelDownload" = "Annuleren";
+"guided.back" = "Terug naar overzicht";
+"guided.checkAgain" = "Opnieuw controleren";
+"guided.checkAgain.help" = "Controleert alle open stappen opnieuw en gaat verder met wat ervan afhangt";
+"guided.copy" = "Kopiëren";
+"guided.website" = "Website van %1$@";
+"guided.installManager" = "Installeer eerst %1$@ (zie de website) en klik dan op Opnieuw controleren.";
+"guided.state.queued" = "Wacht op download";
+"guided.state.paused" = "Gepauzeerd";
+"guided.state.downloaded" = "Gedownload";
+"guided.state.verifying" = "Controleren …";
+"guided.state.installing" = "Installeren …";
+"guided.state.waiting" = "Wacht op jou";
+"guided.pending.hint" = "MacReplica controleert of de app is geïnstalleerd als je op Klaar klikt. Later laat hem open voor een andere keer; Annuleren stopt de overige installaties.";
+"guided.pending.done" = "Klaar";
+"guided.pending.cancel" = "Installatie annuleren";
+"items.source" = "Installeren";
+"items.source.head" = "Ontwikkelversie (HEAD), zoals op de oude Mac";
+"items.source.stable" = "Stabiele versie";
+"items.status.guided" = "Begeleide stap";
+"summary.waiting" = "Wacht op jou";
+"summary.title.waiting" = "Bijna klaar – een paar stappen zijn aan jou";
+"summary.guidedHeading" = "Begeleide stappen";
+"summary.guidedMessage" = "Alles wat automatisch kan, is klaar. Deze apps en stappen hebben jou nodig; MacReplica zoekt officiële downloads, installeert ze een voor een en controleert elk resultaat. Je kunt ze ook later doen – het herstel onthoudt wat nog open is.";
+"summary.guidedMore.one" = "… en nog %1$d app";
+"summary.guidedMore.other" = "… en nog %1$d apps";
+"summary.guidedTools.one" = "%1$d stap voor ontwikkelaarstools met de exacte opdracht";
+"summary.guidedTools.other" = "%1$d stappen voor ontwikkelaarstools met de exacte opdrachten";
+"summary.guidedOpen" = "Doorgaan met begeleide stappen";
+"resume.waiting.title.one" = "%1$d stap van je herstel wacht op jou";
+"resume.waiting.title.other" = "%1$d stappen van je herstel wachten op jou";
+"resume.waiting.message" = "Alles wat automatisch kan, is klaar. Ga verder om te controleren wat je intussen hebt geïnstalleerd en de overige stappen te doen.";
+
+/* Mixed support */
+"supportLevel.mixed" = "Deels automatisch, deels begeleide stappen";
+
+/* Offer hints */
+"offer.appStore.hint" = "MacReplica opent de App Store-pagina van de app; je installeert hem daar en MacReplica controleert het resultaat.";
+"offer.website.hint" = "MacReplica opent de website van de leverancier; je downloadt en installeert de app daar, daarna controleert MacReplica of hij is geïnstalleerd.";
+
+/* Guided step texts */
+"saved.developerTools" = "Ontwikkelaarstools: %1$@";
+"guidedStep.installYourself" = "MacReplica kent geen officiële download voor deze app. Installeer hem zoals je hem oorspronkelijk kreeg (installatieprogramma, leveranciersaccount of licentieportaal) en klik daarna op Klaar.";
+
+/* Restore instructions: developer tools */
+"guide.toolchains.title" = "Ontwikkelaarstools en pakketbeheerders";
+"guide.toolchains.intro" = "MacReplica installeert deze waar mogelijk automatisch opnieuw. Versies met * waren de standaard. De opdrachten hieronder zijn de stappen die je zelf uitvoert; installeer voor de rest de beheerder via de website en installeer de vermelde versies en tools opnieuw.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Beeldschermprofiel";
+"skip.displayNotConnected" = "Wacht op %1$@ – sluit hem aan en controleer opnieuw";
+"skip.displayOfAnotherMac" = "Hoorde bij het ingebouwde beeldscherm van de oude Mac";
+"skip.profileNotAvailable" = "Het toegewezen profiel staat niet in de reservekopie en niet op deze Mac";
+"guided.display.instruction" = "Sluit %1$@ aan en klik op Opnieuw controleren – MacReplica wijst er ‘%2$@’ aan toe. Of kies het profiel zelf: Systeeminstellingen › Beeldschermen › kies het beeldscherm › Kleurprofiel.";
+"files.displayAssignments.one" = "%1$d toewijzing van beeldschermprofielen behouden";
+"files.displayAssignments.other" = "%1$d toewijzingen van beeldschermprofielen behouden";
+"files.displayAssignments.hint" = "Welk profiel elk beeldscherm gebruikt. Op de nieuwe Mac wijst MacReplica het opnieuw toe aan hetzelfde beeldscherm zodra het is aangesloten. Beeldschermen worden alleen herkend aan gezouten controlesommen, nooit aan hun serienummer.";
+"restore.select.sameMac" = "Deze reservekopie is op deze Mac gemaakt";
+"restore.select.otherMac" = "Deze reservekopie is op een andere Mac gemaakt";
+"restore.select.unknownMac" = "Toewijzingen van beeldschermprofielen";
+"restore.select.displayHint" = "Beeldschermprofielen worden alleen opnieuw toegewezen aan dezelfde beeldschermen. Profielen van het ingebouwde beeldscherm van de oude Mac worden alleen gebruikt als dit dezelfde Mac is.";
+
+/* Python saved copies */
+"note.pythonEnvironmentPreserved" = "De bewaarde kopie van de omgeving is hersteld en gecontroleerd door hem uit te voeren";
+"note.pythonPreservationNotUsed" = "De bewaarde kopie is niet gebruikt (%1$@); de omgeving is in plaats daarvan opnieuw opgebouwd uit de pakketten";
+"preservation.differentHomeFolder" = "andere thuismap";
+"preservation.incompatibleArchitecture" = "native code voor een andere processor";
+"preservation.requiresNewerMacOS" = "vereist een nieuwere macOS";
+"preservation.baseInterpreterMissing" = "de bijbehorende Python-installatie staat nog niet op deze Mac";
+"preservation.archiveDamaged" = "de bewaarde kopie is beschadigd";
+"preservation.extractionFailed" = "hij kon niet worden uitgepakt";
+"preservation.verificationFailed" = "hij doorstond de controle niet";
+
+/* Python strategies */
+"python.keepCopy" = "Ook een volledige kopie van deze omgeving bewaren";
+"python.keepCopy.hint" = "Voor een herinstallatie van macOS op deze Mac met dezelfde gebruiker: de kopie kan ongewijzigd terugkomen als dezelfde Python-installatie aanwezig is; MacReplica controleert hem door hem uit te voeren en bouwt de omgeving anders opnieuw op. Maakt de reservekopie groter.";
+"items.pythonStrategy" = "Herstellen";
+"items.pythonStrategy.rebuild" = "Opnieuw opbouwen uit pakketten (aanbevolen)";
+"items.pythonStrategy.preserve" = "Bewaarde kopie – gecontroleerd, anders opnieuw opgebouwd";
+"appData.category.toolPresets" = "Gereedschapsvoorinstellingen";
+"appData.category.contours" = "Contouren";
+"appData.category.menuCustomization" = "Menuaanpassingen";
+"appData.category.customToolbars" = "Eigen gereedschapsbalken";
+"appData.category.curvesPresets" = "Curven-voorinstellingen";
+"appData.category.levelsPresets" = "Niveaus-voorinstellingen";
+"appData.category.hueSaturationPresets" = "Kleurtoon/verzadiging-voorinstellingen";
+"appData.category.blackWhitePresets" = "Zwart-wit-voorinstellingen";
+"appData.category.channelMixerPresets" = "Kanaalmixer-voorinstellingen";
+"appData.category.exposurePresets" = "Belichting-voorinstellingen";
+"appData.category.selectiveColorPresets" = "Selectieve kleur-voorinstellingen";
+"appData.category.duotonePresets" = "Duotoon-voorinstellingen";
+"appData.category.colorSettings" = "Actieve kleurinstellingen";
+"appData.category.colorSettingsFiles" = "Bewaarde kleurinstellingen";
+"appData.category.proofSetups" = "Proefinstellingen";
+"appData.category.modifiedWorkspaces" = "Gewijzigde werkruimten";
+"appData.category.workspaceState" = "Gekozen werkruimte";
+"appData.category.documentPresets" = "Voorinstellingen voor nieuwe documenten";
+"appData.category.generalPreferences" = "Voorkeuren (alleen dezelfde versie)";
+"appData.category.rawDefaults" = "Raw-standaardinstellingen";
+"appData.category.fusionSettings" = "Fusion-gereedschapsvoorinstellingen";
+"appData.category.fusionLUTs" = "Fusion-LUT’s";
+"appData.category.fusionScripts" = "Scripts";
+"appData.category.acesTransforms" = "ACES-transformaties";
+"appData.category.fairlightPresets" = "Fairlight-presets";
+"appData.category.keyboardPresets" = "Sneltoetspresets";
+"appData.category.layoutPresets" = "Lay-outpresets en vensterindeling";
+"appData.category.userPreferencePresets" = "Presets voor gebruikersvoorkeuren";
+"appData.category.smartBins" = "Slimme bins van de gebruiker";
+"appData.category.metadataPresets" = "Metadata- en HDR-presets";
+"appData.category.userPreferences" = "Gebruikersvoorkeuren";
+"skip.applicationNotInstalled" = "Wacht tot %1$@ is geïnstalleerd – installeer het en ga dan verder met het herstel";
+"skip.applicationVersionOlder" = "%1$@ %2$@ op deze Mac is ouder dan %3$@ waar de gegevens vandaan komen – werk het bij en ga dan verder met het herstel";
+"note.restoredIntoVersion" = "%1$@ staat niet op deze Mac; de gegevens zijn hersteld voor %2$@.";
+"failure.permissionDenied.title" = "Geen schrijfrechten";
+"failure.permissionDenied.explanation" = "MacReplica mag niet schrijven in de map van deze app. Installeer de app opnieuw (het installatieprogramma maakt de map aan) of kopieer de bestanden met een beheerdersaccount uit de reservekopie en gebruik daarna Mislukte onderdelen opnieuw proberen.";
+"items.appVersion" = "Herstellen voor:";
+"items.appVersion.notInstalled" = "%1$@ (niet op deze Mac)";
+"items.decision.appData.keep" = "Bestanden van deze Mac houden, de rest toevoegen";
+"items.decision.appData.replace" = "Vervangen door de reservekopie (oude bestanden worden bewaard)";
+"items.decision.appData.skip" = "Dit onderdeel overslaan";
+"items.appData.summary" = "%1$d nieuw, %2$d identiek, %3$d anders dan op deze Mac:";
+"items.appData.differentFile" = "%1$@ – reservekopie %2$@, %3$@ · deze Mac %4$@, %5$@";
+"items.appData.moreFiles" = "en nog %1$d";
+"appData.shippedLeftOut" = "%1$d bestanden die bij %2$@ horen, worden weggelaten – het installatieprogramma zet ze terug.";
+"items.differ.one" = "%1$d bestand verschilt op deze Mac:";
+"items.differ.other" = "%1$d bestanden verschillen op deze Mac:";
+"summary.waitingForAppsHeading" = "Wacht op apps";
+"summary.waitingForAppsMessage" = "Deze gegevens horen bij apps die nog niet zijn geïnstalleerd (of ouder zijn dan op de oude Mac). Installeer of werk ze bij en kies daarna Ga verder – MacReplica herstelt de gegevens dan.";
+"items.status.waitsForApp" = "Wacht op %1$@";
+"items.status.needsNewerApp" = "Vereist %1$@ %2$@ of nieuwer";

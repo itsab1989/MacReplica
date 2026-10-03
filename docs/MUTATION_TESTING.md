@@ -66,6 +66,81 @@ Overall mutation score: **85.5 %** (609 of 712 valid mutants killed)
 | `Inventory/AppDataScanner.swift` | 21 | 3 | 4 | 0 | 87.5 % | 80 % | ✅ |
 | `Inventory/ICCProfile.swift` | 27 | 9 | 1 | 0 | 75.0 % | 75 % | ✅ |
 
+### Display profiles and Python saved copies (2026-10-03)
+
+Run on 2026-10-03 (macOS 27, Swift 6.4, 6 shards) for the display-profile and saved-copy modules
+and the Python/app-data restore, after the first run left them below threshold
+(`PythonAndDataRestore.swift` 70.5 %, `DisplayProfiles.swift` 52.2 %, `DisplayProfileRestore.swift`
+76.9 %, `PythonPreservation.swift` 59.1 %). Tests were added (suites `PythonRestoreEdgeTests`,
+`PythonPreservationEdgeTests`, `DataRestoreEdgeTests`, and a simulated-manager test in
+`DisplayProfileTests`), then the four modules were run again in full.
+
+| Module | Killed | Survived | Invalid | Excluded | Score | Threshold | Result |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Restore/PythonAndDataRestore.swift` | 102 | 0 | 3 | 4 | 100.0 % | 75 % | ✅ |
+| `ColorProfiles/DisplayProfiles.swift` | 14 | 0 | 2 | 2 | 100.0 % | 80 % | ✅ |
+| `Restore/DisplayProfileRestore.swift` | 10 | 0 | 0 | 3 | 100.0 % | 80 % | ✅ |
+| `Python/PythonPreservation.swift` | 20 | 0 | 2 | 2 | 100.0 % | 80 % | ✅ |
+
+Gaps these survivors showed (now covered): the uv Python download's architecture (`aarch64` vs
+`x86_64`), the preference for the exact pyenv version over Homebrew's Python and for Homebrew's uv,
+the uv lock-file path and its notes, predictions for existing environments (other version, missing
+packages, complete), the "project folders are never created" rule, nested folders of tool-managed
+environments, no per-package retry after disk-full or timeout, the pip output shown after the last
+attempt, the minimum macOS of a saved copy (including the exact boundary), the highest minimum of
+all native files and `.dylib` files, local and editable packages, import-name validation and
+de-duplication, app-data conflict/identical/damaged predictions, damaged backup files never being
+copied, apps running under a secondary bundle identifier, credential permissions (`0` → `0o600`,
+public files staying readable), one moved-aside note per credential folder, and the simulated
+display manager refusing disconnected displays and failed writes.
+
+**Outside the scope on purpose:** `LiveDisplayColorManager` (ColorSync and IOKit) is in its own file,
+`ColorProfiles/LiveDisplayColorManager.swift`, which is not a mutation module. It is the only code
+that reads and changes the real Mac's display settings; a test would change the user's display
+profile assignments. Tests and the simulation use `SimulatedDisplayColorManager`. The live manager
+was checked on the development Mac with `MacReplicaSimulator display-check-live` (reads the displays
+and assigns each connected display's current custom profile again, then reads it back — nothing
+visible changes): built-in display read, re-assigned and read back correctly. Assigning a *different*
+profile and external displays have not been exercised on real hardware.
+
+Exclusions (`config.json`; an exclusion can now name one `operator`, so other mutants on the same
+line still count): parameter defaults that every caller overrides (`isConnected`,
+`referencesLocalPaths`), `first` → `last` where at most one element can match (profile records by
+original path, displays by their unique ColorSync ID) or any match is correct (identical profile
+copies, which running bundle identifier the message names), sorting a set, the credential folder
+whose parent is always the home folder, and the moved-aside check's fallback value that is never
+read.
+
+### Application data: version folders, shared locations, app requirements (2026-10-03)
+
+Run on 2026-10-03 (macOS 27, Swift 6.4, 6 shards) for the three application-data modules after
+Photoshop (release and beta), DaVinci Resolve LUTs and preferences, version-folder retargeting and
+the per-item conflict choice were added. First run of the extended modules:
+`PythonAndDataRestore.swift` 95.5 % (128 of 134), `AppDataProviders.swift` 89.5 % (17 of 19),
+`AppDataScanner.swift` 81.1 % (30 of 37) — all above threshold, but with real gaps. Tests were added
+(suite `AppDataVersionTargetTests`), equivalent mutants were excluded, and the survivors were run again
+(`--only-survivors`).
+
+| Module | Killed | Survived | Invalid | Excluded | Score | Threshold | Result |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Restore/PythonAndDataRestore.swift` | 134 | 0 | 4 | 4 | 100.0 % | 75 % | ✅ |
+| `Providers/AppDataProviders.swift` | 18 | 0 | 2 | 1 | 100.0 % | 80 % | ✅ |
+| `Inventory/AppDataScanner.swift` | 33 | 0 | 5 | 4 | 100.0 % | 80 % | ✅ |
+
+Gaps these survivors showed (now covered): choosing the newest other version by version number
+rather than by name ("Editor 11" before "Editor 9") with several versions on the new Mac; a user
+choice that is not an offered version (another app's folder, a version not on this Mac, a path) being
+ignored; the new/identical file counts of the restore selection's comparison; data that requires only
+`appMustBeInstalled` or only `notForOlderApp` (each alone, not just both together); providers that list
+files being detected only when one of those files is there; the stable identifier of home-folder data
+and the `/Library/` prefix of shared data's identifier, and the `.user`/`.system` file domain;
+`shippedFilesLeftOut` staying empty when nothing came with an app.
+
+Exclusions: the initial value of the `isDirectory` flag (`fileExists(atPath:isDirectory:)` always sets
+it when the path exists), sorting unique relative paths (`<` vs `<=`), `first` → `last` for unique
+provider IDs, and the symbolic-link `continue` in the scanner (URL resource values describe the link
+itself, so the next guard skips it too; the rule is still tested).
+
 ### Gaps the first run revealed (now covered)
 
 - Deselected Python environments and app-data folders, and credentials without opt-in, could have
@@ -98,7 +173,7 @@ which met their thresholds in the first run) were reviewed from the list. They f
 | Not testable without real system services | administrator dialog parsing inside the AppleScript, HTTP status of the live GitHub API, Command Line Tools timeout at the exact deadline | would need real admin rights, network or timing |
 | Low value | error category for a disk-full copy outside the administrator path, cosmetic progress values | documented, not worth a dedicated test |
 
-Per module: `BackupVerifier.swift` 1, `Credentials.swift` 1, `AppDataScanner.swift` 3, `DeveloperSettings.swift` 3, `ICCProfile.swift` 9, `Matcher.swift` 10, `AppDataProviders.swift` 2, `FileConflictAnalyzer.swift` 12, `PrivilegedExecutor.swift` 1, `PythonAndDataRestore.swift` 17, `RestoreExecutor.swift` 25, `RestorePlanner.swift` 11, `SessionStore.swift` 1, `SafeCleaner.swift` 2, `UpdateChecker.swift` 5.
+Per module: `BackupVerifier.swift` 1, `Credentials.swift` 1, `AppDataScanner.swift` 3 (0 since the application-data run of 2026-10-03), `DeveloperSettings.swift` 3, `ICCProfile.swift` 9, `Matcher.swift` 10, `AppDataProviders.swift` 2 (0 since that run), `FileConflictAnalyzer.swift` 12, `PrivilegedExecutor.swift` 1, `PythonAndDataRestore.swift` 17 (0 since the run of 2026-10-03, see above), `RestoreExecutor.swift` 25, `RestorePlanner.swift` 11, `SessionStore.swift` 1, `SafeCleaner.swift` 2, `UpdateChecker.swift` 5.
 
 The complete list of every remaining mutant (file, line, operator, original and mutated line) is in
 [mutation-survivors.md](mutation-survivors.md); re-run the runner as described above to reproduce it.

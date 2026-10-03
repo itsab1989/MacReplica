@@ -22,7 +22,8 @@
         "RestorePlannerTests",
         "EndToEndTests",
         "TwoStageSelectionTests",
-        "SelectionPlannerTests"
+        "SelectionPlannerTests",
+        "DeveloperEnvironmentTests"
       ],
       "area": "Restore"
     },
@@ -63,7 +64,9 @@
       "tests": [
         "ResumeTests",
         "CleanupTests",
-        "SessionAndPrivilegeEdgeTests"
+        "SessionAndPrivilegeEdgeTests",
+        "DeveloperEnvironmentTests",
+        "GuidedInstallationTests"
       ],
       "area": "Resume"
     },
@@ -142,7 +145,14 @@
         "PythonTests",
         "ApplicationDataTests",
         "ProviderTests",
-        "CredentialTests"
+        "CredentialTests",
+        "PythonStrategyTests",
+        "RealPythonPreservationTests",
+        "PythonRestoreEdgeTests",
+        "PythonPreservationEdgeTests",
+        "DataRestoreEdgeTests",
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests"
       ],
       "area": "Python, application data and credential restore",
       "threshold": 75
@@ -151,7 +161,9 @@
       "file": "Providers/AppDataProviders.swift",
       "tests": [
         "ProviderCatalogTests",
-        "ProviderTests"
+        "ProviderTests",
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests"
       ],
       "area": "Provider selection and discovery"
     },
@@ -160,7 +172,9 @@
       "tests": [
         "ApplicationDataTests",
         "ProviderCatalogTests",
-        "AppDataScannerEdgeTests"
+        "AppDataScannerEdgeTests",
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests"
       ],
       "area": "Application data path handling and refusal rules"
     },
@@ -174,6 +188,155 @@
       ],
       "area": "ICC profile identity (header, computed Profile ID)",
       "threshold": 75
+    },
+    {
+      "file": "Toolchains/ToolchainProvider.swift",
+      "tests": [
+        "ToolchainSecurityTests",
+        "ToolchainScannerTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Toolchain validation and command policy"
+    },
+    {
+      "file": "Toolchains/NodeToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Node.js environments"
+    },
+    {
+      "file": "Toolchains/PythonToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "SmallParserTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Python tools (pyenv, uv, pipx, Conda)"
+    },
+    {
+      "file": "Toolchains/LanguageToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "SmallParserTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Ruby, Rust, Go, Java, .NET"
+    },
+    {
+      "file": "Toolchains/PackageManagerToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Package managers (MacPorts, Nix, Pixi, mise, asdf)"
+    },
+    {
+      "file": "Support/MiniTOML.swift",
+      "tests": [
+        "SmallParserTests",
+        "ToolchainScannerTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "TOML reader"
+    },
+    {
+      "file": "Distribution/DistributionChannel.swift",
+      "tests": [
+        "ChannelTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainEdgeTests"
+      ],
+      "area": "Distribution channels"
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "tests": [
+        "DownloadSourceTests",
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Download source selection"
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "tests": [
+        "DownloadQueueTests",
+        "GuidedInstallationTests",
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Download queue"
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "tests": [
+        "DownloadInstallerTests",
+        "GuidedInstallationTests",
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Download verification"
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "tests": [
+        "GuidedInstallationTests",
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Manual installation, cancellation"
+    },
+    {
+      "file": "Restore/ToolchainRestore.swift",
+      "tests": [
+        "DeveloperEnvironmentTests",
+        "RestoreExecutionTests",
+        "FailureModeTests",
+        "RecoveryRestoreEdgeTests",
+        "MoreRecoveryEdgeTests",
+        "ExecutorEdgeTests"
+      ],
+      "area": "Environment recovery, resume"
+    },
+    {
+      "file": "ColorProfiles/DisplayProfiles.swift",
+      "tests": [
+        "DisplayProfileTests"
+      ],
+      "area": "Display profile assignments (ICC strategy)"
+    },
+    {
+      "file": "Restore/DisplayProfileRestore.swift",
+      "tests": [
+        "DisplayProfileTests"
+      ],
+      "area": "Display profile restore and verification"
+    },
+    {
+      "file": "Python/PythonPreservation.swift",
+      "tests": [
+        "PythonStrategyTests",
+        "RealPythonPreservationTests",
+        "PythonPreservationEdgeTests"
+      ],
+      "area": "Python strategy selection and verification"
     }
   ],
   "exclusions": [
@@ -206,6 +369,154 @@
       "file": "Credentials/Credentials.swift",
       "pattern": "minimumPassphraseLength = 12|defaultIterations = 600_000",
       "reason": "Policy constants; boundaries are tested via the 'short' passphrase and iteration floor."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Restore/ToolchainRestore.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "http.statusCode == 200|willPerformHTTPRedirection|task.originalRequest",
+      "reason": "URLSessionFetcher talks to real servers; tests use LocalFetcher."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "task.originalRequest|NSURLErrorCancelled|totalBytesExpectedToWrite|statusCode != 200",
+      "reason": "URLSessionDownloadTransport needs a real server; tests use LocalDownloadTransport."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "if offset == 0 \\|\\|",
+      "reason": "Test-only local transport."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "withIntermediateDirectories: true",
+      "reason": "The parent folder always exists here (equivalent mutant)."
+    },
+    {
+      "file": "Toolchains/ToolchainProvider.swift",
+      "pattern": "data.count < 5_000_000",
+      "reason": "Size guard against huge metadata files; boundary not meaningful."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "data.count <= maxBytes",
+      "reason": "Size guard; boundary not meaningful."
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "pattern": "if await queue.state\\(item.id\\) == nil",
+      "reason": "Enqueueing again restarts an equivalent download (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "recommended: true\\)\\)",
+      "reason": "markRecommended sets App Store offers as recommended again (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "delayPerChunk > 0",
+      "reason": "Test-only local transport."
+    },
+    {
+      "file": "Restore/DisplayProfileRestore.swift",
+      "pattern": "log\\.(info|warning|error)|onEvent\\(\\.activity",
+      "reason": "Log and progress only."
+    },
+    {
+      "file": "ColorProfiles/DisplayProfiles.swift",
+      "pattern": "isConnected: Bool = true",
+      "operator": "true → false",
+      "reason": "Parameter default only; every caller in the app passes isConnected explicitly (equivalent mutant)."
+    },
+    {
+      "file": "ColorProfiles/DisplayProfiles.swift",
+      "pattern": "profiles\\.first\\(where: \\{ \\$0\\.originalPath == path \\}\\)",
+      "operator": "first → last",
+      "reason": "A backup holds at most one profile record per original path, so first and last are the same record (equivalent mutant)."
+    },
+    {
+      "file": "Restore/DisplayProfileRestore.swift",
+      "pattern": "index\\.entries\\.first \\{ index\\.hash\\(of: \\$0\\) == sha \\}",
+      "operator": "first → last",
+      "reason": "Every identical copy of the backed-up profile is a correct profile to assign; which one is used when several exist is not specified."
+    },
+    {
+      "file": "Restore/DisplayProfileRestore.swift",
+      "pattern": "manager\\.displays\\(\\)\\.first \\{",
+      "operator": "first → last",
+      "reason": "ColorSync device IDs (and their salted keys) are unique, so at most one display matches (equivalent mutant)."
+    },
+    {
+      "file": "Python/PythonPreservation.swift",
+      "pattern": "referencesLocalPaths: Bool = false\\) \\{",
+      "operator": "false → true",
+      "reason": "Parameter default only; preserve() always passes the value (equivalent mutant)."
+    },
+    {
+      "file": "Python/PythonPreservation.swift",
+      "pattern": "architectures\\.sorted \\{ \\$0\\.rawValue < \\$1\\.rawValue \\}",
+      "operator": "< → <=",
+      "reason": "Sorts the elements of a set: there are no equal elements (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "createDirectory\\(at: folder, withIntermediateDirectories: true, attributes",
+      "operator": "true → false",
+      "reason": "Every credential folder (~/.ssh, ~/.aws, ~/.kube, ~/.terraform.d) is directly in the home folder, which always exists (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "if case \\.existingFileMovedAside = \\$0 \\{ return true \\}; return false",
+      "operator": "false → true",
+      "reason": "At this point the notes only ever hold the moved-aside note, so the fallback value is never used (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "profile\\.bundleIdentifiers\\.first\\(where: environment\\.isApplicationRunning\\)",
+      "operator": "first → last",
+      "reason": "Any running identifier blocks the restore (tested); which one the detail names when several run at once is not specified."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "var isDirectory: ObjCBool = false",
+      "operator": "false → true",
+      "reason": "fileExists(atPath:isDirectory:) always sets the flag when the path exists, and a missing path fails the same guard (equivalent mutant)."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "files\\.sort \\{ \\$0\\.record\\.relativePath < \\$1\\.record\\.relativePath \\}",
+      "operator": "< → <=",
+      "reason": "Relative paths inside one folder are unique, so < and <= give the same order (equivalent mutant)."
+    },
+    {
+      "file": "Providers/AppDataProviders.swift",
+      "pattern": "providers\\.first \\{ \\$0\\.id == id \\}",
+      "operator": "first → last",
+      "reason": "Provider identifiers are unique (tested in ProviderCatalogTests), so the first and the last match are the same provider (equivalent mutant)."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "if values\\.isSymbolicLink == true \\{ continue \\}",
+      "operator": "remove continue",
+      "reason": "URL resource values describe the link itself, so a symbolic link is never a regular file and the next guard skips it too (equivalent mutant; the rule is tested in AppDataVersionTargetTests)."
     }
   ]
 }

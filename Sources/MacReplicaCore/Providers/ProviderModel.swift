@@ -48,14 +48,29 @@ public struct AppDataCategory: Sendable {
     /// Names (files or folders, at any depth) that are never copied, e.g. caches inside a user folder.
     public var excluding: [String]
     public var classification: DataClassification
+    /// For versioned apps: the files also work in another version of the app, so they may be restored
+    /// into the version installed on the new Mac. In `files`, `{folder}` stands for the version folder's
+    /// name without a trailing " Settings" (e.g. "Adobe Photoshop 2026 Prefs.psp").
+    public var movesBetweenVersions: Bool
 
-    public init(_ key: String, _ path: String, files: [String]? = nil, excluding: [String] = [], _ classification: DataClassification = .safe) {
+    public init(_ key: String, _ path: String, files: [String]? = nil, excluding: [String] = [], _ classification: DataClassification = .safe,
+                movesBetweenVersions: Bool = false) {
         self.key = key
         self.path = path
         self.files = files
         self.excluding = excluding
         self.classification = classification
+        self.movesBetweenVersions = movesBetweenVersions
     }
+}
+
+/// Where an application keeps the data a provider describes.
+public enum AppDataScope: String, Codable, Sendable {
+    /// Below the user's home folder (the usual case).
+    case home
+    /// Below `/Library`, shared by all users of the Mac — e.g. DaVinci Resolve's LUT folder. Only provider
+    /// locations are ever read or written there; user-chosen folders are always inside the home folder.
+    case sharedLibrary
 }
 
 /// Everything MacReplica knows about migrating one application's user data.
@@ -65,7 +80,7 @@ public struct AppDataProvider: Sendable {
     public var id: String
     public var appName: String
     public var bundleIdentifiers: [String]
-    /// Path below the home folder to the application's data folder.
+    /// Path below the home folder (or `/Library` for `scope == .sharedLibrary`) to the application's data folder.
     public var base: String
     /// Pattern for versioned sub-folders, e.g. `^Adobe Photoshop \d{4}$`.
     public var versionFolderPattern: String?
@@ -77,6 +92,15 @@ public struct AppDataProvider: Sendable {
     public var researchedOn: String
     /// Short English notes for maintainers (shown in docs, not in the UI).
     public var limitations: [String]
+    public var scope: AppDataScope = .home
+    /// The installer package (`pkgutil` ID) that ships content into the same folder. Files listed in its
+    /// receipt came with the app, so they are left out: the app's installer puts them back on the new Mac.
+    public var shippedByPackage: String? = nil
+    /// The data is only restored once the app is installed on the new Mac (it lives in the app's own
+    /// folders, or its format belongs to the installed version); until then the step waits.
+    public var appMustBeInstalled = false
+    /// The files carry the app's database version and must not go to an older version of the app.
+    public var notForOlderApp = false
 }
 
 /// What a backed-up application data folder came from. Stored in the manifest so a
@@ -90,9 +114,21 @@ public struct AppDataProfileReference: Codable, Equatable, Hashable, Sendable {
     public var bundleIdentifiers: [String]
     public var mustBeClosed: Bool
     public var classification: DataClassification
+    /// The pattern other version folders of the same app match (e.g. `^Adobe Photoshop \d{4}$`); with
+    /// `movesBetweenVersions`, the data may be restored into one of them. Nil in backups of earlier versions.
+    public var versionFolderPattern: String?
+    public var movesBetweenVersions: Bool
+    /// The version of the app on the old Mac (for `notForOlderApp`).
+    public var sourceAppVersion: String?
+    public var appMustBeInstalled: Bool
+    public var notForOlderApp: Bool
 
     public init(provider: String, appName: String, category: String, appVersion: String? = nil, bundleIdentifiers: [String] = [],
-                mustBeClosed: Bool = false, classification: DataClassification = .safe) {
+                mustBeClosed: Bool = false, classification: DataClassification = .safe, versionFolderPattern: String? = nil,
+                movesBetweenVersions: Bool = false, sourceAppVersion: String? = nil, appMustBeInstalled: Bool = false, notForOlderApp: Bool = false) {
+        self.sourceAppVersion = sourceAppVersion
+        self.appMustBeInstalled = appMustBeInstalled
+        self.notForOlderApp = notForOlderApp
         self.provider = provider
         self.appName = appName
         self.category = category
@@ -100,10 +136,13 @@ public struct AppDataProfileReference: Codable, Equatable, Hashable, Sendable {
         self.bundleIdentifiers = bundleIdentifiers
         self.mustBeClosed = mustBeClosed
         self.classification = classification
+        self.versionFolderPattern = versionFolderPattern
+        self.movesBetweenVersions = movesBetweenVersions
     }
 
     private enum CodingKeys: String, CodingKey {
-        case provider, appName, category, appVersion, bundleIdentifiers, mustBeClosed, classification
+        case provider, appName, category, appVersion, bundleIdentifiers, mustBeClosed, classification, versionFolderPattern, movesBetweenVersions
+        case sourceAppVersion, appMustBeInstalled, notForOlderApp
     }
 
     public init(from decoder: Decoder) throws {
@@ -115,12 +154,20 @@ public struct AppDataProfileReference: Codable, Equatable, Hashable, Sendable {
         bundleIdentifiers = try c.decodeIfPresent([String].self, forKey: .bundleIdentifiers) ?? []
         mustBeClosed = try c.decodeIfPresent(Bool.self, forKey: .mustBeClosed) ?? false
         classification = try c.decodeIfPresent(DataClassification.self, forKey: .classification) ?? .safe
+        versionFolderPattern = try c.decodeIfPresent(String.self, forKey: .versionFolderPattern)
+        movesBetweenVersions = try c.decodeIfPresent(Bool.self, forKey: .movesBetweenVersions) ?? false
+        sourceAppVersion = try c.decodeIfPresent(String.self, forKey: .sourceAppVersion)
+        appMustBeInstalled = try c.decodeIfPresent(Bool.self, forKey: .appMustBeInstalled) ?? false
+        notForOlderApp = try c.decodeIfPresent(Bool.self, forKey: .notForOlderApp) ?? false
     }
 }
 
 public struct DetectedAppData: Sendable {
     public var profile: AppDataProfileReference
     public var folder: URL
+    public var scope: AppDataScope = .home
+    /// The installer package whose files are left out (see `AppDataProvider.shippedByPackage`).
+    public var shippedByPackage: String?
     /// Only these file names directly inside `folder`, or everything when nil.
     public var files: [String]?
     /// Names that are skipped wherever they occur.
@@ -157,4 +204,7 @@ public struct GuidanceRecord: Codable, Equatable, Sendable, Identifiable {
         self.name = name
         self.kind = kind
     }
+
+    /// The name this version of MacReplica uses for the service (a backup keeps the name of the version that made it).
+    public var currentName: String { GuidanceCatalog.entries.first { $0.id == id }?.name ?? name }
 }

@@ -60,8 +60,22 @@ public struct CommandPolicy: Sendable {
     /// Absolute paths of the only executables MacReplica may start.
     public var allowedExecutables: Set<String>
 
+    /// Programs that are never allowed, whatever folder they are in: shells and interpreters that
+    /// would run a command line, and tools that escalate privileges.
+    public static let forbiddenNames: Set<String> = ["sh", "bash", "zsh", "dash", "ksh", "csh", "tcsh", "fish", "env", "sudo", "su",
+                                                    "doas", "eval", "xargs", "perl", "ruby", "node", "osascript", "launchctl"]
+
     public init(allowedExecutables: Set<String>) {
         self.allowedExecutables = allowedExecutables
+    }
+
+    /// The policy plus exact additional executables (absolute paths). Shells and the like are dropped.
+    public func adding(_ executables: Set<String>) -> CommandPolicy {
+        let accepted = executables.filter { path in
+            path.hasPrefix("/") && !path.contains("/../") && !path.hasSuffix("/..")
+                && !Self.forbiddenNames.contains((path as NSString).lastPathComponent.lowercased())
+        }
+        return CommandPolicy(allowedExecutables: allowedExecutables.union(accepted))
     }
 
     public func validate(_ command: Command) throws {
@@ -81,8 +95,13 @@ public struct CommandPolicy: Sendable {
     }
 }
 
+/// A runner whose allow-list can be extended by exact executables for one restore.
+public protocol CommandPolicyExtending: CommandRunning {
+    func allowing(_ executables: Set<String>) -> CommandRunning
+}
+
 /// Runs allow-listed executables with `Process`, never through a shell.
-public final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
+public final class ProcessCommandRunner: CommandRunning, CommandPolicyExtending, @unchecked Sendable {
     private let policy: CommandPolicy
     private let baseEnvironment: [String: String]
 
@@ -91,6 +110,15 @@ public final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
     public init(policy: CommandPolicy, baseEnvironment: [String: String]) {
         self.policy = policy
         self.baseEnvironment = baseEnvironment
+    }
+
+    /// Timeouts run on their own serial queue so that busy global queues cannot delay them.
+    private static let timeoutQueue = DispatchQueue(label: "MacReplica.command-timeouts", qos: .userInitiated)
+    /// Results are delivered from a queue of their own for the same reason.
+    private static let completionQueue = DispatchQueue(label: "MacReplica.command-results", qos: .userInitiated, attributes: .concurrent)
+
+    public func allowing(_ executables: Set<String>) -> CommandRunning {
+        ProcessCommandRunner(policy: policy.adding(executables), baseEnvironment: baseEnvironment)
     }
 
     public func run(_ command: Command, onOutputLine: (@Sendable (String) -> Void)?) async throws -> CommandResult {
@@ -112,24 +140,29 @@ public final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
 
         let collector = OutputCollector(onLine: onOutputLine)
         // Each pipe is drained on its own thread until end-of-file; the result is only
-        // assembled after both readers finished, so no output can be lost.
+        // assembled after both readers finished, so no output can be lost. The reads block,
+        // so they get dedicated threads: on GCD's global queues, many running commands could
+        // occupy all worker threads and delay everything else, including timeouts.
         let readers = DispatchGroup()
         for (pipe, isError) in [(stdoutPipe, false), (stderrPipe, true)] {
             readers.enter()
-            DispatchQueue.global(qos: .utility).async {
+            let reader = Thread {
                 let handle = pipe.fileHandleForReading
                 while let data = try? handle.read(upToCount: 65_536), !data.isEmpty {
                     collector.append(data, isError: isError)
                 }
                 readers.leave()
             }
+            reader.name = "MacReplica command output"
+            reader.qualityOfService = .utility
+            reader.start()
         }
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<CommandResult, Error>) in
                 let timeoutState = TimeoutState()
                 process.terminationHandler = { finished in
-                    readers.notify(queue: .global()) {
+                    readers.notify(queue: Self.completionQueue) {
                         let output = collector.finish()
                         continuation.resume(returning: CommandResult(
                             exitCode: finished.terminationStatus,
@@ -151,7 +184,7 @@ public final class ProcessCommandRunner: CommandRunning, @unchecked Sendable {
                     return
                 }
                 if command.timeout > 0 {
-                    DispatchQueue.global().asyncAfter(deadline: .now() + command.timeout) {
+                    Self.timeoutQueue.asyncAfter(deadline: .now() + command.timeout) {
                         if process.isRunning {
                             timeoutState.fired = true
                             process.terminate()

@@ -58,6 +58,11 @@ public struct PythonInstallation: Codable, Equatable, Sendable, Identifiable {
 
 public enum EnvironmentManager: String, Codable, Sendable {
     case venv, virtualenvwrapper, pyenvVirtualenv, pipenv, unknown
+    /// Project environments created by uv, virtualenv or for a Poetry project.
+    case uv, virtualenv, poetry
+
+    /// Environments in a tool's own folder (they may be created even if their parent is missing).
+    public var isToolManaged: Bool { [.virtualenvwrapper, .pyenvVirtualenv, .pipenv].contains(self) }
 
     public init(from decoder: Decoder) throws {
         self = EnvironmentManager(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .unknown
@@ -117,6 +122,8 @@ public struct PythonEnvironment: Codable, Equatable, Hashable, Sendable, Identif
     public var requirementsPath: String
     /// Dependency files found in the project, copied into the backup for reference.
     public var projectFiles: [FileRecord]
+    /// A copy of the whole environment, when the user chose to keep one (see `PythonPreservation`).
+    public var preservation: PythonPreservation?
 
     public init(id: String, name: String, path: String, manager: EnvironmentManager, pythonVersion: String, baseInterpreter: String?,
                 baseSource: PythonSource, architectures: [CPUArchitecture] = [], packages: [PythonPackage] = [], pipVersion: String? = nil,

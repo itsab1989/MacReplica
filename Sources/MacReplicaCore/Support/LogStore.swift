@@ -8,7 +8,7 @@ public final class LogStore: @unchecked Sendable {
 
     /// The part of MacReplica a line belongs to, so problems can be found quickly.
     public enum Component: String, Sendable {
-        case general, startup, inventory, homebrew, appStore, python, applicationData, backup, restore, verification, cleanup, permissions
+        case general, startup, inventory, homebrew, appStore, python, developerTools, downloads, applicationData, backup, restore, verification, cleanup, permissions
     }
 
     public let fileURL: URL?

@@ -166,6 +166,9 @@ public struct HomebrewClient: Sendable {
         case .formula(let name):
             try Self.validatePackageName(name)
             arguments = ["install", "--formula", name]
+        case .formulaHead(let name):
+            try Self.validatePackageName(name)
+            arguments = ["install", "--formula", name, "--HEAD"]
         case .cask(let token):
             try Self.validatePackageName(token)
             arguments = ["install", "--cask", token]
@@ -183,6 +186,17 @@ public struct HomebrewClient: Sendable {
             installCommand.environment.merge(extraEnvironment) { current, _ in current }
         }
         return try await runner.run(installCommand, onOutputLine: onOutputLine)
+    }
+
+    /// Homebrew 6.0 and later only load formulae and casks from third-party taps the user trusts.
+    public static func requiresTapTrust(_ version: String) -> Bool {
+        (Int(version.split(separator: ".").first ?? "") ?? 0) >= 6
+    }
+
+    /// Marks a third-party tap as trusted (`brew trust --tap`). Only called for taps the user allowed in MacReplica.
+    public func trustTap(_ brew: HomebrewInstallation, name: String) async throws -> CommandResult {
+        try Self.validatePackageName(name)
+        return try await runner.run(command(brew, ["trust", "--tap", name], timeout: 120))
     }
 
     /// Package names come from a backup file and must never be interpreted as options or paths.
@@ -204,6 +218,8 @@ public struct HomebrewClient: Sendable {
 
 public enum HomebrewPackage: Sendable, Equatable {
     case formula(String)
+    /// The development version built from the formula's source repository (`--HEAD`).
+    case formulaHead(String)
     case cask(String)
     case tap(name: String, remote: String?)
 }

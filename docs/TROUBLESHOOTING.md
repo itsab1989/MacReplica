@@ -41,11 +41,13 @@ macOS protects some folders (for example other apps' data). MacReplica does not 
 Access; it reports these locations and continues. If you want them included, click the button next to
 the message to open *Privacy & Security* and grant access, then scan again — or continue without them.
 
-## “Not signed in to the App Store”
+## An App Store app is waiting for you
 
-App Store apps are reinstalled with `mas`, which cannot sign in for you. Open the App Store, sign in
-with your Apple Account, then click **Retry Failed Items**. You can also install the app from your
-purchases in the App Store.
+`mas install` needs administrator rights since mas 7, so MacReplica does not install App Store apps
+itself. In the guided installation it opens each app's App Store page: sign in to the App Store with
+your Apple Account, click *Get* or the download button, then **Done**. MacReplica checks that the app
+is installed. Apps removed from the App Store or licensed through an organisation (VPP) cannot be
+reinstalled this way.
 
 ## Homebrew or the Command Line Tools did not install
 
@@ -56,9 +58,27 @@ purchases in the App Store.
 
 ## An app could not be restored automatically
 
-Apps without a Homebrew package or App Store entry, licensed software and apps from installers are
-listed under **Install these apps yourself**, with a link to the vendor's website where it is known.
+Apps without a Homebrew package come back in the **guided installation**: MacReplica looks up the
+vendor's own update feed, the vendor download from Homebrew's catalog, the App Store or the vendor's
+website, verifies downloads and installs them one after another. If no official download is found,
+install the app the way you got it originally and click **Check Again**.
 
+## A download was “not verified”
+
+The file did not match the vendor's signature, Homebrew's checksum, the original app's bundle
+identifier or developer Team ID, or does not run on this Mac. MacReplica deleted it without opening
+it. Install the app from the vendor's website instead. If the vendor changed the developer account,
+this is expected — check the vendor's website.
+
+## A developer tool step is waiting or failed
+
+- **Waiting for you:** the tool is a shell function (nvm, RVM, SDKMAN) or needs an installer or
+  administrator rights (MacPorts, Nix). Run the command shown (**Copy**) in Terminal, then click
+  **Check Again**; steps that depend on it (for example npm packages) follow automatically.
+- **Required tool is missing:** the version or package manager is not installed, for example because
+  its Homebrew package was unticked. Select or install it, then **Retry Failed Items**.
+- **Conda reports terms of service:** Anaconda's default channels require accepting Anaconda's terms.
+  MacReplica never accepts them for you — run `conda tos accept` yourself if you agree, then retry.
 ## Python environment problems
 
 - **Python version not available:** Homebrew no longer offers that Python version. Create the

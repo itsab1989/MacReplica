@@ -16,13 +16,24 @@
    - **Possible matches found** — apps where several Homebrew packages could fit. Pick the right one
      or *None of these* (you can also decide later on the new Mac);
    - **Fonts and Color Profiles** — every font and ICC profile with name, version and format. Untick
-     what you do not need. Display profiles macOS generated for this Mac's displays are not selected;
-   - **Development Environments** — Python environments to rebuild, Python settings from your shell profile;
+     what you do not need. Display profiles macOS generated for this Mac's displays are not selected.
+     **Keep display profile assignments** remembers which profile each display uses, so MacReplica can
+     assign it again to the same display (on the same Mac, or an external display that is connected);
+   - **Development Environments** — Python environments to rebuild, Python settings from your shell profile.
+     For reinstalling macOS on the same Mac you can also tick **Also keep a complete copy of this
+     environment**; on restore the copy is checked and run, and rebuilt from its packages if it does not fit;
+   - **Developer Tools** — version managers, language versions, global tools and other package managers,
+     each with how it comes back (*Restored automatically*, *Guided step* or both). Untick any you do
+     not want ([details](DEVELOPER_ENVIRONMENTS.md));
    - **Developer Settings** — Git settings (your email only if you tick it);
-   - **Application Data** — detected app settings and presets; add more with **Add Folder …**;
+   - **Application Data** — detected app settings and presets, per app and kind (for example Photoshop and
+     the Photoshop beta separately, DaVinci Resolve LUTs, keyboard and layout presets); items that may not
+     work in another app version or may contain keys are not selected. Add more with **Add Folder …**;
    - **Credentials** — off unless you choose a provider and set a passphrase;
    - **Sign in again** — services that need a new login on the new Mac;
-   - locations macOS did not let MacReplica read.
+   - locations macOS did not let MacReplica read;
+   - under **Show apps**, every app with a checkbox (untick apps you do not want in the backup) and a
+     badge for beta, nightly and other pre-release channels.
 3. Click **Save Backup …** and choose the destination folder. MacReplica creates a folder named
    `MacReplica-Backup-<date>-<time>`, verifies it and shows its size, location and contents.
 4. Copy that folder to the new Mac (or keep it on the external drive).
@@ -39,18 +50,49 @@
    - **Credentials** can only be restored with the passphrase you set on the old Mac.
 3. Click **Preview (Dry Run)** to see exactly what will happen, or **Start Restore**.
 4. If something already exists in a different version or with the same name, MacReplica asks:
-   *Keep this Mac's version*, *Replace with backup*, *Keep both* (where safe) or *Skip*.
+   *Keep this Mac's version*, *Replace with backup*, *Keep both* (where safe) or *Skip*. For application
+   data, the item shows how many files differ (ⓘ lists them with size and date) and lets you choose
+   *Keep this Mac's files, add the rest* (default), *Replace with the backup* (the old files are kept in
+   *Replaced Files*) or *Skip*. Presets of a Photoshop version that is not on this Mac go into the version
+   that is (**Restore for:** lets you choose).
+   Data that belongs to an app that is not installed yet (for example DaVinci Resolve's LUTs and presets)
+   waits: install the app, then choose **Continue** — MacReplica restores it then. Resolve presets are never
+   put into an older Resolve. Quit Photoshop and Resolve before restoring their settings.
 5. If administrator rights are needed (Homebrew, shared folders), MacReplica explains why and macOS
    asks for your password once.
 6. Keep MacReplica open and the Mac awake. You can **Stop** at any time; the restore can continue later.
-7. The summary lists what worked, what failed (with what to do), apps to install yourself, and
+7. The summary lists what worked, what failed (with what to do), what is **waiting for you**, and
    services to sign in to. **Retry Failed Items** runs only the failed steps again.
+8. **Continue with Guided Steps** opens the guided installation (see below).
+
+### Guided installation
+
+Everything automatic runs first. Apps that need you — App Store apps, apps without a Homebrew package,
+beta and nightly builds — and developer-tool steps MacReplica cannot run come last:
+
+1. Click **Look Up Downloads**. MacReplica asks only official sources (the vendor's update feed
+   declared in the app, the vendor download from Homebrew's catalog, the App Store, the vendor's
+   website). Nothing is downloaded yet.
+2. For each app, pick the **Source** if there are several; the one marked *recommended* matches the
+   channel you used on the old Mac. The line below tells you what is verified before installing.
+3. **Install Selected One by One** downloads, verifies and installs the ticked apps. Apps are copied
+   into Applications; installer packages open in Apple's Installer; App Store and website sources
+   open the page for you. When MacReplica waits for you, answer **Done** (it checks), **Skip**,
+   **Later** or **Cancel Installation**. **Download Selected** only downloads; downloads can be
+   paused, resumed, retried and cancelled.
+4. Developer-tool steps show the exact command (with **Copy**) or the page to install from. Do it,
+   then click **Check Again** — MacReplica verifies it and installs what depends on it (for example
+   your npm packages after you installed Node.js with nvm).
+
+Skipped apps stay skipped. Postponed, cancelled and waiting steps are offered again whenever you
+continue the restore. Details: [DOWNLOADS.md](DOWNLOADS.md).
 
 ### Interrupted restores
 
 If MacReplica was stopped, quit or crashed, the start screen offers:
 
-- **Continue** — resume with the same choices; finished steps are not repeated.
+- **Continue** — resume with the same choices; finished steps are not repeated, steps that wait for
+  you are checked again. If only such steps are left, the start screen says how many are waiting.
 - **Review …** — open the selection first; finished steps are locked with their results, everything
   else can still be changed.
 - **Discard** — forget the unfinished restore (nothing that was installed is removed).
@@ -82,12 +124,15 @@ Keep the folder complete. **Check Backup** verifies every checksum at any time.
 | `~/Library/Application Support/MacReplica/Sessions/` | unfinished restore sessions |
 | `~/Library/Application Support/MacReplica/Replaced Files/` | files MacReplica moved aside instead of overwriting them |
 | `~/Library/Application Support/MacReplica/Reports/` | restore reports |
+| `~/Library/Caches/MacReplica/Downloads/` | downloads of the guided installation (verified, quarantined) |
 
 ## Troubleshooting
 
 | Problem | What to do |
 |---|---|
-| “Not signed in to the App Store” | Open the App Store, sign in, then **Retry Failed Items**. |
+| An App Store app is “waiting for you” | Open the guided installation, install it from the App Store page MacReplica opens (signed in with your Apple Account), click **Done**. |
+| A developer tool failed with “Required tool is missing” | Install the manager (or select it for the restore), then **Retry Failed Items**. |
+| A download is “not verified” | The file did not match the vendor's signature, checksum or developer and was deleted. Install the app from the vendor's website instead. |
 | Network errors | Check the connection, then **Retry Failed Items**. |
 | Command Line Tools did not install | Confirm Apple's installation dialog; on a slow connection it can take long. Retry afterwards. |
 | An app's data was not restored because the app is running | Quit the app and retry. |

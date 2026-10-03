@@ -16,6 +16,7 @@ struct RootView: View {
             case .dryRun: DryRunView()
             case .restoring: RestoreProgressView()
             case .restoreSummary: RestoreSummaryView()
+            case .guidedInstall: GuidedInstallView()
             case .verifying: VerifyingView()
             case .verificationResult: VerificationResultView()
             case .problem: ProblemView()
@@ -163,7 +164,11 @@ struct ResumeBanner: View {
     var body: some View {
         let l = model.l
         VStack(alignment: .leading, spacing: 10) {
-            NoticeView(style: .info, title: l.t("resume.title"), message: l.t("resume.message"))
+            if let session = model.unfinishedSession, session.onlyWaitingForUser {
+                NoticeView(style: .info, title: l.p("resume.waiting.title", session.openItemIDs.count), message: l.t("resume.waiting.message"))
+            } else {
+                NoticeView(style: .info, title: l.t("resume.title"), message: l.t("resume.message"))
+            }
             HStack {
                 Spacer()
                 Button(l.t("resume.discard")) { model.discardUnfinished() }

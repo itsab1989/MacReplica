@@ -30,7 +30,7 @@ public struct OwnershipMarker: Codable, Equatable, Sendable {
     public static let fileName = ".macreplica-owned"
 
     public enum Kind: String, Codable, Sendable {
-        case backup, temporary, session, simulation
+        case backup, temporary, session, simulation, downloads
     }
 
     public var kind: Kind

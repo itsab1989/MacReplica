@@ -1072,7 +1072,7 @@
   "macos_version" : "15.1.0",
   "macreplica_build" : "1",
   "macreplica_version" : "1.0.0",
-  "manifest_version" : 1,
+  "manifest_version" : 2,
   "mas_apps" : [
     {
       "app_store_id" : 1234567890,

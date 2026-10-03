@@ -12,7 +12,7 @@ public enum AppDataProviders {
         let fm = FileManager.default
         var result: [DetectedAppData] = []
         for provider in providers {
-            let base = layout.homeDirectory.appendingPathComponent(provider.base)
+            let base = layout.root(of: provider.scope).appendingPathComponent(provider.base)
             var appFolders: [(URL, String?)] = []
             if let pattern = provider.versionFolderPattern {
                 let names = ((try? fm.contentsOfDirectory(atPath: base.path)) ?? [])
@@ -26,14 +26,20 @@ public enum AppDataProviders {
                     guard PathSafety.isSafeRelativePath(category.path) || category.path.isEmpty else { continue }
                     let url = category.path.isEmpty ? folder : folder.appendingPathComponent(category.path)
                     guard let items = try? fm.contentsOfDirectory(atPath: url.path) else { continue }
-                    let present = category.files.map { names in names.filter { items.contains($0) } }
+                    let folderName = version.map { $0.hasSuffix(" Settings") ? String($0.dropLast(" Settings".count)) : $0 } ?? ""
+                    let wanted = category.files?.map { $0.replacingOccurrences(of: "{folder}", with: folderName) }
+                    let present = wanted.map { names in names.filter { items.contains($0) } }
                     if let present, present.isEmpty { continue }
                     if present == nil, !items.contains(where: { !$0.hasPrefix(".") }) { continue }
                     let profile = AppDataProfileReference(
                         provider: provider.id, appName: provider.appName, category: category.key, appVersion: version,
                         bundleIdentifiers: provider.bundleIdentifiers, mustBeClosed: provider.mustBeClosed,
-                        classification: category.classification)
-                    result.append(DetectedAppData(profile: profile, folder: url, files: present, excluding: category.excluding))
+                        classification: category.classification,
+                        versionFolderPattern: version == nil ? nil : provider.versionFolderPattern,
+                        movesBetweenVersions: version != nil && category.movesBetweenVersions,
+                        appMustBeInstalled: provider.appMustBeInstalled, notForOlderApp: provider.notForOlderApp)
+                    result.append(DetectedAppData(profile: profile, folder: url, scope: provider.scope, shippedByPackage: provider.shippedByPackage,
+                                                  files: present, excluding: category.excluding))
                 }
             }
         }

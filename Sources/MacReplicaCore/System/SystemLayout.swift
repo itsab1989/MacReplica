@@ -25,6 +25,9 @@ public struct SystemLayout: Sendable, Equatable {
     public var mdls: String
     public var osascript: String
     public var installer: String
+    /// Disk image and archive tools used to unpack verified downloads (read-only mounts, no installation).
+    public var hdiutil: String = "/usr/bin/hdiutil"
+    public var ditto: String = "/usr/bin/ditto"
     /// Files that only exist when the Command Line Tools are fully installed.
     public var commandLineToolsMarkers: [String]
     public var rosettaMarker: String
@@ -136,7 +139,7 @@ public struct SystemLayout: Sendable, Equatable {
     /// listed one by one (no patterns), and only Homebrew's own.
     public var allowedExecutables: Set<String> {
         let pythons = homebrewPrefixes.flatMap { prefix in PythonVersion.supportedMinors.map { homebrewPython(minor: $0, prefix: prefix) } }
-        return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer])
+        return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto])
     }
 
     public func baseFolder(for kind: BackupFileKind, domain: FileDomain) -> URL {
@@ -150,6 +153,12 @@ public struct SystemLayout: Sendable, Equatable {
 
     /// Replaces the home directory with `~` so that manifests, logs and reports
     /// never contain the user's account name.
+    /// `/Library`, the folder shared by all users (in a simulation or test sandbox, its stand-in next to the shared fonts).
+    public var sharedLibrary: URL { systemFonts.deletingLastPathComponent() }
+
+    /// The folder application data paths of a scope are relative to.
+    public func root(of scope: AppDataScope) -> URL { scope == .home ? homeDirectory : sharedLibrary }
+
     public func displayPath(_ url: URL) -> String {
         let redacted = Self.redactHome(url.standardizedFileURL.path, home: homeDirectory.standardizedFileURL.path)
         guard let root = simulationRoot?.standardizedFileURL.path, redacted.hasPrefix(root + "/") else { return redacted }

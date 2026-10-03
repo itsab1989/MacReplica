@@ -7,7 +7,54 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-03
+
+### Added
+- Developer tools and package managers: pyenv, uv, pipx, Conda, nvm, fnm, Volta, npm/pnpm/Yarn global
+  packages, rbenv, RVM, gems, rustup, Cargo, Go, JDKs, SDKMAN, .NET, MacPorts, Nix, Pixi, mise, asdf
+  (pkgx and Fink listed only). Scans read files only; restores run the managers' own commands without
+  a shell; steps MacReplica cannot run are guided and verified.
+- Python: environments are rebuilt with exactly the recorded pyenv or uv Python; uv projects from
+  `uv.lock` with `uv sync --frozen`; `uv.lock`, `pylock.toml`, `environment.yml` and `hatch.toml` are kept.
+- Release channels (beta, nightly, insider, preview) with their evidence, the vendor's update feed and
+  the developer Team ID are recorded per app; casks keep their channel on restore.
+- Guided installation: official download sources (vendor update feed, Homebrew's vendor URL, App Store
+  page, vendor website), verification before installing (vendor signature or checksum, bundle
+  identifier, Team ID, code signature, architecture, macOS version), download queue with pause,
+  resume, retry and cancel, installation one after another, quarantine kept for Gatekeeper.
+- Steps that wait for the user, and steps skipped, postponed or cancelled by the user, are recorded as
+  such (not as failures) and offered again when the restore continues, also after quitting.
+- Backup selection for individual apps and for each developer tool.
+- Homebrew development builds (`--HEAD`) are reproduced unless the stable release is chosen.
+- Display profile assignments: the profile each display uses is recorded (displays and the Mac only as
+  salted hashes) and assigned again to the same display, verified by reading it back; displays that are not
+  connected wait; the built-in display of another Mac is left alone.
+- Python: optional complete copy of a virtual environment for reinstalling on the same Mac; used only after
+  checks and a run of the environment, otherwise rebuilt from its packages (the default stays the rebuild).
+- Photoshop (Beta) as its own provider; more Photoshop presets and settings (the Adobe-listed panel files,
+  colour settings, workspaces, document presets, preferences for the same version); Adobe colour settings;
+  Camera Raw defaults. Presets go into the Photoshop version installed on the new Mac, or the original one.
+- DaVinci Resolve: user LUTs from the shared LUT folder (without the LUTs Resolve installs), ACES transforms,
+  Fairlight presets, keyboard, layout and user-preference presets, smart bins, metadata presets. Data that
+  needs its app waits until the app is installed and is never restored into an older version.
+- Application data conflicts: keep this Mac's files, replace with the backup or skip, with a list of the
+  files that differ.
+
+### Fixed
+- Command timeouts could fire late, or not at all, while many commands ran at the same time (blocking
+  output readers used GCD's limited global worker threads); readers now have their own threads and
+  timeouts their own queue.
+- Photoshop beta data was not detected. Resolve's keyboard and layout presets live in
+  `~/Library/Preferences/Blackmagic Design/DaVinci Resolve/`, not in Application Support.
+- Mac App Store apps could not be reinstalled with current `mas` (7.0 requires root for `mas install`).
+  App Store apps are now installed from the App Store page MacReplica opens, and verified.
+- Third-party taps are trusted after the user allows them (`brew trust --tap`), as Homebrew 6 and
+  later require before loading their packages.
+
 ### Changed
+- Backup format version 2 (`manifest_version`): backups of 1.0.0 are read as before; MacReplica 1.0.0
+  refuses version 2 backups with a clear message instead of restoring new kinds of data (such as
+  DaVinci Resolve LUTs in `/Library`) to the wrong place. Update MacReplica on the new Mac first.
 - Release pipeline: every release is built, installed and launched on macOS 14, 15 and 26 (Apple
   silicon) and macOS 15 (Intel) before it is published; release notes include download, checksum,
   first-launch and compatibility information.
@@ -63,5 +110,6 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/itsab1989/MacReplica/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/itsab1989/MacReplica/releases/tag/v1.0.0

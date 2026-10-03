@@ -151,7 +151,7 @@ public struct HomebrewInstaller: Sendable {
         // be executable, report a version and live at the expected prefix.
         switch await HomebrewClient(layout: layout, runner: runner).locate() {
         case .ready(let installation):
-            log.info("Homebrew \(installation.version) is ready at \(installation.prefix.path)", component: .homebrew)
+            log.info("Homebrew \(installation.version) is ready at \(layout.displayPath(installation.prefix))", component: .homebrew)
             return installation
         case .broken(_, let reason):
             throw HomebrewInstallError.notWorkingAfterInstall(reason)

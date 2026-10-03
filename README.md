@@ -50,7 +50,7 @@ MacReplica is a native macOS app. You do not need the Terminal.
 - [Screenshots](#screenshots)
 - [Installation](#installation) · [Requirements and compatibility](#requirements-and-compatibility)
 - [Using MacReplica](#using-macreplica)
-- [Details](#details): apps · app data · Python · fonts and ICC profiles · dry run and resume
+- [Details](#details): apps · guided installation · developer tools · app data · Python · fonts and ICC profiles · dry run and resume
 - [Permissions, security and privacy](#permissions-security-and-privacy)
 - [Logs and troubleshooting](#logs-and-troubleshooting)
 - [Known limitations](#known-limitations)
@@ -61,10 +61,11 @@ MacReplica is a native macOS app. You do not need the Terminal.
 
 | | What is recorded on the old Mac | What happens on the new Mac |
 |---|---|---|
-| **Apps** | Apps in `/Applications` and `~/Applications` with version, vendor and architecture | Reinstalled with Homebrew or from the Mac App Store where a reliable source exists; everything else is listed with the vendor's website |
-| **Homebrew** | Formulae, casks and taps | Xcode Command Line Tools and Homebrew are installed if needed, then your packages |
-| **Mac App Store** | Apps installed from the App Store | Reinstalled with [`mas`](https://github.com/mas-cli/mas) if you are signed in to the App Store |
-| **Python** | Environments, Python versions, packages and project settings | Environments are rebuilt with the same Python version and packages — not copied |
+| **Apps** | Apps in `/Applications` and `~/Applications` with version, vendor, architecture, release channel (beta, nightly …) and update feed | Reinstalled with Homebrew where a reliable package exists; everything else in a guided installation with verified official downloads |
+| **Homebrew** | Formulae (including `--HEAD` builds), casks and taps | Xcode Command Line Tools and Homebrew are installed if needed, then your packages |
+| **Mac App Store** | Apps installed from the App Store | MacReplica opens each app's App Store page; you click *Get* and MacReplica checks the result |
+| **Developer tools** | Version managers, language versions, global tools and other package managers: pyenv, uv, pipx, Conda, nvm, fnm, Volta, npm/pnpm/Yarn, rbenv, RVM, gems, rustup, Cargo, Go, JDKs, SDKMAN, .NET, MacPorts, Nix, Pixi, mise, asdf | Managers from Homebrew, then versions, tools and environments — automatically where possible, as guided steps where not ([details](docs/DEVELOPER_ENVIRONMENTS.md)) |
+| **Python** | Environments, Python versions, packages, lock files and project settings | Environments are rebuilt with the same Python version (exactly from pyenv or uv when available) and packages; uv projects from `uv.lock` — not copied |
 | **App data** | Settings and presets of supported apps, plus folders you add | Copied back after checks; caches, databases and passwords are never included |
 | **Fonts and ICC profiles** | Each file individually selectable, with its identity | Compared with what the new Mac already has before anything is copied |
 | **Git settings** | Name, aliases and preferences (email only if you choose) | Written to `~/.gitconfig` |
@@ -202,12 +203,44 @@ folder layout are in the [user guide](docs/USER_GUIDE.md).
 - On a new Mac without them, MacReplica installs the **Xcode Command Line Tools** (Apple's own
   installation dialog) and **Homebrew** from Homebrew's official signed installer package, after
   checking its signature, Homebrew's team ID and its SHA-256 checksum.
-- Third-party Homebrew sources (*taps*) are only added if you allow them.
-- **Mac App Store** apps are reinstalled with `mas`, which MacReplica installs through Homebrew. You
-  must be signed in to the App Store — `mas` cannot sign in for you. If you are not, those apps are
-  marked as failed with instructions; sign in and use **Retry Failed Items**.
-- Apps without a reliable automatic source are listed with the vendor's website.
+- Third-party Homebrew sources (*taps*) are only added if you allow them; on Homebrew 6 and later
+  MacReplica then also trusts them (`brew trust --tap`), which Homebrew requires.
+- Formulae installed as development builds (`--HEAD`) come back as such; you can choose the stable
+  release instead.
+- **Mac App Store** apps: `mas install` needs administrator rights since mas 7, so MacReplica does not
+  use it. It opens each app's App Store page; you click *Get* (signed in with your Apple Account) and
+  MacReplica checks that the app arrived.
 - Already-installed apps are detected and not installed again; a restore can be run twice safely.
+
+### Guided installation
+
+Apps that cannot be installed automatically — App Store apps, apps from vendor installers, beta and
+nightly builds — are installed in a guided step after everything else:
+
+- MacReplica looks up **official downloads only**: the vendor's own update feed declared in the app
+  (for the same channel as on the old Mac), the vendor download Homebrew's catalog points to, the App
+  Store page or the vendor's website. Never download portals or mirrors, and nothing is fetched before
+  you ask.
+- Downloads are **verified before anything is installed**: the vendor's signature or Homebrew's
+  checksum, then the app's bundle identifier, developer Team ID, code signature, architecture and
+  minimum macOS version. Downloads keep the quarantine flag, so Gatekeeper still checks them.
+- A **download queue** with pause, resume, retry and cancel; **install one after another** copies apps
+  into Applications (never over an existing app, never with administrator rights) or opens installer
+  packages in Apple's Installer for you.
+- **Skip**, **Later** and **Cancel** are recorded as your decision, not as failures, and the restore
+  remembers what is still open — even after quitting.
+
+Details: [docs/DOWNLOADS.md](docs/DOWNLOADS.md).
+
+### Developer tools and package managers
+
+MacReplica records version managers, language versions, global tools and other package managers by
+reading their files (no tool is started, credential files are never opened) and restores them on the
+new Mac: managers from Homebrew, then versions, tools and environments with the managers' own
+commands — never through a shell. Where a tool is a shell function (nvm, RVM, SDKMAN) or needs an
+installer or administrator rights (MacPorts, Nix), MacReplica shows the exact command, checks the
+result and continues with what depends on it. The full support matrix is in
+[docs/DEVELOPER_ENVIRONMENTS.md](docs/DEVELOPER_ENVIRONMENTS.md).
 
 ### Application data
 
@@ -232,8 +265,10 @@ lists them for signing in again — nothing is copied for them.
 
 Virtual environments contain absolute paths and links to a specific Python installation, so copied
 environments usually break. MacReplica records each environment's Python version, packages
-(`requirements.txt`) and project files instead. On the new Mac it installs the matching Python
-version with Homebrew (`python@3.x`) and recreates each environment with `venv` and `pip`. If exact
+(`requirements.txt`) and project files (including `uv.lock`, `poetry.lock`, `Pipfile.lock`,
+`environment.yml`) instead. On the new Mac it uses exactly the recorded Python version from pyenv or uv
+when those are restored, otherwise Homebrew's Python of the same minor version, and recreates each
+environment with `venv` and `pip` — or, for uv projects with a lock file, with `uv sync --frozen`. If exact
 package versions are no longer available, compatible versions are installed and reported. Packages
 installed from local folders or repositories are listed for manual setup. MacReplica finds Homebrew,
 pyenv and python.org interpreters, and environments in your home folder (for example `.venv` folders
@@ -325,20 +360,28 @@ More in [Troubleshooting](docs/TROUBLESHOOTING.md).
 
 ## Known limitations
 
-- **Not everything can be reinstalled automatically.** Apps without a Homebrew package or App Store
-  entry, licensed software and apps from installers must be installed by hand (MacReplica lists them).
+- **Not everything can be reinstalled automatically.** Apps without a verifiable official download
+  (licensed software, vendor accounts) and installer packages need you; MacReplica guides you and
+  checks the result.
 - **Logins are not migrated.** Accounts, licences and anything kept in the Keychain need a new
   sign-in; MacReplica tells you which apps and tools are affected.
 - **App data is limited to the supported apps and folders you add**, and data from one app version
   may not work in another. Data of a versioned app is restored into the matching version folder.
-- **The Mac App Store requires you to be signed in** before App Store apps can be reinstalled.
+- **App Store apps are installed by you** from the page MacReplica opens (signed in with your Apple
+  Account); `mas install` needs administrator rights since mas 7.
 - **Python environments are rebuilt, not copied.** Packages from local folders or private
   repositories, and package versions that no longer exist, need attention.
 - **Protected locations** (macOS system folders, other apps' sandboxes) are not read; MacReplica
   does not request Full Disk Access.
 - **Architecture differences:** apps without a build for the new Mac's processor are skipped with an
   explanation; Apple silicon apps cannot run on Intel Macs.
-- **Other package managers** (MacPorts, Nix, npm global packages, …) are not supported.
+- **Some developer tools are guided steps**, not automatic: nvm, RVM and SDKMAN (shell functions),
+  MacPorts (administrator rights), installing Nix, .NET SDK versions, asdf and mise tools from
+  third-party backends. pkgx and Fink are only listed. Real installations of MacPorts, Nix, rbenv,
+  rustup, SDKMAN and .NET were not used for testing; see
+  [docs/DEVELOPER_ENVIRONMENTS.md](docs/DEVELOPER_ENVIRONMENTS.md#verified-and-what-is-not).
+- **Download verification needs a vendor signature, a Homebrew checksum or the original Team ID**;
+  anything else is only offered as the vendor's website.
 - Fonts in apps that are already running appear after the app is reopened.
 - Printer-driver colour profiles come back by reinstalling the printer driver.
 - Releases are not signed with a Developer ID or notarized (see [Installation](#installation)).
@@ -369,7 +412,7 @@ published by GitHub Actions — see [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCE
 ## Testing
 
 ```sh
-scripts/test.sh                              # all tests (about 300, Swift Testing)
+scripts/test.sh                              # all tests (about 340, Swift Testing)
 scripts/test.sh --filter FontConflictTests   # one suite
 ```
 
@@ -377,6 +420,8 @@ The tests never touch your own apps or files: integration and end-to-end tests r
 **simulated Macs** — sandbox folders with stand-in versions of `brew`, `mas` and other tools — using
 synthetic apps, fonts and profiles generated in code. Restoring into real system folders, the real
 App Store and administrator dialogs are not covered by automated tests; they were validated by hand.
+What was validated for developer tools and the guided installation is in
+[docs/RECOVERY_REPORT.md](docs/RECOVERY_REPORT.md).
 
 **Mutation testing** checks that the tests really catch mistakes in the critical modules (selection,
 conflict decisions, restore, verification, clean-up, credentials). The last full run killed 85.5 %

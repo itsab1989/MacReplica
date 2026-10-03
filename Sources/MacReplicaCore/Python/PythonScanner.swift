@@ -149,12 +149,16 @@ public struct PythonScanner: Sendable {
         "env-" + Hashing.sha256Hex(of: Data(path.utf8)).prefix(12)
     }
 
-    func manager(for folder: URL) -> EnvironmentManager {
+    func manager(for folder: URL, config: [String: String] = [:]) -> EnvironmentManager {
         let path = folder.standardizedFileURL.path
         let home = layout.homeDirectory.standardizedFileURL.path
         if path.hasPrefix(home + "/.virtualenvs/") { return .virtualenvwrapper }
         if path.hasPrefix(home + "/.pyenv/versions/") { return .pyenvVirtualenv }
         if path.hasPrefix(home + "/.local/share/virtualenvs/") { return .pipenv }
+        // `pyvenv.cfg` names the tool that created the environment (`uv = 0.4.0`, `virtualenv = 20.26.3`).
+        if config["uv"] != nil { return .uv }
+        if FileManager.default.fileExists(atPath: folder.deletingLastPathComponent().appendingPathComponent("poetry.lock").path) { return .poetry }
+        if config["virtualenv"] != nil { return .virtualenv }
         return .venv
     }
 
@@ -171,8 +175,8 @@ public struct PythonScanner: Sendable {
 
         let display = layout.displayPath(folder)
         let id = Self.environmentID(for: display)
-        let manager = manager(for: folder)
-        let isProjectLocal = manager == .venv
+        let manager = manager(for: folder, config: config)
+        let isProjectLocal = !manager.isToolManaged
         let name = isProjectLocal && [".venv", "venv", "env", ".env"].contains(folder.lastPathComponent)
             ? folder.deletingLastPathComponent().lastPathComponent : folder.lastPathComponent
         let home = config["home"].map { layout.redact($0) }
@@ -183,8 +187,9 @@ public struct PythonScanner: Sendable {
         if isProjectLocal {
             let project = folder.deletingLastPathComponent()
             let names = ((try? FileManager.default.contentsOfDirectory(atPath: project.path)) ?? []).filter {
-                ($0.hasPrefix("requirements") && $0.hasSuffix(".txt")) || ["pyproject.toml", "Pipfile", "Pipfile.lock", "poetry.lock",
-                                                                            "setup.cfg", ".python-version"].contains($0)
+                ($0.hasPrefix("requirements") && ($0.hasSuffix(".txt") || $0.hasSuffix(".in")))
+                    || ["pyproject.toml", "Pipfile", "Pipfile.lock", "poetry.lock", "uv.lock", "pylock.toml", "environment.yml",
+                        "environment.yaml", "hatch.toml", "setup.cfg", ".python-version"].contains($0)
             }.sorted()
             for fileName in names {
                 let url = project.appendingPathComponent(fileName)

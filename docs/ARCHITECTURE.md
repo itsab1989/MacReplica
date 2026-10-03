@@ -29,6 +29,7 @@ scripts/                   test, app bundle, DMG, notarization
    PythonScanner                                           RestorePlanner ──► RestorePlan (ordered items
    AppDataScanner + AppDataProviders                              │           with dependencies)
    DeveloperSettingsScanner                                       ▼
+   ToolchainCatalog (providers)                                    │
    CredentialProviders (opt-in)                            RestoreExecutor
    GuidanceDetector                                          ├─ dryRun(plan)   — read-only predictions
    AccessProbe                                               └─ run(plan)      — installs, copies, verifies,
@@ -60,7 +61,7 @@ services on background tasks and turns their results into screens.
 
 ## Manifest
 
-`manifest.json` is versioned (`manifest_version`, currently 1), uses stable snake_case keys and is
+`manifest.json` is versioned (`manifest_version`, currently 2; version 1 backups of MacReplica 1.0.0 are migrated on reading), uses stable snake_case keys and is
 decoded leniently (missing sections become empty, unknown keys are ignored, newer major versions
 are refused with a clear message). It records the MacReplica version and build, macOS version and
 architecture of the old Mac, and for each item what is needed to restore it — never secrets.
@@ -85,3 +86,39 @@ stored in the restore session, so it survives a restart. Only items in the backu
   `RestoreExecutor.perform`, plus descriptions in all languages (tests enforce translations).
 - **New language:** add a `.lproj` folder and an `AppLanguage` case; `LocalizationTests` check
   completeness and placeholders.
+
+## Developer tools: provider architecture
+
+`Sources/MacReplicaCore/Toolchains/` holds one `ToolchainProvider` per package or version manager
+(pyenv, uv, Conda, nvm, rustup, MacPorts, …), registered in `ToolchainCatalog.providers`. Adding a
+provider means adding one type and one catalog entry; scanning, backup and restore selection, the
+plan, the dry run and the reports work from the catalog. A provider
+
+- **scans** by reading files (`scan(_:) -> ToolchainRecord?`), never by starting a tool;
+- describes its **restore steps** (`restoreActions(for:)`: manager, runtime, package, environment) and
+  the **Homebrew package** that installs the manager or a runtime (`managerPackage`, `homebrewPackage`);
+- builds **commands** from validated names and versions (`commands(for:context:)`), lists the exact
+  executables it may start (`executableCandidates`) and **verifies** results through files
+  (`isSatisfied`);
+- states its **support level** per step (automatic, guided, listed) and the instruction for guided steps.
+
+`RestorePlanner` turns records into `toolchainStep` items with dependencies (manager → runtime →
+packages; Cargo programs → rustup's default toolchain; Python environments → the exact pyenv/uv
+runtime). `RestoreExecutor` extends the command policy for one run by exactly the executables of the
+plan's steps (`CommandPolicy.adding`, which always refuses shells and similar programs).
+
+## Guided steps and resume
+
+Steps that wait for the user end with an *open* outcome (`manualStepRequired`,
+`waitingForManualStep`, `postponedByUser`, `cancelledByUser`). Open steps are not part of
+`RestoreSession.finishedItemIDs`, so continuing a session checks them again; a session whose only
+remaining steps are open is shown as "waiting for you".
+
+## Downloads
+
+`Sources/MacReplicaCore/Distribution/` derives release channels and reads update feeds;
+`Sources/MacReplicaCore/Downloads/` contains `DownloadSourceFinder` (official sources only),
+`DownloadQueue` (pause, resume, retry, cancel; `URLSessionDownloadTransport` in the app,
+`LocalDownloadTransport` in tests and the simulation), `DownloadInstaller` (verification, unpacking,
+installation without administrator rights) and `GuidedInstallation` (one-after-another installation
+with user decisions). See [DOWNLOADS.md](DOWNLOADS.md).

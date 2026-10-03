@@ -25,6 +25,9 @@ copy the repository N times and start shard K (0 … N-1) in copy K; every
 shard processes every N-th mutant of each module. --merge combines the
 shard results into one report.
 
+Exclusions in config.json match source lines by "pattern"; an optional "operator" limits one
+to that operator's mutants, so other mutants on the same line still count.
+
 With --check the exit code is non-zero if a module falls below its
 threshold (used in CI).
 """
@@ -126,11 +129,12 @@ def run(command, timeout):
     env = dict(os.environ, MACREPLICA_CLT_TESTING=os.environ.get("MACREPLICA_CLT_TESTING", "1"), TMPDIR=str(MUTATION_TMP) + "/")
     # Own process group, so that a mutant that hangs is stopped together with the test helper
     # processes `swift test` starts (killing only `swift test` would leave them running).
-    process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
+    process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env,
                                start_new_session=True)
     try:
         output, _ = process.communicate(timeout=timeout)
-        return process.returncode, output
+        # Decoded leniently: a mutant can print anything, including bytes that are not valid UTF-8.
+        return process.returncode, output.decode("utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         os.killpg(process.pid, signal.SIGKILL)
         process.communicate()
@@ -206,7 +210,8 @@ def main():
                 mutants = [m for m in mutants if (m["line"], m["start"], m["operator"]) in survivor_keys.get(module["file"], set())]
             if args.shards > 1:
                 mutants = [m for i, m in enumerate(mutants) if i % args.shards == args.shard]
-            excluded = [re.compile(e["pattern"]) for e in config.get("exclusions", []) if e["file"] == module["file"]]
+            # An exclusion matches lines by pattern; with "operator" it excludes only that operator's mutants there.
+            excluded = [(re.compile(e["pattern"]), e.get("operator")) for e in config.get("exclusions", []) if e["file"] == module["file"]]
             # A filter that matches nothing would run zero tests and let every mutant "survive".
             known = set()
             for test_file in (ROOT / "Tests").rglob("*.swift"):
@@ -229,7 +234,7 @@ def main():
                 sys.exit(f"tests for {module['file']} fail without mutations")
             print(f"== {module['file']}: {len(mutants)} mutants", flush=True)
             for index, mutant in enumerate(mutants, 1):
-                if any(rx.search(mutant["original"]) for rx in excluded):
+                if any(rx.search(mutant["original"]) and operator in (None, mutant["operator"]) for rx, operator in excluded):
                     mutant["status"] = "excluded"
                     results.append({**mutant, "file": module["file"]})
                     continue

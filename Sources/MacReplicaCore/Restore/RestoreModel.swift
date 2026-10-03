@@ -7,6 +7,10 @@ public enum RestoreComponent: String, Codable, Sendable, CaseIterable, Identifia
     case brewCasks
     case appStore
     case python
+    /// Version managers, language runtimes and global tools (Node.js, Ruby, Rust, Go, Java, .NET, Python tools).
+    case developerTools
+    /// Package managers besides Homebrew (MacPorts, Nix, Pixi, mise, asdf).
+    case packageManagers
     case developerSettings
     case applicationData
     case fonts
@@ -34,6 +38,12 @@ public enum RestoreItemKind: String, Codable, Sendable {
     case applicationData
     case gitConfiguration
     case credential
+    /// A runtime, global package or environment of a version or package manager.
+    case toolchainStep
+    /// An application without automatic installation: guided download and installation.
+    case manualApp
+    /// A profile assigned to a display on the old Mac, assigned again here.
+    case displayProfile
 
     /// Rough relative duration, used to estimate the remaining time before real timings exist.
     var weight: Double {
@@ -49,6 +59,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .pythonEnvironment: return 90
         case .applicationData: return 5
         case .gitConfiguration, .credential: return 1
+        case .toolchainStep: return 60
+        case .manualApp, .displayProfile: return 1
         }
     }
 
@@ -62,6 +74,9 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .pythonEnvironment: return .python
         case .applicationData, .gitConfiguration: return .applicationData
         case .credential: return .permissions
+        case .toolchainStep: return .developerTools
+        case .manualApp: return .downloads
+        case .displayProfile: return .restore
         }
     }
 }
@@ -88,6 +103,13 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     public var applicationData: AppDataFolder?
     /// Sanitized Git configuration to write to `~/.gitconfig`.
     public var gitConfig: String?
+    /// For `toolchainStep`: what to do with which version or package manager.
+    public var toolchain: ToolchainAction?
+    /// For `manualApp` and guided App Store installs: the application as recorded on the old Mac.
+    public var app: AppRecord?
+    /// For `displayProfile`: the assignment and the keys to recognise the display.
+    public var displayAssignment: DisplayProfileAssignment?
+    public var hardwareKeys: HardwareKeys?
 
     public init(id: String, kind: RestoreItemKind, title: String, identifier: String, originalVersion: String? = nil,
                 bundleIdentifier: String? = nil, appBundleNames: [String] = [], tapRemote: String? = nil, file: FileRecord? = nil,
@@ -139,16 +161,42 @@ public struct RestoreSelection: Codable, Equatable, Sendable {
     /// Default for conflicts; per-file choices override it.
     public var conflictResolution: ConflictResolution
     public var conflictOverrides: [String: ConflictResolution]
+    /// Where an item should come from when there are several sources: a download offer ID for
+    /// guided installs, or `stable` for a Homebrew formula that was a development (HEAD) build.
+    public var sourceChoices: [String: String]
 
     public init(components: Set<RestoreComponent> = RestoreComponent.defaultSelection, excludedItemIDs: Set<String> = [],
                 enabledTaps: Set<String> = [], matchDecisions: [String: String] = [:],
-                conflictResolution: ConflictResolution = .keepExisting, conflictOverrides: [String: ConflictResolution] = [:]) {
+                conflictResolution: ConflictResolution = .keepExisting, conflictOverrides: [String: ConflictResolution] = [:],
+                sourceChoices: [String: String] = [:]) {
         self.components = components
         self.excludedItemIDs = excludedItemIDs
         self.enabledTaps = enabledTaps
         self.matchDecisions = matchDecisions
         self.conflictResolution = conflictResolution
         self.conflictOverrides = conflictOverrides
+        self.sourceChoices = sourceChoices
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case components, excludedItemIDs, enabledTaps, matchDecisions, conflictResolution, conflictOverrides, sourceChoices
+    }
+
+    // Sessions saved by earlier versions lack newer fields; they are read with defaults.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        components = Set((try c.decodeIfPresent(LenientList<RestoreComponent>.self, forKey: .components)?.elements) ?? Array(RestoreComponent.defaultSelection))
+        excludedItemIDs = try c.decodeIfPresent(Set<String>.self, forKey: .excludedItemIDs) ?? []
+        enabledTaps = try c.decodeIfPresent(Set<String>.self, forKey: .enabledTaps) ?? []
+        matchDecisions = try c.decodeIfPresent([String: String].self, forKey: .matchDecisions) ?? [:]
+        conflictResolution = try c.decodeIfPresent(ConflictResolution.self, forKey: .conflictResolution) ?? .keepExisting
+        conflictOverrides = try c.decodeIfPresent([String: ConflictResolution].self, forKey: .conflictOverrides) ?? [:]
+        sourceChoices = try c.decodeIfPresent([String: String].self, forKey: .sourceChoices) ?? [:]
+    }
+
+    /// True if a Homebrew development (HEAD) build should be installed as such.
+    public func installsHead(_ item: RestoreItem) -> Bool {
+        item.kind == .formula && (item.originalVersion?.hasPrefix("HEAD") ?? false) && sourceChoices[item.id] != "stable"
     }
 
     public func resolution(for itemID: String) -> ConflictResolution {
@@ -176,6 +224,12 @@ public enum FailureCategory: String, Codable, Sendable, CaseIterable {
     case pythonEnvironmentConflict
     case credentialCannotBeOpened
     case applicationRunning
+    /// A folder MacReplica must write to does not allow it.
+    case permissionDenied
+    /// The version or package manager a step needs is not installed.
+    case toolUnavailable
+    /// A download did not pass verification (checksum, signature, vendor).
+    case downloadNotTrusted
     case timeout
     case cancelled
     case unknown
@@ -205,6 +259,25 @@ public enum SkipReason: Codable, Equatable, Sendable {
     /// A profile macOS generated for a display of the old Mac; macOS creates its own for this Mac.
     case displaySpecificProfile
     case cancelled
+    /// A guided step: the user performs it (install from the App Store, a vendor download, a command
+    /// MacReplica cannot run), then MacReplica checks the result.
+    case manualStepRequired
+    /// Waits for a guided step it depends on.
+    case waitingForManualStep(itemTitle: String)
+    /// The user chose to do this later.
+    case postponedByUser
+    /// The user cancelled an installation that was in progress (not a technical failure).
+    case cancelledByUser
+    /// The display is not connected; it is assigned when it is (or in System Settings).
+    case displayNotConnected(name: String)
+    /// The profile belonged to the built-in display of the Mac the backup was made on.
+    case displayOfAnotherMac
+    /// The assigned profile is neither in the backup nor on this Mac.
+    case profileNotAvailable
+    /// The data belongs to an app that is not installed on this Mac yet; offered again when the restore continues.
+    case applicationNotInstalled(name: String)
+    /// The app on this Mac is older than the one the data came from; its files could not be read by it.
+    case applicationVersionOlder(name: String, installed: String, backup: String)
 }
 
 public enum ItemOutcome: Codable, Equatable, Sendable {
@@ -228,6 +301,16 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
     public var isSkip: Bool {
         if case .skipped = self { return true }
         return false
+    }
+
+    /// Steps that still wait for the user: they are offered again when the restore continues.
+    public var isOpen: Bool {
+        guard case .skipped(let reason) = self else { return false }
+        switch reason {
+        case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected,
+             .applicationNotInstalled, .applicationVersionOlder: return true
+        default: return false
+        }
     }
 }
 
@@ -268,22 +351,33 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case pythonPackagesUpdated(count: Int)
     /// An environment already existed and only missing packages were added.
     case pythonEnvironmentReused
+    /// The environment was rebuilt exactly from the project's lock file.
+    case pythonLockFileUsed(file: String)
+    /// The saved copy of the environment was restored and verified by running it.
+    case pythonEnvironmentPreserved
+    /// The saved copy could not be used; the environment was rebuilt from its packages instead.
+    case pythonPreservationNotUsed(reason: PythonPreservationProblem)
     case pythonSettingsToApply(count: Int)
     case applicationDataCopied(copied: Int, identical: Int, kept: Int)
     /// Data was restored into the folder of a different app version than the one installed.
     case applicationVersionDiffers(original: String)
+    /// The app version of the backup is not on this Mac; the data went into another installed version.
+    case restoredIntoVersion(original: String, target: String)
 }
 
 public struct RestoreSummary: Equatable, Sendable {
     public var succeeded: Int
     public var failed: Int
     public var skipped: Int
+    /// Guided, postponed or cancelled steps that are still open.
+    public var waiting: Int
     public var total: Int
 
     public init(results: [ItemResult], total: Int) {
         succeeded = results.filter { $0.outcome.isSuccessLike }.count
         failed = results.filter { $0.outcome.isFailure }.count
-        skipped = results.filter { $0.outcome.isSkip }.count
+        waiting = results.filter { $0.outcome.isOpen }.count
+        skipped = results.filter { $0.outcome.isSkip && !$0.outcome.isOpen }.count
         self.total = total
     }
 }
@@ -304,8 +398,11 @@ extension ItemResult {
             switch reason {
             case .keptExisting: return "conflict_kept_destination"
             case .userSkipped: return "skipped_by_user"
-            case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile: return "incompatible"
-            case .projectFolderMissing, .passphraseNotProvided: return "manual_action_required"
+            case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile, .displayOfAnotherMac: return "incompatible"
+            case .projectFolderMissing, .passphraseNotProvided, .manualStepRequired, .waitingForManualStep, .displayNotConnected,
+                 .profileNotAvailable, .applicationNotInstalled, .applicationVersionOlder: return "manual_action_required"
+            case .postponedByUser: return "postponed_by_user"
+            case .cancelledByUser: return "cancelled_by_user"
             default: return "skipped"
             }
         case .failed: return "failed"

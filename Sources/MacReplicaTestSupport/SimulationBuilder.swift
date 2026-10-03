@@ -34,6 +34,42 @@ public struct SimulationRoot {
     public func failOnce(_ package: String, message: String) throws { try setFlag("fail-once/\(package)", true, content: message) }
     public func failAlways(_ package: String, message: String) throws { try setFlag("fail/\(package)", true, content: message) }
     public func setCommandLineToolsDelay(_ seconds: Double) throws { try setFlag("clt-delay", true, content: String(seconds)) }
+    /// The simulated Mac's displays and ColorSync assignments (`state/colorsync.json`).
+    /// `profile` paths are relative to the simulation root.
+    public func configureDisplays(platform: String?, displays: [(uuid: String, name: String, builtIn: Bool, connected: Bool, profile: String?)],
+                                  refuseAssignments: Bool = false) throws {
+        let state = SimulatedDisplayColorManager.State(
+            platform: platform,
+            displays: displays.map { .init(uuid: $0.uuid, name: $0.name, builtIn: $0.builtIn, connected: $0.connected,
+                                           profile: $0.profile.map { url.appendingPathComponent($0).path }) },
+            refuseAssignments: refuseAssignments)
+        try FileManager.default.createDirectory(at: self.state, withIntermediateDirectories: true)
+        try JSONEncoder().encode(state).write(to: self.state.appendingPathComponent("colorsync.json"))
+    }
+
+    /// The profile currently assigned to a simulated display (relative to the root), if any.
+    public func assignedProfile(display uuid: String) -> String? {
+        let manager = SimulatedDisplayColorManager(file: state.appendingPathComponent("colorsync.json"))
+        guard let path = manager.load()?.displays.first(where: { $0.uuid == uuid })?.profile else { return nil }
+        for root in [url.path, url.resolvingSymlinksInPath().path] where path.hasPrefix(root + "/") { return String(path.dropFirst(root.count + 1)) }
+        let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        let base = url.resolvingSymlinksInPath().path
+        return resolved.hasPrefix(base + "/") ? String(resolved.dropFirst(base.count + 1)) : path
+    }
+
+    /// The version the simulated `brew --version` reports (default 4.4.0).
+    public func setHomebrewVersion(_ version: String) throws { try setFlag("brew-version", true, content: version) }
+
+    /// Simulates the user installing one of the sample apps by hand (from the App Store or a vendor download).
+    public func simulateUserInstall(appNamed name: String) throws {
+        guard let app = SimulationBuilder.sampleApps.first(where: { $0.name == name }) else { throw CocoaError(.fileNoSuchFile) }
+        try SimulationBuilder.makeAppBundle(app, in: url.appendingPathComponent("Applications"))
+        if let id = app.appStoreID {
+            // What `mas list` reports for an app installed from the App Store.
+            try FileManager.default.createDirectory(at: state.appendingPathComponent("mas/installed"), withIntermediateDirectories: true)
+            try Data("\(app.name)  (\(app.version))".utf8).write(to: state.appendingPathComponent("mas/installed/\(id)"))
+        }
+    }
 
     /// Commands the simulated tools received, one per line.
     public func calls() -> [String] {
@@ -52,6 +88,9 @@ public enum SimulationBuilder {
         case sourceMac
         /// A freshly installed Mac: no Homebrew, no Command Line Tools, nothing installed.
         case freshMac
+        /// A source Mac that also has developer environments (version managers, runtimes, global tools,
+        /// other package managers) and an app from a nightly channel with a signed vendor update feed.
+        case developerMac
     }
 
     /// Synthetic apps used across scenarios.
@@ -105,6 +144,7 @@ public enum SimulationBuilder {
         try write(FakeTools.brew, to: url.appendingPathComponent("tools/brew"), executable: true)
         try write(FakeTools.mas, to: url.appendingPathComponent("tools/mas"), executable: true)
         try write(FakeTools.python, to: url.appendingPathComponent("tools/python"), executable: true)
+        try write(FakeTools.toolchain, to: url.appendingPathComponent("tools/toolchain"), executable: true)
         try write(FakeTools.xcodeSelect, to: url.appendingPathComponent("bin/xcode-select"), executable: true)
         try write(FakeTools.pkgutil, to: url.appendingPathComponent("bin/pkgutil"), executable: true)
         try write(FakeTools.mdls, to: url.appendingPathComponent("bin/mdls"), executable: true)
@@ -157,13 +197,27 @@ public enum SimulationBuilder {
                                 ("example-tool", "0.9.0"), ("python@3.12", "3.12.7")] {
             try write(version, to: root.state.appendingPathComponent("brew/available/formulae/\(name)"), executable: false)
         }
+        // Version and package managers Homebrew can install (see FakeTools.toolchain).
+        for (name, version) in [("uv", "0.12.22"), ("pyenv", "2.6.10"), ("pipx", "1.8.0"), ("fnm", "1.38.1"), ("volta", "2.0.2"),
+                                ("pnpm", "10.18.0"), ("yarn", "1.22.22"), ("rbenv", "1.3.2"), ("rustup", "1.28.2"), ("go", "1.25.1"),
+                                ("pixi", "0.81.0"), ("mise", "2026.10.0"), ("node", "26.10.0"), ("ruby", "4.0.7")] {
+            try write(version, to: root.state.appendingPathComponent("brew/available/formulae/\(name)"), executable: false)
+        }
+        for (cask, version) in [("miniforge", "26.7.2-0"), ("temurin@21", "21.0.8"), ("dotnet-sdk", "10.0.401")] {
+            try write(#"{"version": "\#(version)", "app": "", "bundle_id": ""}"#,
+                      to: root.state.appendingPathComponent("brew/available/casks/\(cask).json"), executable: false)
+        }
 
         try writeReleases(root)
         try populateMacOSFiles(root)
         switch scenario {
         case .sourceMac: try populateSourceMac(root)
         case .freshMac: try populateFreshMac(root)
+        case .developerMac:
+            try populateSourceMac(root)
+            try populateDeveloperEnvironments(root)
         }
+        try populateVendorDownloads(root)
         return root
     }
 
@@ -243,8 +297,11 @@ public enum SimulationBuilder {
     }
 
     private static func populateFreshMac(_ root: SimulationRoot) throws {
-        // The user already copied their project folder; its environment is missing.
+        // The user already copied their project folders; their environments are missing.
         try write("print('hello')\n", to: root.url.appendingPathComponent("home/Projects/demo-app/main.py"), executable: false)
+        try write("[project]\nname = \"api-service\"\nversion = \"0.1.0\"\n",
+                  to: root.url.appendingPathComponent("home/Projects/api-service/pyproject.toml"), executable: false)
+        try write("version = 1\n\n[[package]]\nname = \"fastapi\"\nversion = \"0.115.0\"\n", to: root.url.appendingPathComponent("home/Projects/api-service/uv.lock"), executable: false)
         // Fonts already on the new Mac: an older version, an identical copy, a different font under the
         // same file name and the same font under another file name.
         let userFonts = root.url.appendingPathComponent("home/Library/Fonts")
@@ -268,6 +325,20 @@ public enum SimulationBuilder {
         var parts = version.split(separator: ".").map(String.init)
         if let last = parts.last, let number = Int(last) { parts[parts.count - 1] = String(number + 1) }
         return parts.joined(separator: ".")
+    }
+
+    /// A synthetic, unsigned application bundle (Info.plist and a Mach-O header only).
+    @discardableResult
+    public static func makeSyntheticApp(name: String, bundleID: String, version: String, architectures: [CPUArchitecture] = [.arm64, .x86_64],
+                                        minimumSystemVersion: String = "13.0", extraInfo: [String: Any] = [:], in folder: URL) throws -> URL {
+        try makeAppBundle(SampleApp(name: name, bundleID: bundleID, version: version, vendor: "Example Vendor", architectures: architectures), in: folder)
+        let bundle = folder.appendingPathComponent("\(name).app")
+        let infoURL = bundle.appendingPathComponent("Contents/Info.plist")
+        var info = (NSDictionary(contentsOf: infoURL) as? [String: Any]) ?? [:]
+        info["LSMinimumSystemVersion"] = minimumSystemVersion
+        info.merge(extraInfo) { $1 }
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: infoURL)
+        return bundle
     }
 
     static func makeAppBundle(_ app: SampleApp, in folder: URL) throws {

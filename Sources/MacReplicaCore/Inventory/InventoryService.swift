@@ -1,7 +1,7 @@
 import Foundation
 
 public enum InventoryPhase: String, Sendable, CaseIterable {
-    case applications, homebrew, appStore, matching, python, fonts, colorProfiles
+    case applications, homebrew, appStore, matching, python, developerTools, fonts, colorProfiles
 }
 
 public struct InventoryProgress: Sendable, Equatable {
@@ -75,6 +75,37 @@ public struct InventoryResult: Sendable {
         if !includeSettings { manifest.python.settings = [] }
     }
 
+    /// Adds a saved copy of the chosen environments to the backup (archives created in `workFolder`).
+    /// Environments that contain files that look like credentials are not copied; that is recorded.
+    public mutating func preservePythonEnvironments(_ ids: Set<String>, layout: SystemLayout, runner: CommandRunning, workFolder: URL) async {
+        guard !ids.isEmpty else { return }
+        let keys = manifest.hardwareKeys ?? HardwareKeys.make(platformIdentifier: nil)
+        manifest.hardwareKeys = keys
+        for index in manifest.python.environments.indices where ids.contains(manifest.python.environments[index].id) {
+            let environment = manifest.python.environments[index]
+            switch (try? await PythonPreserver.preserve(environment, layout: layout, runner: runner, workFolder: workFolder, keys: keys)) {
+            case .preserved(let file, let preservation)?:
+                extraFiles.append(file)
+                manifest.python.environments[index].preservation = preservation
+            case .refused(let issue)?:
+                manifest.backupIssues.append(issue)
+            case nil:
+                manifest.backupIssues.append(BackupIssue(path: environment.path, reason: .unreadable))
+            }
+        }
+    }
+
+    /// Keeps only the chosen package and version managers (by provider).
+    public mutating func keepToolchains(_ providers: Set<ToolchainProviderID>) {
+        manifest.toolchains.removeAll { !providers.contains($0.provider) }
+    }
+
+    /// Leaves out applications the user deselected for the backup (by `AppRecord.id`).
+    public mutating func excludeApplications(_ ids: Set<String>) {
+        guard !ids.isEmpty else { return }
+        manifest.applications.removeAll { ids.contains($0.id) }
+    }
+
     /// Adds a folder of application data chosen by the user (replacing an earlier scan of it).
     public mutating func addApplicationData(_ folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
         removeApplicationData(id: folder.id)
@@ -85,7 +116,7 @@ public struct InventoryResult: Sendable {
 
     public mutating func removeApplicationData(id: String) {
         guard let folder = manifest.applicationData.first(where: { $0.id == id }) else { return }
-        let prefix = "~/" + folder.relativePath + "/"
+        let prefix = folder.displayPath + "/"
         manifest.applicationData.removeAll { $0.id == id }
         extraFiles.removeAll { $0.record.backupPath.hasPrefix("application-data/\(id)/") }
         manifest.backupIssues.removeAll { $0.path.hasPrefix(prefix) }
@@ -222,6 +253,10 @@ public struct InventoryService: Sendable {
         let developer = DeveloperSettingsScanner(layout: layout).scan()
         let detectedData = AppDataProviders.detect(layout: layout)
 
+        // Package and version managers, runtimes and global tools (files only, no tool is started).
+        progress(InventoryProgress(phase: .developerTools, fraction: 0.76, detail: nil))
+        let toolchains = ToolchainCatalog.scan(ToolchainContext(layout: layout, architecture: architecture))
+
         // 6. Fonts and color profiles (80 – 100 %)
         progress(InventoryProgress(phase: .fonts, fraction: 0.8, detail: nil))
         let files = FileScanner(layout: layout)
@@ -248,14 +283,27 @@ public struct InventoryService: Sendable {
             iccProfiles: profiles.map(\.record),
             python: python.snapshot,
             locations: locations,
-            developer: developer)
+            developer: developer,
+            toolchains: toolchains)
         manifest.macreplicaBuild = SystemInfo.buildNumber
+        // Display profile assignments (read-only); identifiers only as salted hashes.
+        let displayManager = layout.displayColorManager
+        let keys = HardwareKeys.make(platformIdentifier: displayManager.platformIdentifier())
+        manifest.hardwareKeys = keys
+        manifest.displayProfiles = DisplayProfileScanner.assignments(displays: displayManager.displays(), profiles: profiles.map(\.record),
+                                                                     layout: layout, keys: keys)
         manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)))
         var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)
         // Known user-created data of supported apps (presets, styles, LUTs …) is suggested automatically.
-        for detected in detectedData {
+        for var detected in detectedData {
+            if detected.profile.notForOlderApp {
+                let ids = Set(detected.profile.bundleIdentifiers.map { $0.lowercased() })
+                detected.profile.sourceAppVersion = apps.first { $0.bundleIdentifier.map { ids.contains($0.lowercased()) } ?? false }?.version
+            }
+            var shipped: Set<String> = []
+            if let package = detected.shippedByPackage { shipped = await shippedFiles(package: package, below: detected.folder) }
             if let scan = try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
-                                                                     excluding: detected.excluding),
+                                                                     excluding: detected.excluding, scope: detected.scope, shipped: shipped),
                !scan.files.isEmpty {
                 result.addApplicationData(scan.folder, files: scan.files, issues: scan.issues)
             } else {
@@ -274,6 +322,11 @@ public struct InventoryService: Sendable {
                 for index in apps.indices where apps[index].bundleFileName.caseInsensitiveCompare(artifact) == .orderedSame {
                     apps[index].source = .homebrewCask(token: cask.token)
                     apps[index].restoreMethod = .homebrewCask(token: cask.token)
+                    // The cask token names the channel exactly (`firefox@nightly`); restoring the same cask reproduces it.
+                    if let channel = ChannelDetector.channel(caskToken: cask.token) {
+                        apps[index].channel = channel
+                        apps[index].channelEvidence = .homebrewCask
+                    }
                 }
             }
         }
@@ -302,6 +355,30 @@ public struct InventoryService: Sendable {
     static func isWebURL(_ value: String) -> Bool {
         guard let url = URL(string: value), let scheme = url.scheme?.lowercased() else { return false }
         return (scheme == "https" || scheme == "http") && url.host != nil
+    }
+
+    /// Files an installer package placed below `folder` (paths relative to it), from its receipt via
+    /// `pkgutil --files`. Empty if the package is not installed or the receipt cannot be read.
+    func shippedFiles(package: String, below folder: URL) async -> Set<String> {
+        await Self.shippedFiles(package: package, below: folder, layout: layout, runner: runner)
+    }
+
+    public static func shippedFiles(package: String, below folder: URL, layout: SystemLayout, runner: CommandRunning) async -> Set<String> {
+        guard package.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]{0,200}$"#, options: .regularExpression) != nil,
+              let result = try? await runner.run(Command(executable: layout.pkgutil, arguments: ["--files", package],
+                                                         environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 60)),
+              result.succeeded else { return [] }
+        return receiptPaths(result.stdout, below: folder, root: layout.simulationRoot)
+    }
+
+    /// Receipt paths are relative to `/` (or the simulation root standing in for it).
+    static func receiptPaths(_ output: String, below folder: URL, root: URL?) -> Set<String> {
+        var prefix = folder.standardizedFileURL.path
+        if let root = root?.standardizedFileURL.path, prefix.hasPrefix(root + "/") { prefix = String(prefix.dropFirst(root.count)) }
+        prefix = String(prefix.drop { $0 == "/" }) + "/"
+        return Set(output.split(whereSeparator: \.isNewline).compactMap { line in
+            line.hasPrefix(prefix) ? String(line.dropFirst(prefix.count)) : nil
+        })
     }
 
     /// The installer package that placed a bundle, via `pkgutil --file-info`.

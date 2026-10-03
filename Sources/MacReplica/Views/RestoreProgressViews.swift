@@ -4,7 +4,7 @@ import SwiftUI
 struct DryRunView: View {
     @EnvironmentObject var model: AppModel
 
-    private enum Group: CaseIterable { case change, present, conflict, skip }
+    private enum Group: CaseIterable { case change, guided, present, conflict, skip }
 
     private func group(_ prediction: Prediction) -> Group {
         switch prediction {
@@ -12,12 +12,14 @@ struct DryRunView: View {
         case .alreadyPresent, .identicalFileExists, .equivalentFileExists, .keepsMacOSVersion: return .present
         case .conflict, .environmentConflict: return .conflict
         case .willSkip, .backupFileDamaged: return .skip
+        case .manualStep: return .guided
         }
     }
 
     private func title(_ group: Group, count: Int) -> String {
         switch group {
         case .change: return model.l.p("dryRun.group.change", count)
+        case .guided: return model.l.p("dryRun.group.guided", count)
         case .present: return model.l.p("dryRun.group.present", count)
         case .conflict: return model.l.p("dryRun.group.conflict", count)
         case .skip: return model.l.p("dryRun.group.skip", count)
@@ -214,11 +216,13 @@ struct RestoreSummaryView: View {
         let session = model.session
         let results = plan?.items.compactMap { item in session?.results[item.id].map { (item, $0) } } ?? []
         let failed = results.filter { $0.1.outcome.isFailure }
-        let skipped = results.filter { $0.1.outcome.isSkip }
+        let skipped = results.filter { $0.1.outcome.isSkip && !$0.1.outcome.isOpen }
         let notes = results.filter { !$0.1.notes.isEmpty && !$0.1.outcome.isFailure }
         let summary = RestoreSummary(results: results.map(\.1), total: plan?.items.count ?? 0)
         let complete = session?.status == .completed
-        let title = !complete ? l.t("summary.title.stopped") : (failed.isEmpty ? l.t("summary.title.done") : l.t("summary.title.problems"))
+        let waitingOnly = session?.onlyWaitingForUser == true
+        let title = waitingOnly ? l.t("summary.title.waiting")
+            : (!complete ? l.t("summary.title.stopped") : (failed.isEmpty ? l.t("summary.title.done") : l.t("summary.title.problems")))
 
         ScreenLayout(title: title, subtitle: nil) {
             ScrollView {
@@ -229,17 +233,45 @@ struct RestoreSummaryView: View {
                         SummaryTile(value: summary.failed, label: l.t("summary.failed"), color: summary.failed > 0 ? .red : .secondary)
                             .accessibilityIdentifier("summary.failed")
                         SummaryTile(value: summary.skipped, label: l.t("summary.skipped"), color: .secondary)
+                        if summary.waiting > 0 {
+                            SummaryTile(value: summary.waiting, label: l.t("summary.waiting"), color: .orange)
+                                .accessibilityIdentifier("summary.waiting")
+                        }
                     }
-                    if !complete {
+                    if !complete, session?.onlyWaitingForUser == true {
+                        GuidedStepsCard()
+                    } else if !complete {
                         NoticeView(style: .info, title: l.t("summary.stopped.title"), message: l.t("summary.stopped.message"))
+                        GuidedStepsCard()
                     } else if failed.isEmpty {
                         NoticeView(style: .success, title: l.t("summary.allDone.title"), message: l.t("summary.allDone.message"))
+                    }
+                    let waitingForApps = results.filter { $0.0.kind == .applicationData && $0.1.outcome.isOpen }
+                    if !waitingForApps.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(l.t("summary.waitingForAppsHeading")).font(.headline)
+                            Text(l.t("summary.waitingForAppsMessage")).font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            ForEach(waitingForApps, id: \.0.id) { item, result in
+                                HStack(alignment: .firstTextBaseline) {
+                                    Image(systemName: "hourglass").foregroundStyle(.orange).frame(width: 18)
+                                    Text(l.itemTitle(item)).lineLimit(1)
+                                    Spacer()
+                                    Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+                        .accessibilityIdentifier("summary.waitingForApps")
                     }
                     if !failed.isEmpty {
                         Text(l.t("summary.failedHeading")).font(.headline)
                         ForEach(failed, id: \.0.id) { item, result in FailureRow(item: item, result: result) }
                     }
-                    if let manual = plan?.manualApps, !manual.isEmpty {
+                    if let manual = plan?.manualApps, !manual.isEmpty, complete {
                         Text(l.t("summary.manualHeading")).font(.headline)
                         Text(l.t("summary.manualMessage")).foregroundStyle(.secondary).font(.callout)
                             .fixedSize(horizontal: false, vertical: true)
@@ -290,6 +322,7 @@ struct RestoreSummaryView: View {
             Spacer()
             if !complete, let session {
                 Button(l.t("resume.continue")) { model.resumeRestore(session) }
+                    .accessibilityIdentifier("summary.continue")
             }
             if !failed.isEmpty {
                 Button(l.t("summary.retry")) { model.retryFailed() }

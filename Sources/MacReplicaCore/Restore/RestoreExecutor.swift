@@ -40,6 +40,10 @@ public struct RestoreEnvironment: Sendable {
     /// Reports whether an app with this bundle identifier is running. Providers whose
     /// app must be closed are not restored while it runs.
     public var isApplicationRunning: @Sendable (String) -> Bool = { _ in false }
+    /// Display profile access; nil uses the layout's (ColorSync, or the simulated one in a sandbox).
+    public var displayColor: DisplayColorManaging?
+    /// macOS version of this Mac (compared with the minimum version of native code in saved environments).
+    public var macOSVersion: String = SystemInfo.macOSVersion
 
     public init(layout: SystemLayout, runner: CommandRunning, privileged: PrivilegedExecuting, homebrewSource: HomebrewPackageSource,
                 localizer: Localizer, log: LogStore, targetArchitecture: CPUArchitecture = SystemInfo.currentArchitecture,
@@ -92,6 +96,9 @@ public enum Prediction: Equatable, Sendable {
     case environmentConflict
     /// A Homebrew package; looked up only in the full dry run and during the restore.
     case checkedWhenRestoring
+    /// The user performs this step (App Store, vendor download, a command MacReplica cannot run);
+    /// MacReplica guides and verifies it.
+    case manualStep
 }
 
 public struct DryRunEntry: Equatable, Sendable, Identifiable {
@@ -102,6 +109,8 @@ public struct DryRunEntry: Equatable, Sendable, Identifiable {
     public var notes: [ResultNote]
     /// For fonts and profiles: how the backup copy relates to what this Mac has.
     public var fileAssessment: FileAssessment?
+    /// For application data: new, identical and different files, and the app version it goes into.
+    public var appDataComparison: AppDataComparison? = nil
 }
 
 extension RestoreSelection {
@@ -293,7 +302,8 @@ struct Inspector: Sendable {
             if let app = installedApp(for: item), item.bundleIdentifier != nil || !item.appBundleNames.isEmpty {
                 return .alreadyPresent(version: installedVersion(ofApp: app))
             }
-            return .willInstall
+            // `mas install` needs root since mas 7; the user installs from the App Store page MacReplica opens.
+            return .manualStep
         case .font, .colorProfile:
             return predictFile(item)
         case .pythonEnvironment:
@@ -304,6 +314,13 @@ struct Inspector: Sendable {
             return predictGitConfiguration(item)
         case .credential:
             return environment.credentialPassphrase == nil ? .willSkip(.passphraseNotProvided) : .willCopy
+        case .toolchainStep:
+            return predictToolchain(item)
+        case .manualApp:
+            if let app = installedApp(for: item) { return .alreadyPresent(version: installedVersion(ofApp: app)) }
+            return .manualStep
+        case .displayProfile:
+            return predictDisplayProfile(item)
         }
     }
 }
@@ -346,6 +363,7 @@ public final class RestoreExecutor: Sendable {
         let taps: Set<String>? = brew == nil || !checkPackages ? nil : ((try? await environment.homebrew.installedTaps(brew!)) ?? [])
         var entries: [DryRunEntry] = []
         var blocked = Set<String>()
+        var guided = Set<String>()
         for item in plan.items {
             var prediction = await inspector.predict(item, brew: brew, taps: taps)
             if let dependency = item.dependsOn.first(where: { blocked.contains($0) }) {
@@ -354,6 +372,11 @@ public final class RestoreExecutor: Sendable {
                 }
             }
             if case .willSkip = prediction { blocked.insert(item.id) }
+            // A step that needs a guided step first can only be checked after the user did it.
+            if item.dependsOn.contains(where: { guided.contains($0) }) {
+                if case .alreadyPresent = prediction {} else { prediction = .dependsOnEarlierStep }
+            }
+            if prediction == .manualStep || item.dependsOn.contains(where: { guided.contains($0) }) { guided.insert(item.id) }
             var requiresAdmin = false
             if item.kind == .homebrew, prediction == .willInstall { requiresAdmin = true }
             if item.kind.isFile, let targets = inspector.fileTargets(item) {
@@ -363,8 +386,10 @@ public final class RestoreExecutor: Sendable {
                 }
             }
             let assessment = item.kind.isFile ? inspector.assessFile(item)?.assessment : nil
-            entries.append(DryRunEntry(item: item, prediction: prediction, requiresAdmin: requiresAdmin, notes: inspector.notes(for: item),
-                                       fileAssessment: assessment))
+            let isData = item.kind == .applicationData
+            entries.append(DryRunEntry(item: item, prediction: prediction, requiresAdmin: requiresAdmin,
+                                       notes: inspector.notes(for: item) + (isData ? inspector.applicationDataNotes(item) : []),
+                                       fileAssessment: assessment, appDataComparison: isData ? inspector.applicationDataComparison(item) : nil))
         }
         return entries
     }
@@ -379,12 +404,14 @@ public final class RestoreExecutor: Sendable {
         let inspector = Inspector(environment: environment, backupRoot: backupRoot, selection: session.selection, damagedFiles: damagedFiles)
         var context = RunContext()
         context.brew = await environment.homebrew.locate().installation
+        prepareToolchains(plan: plan, context: &context)
         let total = plan.items.count
         log.info("Restore session \(session.id): \(total) steps, \(session.finishedItemIDs.count) already finished", component: .restore)
         persist(&session)
 
         for (index, item) in plan.items.enumerated() {
-            if session.results[item.id] != nil { continue }
+            // Finished steps are not repeated; steps that wait for the user are checked again.
+            if let previous = session.results[item.id], !previous.outcome.isOpen { continue }
             if Task.isCancelled {
                 log.warning("Restore cancelled before \(item.id)", component: .restore)
                 break
@@ -401,10 +428,13 @@ public final class RestoreExecutor: Sendable {
             }) {
                 // Something that is already installed stays "already present", even if a
                 // prerequisite is missing; this matches what the dry run reports.
+                let title = plan.item(id: blocker)?.title ?? blocker
                 if case .alreadyPresent(let version) = await inspector.predict(item, brew: context.brew, taps: nil) {
                     result = ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: version)
+                } else if session.results[blocker]?.outcome.isOpen == true {
+                    // The prerequisite waits for the user, so this step waits as well.
+                    result = ItemResult(itemID: item.id, outcome: .skipped(.waitingForManualStep(itemTitle: title)))
                 } else {
-                    let title = plan.item(id: blocker)?.title ?? blocker
                     result = ItemResult(itemID: item.id, outcome: .skipped(.dependencyFailed(itemTitle: title)))
                 }
             } else {
@@ -452,6 +482,9 @@ public final class RestoreExecutor: Sendable {
 
     struct RunContext {
         var brew: HomebrewInstallation?
+        /// The runner for toolchain steps: the normal allow-list plus the exact executables of this plan's steps.
+        var toolchainRunner: CommandRunning?
+        var toolchainContext: ToolchainContext?
         var installedTaps: Set<String>?
         /// Results of the batched administrator copy for files in shared folders.
         var privilegedFileResults: [String: Result<FileAction, PrivilegedError>] = [:]
@@ -476,19 +509,25 @@ public final class RestoreExecutor: Sendable {
             case .homebrew: return await installHomebrew(item, context: &context, onEvent: onEvent)
             case .tap: return try await installTap(item, inspector: inspector, context: &context, onEvent: onEvent)
             case .masTool: return try await installMasTool(item, context: context, onEvent: onEvent)
-            case .formula: return try await installFormula(item, context: context, onEvent: onEvent)
+            case .formula: return try await installFormula(item, inspector: inspector, context: context, onEvent: onEvent)
             case .cask: return try await installCask(item, inspector: inspector, context: context, onEvent: onEvent)
-            case .appStoreApp: return try await installAppStoreApp(item, inspector: inspector, onEvent: onEvent)
+            case .appStoreApp: return await checkAppStoreInstall(item, inspector: inspector)
             case .font, .colorProfile:
                 return await restoreFile(item, inspector: inspector, context: &context, plan: plan, session: session, onEvent: onEvent)
             case .pythonEnvironment:
-                return try await restorePythonEnvironment(item, inspector: inspector, brew: context.brew, onEvent: onEvent)
+                return try await restorePythonEnvironment(item, inspector: inspector, brew: context.brew, context: context, onEvent: onEvent)
             case .applicationData:
                 return restoreApplicationData(item, inspector: inspector, session: session, onEvent: onEvent)
             case .gitConfiguration:
                 return restoreGitConfiguration(item, inspector: inspector, session: session)
             case .credential:
                 return restoreCredential(item, inspector: inspector, session: session, onEvent: onEvent)
+            case .toolchainStep:
+                return try await restoreToolchainStep(item, inspector: inspector, context: context, onEvent: onEvent)
+            case .manualApp:
+                return checkGuidedInstall(item, inspector: inspector)
+            case .displayProfile:
+                return restoreDisplayProfile(item, inspector: inspector, onEvent: onEvent)
             }
         } catch is CancellationError {
             return failed(item, .cancelled)
@@ -570,10 +609,19 @@ public final class RestoreExecutor: Sendable {
         }
         guard let brew = context.brew else { return failed(item, .homebrewUnavailable) }
         let taps = try await environment.homebrew.installedTaps(brew)
-        if taps.contains(item.identifier.lowercased()) { return ItemResult(itemID: item.id, outcome: .alreadyPresent) }
+        if taps.contains(item.identifier.lowercased()) {
+            if HomebrewClient.requiresTapTrust(brew.version) { _ = try? await environment.homebrew.trustTap(brew, name: item.identifier) }
+            return ItemResult(itemID: item.id, outcome: .alreadyPresent)
+        }
         onEvent(.activity(itemID: item.id, .installing))
         let result = try await environment.homebrew.install(brew, package: .tap(name: item.identifier, remote: item.tapRemote), askpass: nil)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
+        // Homebrew 6+ loads packages from third-party taps only once they are trusted. The user allowed
+        // this tap on the restore screen, so MacReplica records that decision with Homebrew.
+        if HomebrewClient.requiresTapTrust(brew.version) {
+            let trusted = try await environment.homebrew.trustTap(brew, name: item.identifier)
+            guard trusted.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: trusted))) }
+        }
         onEvent(.activity(itemID: item.id, .verifying))
         guard try await environment.homebrew.installedTaps(brew).contains(item.identifier.lowercased()) else {
             return failed(item, .verificationFailed, "tap not listed after installation")
@@ -594,20 +642,21 @@ public final class RestoreExecutor: Sendable {
     }
 
     private func versionNotes(original: String?, installed: String?) -> [ResultNote] {
-        guard let original, let installed, original != installed,
+        guard let original, let installed, original != installed, !original.hasPrefix("HEAD"),
               VersionComparison.compare(original, installed) == .orderedAscending else { return [] }
         return [.newerVersionInstalled(original: original, installed: installed)]
     }
 
-    private func installFormula(_ item: RestoreItem, context: RunContext,
+    private func installFormula(_ item: RestoreItem, inspector: Inspector, context: RunContext,
                                 onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
         guard let brew = context.brew else { return failed(item, .homebrewUnavailable) }
         if let version = try await environment.homebrew.installedFormulaVersion(brew, name: item.identifier) {
             return ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: version)
         }
         onEvent(.activity(itemID: item.id, .installing))
-        let result = try await environment.homebrew.install(brew, package: .formula(item.identifier), askpass: environment.askpassPath,
-                                                           extraEnvironment: environment.askpassEnvironment)
+        let head = inspector.selection.installsHead(item)
+        let result = try await environment.homebrew.install(brew, package: head ? .formulaHead(item.identifier) : .formula(item.identifier),
+                                                           askpass: environment.askpassPath, extraEnvironment: environment.askpassEnvironment)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let version = try await environment.homebrew.installedFormulaVersion(brew, name: item.identifier) else {

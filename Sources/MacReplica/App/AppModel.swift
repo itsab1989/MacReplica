@@ -13,6 +13,7 @@ enum Screen: Equatable {
     case dryRun
     case restoring
     case restoreSummary
+    case guidedInstall
     case verifying
     case verificationResult
     case problem
@@ -60,6 +61,8 @@ final class AppModel: ObservableObject {
     /// Python environments the user wants in the backup.
     @Published var selectedPythonEnvironments = Set<String>()
     @Published var includePythonSettings = true
+    /// Environments of which a complete copy goes into the backup as well (off by default).
+    @Published var preservedPythonEnvironments = Set<String>()
     @Published var pythonSearchFolders: [URL] = []
     @Published var addingApplicationData = false
     @Published var notice: ProblemInfo?
@@ -72,6 +75,17 @@ final class AppModel: ObservableObject {
     @Published var excludedApplicationData = Set<String>()
     /// Fonts and profiles the user left out of the backup (`InventoryResult.selectionID`).
     @Published var excludedBackupFiles = Set<String>()
+    /// Package and version managers and applications the user left out of the backup.
+    @Published var excludedToolchains = Set<ToolchainProviderID>()
+    @Published var excludedApplications = Set<String>()
+    /// Profile assignments of displays (System Settings › Displays › Color profile) go into the backup.
+    @Published var includeDisplayAssignments = true
+    /// Guided installations after the automatic restore.
+    @Published var guided = GuidedUIState()
+    var guidedInstallation: GuidedInstallation?
+    var downloadQueue: DownloadQueue?
+    var pendingDecision: CheckedContinuation<GuidedDecision, Never>?
+    var guidedTask: Task<Void, Never>?
     /// Passphrase for restoring encrypted credentials; requested right before the restore.
     @Published var askForRestorePassphrase = false
     var restorePassphrase: String?
@@ -134,7 +148,7 @@ final class AppModel: ObservableObject {
     @Published var verificationProgress: Double = 0
 
     private var task: Task<Void, Never>?
-    private var restoreLog: LogStore?
+    var restoreLog: LogStore?
 
     struct AdminNotice: Equatable {
         var installsHomebrew: Bool
@@ -247,6 +261,11 @@ final class AppModel: ObservableObject {
         credentialPassphrase = nil
         excludedApplicationData = []
         excludedBackupFiles = []
+        excludedToolchains = []
+        excludedApplications = []
+        includeDisplayAssignments = true
+        preservedPythonEnvironments = []
+        resetGuided()
         manifest = nil
         backupURL = nil
         verification = nil
@@ -410,6 +429,9 @@ final class AppModel: ObservableObject {
         guard var inventory else { return }
         inventory.keepPythonEnvironments(selectedPythonEnvironments, includeSettings: includePythonSettings)
         applyDeveloperChoices(to: &inventory)
+        inventory.keepToolchains(Set(inventory.manifest.toolchains.map(\.provider)).subtracting(excludedToolchains))
+        inventory.excludeApplications(excludedApplications)
+        if !includeDisplayAssignments { inventory.manifest.displayProfiles = [] }
         for id in excludedApplicationData { inventory.removeApplicationData(id: id) }
         inventory.excludeFiles(excludedBackupFiles)
         let credentials = selectedCredentialProviders.isEmpty ? nil
@@ -421,7 +443,20 @@ final class AppModel: ObservableObject {
         log.info("Inventory: \(inventory.manifest.applications.count) applications, \(inventory.fonts.count) fonts, \(inventory.colorProfiles.count) ICC profiles, \(inventory.manifest.python.environments.count) Python environments, \(inventory.manifest.applicationData.count) data folders", component: .inventory)
         for warning in inventory.warnings { log.warning("Inventory warning: \(warning)", component: .inventory) }
         let model = self
+        let preserved = selectedPythonEnvironments.intersection(preservedPythonEnvironments)
+        let layout = services.layout
+        let runner = services.runner
         task = Task.detached { [weak self] in
+            var inventory = inventory
+            // Saved copies of environments are packed in MacReplica's own work folder and removed afterwards.
+            let work = layout.caches.appendingPathComponent("Work/python-\(UUID().uuidString)")
+            if !preserved.isEmpty {
+                try? FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+                try? OwnershipMarker(kind: .temporary).write(into: work)
+                await inventory.preservePythonEnvironments(preserved, layout: layout, runner: runner, workFolder: work)
+                log.info("Saved copies of \(preserved.count) Python environments prepared", component: .python)
+            }
+            defer { if !preserved.isEmpty { try? SafeCleaner(homeDirectory: layout.homeDirectory).removeOwnedFolder(work, kind: .temporary) } }
             do {
                 let outcome = try writer.write(inventory, into: parent, log: log, credentials: credentials) { progress in
                     Task { @MainActor in model.backupProgress = progress.fraction }
@@ -808,7 +843,7 @@ final class AppModel: ObservableObject {
 
     @Published var lastReport: URL?
 
-    private func writeRestoreReport(plan: RestorePlan, session: RestoreSession) {
+    func writeRestoreReport(plan: RestorePlan, session: RestoreSession) {
         guard let manifest else { return }
         let html = ReportBuilder(localizer: l).restoreSummaryReport(plan: plan, session: session, manifest: manifest)
         let folder = services.layout.applicationSupport.appendingPathComponent("Reports")

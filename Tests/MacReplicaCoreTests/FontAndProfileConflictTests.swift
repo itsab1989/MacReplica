@@ -517,7 +517,10 @@ struct SelectionPlannerTests {
         let (_, manifest) = try await TestEnvironment.makeBackup(sandbox)
         let filesOnly = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.fonts, .colorProfiles])).items
         #expect(!filesOnly.contains { $0.kind == .homebrew || $0.kind == .commandLineTools })
-        for component in [RestoreComponent.brewFormulae, .brewCasks, .appStore, .python] {
+        // App Store apps are installed from the App Store page and need neither Homebrew nor mas.
+        #expect(!RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.appStore])).items
+            .contains { $0.kind == .homebrew || $0.kind == .commandLineTools || $0.kind == .masTool })
+        for component in [RestoreComponent.brewFormulae, .brewCasks, .python] {
             let items = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [component])).items
             #expect(items.first?.kind == .commandLineTools, "\(component)")
             #expect(items.contains { $0.kind == .homebrew }, "\(component)")
@@ -702,7 +705,7 @@ struct ExecutorEdgeTests {
     @Test func appStoreAppsWithoutBundleInformationAreVerifiedThroughTheAppStoreList() async throws {
         let sandbox = try Sandbox("mas-unidentifiable")
         let (backup, manifest) = try await TestEnvironment.makeBackup(sandbox)
-        let (_, target) = try TestEnvironment.freshMac(sandbox)
+        let (fresh, target) = try TestEnvironment.freshMac(sandbox)
         let selection = RestoreSelection(components: [.appStore])
         var plan = RestorePlanner().plan(manifest: manifest, selection: selection)
         plan.items = plan.items.map { item in
@@ -714,10 +717,13 @@ struct ExecutorEdgeTests {
         }
         let executor = RestoreExecutor(environment: TestEnvironment.restoreEnvironment(target), backupRoot: backup, sessionStore: nil)
         let first = await run(executor, plan, selection)
-        #expect(first.results["mas:1234567890"]?.outcome == .succeeded)
-        #expect(first.results["mas:1234567890"]?.installedVersion == "5.1", "version from the App Store list")
+        #expect(first.results["mas:1234567890"]?.outcome == .skipped(.manualStepRequired), "waits for the user")
+        try fresh.simulateUserInstall(appNamed: "Ledger Lite")
+        // mas (installed separately here) lists the app; `mas list` needs no administrator rights.
+        try FileManager.default.copyItem(at: fresh.url.appendingPathComponent("tools/mas"), to: fresh.url.appendingPathComponent("opt/homebrew/bin/mas"))
         let second = await run(executor, plan, selection)
-        #expect(second.results["mas:1234567890"]?.outcome == .alreadyPresent, "found in the App Store list, not installed again")
+        #expect(second.results["mas:1234567890"]?.outcome == .alreadyPresent, "found in the App Store list")
+        #expect(second.results["mas:1234567890"]?.installedVersion == "5.1", "version from the App Store list")
     }
 
     @Test func installedAppsAreFoundByBundleIdentifierUnderAnotherName() async throws {

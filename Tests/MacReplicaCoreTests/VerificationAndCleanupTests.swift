@@ -60,7 +60,7 @@ struct VerificationTests {
         #expect(!verifier.verify(backupAt: sandbox.url).isUsable)
         try Data(#"{"manifest_version": 7}"#.utf8).write(to: sandbox.url.appendingPathComponent("manifest.json"))
         let report = verifier.verify(backupAt: sandbox.url)
-        #expect(report.issues.contains(.unsupportedVersion(found: 7, supported: 1)))
+        #expect(report.issues.contains(.unsupportedVersion(found: 7, supported: Manifest.currentVersion)))
         #expect(report.manifest == nil)
     }
 

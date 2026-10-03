@@ -53,6 +53,22 @@ struct PythonSection: View {
                             }
                         }
                         .toggleStyle(.checkbox)
+                        if model.selectedPythonEnvironments.contains(environment.id) {
+                            Toggle(isOn: Binding(
+                                get: { model.preservedPythonEnvironments.contains(environment.id) },
+                                set: { on in
+                                    if on { model.preservedPythonEnvironments.insert(environment.id) } else { model.preservedPythonEnvironments.remove(environment.id) }
+                                })) {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(l.t("python.keepCopy"))
+                                    Text(l.t("python.keepCopy.hint")).font(.caption).foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .toggleStyle(.checkbox)
+                            .padding(.leading, 22)
+                            .accessibilityIdentifier("python.keepCopy.\(environment.id)")
+                        }
                     }
                     if !python.settings.isEmpty {
                         Divider()
@@ -145,9 +161,14 @@ struct AppDataRow: View {
                     if folder.profile?.mustBeClosed == true {
                         Text(l.t("appData.mustBeClosed", folder.profile?.appName ?? "")).font(.caption).foregroundStyle(.secondary)
                     }
+                    if let shipped = folder.shippedFilesLeftOut {
+                        Text(l.t("appData.shippedLeftOut", shipped, folder.profile?.appName ?? "")).font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             .toggleStyle(.checkbox)
+            .accessibilityIdentifier("appData.\(folder.profile.map { "\($0.provider).\($0.category)" } ?? folder.id)")
             Spacer()
             Text(l.t("appData.summary", l.p("guide.appData.files", folder.files.count), l.fileSize(folder.totalSize)))
                 .font(.callout).foregroundStyle(.secondary)
@@ -248,6 +269,7 @@ struct BackupSavedView: View {
         return l.t("saved.contents", l.number(manifest.applications.count), l.number(manifest.brewFormulae.filter(\.installedOnRequest).count
             + manifest.brewCasks.count), l.number(manifest.python.environments.count), l.number(manifest.applicationData.count),
             l.number(manifest.fonts.count), l.number(manifest.iccProfiles.count))
+            + (manifest.toolchains.isEmpty ? "" : " · " + l.t("saved.developerTools", l.number(manifest.toolchains.count)))
     }
 }
 
@@ -362,7 +384,7 @@ struct GuidanceList: View {
         VStack(alignment: .leading, spacing: 4) {
             if !reauth.isEmpty {
                 Text(l.t("guidance.reauth.title")).font(.subheadline.weight(.semibold))
-                Text(reauth.map(\.name).joined(separator: ", ")).font(.callout)
+                Text(reauth.map(\.currentName).joined(separator: ", ")).font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(l.t("guidance.reauth.message")).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -370,7 +392,7 @@ struct GuidanceList: View {
             if !manual.isEmpty {
                 Text(l.t("guidance.manual.title")).font(.subheadline.weight(.semibold)).padding(.top, 4)
                 ForEach(manual) { record in
-                    Text("\(record.name): \(l.t("guidance.manual.\(record.id)"))").font(.callout)
+                    Text("\(record.currentName): \(l.t("guidance.manual.\(record.id)"))").font(.callout)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

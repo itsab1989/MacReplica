@@ -129,7 +129,7 @@
 "component.brewCasks" = "Homebrew Casks";
 "component.brewCasks.hint" = "App e altri pacchetti installati con Homebrew.";
 "component.appStore" = "Mac App Store";
-"component.appStore.hint" = "App dal Mac App Store; devi aver eseguito l’accesso all’App Store.";
+"component.appStore.hint" = "App dal Mac App Store. MacReplica apre la pagina App Store di ogni app; la installi lì e MacReplica verifica il risultato.";
 "component.fonts" = "Font";
 "component.fonts.hint" = "Font dalla tua cartella dei font personale e da quella condivisa.";
 "component.colorProfiles" = "Profili ICC";
@@ -722,7 +722,7 @@
 "guidance.manual.terminal" = "Esporta i tuoi profili (Impostazioni › Profili › … › Esporta), poi fai doppio clic sui file .terminal sul nuovo Mac.";
 "guidance.manual.premierePro" = "Copia i tuoi file di abbreviazioni da tastiera (.kys) e gli spazi di lavoro come descritto da Adobe, oppure lascia che Premiere Pro li migri al primo avvio.";
 "guidance.manual.affinity" = "Esporta pennelli, stili, risorse e macro dal menu di ogni pannello, poi importali sul nuovo Mac.";
-"guidance.manual.resolveLibrary" = "Esporta le PowerGrades (.drx) ed esegui il backup della libreria dei progetti da Resolve; copia le LUT personalizzate da /Library/Application Support/Blackmagic Design/DaVinci Resolve/LUT.";
+"guidance.manual.resolveLibrary" = "PowerGrade, preset di rendering e preset di progetto si trovano nella libreria progetti di Resolve. Esegui il backup della libreria nel Project Manager (Back Up) e ripristinala sul nuovo Mac, oppure esporta i PowerGrade dalla Galleria (DRX) e i preset di rendering dalla pagina Deliver. I tuoi LUT e i preset di tastiera e di layout sono elencati in Dati delle app quando il backup li contiene.";
 
 /* Fonts, color profiles and the two-stage restore selection */
 "restore.select.intro" = "Il backup è completo e resta invariato. Tutto ciò che contiene è selezionato: togli ciò che non vuoi su questo Mac.";
@@ -834,3 +834,228 @@
 "files.styles.other" = "%1$d stili";
 "files.version" = "Versione %1$@";
 "files.legacyOrUnreadable" = "Formato obsoleto o illeggibile";
+
+/* Developer tools, package managers and guided steps */
+"component.developerTools" = "Strumenti per sviluppatori";
+"component.developerTools.hint" = "Gestori di versioni, versioni dei linguaggi e strumenti globali per Python, Node.js, Ruby, Rust, Go, Java e .NET.";
+"component.packageManagers" = "Altri gestori di pacchetti";
+"component.packageManagers.hint" = "MacPorts, Nix, Pixi, mise e asdf. I passaggi che MacReplica non può eseguire da solo vengono mostrati come passaggi guidati.";
+"kind.toolchainStep" = "Strumento per sviluppatori";
+"kind.manualApp" = "Installazione guidata";
+"skip.manualStepRequired" = "In attesa di te – vedi i passaggi guidati";
+"skip.waitingForManualStep" = "In attesa che %1$@ sia completato";
+"skip.postponedByUser" = "Rimandato da te";
+"skip.cancelledByUser" = "Annullato da te";
+"ecosystem.packageManagers" = "Gestori di pacchetti";
+"ecosystem.python" = "Python";
+"ecosystem.node" = "Node.js";
+"ecosystem.ruby" = "Ruby";
+"ecosystem.rust" = "Rust";
+"ecosystem.go" = "Go";
+"ecosystem.java" = "Java";
+"ecosystem.dotnet" = ".NET";
+"supportLevel.automatic" = "Ripristinato automaticamente";
+"supportLevel.guided" = "Passaggio guidato";
+"supportLevel.inventoryOnly" = "Elencato per riferimento";
+"prediction.manualStep" = "Passaggio guidato: MacReplica mostra cosa fare e verifica il risultato";
+"prediction.manualAppStore" = "Da installare dall’App Store – MacReplica apre la pagina e verifica il risultato";
+"prediction.afterToolchain" = "Verrà installato dopo i passaggi necessari";
+"dryRun.group.guided.one" = "%1$d passaggio guidato";
+"dryRun.group.guided.other" = "%1$d passaggi guidati";
+"scan.phase.developerTools" = "Ricerca di strumenti per sviluppatori e gestori di pacchetti …";
+"failure.toolUnavailable.title" = "Strumento necessario mancante";
+"failure.toolUnavailable.explanation" = "Questo passaggio richiede un gestore di versioni o di pacchetti non installato su questo Mac. Installalo (o selezionalo per il ripristino) e riprova.";
+"failure.downloadNotTrusted.title" = "Impossibile verificare il download";
+"failure.downloadNotTrusted.explanation" = "Il file scaricato non corrispondeva alla firma, al checksum o allo sviluppatore del produttore. MacReplica non lo ha installato e ha rimosso il file.";
+
+/* Python lock files */
+"note.pythonLockFileUsed" = "Ricostruito esattamente dal file %1$@ del progetto";
+
+/* Guided installation, downloads and developer tools */
+"developerTools.section.title" = "Strumenti per sviluppatori";
+"developerTools.section.message" = "Gestori di versioni, versioni dei linguaggi, strumenti globali e altri gestori di pacchetti. MacReplica annota ciò che è installato – mai gli strumenti stessi né le credenziali – e lo reinstalla sul nuovo Mac.";
+"developerTools.none" = "Nessun gestore di versioni o altro gestore di pacchetti trovato.";
+"developerTools.runtimes.one" = "%1$d versione";
+"developerTools.runtimes.other" = "%1$d versioni";
+"developerTools.packages.one" = "%1$d strumento";
+"developerTools.packages.other" = "%1$d strumenti";
+"developerTools.environments.one" = "%1$d ambiente";
+"developerTools.environments.other" = "%1$d ambienti";
+"results.includeApp" = "Includi questa app nel backup";
+"channel.stable" = "Stabile";
+"channel.beta" = "Beta";
+"channel.nightly" = "Nightly";
+"channel.insider" = "Insider";
+"channel.preview" = "Anteprima";
+"trust.vendorSignature" = "Verificato prima dell’installazione: la firma del produttore sul file, lo sviluppatore e l’app.";
+"trust.checksum" = "Verificato prima dell’installazione: il checksum del file secondo Homebrew, lo sviluppatore e l’app.";
+"trust.developerSignature" = "Il produttore non pubblica un checksum: l’app deve avere la stessa firma dello sviluppatore del vecchio Mac.";
+"trust.none" = "Questo download non può essere verificato, quindi MacReplica apre solo la pagina del produttore.";
+"offer.vendorFeed" = "Feed di aggiornamento del produttore: %1$@ %2$@";
+"offer.homebrewCask" = "Download del produttore (%1$@) %2$@";
+"offer.website" = "Sito del produttore (%1$@)";
+"offer.appStore" = "Mac App Store";
+"offer.recommended" = "%1$@ (consigliato)";
+"guidedStep.finishInstaller" = "Il programma di installazione di Apple è aperto. Completa lì l’installazione.";
+"guidedStep.installFromDiskImage" = "Il download è mostrato nel Finder. Aprilo e trascina l’app nella cartella Applicazioni, accettando la licenza se richiesto.";
+"guidedStep.installFromWebsite" = "Scarica e installa l’app dal sito del produttore aperto da MacReplica.";
+"guidedStep.installFromAppStore" = "La pagina dell’App Store è aperta. Fai clic su Ottieni o sul pulsante di download, con il tuo Account Apple.";
+"guidedStep.runCommand" = "Esegui questo nel Terminale: %1$@";
+"downloadError.network" = "Download non riuscito – controlla la connessione";
+"downloadError.notTrusted" = "Non verificato – non installato";
+"downloadError.architecture" = "Non funziona sul processore di questo Mac";
+"downloadError.macOS" = "Richiede macOS %1$@ o successivo";
+"downloadError.alreadyInstalled" = "È già installata un’app con questo nome";
+"downloadError.license" = "Contratto di licenza – aperto nel Finder";
+"guided.title" = "Installazione guidata";
+"guided.subtitle" = "App e passaggi che MacReplica non può completare da solo";
+"guided.allDone.title" = "Non resta nulla da fare";
+"guided.allDone.message" = "Tutti i passaggi guidati sono completati, saltati o rimandati.";
+"guided.apps.heading.one" = "%1$d app da installare";
+"guided.apps.heading.other" = "%1$d app da installare";
+"guided.tools.heading.one" = "%1$d passaggio per strumenti di sviluppo";
+"guided.tools.heading.other" = "%1$d passaggi per strumenti di sviluppo";
+"guided.tools.message" = "Richiedono uno strumento che MacReplica non esegue (ad esempio una funzione della shell come nvm o diritti di amministratore). Copia il comando nel Terminale, poi fai clic su Controlla di nuovo – MacReplica verifica il risultato e prosegue con ciò che ne dipende.";
+"guided.find.title" = "Cerca i download ufficiali";
+"guided.find.message" = "MacReplica chiede ai feed di aggiornamento dei produttori (indicati nelle app) e al catalogo di Homebrew dove scaricare ogni app. Non viene scaricato nulla finché non lo scegli, e nulla proviene da portali di download o mirror.";
+"guided.find.button" = "Cerca download";
+"guided.source" = "Origine";
+"guided.noSource" = "Nessun download ufficiale trovato – installala tu e fai clic su Controlla di nuovo.";
+"guided.downloadSelected" = "Scarica selezionati";
+"guided.installSequence" = "Installa i selezionati uno alla volta";
+"guided.installOne" = "Installa";
+"guided.later" = "Più tardi";
+"guided.skip" = "Salta";
+"guided.pause" = "Pausa";
+"guided.resume" = "Riprendi";
+"guided.retry" = "Riprova";
+"guided.cancelDownload" = "Annulla";
+"guided.back" = "Torna al riepilogo";
+"guided.checkAgain" = "Controlla di nuovo";
+"guided.checkAgain.help" = "Ricontrolla tutti i passaggi aperti e prosegue con ciò che ne dipende";
+"guided.copy" = "Copia";
+"guided.website" = "Sito di %1$@";
+"guided.installManager" = "Installa prima %1$@ (vedi il sito), poi fai clic su Controlla di nuovo.";
+"guided.state.queued" = "In attesa di download";
+"guided.state.paused" = "In pausa";
+"guided.state.downloaded" = "Scaricato";
+"guided.state.verifying" = "Verifica in corso …";
+"guided.state.installing" = "Installazione …";
+"guided.state.waiting" = "In attesa di te";
+"guided.pending.hint" = "MacReplica verifica se l’app è installata quando fai clic su Fatto. Più tardi la lascia aperta per un’altra volta; Annulla interrompe le installazioni rimanenti.";
+"guided.pending.done" = "Fatto";
+"guided.pending.cancel" = "Annulla installazione";
+"items.source" = "Installa";
+"items.source.head" = "Versione di sviluppo (HEAD), come sul vecchio Mac";
+"items.source.stable" = "Versione stabile";
+"items.status.guided" = "Passaggio guidato";
+"summary.waiting" = "In attesa";
+"summary.title.waiting" = "Quasi fatto – alcuni passaggi spettano a te";
+"summary.guidedHeading" = "Passaggi guidati";
+"summary.guidedMessage" = "Tutto ciò che è automatico è fatto. Queste app e questi passaggi richiedono te; MacReplica trova i download ufficiali, installa uno dopo l’altro e verifica ogni risultato. Puoi anche farli più tardi – il ripristino ricorda cosa resta aperto.";
+"summary.guidedMore.one" = "… e %1$d altra app";
+"summary.guidedMore.other" = "… e altre %1$d app";
+"summary.guidedTools.one" = "%1$d passaggio per strumenti di sviluppo con il comando esatto";
+"summary.guidedTools.other" = "%1$d passaggi per strumenti di sviluppo con i comandi esatti";
+"summary.guidedOpen" = "Continua con i passaggi guidati";
+"resume.waiting.title.one" = "%1$d passaggio del ripristino ti aspetta";
+"resume.waiting.title.other" = "%1$d passaggi del ripristino ti aspettano";
+"resume.waiting.message" = "Tutto ciò che è automatico è fatto. Continua per verificare ciò che hai installato nel frattempo e completare i passaggi rimanenti.";
+
+/* Mixed support */
+"supportLevel.mixed" = "In parte automatico, in parte passaggi guidati";
+
+/* Offer hints */
+"offer.appStore.hint" = "MacReplica apre la pagina dell’app nell’App Store; la installi lì e MacReplica verifica il risultato.";
+"offer.website.hint" = "MacReplica apre il sito del produttore; lì scarichi e installi l’app, poi MacReplica verifica che sia installata.";
+
+/* Guided step texts */
+"saved.developerTools" = "Strumenti per sviluppatori: %1$@";
+"guidedStep.installYourself" = "MacReplica non conosce alcun download ufficiale per questa app. Installala come l’avevi ottenuta (programma di installazione, account del produttore o portale licenze), poi fai clic su Fatto.";
+
+/* Restore instructions: developer tools */
+"guide.toolchains.title" = "Strumenti per sviluppatori e gestori di pacchetti";
+"guide.toolchains.intro" = "MacReplica li reinstalla automaticamente quando possibile. Le versioni contrassegnate con * erano quelle predefinite. I comandi seguenti sono i passaggi da eseguire tu; per il resto, installa il gestore dal suo sito e reinstalla le versioni e gli strumenti elencati.";
+
+/* Display profile assignments */
+"kind.displayProfile" = "Profilo del monitor";
+"skip.displayNotConnected" = "In attesa di %1$@ – collegalo e controlla di nuovo";
+"skip.displayOfAnotherMac" = "Apparteneva al monitor integrato del vecchio Mac";
+"skip.profileNotAvailable" = "Il profilo assegnato non è nel backup né su questo Mac";
+"guided.display.instruction" = "Collega %1$@ e fai clic su Controlla di nuovo – MacReplica gli assegna «%2$@». Oppure scegli tu il profilo: Impostazioni di Sistema › Monitor › seleziona il monitor › Profilo colore.";
+"files.displayAssignments.one" = "Mantieni %1$d assegnazione del profilo del monitor";
+"files.displayAssignments.other" = "Mantieni %1$d assegnazioni dei profili del monitor";
+"files.displayAssignments.hint" = "Quale profilo usa ogni monitor. Sul nuovo Mac MacReplica lo riassegna allo stesso monitor quando è collegato. I monitor vengono riconosciuti solo tramite checksum con salt, mai tramite il numero di serie.";
+"restore.select.sameMac" = "Questo backup è stato creato su questo Mac";
+"restore.select.otherMac" = "Questo backup è stato creato su un altro Mac";
+"restore.select.unknownMac" = "Assegnazioni dei profili del monitor";
+"restore.select.displayHint" = "I profili dei monitor vengono riassegnati solo agli stessi monitor. I profili del monitor integrato del vecchio Mac vengono usati solo se si tratta dello stesso Mac.";
+
+/* Python saved copies */
+"note.pythonEnvironmentPreserved" = "La copia salvata dell’ambiente è stata ripristinata e verificata eseguendolo";
+"note.pythonPreservationNotUsed" = "La copia salvata non è stata usata (%1$@); l’ambiente è stato ricostruito dai suoi pacchetti";
+"preservation.differentHomeFolder" = "cartella Inizio diversa";
+"preservation.incompatibleArchitecture" = "codice nativo per un altro processore";
+"preservation.requiresNewerMacOS" = "richiede un macOS più recente";
+"preservation.baseInterpreterMissing" = "la sua installazione di Python non è ancora su questo Mac";
+"preservation.archiveDamaged" = "la copia salvata è danneggiata";
+"preservation.extractionFailed" = "non è stato possibile estrarla";
+"preservation.verificationFailed" = "non ha superato la verifica";
+
+/* Python strategies */
+"python.keepCopy" = "Conserva anche una copia completa di questo ambiente";
+"python.keepCopy.hint" = "Per reinstallare macOS su questo Mac con lo stesso utente: la copia può tornare invariata se è presente la stessa installazione di Python; MacReplica la verifica eseguendola e altrimenti ricostruisce l’ambiente. Rende il backup più grande.";
+"items.pythonStrategy" = "Ripristina";
+"items.pythonStrategy.rebuild" = "Ricostruisci dai pacchetti (consigliato)";
+"items.pythonStrategy.preserve" = "Copia salvata – verificata, altrimenti ricostruita";
+"appData.category.toolPresets" = "Predefiniti strumento";
+"appData.category.contours" = "Profili";
+"appData.category.menuCustomization" = "Menu personalizzati";
+"appData.category.customToolbars" = "Barre strumenti personalizzate";
+"appData.category.curvesPresets" = "Predefiniti curve";
+"appData.category.levelsPresets" = "Predefiniti livelli";
+"appData.category.hueSaturationPresets" = "Predefiniti tonalità/saturazione";
+"appData.category.blackWhitePresets" = "Predefiniti bianco e nero";
+"appData.category.channelMixerPresets" = "Predefiniti miscelatore canale";
+"appData.category.exposurePresets" = "Predefiniti esposizione";
+"appData.category.selectiveColorPresets" = "Predefiniti correzione colore selettiva";
+"appData.category.duotonePresets" = "Predefiniti monotono/duotono";
+"appData.category.colorSettings" = "Impostazioni colore attive";
+"appData.category.colorSettingsFiles" = "Impostazioni colore salvate";
+"appData.category.proofSetups" = "Impostazioni prova";
+"appData.category.modifiedWorkspaces" = "Aree di lavoro modificate";
+"appData.category.workspaceState" = "Area di lavoro scelta";
+"appData.category.documentPresets" = "Predefiniti nuovo documento";
+"appData.category.generalPreferences" = "Preferenze (solo stessa versione)";
+"appData.category.rawDefaults" = "Impostazioni Raw predefinite";
+"appData.category.fusionSettings" = "Predefiniti strumenti Fusion";
+"appData.category.fusionLUTs" = "LUT di Fusion";
+"appData.category.fusionScripts" = "Script";
+"appData.category.acesTransforms" = "Trasformazioni ACES";
+"appData.category.fairlightPresets" = "Preset Fairlight";
+"appData.category.keyboardPresets" = "Preset scorciatoie da tastiera";
+"appData.category.layoutPresets" = "Preset di layout e disposizione finestre";
+"appData.category.userPreferencePresets" = "Preset preferenze utente";
+"appData.category.smartBins" = "Smart bin dell’utente";
+"appData.category.metadataPresets" = "Preset metadati e HDR";
+"appData.category.userPreferences" = "Preferenze utente";
+"skip.applicationNotInstalled" = "In attesa che %1$@ sia installato: installalo e poi continua il ripristino";
+"skip.applicationVersionOlder" = "%1$@ %2$@ su questo Mac è più vecchio di %3$@ da cui provengono i dati: aggiornalo e poi continua il ripristino";
+"note.restoredIntoVersion" = "%1$@ non è su questo Mac; i dati sono stati ripristinati per %2$@.";
+"failure.permissionDenied.title" = "Nessun permesso di scrittura";
+"failure.permissionDenied.explanation" = "MacReplica non può scrivere nella cartella di questa app. Reinstalla l’app (il suo programma di installazione prepara la cartella) o copia i file dal backup con un account amministratore, poi usa Riprova elementi non riusciti.";
+"items.appVersion" = "Ripristina per:";
+"items.appVersion.notInstalled" = "%1$@ (non su questo Mac)";
+"items.decision.appData.keep" = "Mantieni quelli di questo Mac, aggiungi il resto";
+"items.decision.appData.replace" = "Sostituisci con il backup (i vecchi vengono conservati)";
+"items.decision.appData.skip" = "Salta questo elemento";
+"items.appData.summary" = "%1$d nuovi, %2$d identici, %3$d diversi da questo Mac:";
+"items.appData.differentFile" = "%1$@ – backup %2$@, %3$@ · questo Mac %4$@, %5$@";
+"items.appData.moreFiles" = "e altri %1$d";
+"appData.shippedLeftOut" = "%1$d file forniti con %2$@ sono esclusi: il suo programma di installazione li rimette a posto.";
+"items.differ.one" = "%1$d file è diverso su questo Mac:";
+"items.differ.other" = "%1$d file sono diversi su questo Mac:";
+"summary.waitingForAppsHeading" = "In attesa di app";
+"summary.waitingForAppsMessage" = "Questi dati appartengono ad app non ancora installate (o più vecchie che sul Mac precedente). Installale o aggiornale, poi scegli Continua: MacReplica ripristinerà allora i dati.";
+"items.status.waitsForApp" = "Attende %1$@";
+"items.status.needsNewerApp" = "Richiede %1$@ %2$@ o successivo";

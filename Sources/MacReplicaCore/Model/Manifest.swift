@@ -4,10 +4,15 @@ import Foundation
 ///
 /// The manifest is written as `manifest.json` with snake_case keys. Field names
 /// are stable and language-independent; human-readable text never goes in here.
-/// Unknown keys are ignored when decoding, so newer minor additions stay readable
-/// by older versions, and `ManifestIO` migrates older manifest versions forward.
+/// Unknown keys are ignored when decoding, so additions that older versions may
+/// safely ignore stay readable by them, and `ManifestIO` migrates older manifest
+/// versions forward.
+///
+/// Version 2 (MacReplica 1.0.1) adds data an older MacReplica would restore wrongly if it
+/// ignored it, above all application data in the shared `/Library` (`scope`). MacReplica
+/// 1.0.0 refuses version 2 backups instead of misplacing files.
 public struct Manifest: Codable, Equatable, Sendable {
-    public static let currentVersion = 1
+    public static let currentVersion = 2
 
     public var manifestVersion: Int
     public var macreplicaVersion: String
@@ -35,6 +40,12 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var guidance: [GuidanceRecord]
     /// How many fonts and profiles were found and how many the user chose to back up.
     public var backupSelection: BackupSelectionSummary?
+    /// Package managers, version managers, runtimes and global tools besides Homebrew and the App Store.
+    public var toolchains: [ToolchainRecord]
+    /// Salted hashes that let a restore recognise the same Mac and the same displays (no identifiers are stored).
+    public var hardwareKeys: HardwareKeys?
+    /// Profiles the user assigned to displays (System Settings › Displays › Color profile).
+    public var displayProfiles: [DisplayProfileAssignment]
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -56,8 +67,11 @@ public struct Manifest: Codable, Equatable, Sendable {
         locations: [LocationAccess] = [],
         developer: DeveloperSettings = DeveloperSettings(),
         credentials: [CredentialRecord] = [],
-        guidance: [GuidanceRecord] = []
+        guidance: [GuidanceRecord] = [],
+        toolchains: [ToolchainRecord] = []
     ) {
+        self.toolchains = toolchains
+        self.displayProfiles = []
         self.manifestVersion = manifestVersion
         self.macreplicaVersion = macreplicaVersion
         self.createdAt = createdAt
@@ -83,7 +97,8 @@ public struct Manifest: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
-        case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection
+        case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
+        case hardwareKeys, displayProfiles
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -113,6 +128,10 @@ public struct Manifest: Codable, Equatable, Sendable {
         credentials = try c.decodeIfPresent([CredentialRecord].self, forKey: .credentials) ?? []
         guidance = try c.decodeIfPresent([GuidanceRecord].self, forKey: .guidance) ?? []
         backupSelection = try c.decodeIfPresent(BackupSelectionSummary.self, forKey: .backupSelection)
+        // Providers added by later versions are dropped instead of failing the whole manifest.
+        toolchains = try c.decodeIfPresent(LenientList<ToolchainRecord>.self, forKey: .toolchains)?.elements ?? []
+        hardwareKeys = try c.decodeIfPresent(HardwareKeys.self, forKey: .hardwareKeys)
+        displayProfiles = try c.decodeIfPresent(LenientList<DisplayProfileAssignment>.self, forKey: .displayProfiles)?.elements ?? []
     }
 }
 
@@ -156,7 +175,7 @@ public struct HomebrewSnapshot: Codable, Equatable, Sendable {
 
 /// How an application originally got onto the Mac, as far as MacReplica can tell.
 /// `unknown` is used whenever there is no reliable evidence — MacReplica never guesses.
-public enum InstallSource: Codable, Equatable, Sendable {
+public enum InstallSource: Codable, Equatable, Hashable, Sendable {
     case homebrewCask(token: String)
     case appStore
     case package(identifier: String)
@@ -284,7 +303,7 @@ public enum MatchEvidence: String, Codable, Sendable, CaseIterable {
     case vendor
 }
 
-public struct AppRecord: Codable, Equatable, Identifiable, Sendable {
+public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var id: String { bundleIdentifier ?? path }
 
     public var name: String
@@ -301,6 +320,13 @@ public struct AppRecord: Codable, Equatable, Identifiable, Sendable {
     /// Possible Homebrew packages when the match was not unambiguous.
     public var candidates: [MatchCandidate]
     public var homepage: String?
+    /// The release channel (beta, nightly …) when there is evidence for one; nil means none was found.
+    public var channel: ReleaseChannel?
+    public var channelEvidence: ChannelEvidence?
+    /// The vendor's update feed declared in the bundle, used to find an official download.
+    public var updateFeed: UpdateFeed?
+    /// Apple Developer Team ID of the bundle's signature; downloads must carry the same one.
+    public var teamIdentifier: String?
 
     public init(
         name: String,
@@ -332,7 +358,7 @@ public struct AppRecord: Codable, Equatable, Identifiable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case name, version, buildVersion, bundleIdentifier, path, vendor, architectures
-        case minimumSystemVersion, source, restoreMethod, candidates, homepage
+        case minimumSystemVersion, source, restoreMethod, candidates, homepage, channel, channelEvidence, updateFeed, teamIdentifier
     }
 
     public init(from decoder: Decoder) throws {
@@ -349,6 +375,10 @@ public struct AppRecord: Codable, Equatable, Identifiable, Sendable {
         restoreMethod = try c.decodeIfPresent(RestoreMethod.self, forKey: .restoreMethod) ?? .manual
         candidates = try c.decodeIfPresent([MatchCandidate].self, forKey: .candidates) ?? []
         homepage = try c.decodeIfPresent(String.self, forKey: .homepage)
+        channel = try c.decodeIfPresent(ReleaseChannel.self, forKey: .channel)
+        channelEvidence = try c.decodeIfPresent(ChannelEvidence.self, forKey: .channelEvidence)
+        updateFeed = try c.decodeIfPresent(UpdateFeed.self, forKey: .updateFeed)
+        teamIdentifier = try c.decodeIfPresent(String.self, forKey: .teamIdentifier)
     }
 
     /// True when MacReplica found possible Homebrew packages but none was certain enough
@@ -370,6 +400,9 @@ public struct BrewFormulaRecord: Codable, Equatable, Identifiable, Sendable {
     public var tap: String?
     /// False for formulae that were only pulled in as dependencies.
     public var installedOnRequest: Bool
+
+    /// A development build from the formula's source repository (`brew install --HEAD`).
+    public var isHead: Bool { version.hasPrefix("HEAD") }
 
     public init(name: String, version: String, tap: String? = nil, installedOnRequest: Bool = true) {
         self.name = name

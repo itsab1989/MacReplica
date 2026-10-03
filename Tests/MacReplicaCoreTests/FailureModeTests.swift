@@ -75,19 +75,22 @@ struct FailureModeTests {
         #expect(label(session, "cask:pixel-forge") == "succeeded")
     }
 
-    @Test("App Store without sign-in does not stop the restore and can be retried")
-    func appStoreNotSignedIn() async throws {
+    @Test("App Store apps are guided: no mas call, no failure when signed out, done once the user installed them")
+    func appStoreIsGuided() async throws {
         let c = try await context("mas-signin")
         try c.fresh.setAppStoreSignedOut(true)
         let selection = RestoreSelection(components: [.appStore, .fonts])
         let session = await restore(c, selection: selection)
-        #expect(label(session, "mas:1234567890") == "failed(appStoreNotSignedIn)")
+        #expect(label(session, "mas:1234567890") == "skipped(manualStepRequired)")
         #expect(label(session, "font:system/ExampleMono.ttc") == "succeeded")
-        try c.fresh.setAppStoreSignedOut(false)
-        let plan = RestorePlanner().plan(manifest: c.manifest, selection: selection).subset(retrying: ["mas:1234567890"])
-        let retry = await RestoreExecutor(environment: TestEnvironment.restoreEnvironment(c.target), backupRoot: c.backup, sessionStore: nil)
-            .run(plan: plan, session: RestoreSession(backupPath: "", selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
-        #expect(label(retry, "mas:1234567890") == "succeeded")
+        #expect(!c.fresh.calls().contains { $0.hasPrefix("mas ") }, "mas install needs root since mas 7 and is never used")
+        #expect(session.remainingItemIDs == ["mas:1234567890"])
+        try c.fresh.simulateUserInstall(appNamed: "Ledger Lite")
+        let plan = RestorePlanner().plan(manifest: c.manifest, selection: selection)
+        let resumed = await RestoreExecutor(environment: TestEnvironment.restoreEnvironment(c.target), backupRoot: c.backup, sessionStore: nil)
+            .run(plan: plan, session: session, onEvent: { _ in })
+        #expect(label(resumed, "mas:1234567890") == "alreadyPresent")
+        #expect(resumed.status == .completed)
     }
 
     @Test("Apps without automatic source end up in the manual list")
@@ -141,7 +144,7 @@ struct FailureModeTests {
         try Data(#"{"manifest_version": 99, "applications": []}"#.utf8).write(to: c.backup.appendingPathComponent("manifest.json"))
         let report = BackupVerifier(layout: c.target.layout).verify(backupAt: c.backup)
         #expect(!report.isUsable)
-        #expect(report.issues.contains(.unsupportedVersion(found: 99, supported: 1)))
+        #expect(report.issues.contains(.unsupportedVersion(found: 99, supported: Manifest.currentVersion)))
     }
 
     @Test("Wrong hashes in the target are treated as conflicts, identical files as present")

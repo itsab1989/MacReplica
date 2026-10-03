@@ -39,6 +39,8 @@ extension Localizer {
         case .brewCasks: return t("component.brewCasks")
         case .appStore: return t("component.appStore")
         case .python: return t("component.python")
+        case .developerTools: return t("component.developerTools")
+        case .packageManagers: return t("component.packageManagers")
         case .developerSettings: return t("component.developerSettings")
         case .applicationData: return t("component.applicationData")
         case .credentials: return t("component.credentials")
@@ -54,6 +56,8 @@ extension Localizer {
         case .brewCasks: return t("component.brewCasks.hint")
         case .appStore: return t("component.appStore.hint")
         case .python: return t("component.python.hint")
+        case .developerTools: return t("component.developerTools.hint")
+        case .packageManagers: return t("component.packageManagers.hint")
         case .developerSettings: return t("component.developerSettings.hint")
         case .applicationData: return t("component.applicationData.hint")
         case .credentials: return t("component.credentials.hint")
@@ -78,6 +82,9 @@ extension Localizer {
         case .applicationData: return t("kind.applicationData")
         case .gitConfiguration: return t("kind.gitConfiguration")
         case .credential: return t("kind.credential")
+        case .toolchainStep: return t("kind.toolchainStep")
+        case .manualApp: return t("kind.manualApp")
+        case .displayProfile: return t("kind.displayProfile")
         }
     }
 
@@ -111,8 +118,61 @@ extension Localizer {
         case .fileNotSupported: return t("skip.fileNotSupported")
         case .displaySpecificProfile: return t("skip.displaySpecificProfile")
         case .cancelled: return t("skip.cancelled")
+        case .manualStepRequired: return t("skip.manualStepRequired")
+        case .waitingForManualStep(let title): return t("skip.waitingForManualStep", title)
+        case .postponedByUser: return t("skip.postponedByUser")
+        case .cancelledByUser: return t("skip.cancelledByUser")
+        case .displayNotConnected(let name): return t("skip.displayNotConnected", name)
+        case .displayOfAnotherMac: return t("skip.displayOfAnotherMac")
+        case .profileNotAvailable: return t("skip.profileNotAvailable")
+        case .applicationNotInstalled(let name): return t("skip.applicationNotInstalled", name)
+        case .applicationVersionOlder(let name, let installed, let backup): return t("skip.applicationVersionOlder", name, installed, backup)
         }
     }
+
+    public func ecosystemText(_ ecosystem: Ecosystem) -> String { t("ecosystem.\(ecosystem.rawValue)") }
+
+    public func channelText(_ channel: ReleaseChannel) -> String { t("channel.\(channel.rawValue)") }
+
+    public func trustText(_ trust: DownloadOffer.Trust) -> String { t("trust.\(trust.rawValue)") }
+
+    /// "Vendor update feed: Nightly 130.0a2 (recommended)".
+    public func offerText(_ offer: DownloadOffer) -> String {
+        let version = offer.version ?? ""
+        let text: String
+        switch offer.kind {
+        case .vendorFeed: text = t("offer.vendorFeed", offer.channel.map(channelText) ?? channelText(.stable), version)
+        case .homebrewCask: text = t("offer.homebrewCask", offer.host, version)
+        case .vendorWebsite: text = t("offer.website", offer.host)
+        case .appStore: text = t("offer.appStore")
+        }
+        return offer.recommended ? t("offer.recommended", text) : text
+    }
+
+    public func guidedStepText(_ step: GuidedStep) -> String {
+        switch step {
+        case .finishInstaller: return t("guidedStep.finishInstaller")
+        case .installFromDiskImage: return t("guidedStep.installFromDiskImage")
+        case .installFromWebsite: return t("guidedStep.installFromWebsite")
+        case .installFromAppStore: return t("guidedStep.installFromAppStore")
+        case .installYourself: return t("guidedStep.installYourself")
+        case .runCommand(let command): return t("guidedStep.runCommand", command)
+        }
+    }
+
+    public func downloadErrorText(_ error: DownloadError) -> String {
+        switch error {
+        case .network, .httpStatus, .tooLarge: return t("downloadError.network")
+        case .cancelled: return t("skip.cancelledByUser")
+        case .incompatibleArchitecture: return t("downloadError.architecture")
+        case .requiresNewerMacOS(let version): return t("downloadError.macOS", version)
+        case .alreadyInstalled: return t("downloadError.alreadyInstalled")
+        case .licenseAgreement: return t("downloadError.license")
+        default: return t("downloadError.notTrusted")
+        }
+    }
+
+    public func supportLevelText(_ level: SupportLevel) -> String { t("supportLevel.\(level.rawValue)") }
 
     public func architectureText(_ architecture: CPUArchitecture) -> String {
         switch architecture {
@@ -134,9 +194,13 @@ extension Localizer {
         case .pythonPackagesNeedManualSetup(let names): return t("note.pythonManualPackages", names.joined(separator: ", "))
         case .pythonPackagesUpdated(let count): return p("note.pythonPackagesUpdated", count)
         case .pythonEnvironmentReused: return t("note.pythonEnvironmentReused")
+        case .pythonLockFileUsed(let file): return t("note.pythonLockFileUsed", file)
+        case .pythonEnvironmentPreserved: return t("note.pythonEnvironmentPreserved")
+        case .pythonPreservationNotUsed(let reason): return t("note.pythonPreservationNotUsed", t("preservation.\(reason.rawValue)"))
         case .pythonSettingsToApply(let count): return p("note.pythonSettings", count)
         case .applicationDataCopied(let copied, let identical, let kept): return t("note.applicationData", copied, identical, kept)
         case .applicationVersionDiffers(let original): return t("note.applicationVersionDiffers", original)
+        case .restoredIntoVersion(let original, let target): return t("note.restoredIntoVersion", original, target)
         }
     }
 
@@ -226,6 +290,7 @@ extension Localizer {
 
     public func predictionText(_ prediction: Prediction, kind: RestoreItemKind) -> String {
         if prediction == .dependsOnEarlierStep, kind == .pythonEnvironment { return t("prediction.recreateEnvironment") }
+        if prediction == .dependsOnEarlierStep, kind == .toolchainStep { return t("prediction.afterToolchain") }
         switch prediction {
         case .willInstall:
             switch kind {
@@ -254,6 +319,7 @@ extension Localizer {
         case .willRecreateEnvironment: return t("prediction.recreateEnvironment")
         case .willCompleteEnvironment: return t("prediction.completeEnvironment")
         case .environmentConflict: return t("prediction.environmentConflict")
+        case .manualStep: return kind == .appStoreApp ? t("prediction.manualAppStore") : t("prediction.manualStep")
         case .checkedWhenRestoring: return t("prediction.checkedWhenRestoring")
         }
     }

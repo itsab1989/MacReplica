@@ -153,6 +153,8 @@ enum Symbols {
         case .brewCasks: return "shippingbox"
         case .appStore: return "bag"
         case .python: return "chevron.left.forwardslash.chevron.right"
+        case .developerTools: return "hammer"
+        case .packageManagers: return "shippingbox.and.arrow.backward"
         case .developerSettings: return "wrench.and.screwdriver"
         case .credentials: return "key"
         case .applicationData: return "folder"
@@ -175,6 +177,22 @@ enum Symbols {
         case .applicationData: return "folder"
         case .gitConfiguration: return "wrench.and.screwdriver"
         case .credential: return "key"
+        case .toolchainStep: return "hammer"
+        case .manualApp: return "arrow.down.circle"
+        case .displayProfile: return "display"
+        }
+    }
+
+    static func ecosystem(_ ecosystem: Ecosystem) -> String {
+        switch ecosystem {
+        case .packageManagers: return "shippingbox.and.arrow.backward"
+        case .python: return "chevron.left.forwardslash.chevron.right"
+        case .node: return "hexagon"
+        case .ruby: return "diamond"
+        case .rust: return "gearshape.2"
+        case .go: return "hare"
+        case .java: return "cup.and.saucer"
+        case .dotnet: return "circle.hexagongrid"
         }
     }
 }
