@@ -4,6 +4,9 @@ name: Launchpad probe
 # for MacReplica's Launchpad layout support. Changes nothing.
 on:
   workflow_dispatch:
+  push:
+    branches: [feature/knut-round3]
+    paths: [.github/workflows/launchpad-probe.yml]
 
 permissions:
   contents: read
