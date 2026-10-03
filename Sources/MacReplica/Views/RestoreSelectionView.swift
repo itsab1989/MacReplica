@@ -253,6 +253,7 @@ struct ItemSelectionSheet: View {
                 Spacer()
                 Button(l.t("common.done")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("individual.done")
             }
             .padding(12)
         }
@@ -301,6 +302,8 @@ enum ItemStatus {
         case .alreadyPresent, .identicalFileExists, .equivalentFileExists, .keepsMacOSVersion:
             return (l.t(item.kind.isFile || item.kind == .applicationData || item.kind == .gitConfiguration ? "items.status.present" : "items.status.installed"), .secondary)
         case .conflict, .environmentConflict: return (l.t("items.status.conflict"), .orange)
+        case .willSkip(.applicationNotInstalled(let name)): return (l.t("items.status.waitsForApp", name), .orange)
+        case .willSkip(.applicationVersionOlder(let name, _, let backup)): return (l.t("items.status.needsNewerApp", name, backup), .orange)
         case .willSkip(let reason): return (l.skipText(reason), .secondary)
         case .backupFileDamaged: return (l.t("items.status.cannotVerify"), .red)
         case .checkedWhenRestoring: return (l.t("items.status.checkedLater"), .secondary)

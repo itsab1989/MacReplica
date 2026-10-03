@@ -1055,3 +1055,7 @@
 "appData.shippedLeftOut" = "%1$d bestanden die bij %2$@ horen, worden weggelaten – het installatieprogramma zet ze terug.";
 "items.differ.one" = "%1$d bestand verschilt op deze Mac:";
 "items.differ.other" = "%1$d bestanden verschillen op deze Mac:";
+"summary.waitingForAppsHeading" = "Wacht op apps";
+"summary.waitingForAppsMessage" = "Deze gegevens horen bij apps die nog niet zijn geïnstalleerd (of ouder zijn dan op de oude Mac). Installeer of werk ze bij en kies daarna Ga verder – MacReplica herstelt de gegevens dan.";
+"items.status.waitsForApp" = "Wacht op %1$@";
+"items.status.needsNewerApp" = "Vereist %1$@ %2$@ of nieuwer";

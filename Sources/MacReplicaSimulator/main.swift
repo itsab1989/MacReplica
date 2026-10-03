@@ -8,6 +8,9 @@
 //   MacReplicaSimulator install-app <folder> <sample app name>   (simulates the user installing an app)
 //   MacReplicaSimulator reinstall <folder>                        (simulates erasing macOS on the same Mac)
 //   MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
+//   MacReplicaSimulator creative <folder>                         (adds Photoshop release/beta and DaVinci Resolve data)
+//   MacReplicaSimulator install-resolve <folder> <version>        (simulates installing DaVinci Resolve)
+//   MacReplicaSimulator launch-photoshop <folder> <folder name>   (simulates opening e.g. "Adobe Photoshop 2026" once)
 //   MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
 //   MacReplicaSimulator set <folder> delay <seconds>
 //   MacReplicaSimulator fail-once <folder> <package> <message>
@@ -26,6 +29,9 @@ func usage() -> Never {
            MacReplicaSimulator install-app <folder> <sample app name>
            MacReplicaSimulator reinstall <folder>
            MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
+           MacReplicaSimulator creative <folder>
+           MacReplicaSimulator install-resolve <folder> <version>
+           MacReplicaSimulator launch-photoshop <folder> <folder name>
            MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
            MacReplicaSimulator set <folder> delay <seconds>
            MacReplicaSimulator fail-once <folder> <package> <message>
@@ -81,6 +87,17 @@ do {
         default: usage()
         }
         print("Displays: \(arguments[2])")
+    case "creative":
+        try root.addCreativeAppData()
+        print("Added Photoshop and DaVinci Resolve data")
+    case "install-resolve":
+        guard arguments.count == 3 else { usage() }
+        try root.installResolve(version: arguments[2])
+        print("Installed DaVinci Resolve \(arguments[2])")
+    case "launch-photoshop":
+        guard arguments.count == 3 else { usage() }
+        try root.launchPhotoshop(arguments[2])
+        print("Opened \(arguments[2]) once")
     case "install-app":
         guard arguments.count == 3 else { usage() }
         try root.simulateUserInstall(appNamed: arguments[2])

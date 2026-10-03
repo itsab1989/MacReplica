@@ -1055,3 +1055,7 @@
 "appData.shippedLeftOut" = "%1$d Dateien, die mit %2$@ geliefert werden, bleiben weg – sein Installer bringt sie zurück.";
 "items.differ.one" = "%1$d Datei ist auf diesem Mac anders:";
 "items.differ.other" = "%1$d Dateien sind auf diesem Mac anders:";
+"summary.waitingForAppsHeading" = "Wartet auf Apps";
+"summary.waitingForAppsMessage" = "Diese Daten gehören zu Apps, die noch nicht installiert sind (oder älter sind als auf dem alten Mac). Installier oder aktualisier sie und wähl dann „Fortsetzen“ – MacReplica stellt die Daten dann wieder her.";
+"items.status.waitsForApp" = "Wartet auf %1$@";
+"items.status.needsNewerApp" = "Braucht %1$@ %2$@ oder neuer";

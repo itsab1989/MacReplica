@@ -1055,3 +1055,7 @@
 "appData.shippedLeftOut" = "%1$d file forniti con %2$@ sono esclusi: il suo programma di installazione li rimette a posto.";
 "items.differ.one" = "%1$d file è diverso su questo Mac:";
 "items.differ.other" = "%1$d file sono diversi su questo Mac:";
+"summary.waitingForAppsHeading" = "In attesa di app";
+"summary.waitingForAppsMessage" = "Questi dati appartengono ad app non ancora installate (o più vecchie che sul Mac precedente). Installale o aggiornale, poi scegli Continua: MacReplica ripristinerà allora i dati.";
+"items.status.waitsForApp" = "Attende %1$@";
+"items.status.needsNewerApp" = "Richiede %1$@ %2$@ o successivo";

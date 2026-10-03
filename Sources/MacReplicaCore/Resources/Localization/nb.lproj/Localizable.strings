@@ -1055,3 +1055,7 @@
 "appData.shippedLeftOut" = "%1$d filer som følger med %2$@, utelates – installasjonsprogrammet legger dem tilbake.";
 "items.differ.one" = "%1$d fil er annerledes på denne Macen:";
 "items.differ.other" = "%1$d filer er annerledes på denne Macen:";
+"summary.waitingForAppsHeading" = "Venter på apper";
+"summary.waitingForAppsMessage" = "Disse dataene hører til apper som ikke er installert ennå (eller er eldre enn på den gamle Macen). Installer eller oppdater dem og velg deretter Fortsett – da gjenoppretter MacReplica dataene.";
+"items.status.waitsForApp" = "Venter på %1$@";
+"items.status.needsNewerApp" = "Krever %1$@ %2$@ eller nyere";

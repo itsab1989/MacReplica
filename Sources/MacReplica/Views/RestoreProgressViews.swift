@@ -246,6 +246,27 @@ struct RestoreSummaryView: View {
                     } else if failed.isEmpty {
                         NoticeView(style: .success, title: l.t("summary.allDone.title"), message: l.t("summary.allDone.message"))
                     }
+                    let waitingForApps = results.filter { $0.0.kind == .applicationData && $0.1.outcome.isOpen }
+                    if !waitingForApps.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(l.t("summary.waitingForAppsHeading")).font(.headline)
+                            Text(l.t("summary.waitingForAppsMessage")).font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            ForEach(waitingForApps, id: \.0.id) { item, result in
+                                HStack(alignment: .firstTextBaseline) {
+                                    Image(systemName: "hourglass").foregroundStyle(.orange).frame(width: 18)
+                                    Text(l.itemTitle(item)).lineLimit(1)
+                                    Spacer()
+                                    Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+                        .accessibilityIdentifier("summary.waitingForApps")
+                    }
                     if !failed.isEmpty {
                         Text(l.t("summary.failedHeading")).font(.headline)
                         ForEach(failed, id: \.0.id) { item, result in FailureRow(item: item, result: result) }
@@ -301,6 +322,7 @@ struct RestoreSummaryView: View {
             Spacer()
             if !complete, let session {
                 Button(l.t("resume.continue")) { model.resumeRestore(session) }
+                    .accessibilityIdentifier("summary.continue")
             }
             if !failed.isEmpty {
                 Button(l.t("summary.retry")) { model.retryFailed() }
