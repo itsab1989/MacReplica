@@ -78,7 +78,8 @@ Evidence: `~/Desktop/MacReplica-Staging/validation/real-apps/` (probes, hashes, 
 ### Mutation testing
 
 Display profile and Python preservation modules: 100 % (were 52–77 %). Application data modules after the
-provider extension: see [MUTATION_TESTING.md](MUTATION_TESTING.md).
+provider extension: `PythonAndDataRestore` 95.5 → 100 %, `AppDataProviders` 89.5 → 100 %, `AppDataScanner`
+81.1 → 100 % (equivalent mutants excluded one operator at a time; details in [MUTATION_TESTING.md](MUTATION_TESTING.md)).
 
 ### Found and fixed during validation
 
