@@ -69,8 +69,31 @@ Checks run in this order for every backed-up file:
 | 13 | Classic suitcase or PostScript Type 1 font | `legacyFormat` | not pre-selected, never opened; identical only if data and resource fork match | select to restore |
 | 14 | Not on this Mac | `ready` | restored | – |
 
-Custom display calibration profiles are restored as files but never assigned to a display; the
-details explain that they are only accurate for the display they were measured on.
+Custom display calibration profiles are restored as files like any other profile. Which display
+used which profile is a separate, optional item (next section).
+
+## Display profile assignments
+
+What macOS offers: the profile a display uses is a per-user ColorSync setting (System Settings ›
+Displays › Color profile), readable and settable with the public ColorSync device API
+(`ColorSyncDeviceCopyDeviceInfo`, `ColorSyncDeviceSetCustomProfiles`, user scope). Displays are
+identified by ColorSync's device ID, which macOS derives from the display (the same value as
+`CGDisplayCreateUUIDFromDisplayID`); the built-in display only exists on its own Mac. Profiles macOS
+generates for a display (`Displays/`) are recreated by macOS and never restored.
+
+| Step | What MacReplica does |
+|---|---|
+| Backup | For every display ColorSync knows (connected or not) whose profile the user chose: records the display (salted SHA-256 of its device ID, its name, built-in or not) and the profile — a profile file that is part of the backup (by checksum) or a profile macOS ships (by path). Factory assignments are not recorded. The Mac's hardware UUID is stored only as a salted hash, so the backup can recognise *the same Mac* without containing the identifier. Offered as *Keep N display profile assignments* (selected). |
+| Restore, display connected | The profile is restored first (normal file rules), then assigned to the same display in the current user's settings and **read back**; only a matching read-back counts as success. Already assigned → nothing changes. |
+| Display not connected | Waits (shown as a guided step); assigned when the restore continues with the display connected, or by the user in System Settings. |
+| Built-in display, different Mac | Skipped: that display belongs to the old Mac. Same Mac (salted hardware key matches) → assigned. |
+| Profile not available | Skipped with an explanation. |
+
+Verification status: same-Mac reinstall and different-Mac scenarios were run in the real app against
+the simulated ColorSync stand-in (scenarios B and C, see [VALIDATION_REPORT.md](VALIDATION_REPORT.md)).
+On the development Mac, the live reader found the user's own calibrated profile on the built-in display
+and recorded it, and re-assigning that profile through the live API was read back correctly. Assigning
+a *different* profile and external displays were not exercised on real hardware.
 
 ## Verification
 

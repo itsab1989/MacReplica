@@ -97,9 +97,11 @@ display manager refusing disconnected displays and failed writes.
 **Outside the scope on purpose:** `LiveDisplayColorManager` (ColorSync and IOKit) is in its own file,
 `ColorProfiles/LiveDisplayColorManager.swift`, which is not a mutation module. It is the only code
 that reads and changes the real Mac's display settings; a test would change the user's display
-profile assignments. Tests and the simulation use `SimulatedDisplayColorManager`, and the live
-manager is checked by hand in the real app (assign a profile, compare with System Settings ›
-Displays).
+profile assignments. Tests and the simulation use `SimulatedDisplayColorManager`. The live manager
+was checked on the development Mac with `MacReplicaSimulator display-check-live` (reads the displays
+and assigns each connected display's current custom profile again, then reads it back — nothing
+visible changes): built-in display read, re-assigned and read back correctly. Assigning a *different*
+profile and external displays have not been exercised on real hardware.
 
 Exclusions (`config.json`; an exclusion can now name one `operator`, so other mutants on the same
 line still count): parameter defaults that every caller overrides (`isConnected`,

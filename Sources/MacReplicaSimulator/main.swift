@@ -59,6 +59,20 @@ if arguments.first == "detect-live" {
     for provider in CredentialProviders.all { print("credential \(provider.id) detected=\(!provider.detect(layout: layout).isEmpty)") }
     exit(0)
 }
+// Checks the live ColorSync access without changing anything visible: every connected display that has a
+// custom profile gets that same profile assigned again, and the assignment is read back. Prints no names.
+if arguments.first == "display-check-live" {
+    let manager = LiveDisplayColorManager()
+    let displays = manager.displays()
+    print("displays=\(displays.count) connected=\(displays.filter(\.isConnected).count) platformIdentifier=\(manager.platformIdentifier() != nil)")
+    for (index, display) in displays.enumerated() where display.isConnected {
+        guard let profile = display.customProfile else { print("display\(index) builtIn=\(display.isBuiltIn ?? false) customProfile=none"); continue }
+        let reassigned = manager.assign(profile, toDisplay: display.uuid)
+        let readBack = manager.displays().first { $0.uuid == display.uuid }?.customProfile?.standardizedFileURL == profile.standardizedFileURL
+        print("display\(index) builtIn=\(display.isBuiltIn ?? false) customProfile=yes reassignSameProfile=\(reassigned) readBackMatches=\(readBack)")
+    }
+    exit(0)
+}
 guard arguments.count >= 2 else { usage() }
 let folder = URL(fileURLWithPath: arguments[1]).standardizedFileURL
 let root = SimulationRoot(url: folder)

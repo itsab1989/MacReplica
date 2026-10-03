@@ -24,8 +24,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   such (not as failures) and offered again when the restore continues, also after quitting.
 - Backup selection for individual apps and for each developer tool.
 - Homebrew development builds (`--HEAD`) are reproduced unless the stable release is chosen.
+- Display profile assignments: the profile each display uses is recorded (displays and the Mac only as
+  salted hashes) and assigned again to the same display, verified by reading it back; displays that are not
+  connected wait; the built-in display of another Mac is left alone.
+- Python: optional complete copy of a virtual environment for reinstalling on the same Mac; used only after
+  checks and a run of the environment, otherwise rebuilt from its packages (the default stays the rebuild).
+- Photoshop (Beta) as its own provider; more Photoshop presets and settings (the Adobe-listed panel files,
+  colour settings, workspaces, document presets, preferences for the same version); Adobe colour settings;
+  Camera Raw defaults. Presets go into the Photoshop version installed on the new Mac, or the original one.
+- DaVinci Resolve: user LUTs from the shared LUT folder (without the LUTs Resolve installs), ACES transforms,
+  Fairlight presets, keyboard, layout and user-preference presets, smart bins, metadata presets. Data that
+  needs its app waits until the app is installed and is never restored into an older version.
+- Application data conflicts: keep this Mac's files, replace with the backup or skip, with a list of the
+  files that differ.
 
 ### Fixed
+- Photoshop beta data was not detected. Resolve's keyboard and layout presets live in
+  `~/Library/Preferences/Blackmagic Design/DaVinci Resolve/`, not in Application Support.
 - Mac App Store apps could not be reinstalled with current `mas` (7.0 requires root for `mas install`).
   App Store apps are now installed from the App Store page MacReplica opens, and verified.
 - Third-party taps are trusted after the user allows them (`brew trust --tap`), as Homebrew 6 and

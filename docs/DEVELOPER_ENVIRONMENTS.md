@@ -70,6 +70,31 @@ verifies it. "Listed" means recorded in the backup and the restore instructions 
 | Java – SDKMAN | candidates and defaults | guided |
 | .NET | SDK versions, global tools | SDKs guided (Microsoft's download page for the version); global tools automatic (`dotnet tool install -g`) |
 
+## Python: rebuild (default) or saved copy (optional)
+
+Rebuilding from the recorded interpreter version and exact package versions stays the default for every
+environment. For reinstalling macOS on the *same* Mac, a virtual environment can additionally be kept as a
+complete copy (*Also keep a complete copy of this environment*, not selected by default):
+
+- **Backup:** the folder is packed with `ditto` (symbolic links and permissions kept). An environment that
+  contains files that look like credentials is refused. The manifest records the archive checksum, a salted
+  hash of the home folder path, the architectures and highest minimum macOS of its native extensions
+  (`.so`/`.dylib`), and whether packages point to local folders (editable installs).
+- **Restore:** *Rebuild from packages (recommended)* or *Saved copy – checked, rebuilt if it does not fit*.
+  The copy is used only if the home folder is the same (virtual environments contain absolute paths), the
+  native code runs on this Mac's processor, macOS is new enough for it, the base interpreter it links to
+  exists, and the archive matches its checksum. It is then **verified by running it**: the environment's own
+  Python (isolated mode) must report the recorded minor version, the expected location, every reinstallable
+  package in its recorded version, and import the packages' top-level modules.
+- **Fallback:** if any check fails, the reason is shown (*different home folder*, *other processor*, *needs a
+  newer macOS*, *base interpreter missing*, *archive damaged*, *could not be unpacked*, *did not run as
+  expected*) and the environment is rebuilt from its packages instead; that result is also verified by
+  running the environment's Python. Nothing is reported as restored on file presence alone.
+
+Tested: a real Python 3 environment packed, restored and verified (`RealPythonPreservationTests`); in the
+real app with simulated Macs: same-Mac reinstall with the copy used (scenario B), damaged archive → rebuilt
+(E), other Mac/home folder → rebuilt (D). The processor and macOS checks are unit-tested.
+
 ## Choosing what to keep
 
 - **Backup:** each manager can be left out on the scan results screen (*Developer Tools*).

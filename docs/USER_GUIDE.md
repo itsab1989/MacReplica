@@ -16,13 +16,19 @@
    - **Possible matches found** — apps where several Homebrew packages could fit. Pick the right one
      or *None of these* (you can also decide later on the new Mac);
    - **Fonts and Color Profiles** — every font and ICC profile with name, version and format. Untick
-     what you do not need. Display profiles macOS generated for this Mac's displays are not selected;
-   - **Development Environments** — Python environments to rebuild, Python settings from your shell profile;
+     what you do not need. Display profiles macOS generated for this Mac's displays are not selected.
+     **Keep display profile assignments** remembers which profile each display uses, so MacReplica can
+     assign it again to the same display (on the same Mac, or an external display that is connected);
+   - **Development Environments** — Python environments to rebuild, Python settings from your shell profile.
+     For reinstalling macOS on the same Mac you can also tick **Also keep a complete copy of this
+     environment**; on restore the copy is checked and run, and rebuilt from its packages if it does not fit;
    - **Developer Tools** — version managers, language versions, global tools and other package managers,
      each with how it comes back (*Restored automatically*, *Guided step* or both). Untick any you do
      not want ([details](DEVELOPER_ENVIRONMENTS.md));
    - **Developer Settings** — Git settings (your email only if you tick it);
-   - **Application Data** — detected app settings and presets; add more with **Add Folder …**;
+   - **Application Data** — detected app settings and presets, per app and kind (for example Photoshop and
+     the Photoshop beta separately, DaVinci Resolve LUTs, keyboard and layout presets); items that may not
+     work in another app version or may contain keys are not selected. Add more with **Add Folder …**;
    - **Credentials** — off unless you choose a provider and set a passphrase;
    - **Sign in again** — services that need a new login on the new Mac;
    - locations macOS did not let MacReplica read;
@@ -44,7 +50,14 @@
    - **Credentials** can only be restored with the passphrase you set on the old Mac.
 3. Click **Preview (Dry Run)** to see exactly what will happen, or **Start Restore**.
 4. If something already exists in a different version or with the same name, MacReplica asks:
-   *Keep this Mac's version*, *Replace with backup*, *Keep both* (where safe) or *Skip*.
+   *Keep this Mac's version*, *Replace with backup*, *Keep both* (where safe) or *Skip*. For application
+   data, the item shows how many files differ (ⓘ lists them with size and date) and lets you choose
+   *Keep this Mac's files, add the rest* (default), *Replace with the backup* (the old files are kept in
+   *Replaced Files*) or *Skip*. Presets of a Photoshop version that is not on this Mac go into the version
+   that is (**Restore for:** lets you choose).
+   Data that belongs to an app that is not installed yet (for example DaVinci Resolve's LUTs and presets)
+   waits: install the app, then choose **Continue** — MacReplica restores it then. Resolve presets are never
+   put into an older Resolve. Quit Photoshop and Resolve before restoring their settings.
 5. If administrator rights are needed (Homebrew, shared folders), MacReplica explains why and macOS
    asks for your password once.
 6. Keep MacReplica open and the Mac awake. You can **Stop** at any time; the restore can continue later.
