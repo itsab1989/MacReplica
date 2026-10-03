@@ -722,7 +722,7 @@
 "guidance.manual.terminal" = "Esporta i tuoi profili (Impostazioni › Profili › … › Esporta), poi fai doppio clic sui file .terminal sul nuovo Mac.";
 "guidance.manual.premierePro" = "Copia i tuoi file di abbreviazioni da tastiera (.kys) e gli spazi di lavoro come descritto da Adobe, oppure lascia che Premiere Pro li migri al primo avvio.";
 "guidance.manual.affinity" = "Esporta pennelli, stili, risorse e macro dal menu di ogni pannello, poi importali sul nuovo Mac.";
-"guidance.manual.resolveLibrary" = "PowerGrade, preset di rendering e preset di progetto si trovano nella libreria progetti di Resolve. Esegui il backup della libreria nel Project Manager (Back Up) e ripristinala sul nuovo Mac, oppure esporta i PowerGrade dalla Galleria (DRX) e i preset di rendering dalla pagina Deliver. MacReplica ripristina a parte i tuoi LUT e i preset di tastiera e di layout.";
+"guidance.manual.resolveLibrary" = "PowerGrade, preset di rendering e preset di progetto si trovano nella libreria progetti di Resolve. Esegui il backup della libreria nel Project Manager (Back Up) e ripristinala sul nuovo Mac, oppure esporta i PowerGrade dalla Galleria (DRX) e i preset di rendering dalla pagina Deliver. I tuoi LUT e i preset di tastiera e di layout sono elencati in Dati delle app quando il backup li contiene.";
 
 /* Fonts, color profiles and the two-stage restore selection */
 "restore.select.intro" = "Il backup è completo e resta invariato. Tutto ciò che contiene è selezionato: togli ciò che non vuoi su questo Mac.";

@@ -722,7 +722,7 @@
 "guidance.manual.terminal" = "Export your profiles (Settings › Profiles › … › Export), then double-click the .terminal files on the new Mac.";
 "guidance.manual.affinity" = "Export brushes, styles, assets and macros from each panel menu, then import them on the new Mac.";
 "guidance.manual.premierePro" = "Copy your keyboard shortcut (.kys) files and workspaces as described by Adobe, or let Premiere Pro migrate them on first launch.";
-"guidance.manual.resolveLibrary" = "PowerGrades, render presets and project presets are stored in Resolve's project library. Back up the library in the Project Manager (Back Up) and restore it on the new Mac, or export PowerGrades from the Gallery (DRX) and render presets from the Deliver page. MacReplica restores your own LUTs, keyboard and layout presets separately.";
+"guidance.manual.resolveLibrary" = "PowerGrades, render presets and project presets are stored in Resolve's project library. Back up the library in the Project Manager (Back Up) and restore it on the new Mac, or export PowerGrades from the Gallery (DRX) and render presets from the Deliver page. Your own LUTs and keyboard and layout presets are listed under Application Data when the backup contains them.";
 "guide.extensions.title" = "%1$@ extensions";
 "guide.extensions.intro" = "Extensions are reinstalled from the marketplace, not copied. Run these commands in Terminal, or turn on Settings Sync:";
 

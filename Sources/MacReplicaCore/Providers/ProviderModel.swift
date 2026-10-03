@@ -204,4 +204,7 @@ public struct GuidanceRecord: Codable, Equatable, Sendable, Identifiable {
         self.name = name
         self.kind = kind
     }
+
+    /// The name this version of MacReplica uses for the service (a backup keeps the name of the version that made it).
+    public var currentName: String { GuidanceCatalog.entries.first { $0.id == id }?.name ?? name }
 }

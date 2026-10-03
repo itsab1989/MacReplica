@@ -4,10 +4,15 @@ import Foundation
 ///
 /// The manifest is written as `manifest.json` with snake_case keys. Field names
 /// are stable and language-independent; human-readable text never goes in here.
-/// Unknown keys are ignored when decoding, so newer minor additions stay readable
-/// by older versions, and `ManifestIO` migrates older manifest versions forward.
+/// Unknown keys are ignored when decoding, so additions that older versions may
+/// safely ignore stay readable by them, and `ManifestIO` migrates older manifest
+/// versions forward.
+///
+/// Version 2 (MacReplica 1.0.1) adds data an older MacReplica would restore wrongly if it
+/// ignored it, above all application data in the shared `/Library` (`scope`). MacReplica
+/// 1.0.0 refuses version 2 backups instead of misplacing files.
 public struct Manifest: Codable, Equatable, Sendable {
-    public static let currentVersion = 1
+    public static let currentVersion = 2
 
     public var manifestVersion: Int
     public var macreplicaVersion: String

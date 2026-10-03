@@ -678,7 +678,7 @@
 "credentials.kubernetes.title" = "Kubernetes-konfigurasjon (kryptert)";
 "failure.applicationRunning.explanation" = "Denne appen lagrer innstillingene sine når den avsluttes, og ville overskrevet de gjenopprettede filene. Avslutt appen og bruk Prøv mislykkede igjen.";
 "guidance.reauth.message" = "Disse appene og verktøyene lagrer påloggingen sin i nøkkelringen eller knytter den til denne Macen. MacReplica gjenoppretter apper og innstillinger, men ikke disse påloggingene.";
-"guidance.manual.resolveLibrary" = "PowerGrades, render-forhåndsinnstillinger og prosjektforhåndsinnstillinger ligger i prosjektbiblioteket i Resolve. Sikkerhetskopier biblioteket i Project Manager (Back Up) og gjenopprett det på den nye Macen, eller eksporter PowerGrades fra Gallery (DRX) og render-forhåndsinnstillinger fra Deliver-siden. Egne LUT-er, hurtigtast- og layoutforhåndsinnstillinger gjenoppretter MacReplica separat.";
+"guidance.manual.resolveLibrary" = "PowerGrades, render-forhåndsinnstillinger og prosjektforhåndsinnstillinger ligger i prosjektbiblioteket i Resolve. Sikkerhetskopier biblioteket i Project Manager (Back Up) og gjenopprett det på den nye Macen, eller eksporter PowerGrades fra Gallery (DRX) og render-forhåndsinnstillinger fra Deliver-siden. Egne LUT-er og hurtigtast- og layoutforhåndsinnstillinger står under Programdata når sikkerhetskopien inneholder dem.";
 "appData.category.preferences" = "Innstillinger og oppstartsfil";
 "credentials.npm.risk" = "Registertokener kan publisere pakker i ditt navn.";
 "appData.category.cameraProfiles" = "Kameraprofiler";

@@ -678,7 +678,7 @@
 "credentials.kubernetes.title" = "Kubernetes-Konfiguration (verschlüsselt)";
 "failure.applicationRunning.explanation" = "Diese App speichert ihre Einstellungen beim Beenden und würde die wiederhergestellten Dateien überschreiben. Beende die App und wähl „Fehlgeschlagene erneut versuchen“.";
 "guidance.reauth.message" = "Diese Apps und Tools speichern ihre Anmeldung im Schlüsselbund oder binden sie an diesen Mac. MacReplica stellt Apps und Einstellungen wieder her, aber nicht diese Anmeldungen.";
-"guidance.manual.resolveLibrary" = "PowerGrades, Render-Presets und Projekt-Presets liegen in Resolves Projektbibliothek. Sicher die Bibliothek im Projektmanager („Back Up“) und stell sie auf dem neuen Mac wieder her, oder exportier PowerGrades aus der Galerie (DRX) und Render-Presets auf der Deliver-Seite. Eigene LUTs, Tastatur- und Layout-Presets stellt MacReplica separat wieder her.";
+"guidance.manual.resolveLibrary" = "PowerGrades, Render-Presets und Projekt-Presets liegen in Resolves Projektbibliothek. Sicher die Bibliothek im Projektmanager („Back Up“) und stell sie auf dem neuen Mac wieder her, oder exportier PowerGrades aus der Galerie (DRX) und Render-Presets auf der Deliver-Seite. Eigene LUTs sowie Tastatur- und Layout-Presets stehen unter „Programmdaten“, wenn die Sicherung sie enthält.";
 "appData.category.preferences" = "Einstellungen und Startdatei";
 "credentials.npm.risk" = "Registry-Tokens können in deinem Namen Pakete veröffentlichen.";
 "appData.category.cameraProfiles" = "Kameraprofile";

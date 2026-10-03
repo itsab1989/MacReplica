@@ -146,12 +146,12 @@ extension ReportBuilder {
         body += list(["guide.accounts.configuration", "guide.accounts.reauthentication", "guide.accounts.keychain"], ordered: false)
         let reauth = manifest.guidance.filter { $0.kind == .reauthenticationRequired }
         if !reauth.isEmpty {
-            body += "<p><b>\(HTML.escape(l.t("guidance.reauth.title")))</b> \(HTML.escape(reauth.map(\.name).joined(separator: ", ")))</p>"
+            body += "<p><b>\(HTML.escape(l.t("guidance.reauth.title")))</b> \(HTML.escape(reauth.map(\.currentName).joined(separator: ", ")))</p>"
         }
         let manualServices = manifest.guidance.filter { $0.kind == .manualMigration }
         if !manualServices.isEmpty {
             body += "<p><b>\(HTML.escape(l.t("guidance.manual.title")))</b></p><ul>"
-            body += manualServices.map { "<li><b>\(HTML.escape($0.name))</b>: \(HTML.escape(l.t("guidance.manual.\($0.id)")))</li>" }.joined() + "</ul>"
+            body += manualServices.map { "<li><b>\(HTML.escape($0.currentName))</b>: \(HTML.escape(l.t("guidance.manual.\($0.id)")))</li>" }.joined() + "</ul>"
         }
         if manifest.credentials.isEmpty {
             body += "<p class=\"muted\">\(HTML.escape(l.t("guide.accounts.noCredentials")))</p>"

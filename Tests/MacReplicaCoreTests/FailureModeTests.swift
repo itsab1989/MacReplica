@@ -144,7 +144,7 @@ struct FailureModeTests {
         try Data(#"{"manifest_version": 99, "applications": []}"#.utf8).write(to: c.backup.appendingPathComponent("manifest.json"))
         let report = BackupVerifier(layout: c.target.layout).verify(backupAt: c.backup)
         #expect(!report.isUsable)
-        #expect(report.issues.contains(.unsupportedVersion(found: 99, supported: 1)))
+        #expect(report.issues.contains(.unsupportedVersion(found: 99, supported: Manifest.currentVersion)))
     }
 
     @Test("Wrong hashes in the target are treated as conflicts, identical files as present")

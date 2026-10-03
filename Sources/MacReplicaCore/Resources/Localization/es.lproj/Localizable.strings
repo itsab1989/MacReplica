@@ -678,7 +678,7 @@
 "credentials.kubernetes.title" = "Configuración de Kubernetes (cifrada)";
 "failure.applicationRunning.explanation" = "Esta app guarda sus ajustes al salir y sobrescribiría los archivos restaurados. Sal de la app y usa Reintentar los fallidos.";
 "guidance.reauth.message" = "Estas apps y herramientas guardan su inicio de sesión en el llavero o lo vinculan a este Mac. MacReplica restaura apps y ajustes, pero no estos inicios de sesión.";
-"guidance.manual.resolveLibrary" = "Los PowerGrades, los ajustes de renderización y los ajustes de proyecto están en la biblioteca de proyectos de Resolve. Haz una copia de la biblioteca en el Project Manager (Back Up) y restáurala en el Mac nuevo, o exporta los PowerGrades desde la Galería (DRX) y los ajustes de renderización desde la página Deliver. MacReplica restaura aparte tus LUT y tus ajustes de teclado y de diseño.";
+"guidance.manual.resolveLibrary" = "Los PowerGrades, los ajustes de renderización y los ajustes de proyecto están en la biblioteca de proyectos de Resolve. Haz una copia de la biblioteca en el Project Manager (Back Up) y restáurala en el Mac nuevo, o exporta los PowerGrades desde la Galería (DRX) y los ajustes de renderización desde la página Deliver. Tus LUT y tus ajustes de teclado y de diseño aparecen en Datos de apps cuando la copia los contiene.";
 "appData.category.preferences" = "Preferencias y archivo de inicio";
 "credentials.npm.risk" = "Los tokens del registro permiten publicar paquetes en tu nombre.";
 "appData.category.cameraProfiles" = "Perfiles de cámara";

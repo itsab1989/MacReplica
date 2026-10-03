@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-03
+
 ### Added
 - Developer tools and package managers: pyenv, uv, pipx, Conda, nvm, fnm, Volta, npm/pnpm/Yarn global
   packages, rbenv, RVM, gems, rustup, Cargo, Go, JDKs, SDKMAN, .NET, MacPorts, Nix, Pixi, mise, asdf
@@ -47,6 +49,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   later require before loading their packages.
 
 ### Changed
+- Backup format version 2 (`manifest_version`): backups of 1.0.0 are read as before; MacReplica 1.0.0
+  refuses version 2 backups with a clear message instead of restoring new kinds of data (such as
+  DaVinci Resolve LUTs in `/Library`) to the wrong place. Update MacReplica on the new Mac first.
 - Release pipeline: every release is built, installed and launched on macOS 14, 15 and 26 (Apple
   silicon) and macOS 15 (Intel) before it is published; release notes include download, checksum,
   first-launch and compatibility information.
@@ -102,5 +107,6 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/itsab1989/MacReplica/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/itsab1989/MacReplica/releases/tag/v1.0.0

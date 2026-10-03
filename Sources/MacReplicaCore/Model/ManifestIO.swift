@@ -68,9 +68,8 @@ public enum ManifestIO {
         }
     }
 
-    /// Migration hook: each step lifts a manifest dictionary by one version.
-    /// Version 1 is the first public format, so there is nothing to migrate yet;
-    /// future versions add a `case` here instead of breaking old backups.
+    /// Migration hook: each step lifts a manifest dictionary by one version, so old
+    /// backups keep working when the format changes.
     static func migrate(
         _ dictionary: [String: Any],
         from version: Int,
@@ -90,8 +89,12 @@ public enum ManifestIO {
         return current
     }
 
-    /// Keyed by the version a step migrates *from*. Empty while only version 1 exists.
-    static let migrationSteps: [Int: @Sendable ([String: Any]) throws -> [String: Any]] = [:]
+    /// Keyed by the version a step migrates *from*.
+    static let migrationSteps: [Int: @Sendable ([String: Any]) throws -> [String: Any]] = [
+        // 1 → 2: every field version 2 adds is optional and means "as before" when absent
+        // (application data in the home folder, no display assignments, no saved Python copies).
+        1: { $0 },
+    ]
 
     public static func read(from backupRoot: URL) throws -> Manifest {
         let url = backupRoot.appendingPathComponent(fileName)

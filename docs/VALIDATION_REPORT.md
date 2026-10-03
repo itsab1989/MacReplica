@@ -75,6 +75,14 @@ Evidence: `~/Desktop/MacReplica-Staging/validation/real-apps/` (probes, hashes, 
 | **Not verified** | Photoshop release (not installed on the development Mac); Photoshop actions *loaded from* `Presets/Actions` files (only listed in the panel menu by Photoshop); assigning a *different* profile and external displays on real hardware; a freshly installed macOS or a second physical Mac. |
 | **Unsupported on purpose** | Machine preferences (Photoshop `MachinePrefs.psp`, Resolve `config.dat`), caches, logs, licences, Resolve database list and project databases, credentials inside any of these. |
 
+### Backup format compatibility (1.0.1)
+
+- Backups are now `manifest_version` 2. The released MacReplica 1.0.0 (downloaded from the v1.0.0 release,
+  checksum verified) refuses a version 2 backup with “This backup needs a newer MacReplica” (screenshot V1)
+  instead of restoring shared-library data into the home folder.
+- A backup made with the released 1.0.0 opens and restores in 1.0.1 (34 successful, 0 failed, guided steps
+  as expected; screenshot V2). Guidance shows the current service names and wording for older backups.
+
 ### Mutation testing
 
 Display profile and Python preservation modules: 100 % (were 52–77 %). Application data modules after the

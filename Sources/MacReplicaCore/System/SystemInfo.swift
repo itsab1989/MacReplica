@@ -45,7 +45,7 @@ public enum MacReplicaVersion {
     /// The single, authoritative version (semantic versioning: MAJOR.MINOR.PATCH).
     /// `scripts/build-app.sh` copies it into the app bundle, the release workflow
     /// checks that the Git tag matches it, and a test checks CHANGELOG.md.
-    public static let current = "1.0.0"
+    public static let current = "1.0.1"
     public static let minimumMacOS = "13.0"
 }
 

@@ -722,7 +722,7 @@
 "guidance.manual.terminal" = "Exporteer je profielen (Instellingen › Profielen › … › Exporteer) en dubbelklik daarna op de nieuwe Mac op de .terminal-bestanden.";
 "guidance.manual.premierePro" = "Kopieer je bestanden met toetscombinaties (.kys) en werkruimten zoals Adobe beschrijft, of laat Premiere Pro ze bij de eerste start overzetten.";
 "guidance.manual.affinity" = "Exporteer penselen, stijlen, assets en macro’s via het menu van elk paneel en importeer ze daarna op de nieuwe Mac.";
-"guidance.manual.resolveLibrary" = "PowerGrades, render-presets en projectpresets staan in de projectbibliotheek van Resolve. Maak een reservekopie van de bibliotheek in de Project Manager (Back Up) en zet die terug op de nieuwe Mac, of exporteer PowerGrades uit de Gallery (DRX) en render-presets vanaf de Deliver-pagina. Je eigen LUT’s, sneltoets- en lay-outpresets herstelt MacReplica apart.";
+"guidance.manual.resolveLibrary" = "PowerGrades, render-presets en projectpresets staan in de projectbibliotheek van Resolve. Maak een reservekopie van de bibliotheek in de Project Manager (Back Up) en zet die terug op de nieuwe Mac, of exporteer PowerGrades uit de Gallery (DRX) en render-presets vanaf de Deliver-pagina. Je eigen LUT’s en sneltoets- en lay-outpresets staan onder Appgegevens als de reservekopie ze bevat.";
 
 /* Fonts, color profiles and the two-stage restore selection */
 "restore.select.intro" = "De reservekopie is compleet en blijft ongewijzigd. Alles erin is geselecteerd – laat weg wat je niet op deze Mac wilt hebben.";

@@ -384,7 +384,7 @@ struct GuidanceList: View {
         VStack(alignment: .leading, spacing: 4) {
             if !reauth.isEmpty {
                 Text(l.t("guidance.reauth.title")).font(.subheadline.weight(.semibold))
-                Text(reauth.map(\.name).joined(separator: ", ")).font(.callout)
+                Text(reauth.map(\.currentName).joined(separator: ", ")).font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(l.t("guidance.reauth.message")).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -392,7 +392,7 @@ struct GuidanceList: View {
             if !manual.isEmpty {
                 Text(l.t("guidance.manual.title")).font(.subheadline.weight(.semibold)).padding(.top, 4)
                 ForEach(manual) { record in
-                    Text("\(record.name): \(l.t("guidance.manual.\(record.id)"))").font(.callout)
+                    Text("\(record.currentName): \(l.t("guidance.manual.\(record.id)"))").font(.callout)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
