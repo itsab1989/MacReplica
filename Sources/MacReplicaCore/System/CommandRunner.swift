@@ -112,6 +112,11 @@ public final class ProcessCommandRunner: CommandRunning, CommandPolicyExtending,
         self.baseEnvironment = baseEnvironment
     }
 
+    /// Timeouts run on their own serial queue so that busy global queues cannot delay them.
+    private static let timeoutQueue = DispatchQueue(label: "MacReplica.command-timeouts", qos: .userInitiated)
+    /// Results are delivered from a queue of their own for the same reason.
+    private static let completionQueue = DispatchQueue(label: "MacReplica.command-results", qos: .userInitiated, attributes: .concurrent)
+
     public func allowing(_ executables: Set<String>) -> CommandRunning {
         ProcessCommandRunner(policy: policy.adding(executables), baseEnvironment: baseEnvironment)
     }
@@ -135,24 +140,29 @@ public final class ProcessCommandRunner: CommandRunning, CommandPolicyExtending,
 
         let collector = OutputCollector(onLine: onOutputLine)
         // Each pipe is drained on its own thread until end-of-file; the result is only
-        // assembled after both readers finished, so no output can be lost.
+        // assembled after both readers finished, so no output can be lost. The reads block,
+        // so they get dedicated threads: on GCD's global queues, many running commands could
+        // occupy all worker threads and delay everything else, including timeouts.
         let readers = DispatchGroup()
         for (pipe, isError) in [(stdoutPipe, false), (stderrPipe, true)] {
             readers.enter()
-            DispatchQueue.global(qos: .utility).async {
+            let reader = Thread {
                 let handle = pipe.fileHandleForReading
                 while let data = try? handle.read(upToCount: 65_536), !data.isEmpty {
                     collector.append(data, isError: isError)
                 }
                 readers.leave()
             }
+            reader.name = "MacReplica command output"
+            reader.qualityOfService = .utility
+            reader.start()
         }
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<CommandResult, Error>) in
                 let timeoutState = TimeoutState()
                 process.terminationHandler = { finished in
-                    readers.notify(queue: .global()) {
+                    readers.notify(queue: Self.completionQueue) {
                         let output = collector.finish()
                         continuation.resume(returning: CommandResult(
                             exitCode: finished.terminationStatus,
@@ -174,7 +184,7 @@ public final class ProcessCommandRunner: CommandRunning, CommandPolicyExtending,
                     return
                 }
                 if command.timeout > 0 {
-                    DispatchQueue.global().asyncAfter(deadline: .now() + command.timeout) {
+                    Self.timeoutQueue.asyncAfter(deadline: .now() + command.timeout) {
                         if process.isRunning {
                             timeoutState.fired = true
                             process.terminate()

@@ -97,6 +97,9 @@ provider extension: `PythonAndDataRestore` 95.5 → 100 %, `AppDataProviders` 89
 - Status text cut off in the restore selection; short status added. “1 files differ” plural fixed.
 - The mutation docs claimed a manual check of the live display manager that had not happened; corrected and
   the check performed (`MacReplicaSimulator display-check-live`).
+- CI (both runners) showed a command timeout firing late under load: the output readers blocked GCD's global
+  worker threads. Readers now run on their own threads, timeouts and results on their own queues; a test that
+  blocks the global queues fails with the old code and passes with the fix.
 - Development builds are signed ad hoc, so macOS asks again for Desktop access after every rebuild; app-facing
   test data moved to `/Users/Shared/MacReplica-Staging/test-data` (linked from the staging folder).
 

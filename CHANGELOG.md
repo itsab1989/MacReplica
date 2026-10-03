@@ -41,6 +41,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   files that differ.
 
 ### Fixed
+- Command timeouts could fire late, or not at all, while many commands ran at the same time (blocking
+  output readers used GCD's limited global worker threads); readers now have their own threads and
+  timeouts their own queue.
 - Photoshop beta data was not detected. Resolve's keyboard and layout presets live in
   `~/Library/Preferences/Blackmagic Design/DaVinci Resolve/`, not in Application Support.
 - Mac App Store apps could not be reinstalled with current `mas` (7.0 requires root for `mas install`).
