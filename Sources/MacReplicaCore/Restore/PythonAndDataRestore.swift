@@ -82,7 +82,24 @@ extension Inspector {
         var source: URL
         var destination: URL
         var state: State
+        /// For files stored with the home placeholder: the content to write on this Mac.
+        var expected: Data? = nil
         enum State { case new, identical, different, damaged }
+    }
+
+    /// A backed-up text file with the home placeholder, with this Mac's home path filled in.
+    func contentForThisMac(_ record: FileRecord, source: URL) -> Data? {
+        guard record.metadata[AppDataScanner.homePlaceholderKey] == "1", let data = try? Data(contentsOf: source),
+              Hashing.sha256Hex(of: data) == record.sha256, let text = String(data: data, encoding: .utf8) else { return nil }
+        return Data(text.replacingOccurrences(of: AppDataScanner.homePlaceholder, with: layout.homeDirectory.standardizedFileURL.path).utf8)
+    }
+
+    /// Whether macOS lets MacReplica into a protected location (Mail, other developers' app containers):
+    /// the nearest existing folder on the way to it can be listed. Reads only.
+    func hasAccess(to folder: URL) -> Bool {
+        var url = folder
+        while !FileManager.default.fileExists(atPath: url.path), url.pathComponents.count > 2 { url.deleteLastPathComponent() }
+        return (try? FileManager.default.contentsOfDirectory(atPath: url.path)) != nil
     }
 
     /// Where an application data folder goes on this Mac.
@@ -141,12 +158,18 @@ extension Inspector {
             guard let source = PathSafety.resolve(record.backupPath, inside: backupRoot),
                   let destination = PathSafety.resolve(record.relativePath, inside: base) else { return nil }
             var state: DataFilePlan.State = .new
+            var expected: Data?
             if damagedFiles.contains(record.backupPath) || !FileManager.default.fileExists(atPath: source.path) {
                 state = .damaged
-            } else if FileManager.default.fileExists(atPath: destination.path) {
-                state = (try? Hashing.sha256Hex(ofFile: destination)) == record.sha256 ? .identical : .different
+            } else if record.metadata[AppDataScanner.homePlaceholderKey] == "1" {
+                expected = contentForThisMac(record, source: source)
+                if expected == nil { state = .damaged }
             }
-            result.append(DataFilePlan(record: record, source: source, destination: destination, state: state))
+            if state != .damaged, FileManager.default.fileExists(atPath: destination.path) {
+                let wanted = expected.map { Hashing.sha256Hex(of: $0) } ?? record.sha256
+                state = (try? Hashing.sha256Hex(ofFile: destination)) == wanted ? .identical : .different
+            }
+            result.append(DataFilePlan(record: record, source: source, destination: destination, state: state, expected: expected))
         }
         return result
     }
@@ -206,6 +229,9 @@ extension Inspector {
         if plan.contains(where: { $0.state == .damaged }) { return .backupFileDamaged }
         if target.appFolderMissing { return .willSkip(.applicationNotInstalled(name: folder.profile?.appName ?? folder.name)) }
         if let reason = applicationDataRequirement(folder) { return .willSkip(reason) }
+        if folder.profile?.requiresFullDiskAccess == true, !hasAccess(to: target.root.appendingPathComponent(target.relativePath)) {
+            return .willSkip(.needsFullDiskAccess(name: folder.profile?.appName ?? folder.name))
+        }
         if plan.contains(where: { $0.state == .different }) { return .conflict(resolution: selection.resolution(for: item.id)) }
         if plan.allSatisfy({ $0.state == .identical }) { return .identicalFileExists }
         return .willCopy
@@ -482,6 +508,9 @@ extension RestoreExecutor {
             return ItemResult(itemID: item.id, outcome: .skipped(.applicationNotInstalled(name: folder.profile?.appName ?? folder.name)))
         }
         if let reason = inspector.applicationDataRequirement(folder) { return ItemResult(itemID: item.id, outcome: .skipped(reason)) }
+        if folder.profile?.requiresFullDiskAccess == true, !inspector.hasAccess(to: target.root.appendingPathComponent(target.relativePath)) {
+            return ItemResult(itemID: item.id, outcome: .skipped(.needsFullDiskAccess(name: folder.profile?.appName ?? folder.name)))
+        }
         // Some apps overwrite their files on quit; never write underneath a running app.
         if let profile = folder.profile, profile.mustBeClosed,
            let running = profile.bundleIdentifiers.first(where: environment.isApplicationRunning) {
@@ -497,7 +526,8 @@ extension RestoreExecutor {
         // Data of a versioned app goes into the version chosen in the plan (see `applicationDataTarget`);
         // the user is told when that is another version, or one that is not installed.
         let versionNotes = inspector.applicationDataNotes(item)
-        if folder.effectiveScope == .sharedLibrary, let base = PathSafety.resolve(target.relativePath, inside: target.root),
+        if folder.effectiveScope != .home, let base = PathSafety.resolve(target.relativePath, inside: target.root),
+           FileManager.default.fileExists(atPath: base.path),
            !fm.isWritableFile(atPath: base.path) {
             return failed(item, .permissionDenied, layout.displayPath(base))
         }
@@ -529,8 +559,13 @@ extension RestoreExecutor {
                     if fm.fileExists(atPath: aside.path) { try fm.removeItem(at: aside) }
                     try fm.moveItem(at: file.destination, to: aside)
                 }
-                try fm.copyItem(at: file.source, to: file.destination)
-                guard (try? Hashing.sha256Hex(ofFile: file.destination)) == file.record.sha256 else { throw CocoaError(.fileWriteUnknown) }
+                if let expected = file.expected {
+                    try expected.write(to: file.destination)
+                    guard (try? Data(contentsOf: file.destination)) == expected else { throw CocoaError(.fileWriteUnknown) }
+                } else {
+                    try fm.copyItem(at: file.source, to: file.destination)
+                    guard (try? Hashing.sha256Hex(ofFile: file.destination)) == file.record.sha256 else { throw CocoaError(.fileWriteUnknown) }
+                }
                 copied += 1
             } catch {
                 problems.append(file.record.relativePath)
@@ -541,11 +576,25 @@ extension RestoreExecutor {
             return ItemResult(itemID: item.id, outcome: .failed(RestoreFailure(category: .verificationFailed, technicalDetail: detail)),
                               notes: [.applicationDataCopied(copied: copied, identical: identical, kept: kept)])
         }
+        let checks = applicationDataChecks(folder, target: target)
         if copied == 0 && kept == 0 {
-            return ItemResult(itemID: item.id, outcome: .alreadyPresent, notes: [.identicalFileExists])
+            return ItemResult(itemID: item.id, outcome: .alreadyPresent, notes: [.identicalFileExists] + checks)
         }
         return ItemResult(itemID: item.id, outcome: .succeeded,
-                          notes: [.applicationDataCopied(copied: copied, identical: identical, kept: kept)] + versionNotes)
+                          notes: [.applicationDataCopied(copied: copied, identical: identical, kept: kept)] + versionNotes + checks)
+    }
+
+    /// App-specific checks of the restored files (see `AppDataVerification`).
+    func applicationDataChecks(_ folder: AppDataFolder, target: AppDataTarget) -> [ResultNote] {
+        switch folder.profile?.verification {
+        case .cryptomatorVaults?:
+            guard let base = PathSafety.resolve(target.relativePath, inside: target.root) else { return [] }
+            let vaults = CryptomatorSettings.vaults(in: base.appendingPathComponent("settings.json"))
+            let missing = vaults.filter { !$0.isPresent }.map(\.name)
+            return [.vaultsRegistered(found: vaults.count - missing.count, missing: missing)]
+        case nil:
+            return []
+        }
     }
 }
 
@@ -658,5 +707,30 @@ extension RestoreExecutor {
         if copied == 0 && kept == 0 { return ItemResult(itemID: item.id, outcome: .alreadyPresent) }
         return ItemResult(itemID: item.id, outcome: .succeeded,
                           notes: notes + [.applicationDataCopied(copied: copied, identical: identical, kept: kept)])
+    }
+}
+
+/// Reads the vault list of Cryptomator's `settings.json` (never passwords: Cryptomator keeps none there).
+enum CryptomatorSettings {
+    struct Vault: Equatable {
+        var name: String
+        var path: String
+        /// The folder exists and contains Cryptomator's vault file (`vault.cryptomator` or the older `masterkey.cryptomator`).
+        var isPresent: Bool
+    }
+
+    static func vaults(in settings: URL) -> [Vault] {
+        guard let data = try? Data(contentsOf: settings),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let directories = object["directories"] as? [[String: Any]] else { return [] }
+        return directories.compactMap { entry in
+            guard let path = entry["path"] as? String, !path.isEmpty else { return nil }
+            let folder = URL(fileURLWithPath: path)
+            let present = ["vault.cryptomator", "masterkey.cryptomator"].contains {
+                FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path)
+            }
+            let name = (entry["displayName"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? folder.lastPathComponent
+            return Vault(name: name, path: path, isPresent: present)
+        }
     }
 }

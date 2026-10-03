@@ -261,6 +261,13 @@ struct RestoreSummaryView: View {
                                         .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
                                 }
                             }
+                            if waitingForApps.contains(where: { if case .skipped(.needsFullDiskAccess) = $0.1.outcome { return true }; return false }) {
+                                HStack {
+                                    Spacer()
+                                    Button(l.t("summary.openFullDiskAccess")) { NSWorkspace.shared.open(AccessProbe.fullDiskAccessSettingsURL) }
+                                        .accessibilityIdentifier("summary.openFullDiskAccess")
+                                }
+                            }
                         }
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)

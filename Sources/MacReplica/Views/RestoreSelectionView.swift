@@ -303,6 +303,7 @@ enum ItemStatus {
             return (l.t(item.kind.isFile || item.kind == .applicationData || item.kind == .gitConfiguration ? "items.status.present" : "items.status.installed"), .secondary)
         case .conflict, .environmentConflict: return (l.t("items.status.conflict"), .orange)
         case .willSkip(.applicationNotInstalled(let name)): return (l.t("items.status.waitsForApp", name), .orange)
+        case .willSkip(.needsFullDiskAccess): return (l.t("items.status.needsFullDiskAccess"), .orange)
         case .willSkip(.applicationVersionOlder(let name, _, let backup)): return (l.t("items.status.needsNewerApp", name, backup), .orange)
         case .willSkip(let reason): return (l.skipText(reason), .secondary)
         case .backupFileDamaged: return (l.t("items.status.cannotVerify"), .red)
@@ -336,6 +337,7 @@ struct RestoreItemRow: View {
                     })) {
                     HStack(spacing: 6) {
                         Text(l.itemTitle(item)).lineLimit(1)
+                        if item.kind == .applicationData { ConfidenceBadge(level: item.applicationData?.profile?.effectiveConfidence) }
                         if item.title != item.identifier, !item.kind.isFile, item.kind != .applicationData {
                             Text(item.identifier).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1)
                         }

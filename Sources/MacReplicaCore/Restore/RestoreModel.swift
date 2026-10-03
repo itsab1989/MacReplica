@@ -278,6 +278,8 @@ public enum SkipReason: Codable, Equatable, Sendable {
     case applicationNotInstalled(name: String)
     /// The app on this Mac is older than the one the data came from; its files could not be read by it.
     case applicationVersionOlder(name: String, installed: String, backup: String)
+    /// macOS protects the location (Mail, another developer's app data); MacReplica needs Full Disk Access.
+    case needsFullDiskAccess(name: String)
 }
 
 public enum ItemOutcome: Codable, Equatable, Sendable {
@@ -308,7 +310,7 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
         guard case .skipped(let reason) = self else { return false }
         switch reason {
         case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected,
-             .applicationNotInstalled, .applicationVersionOlder: return true
+             .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess: return true
         default: return false
         }
     }
@@ -363,6 +365,9 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case applicationVersionDiffers(original: String)
     /// The app version of the backup is not on this Mac; the data went into another installed version.
     case restoredIntoVersion(original: String, target: String)
+    /// Cryptomator: registered vaults whose folder was found, and the names of those that were not
+    /// (on a drive that is not connected, or moved): the user adds them again in Cryptomator.
+    case vaultsRegistered(found: Int, missing: [String])
 }
 
 public struct RestoreSummary: Equatable, Sendable {
@@ -400,7 +405,7 @@ extension ItemResult {
             case .userSkipped: return "skipped_by_user"
             case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile, .displayOfAnotherMac: return "incompatible"
             case .projectFolderMissing, .passphraseNotProvided, .manualStepRequired, .waitingForManualStep, .displayNotConnected,
-                 .profileNotAvailable, .applicationNotInstalled, .applicationVersionOlder: return "manual_action_required"
+                 .profileNotAvailable, .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess: return "manual_action_required"
             case .postponedByUser: return "postponed_by_user"
             case .cancelledByUser: return "cancelled_by_user"
             default: return "skipped"

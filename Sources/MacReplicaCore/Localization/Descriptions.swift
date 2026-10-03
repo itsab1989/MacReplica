@@ -127,6 +127,7 @@ extension Localizer {
         case .profileNotAvailable: return t("skip.profileNotAvailable")
         case .applicationNotInstalled(let name): return t("skip.applicationNotInstalled", name)
         case .applicationVersionOlder(let name, let installed, let backup): return t("skip.applicationVersionOlder", name, installed, backup)
+        case .needsFullDiskAccess(let name): return t("skip.needsFullDiskAccess", name)
         }
     }
 
@@ -201,6 +202,8 @@ extension Localizer {
         case .applicationDataCopied(let copied, let identical, let kept): return t("note.applicationData", copied, identical, kept)
         case .applicationVersionDiffers(let original): return t("note.applicationVersionDiffers", original)
         case .restoredIntoVersion(let original, let target): return t("note.restoredIntoVersion", original, target)
+        case .vaultsRegistered(let found, let missing):
+            return missing.isEmpty ? p("note.vaultsRegistered", found) : p("note.vaultsRegistered", found) + " " + t("note.vaultsMissing", missing.joined(separator: ", "))
         }
     }
 

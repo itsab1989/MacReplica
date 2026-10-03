@@ -5,6 +5,8 @@ import Foundation
 public struct ScannedFile: Sendable, Equatable {
     public var url: URL
     public var record: FileRecord
+    /// Written to the backup instead of the file (a text file with the home path replaced by a placeholder).
+    public var contents: Data? = nil
 }
 
 /// Finds fonts and color profiles in the user and shared library folders.

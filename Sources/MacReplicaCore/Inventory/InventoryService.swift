@@ -313,7 +313,8 @@ public struct InventoryService: Sendable {
             var shipped: Set<String> = []
             if let package = detected.shippedByPackage { shipped = await shippedFiles(package: package, below: detected.folder) }
             if let scan = try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
-                                                                     excluding: detected.excluding, scope: detected.scope, shipped: shipped),
+                                                                     excluding: detected.excluding, scope: detected.scope, shipped: shipped,
+                                                            rewritesHomeFolder: detected.rewritesHomeFolder, allowProviderExceptions: true),
                !scan.files.isEmpty {
                 result.addApplicationData(scan.folder, files: scan.files, issues: scan.issues)
             } else {

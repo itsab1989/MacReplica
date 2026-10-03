@@ -14,7 +14,7 @@ struct ProviderCatalogTests {
         for provider in providers {
             #expect(!provider.bundleIdentifiers.isEmpty, "\(provider.id) has bundle identifiers")
             #expect(!provider.evidence.isEmpty && provider.evidence.allSatisfy { $0.url.hasPrefix("https://") }, "\(provider.id) cites sources")
-            #expect(["2026-10-02", "2026-10-03"].contains(provider.researchedOn))
+            #expect(["2026-10-02", "2026-10-03", "2026-10-04"].contains(provider.researchedOn))
             #expect(provider.status == .fixtureTested, "\(provider.id) is not claimed as verified with the real app")
             #expect(PathSafety.isSafeRelativePath(provider.base), "\(provider.id) base")
             #expect(!provider.base.hasPrefix("Library/Caches") && !provider.base.hasPrefix("Library/Keychains"))

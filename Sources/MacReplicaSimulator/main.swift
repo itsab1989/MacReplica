@@ -52,7 +52,8 @@ if arguments.first == "detect-live" {
             shipped = await InventoryService.shippedFiles(package: package, below: detected.folder, layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]))
         }
         let scan = try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
-                                                            excluding: detected.excluding, scope: detected.scope, shipped: shipped)
+                                                            excluding: detected.excluding, scope: detected.scope, shipped: shipped,
+                                                            rewritesHomeFolder: detected.rewritesHomeFolder, allowProviderExceptions: true)
         print("appdata \(detected.profile.provider)/\(detected.profile.appVersion ?? "-")/\(detected.profile.category) files=\(scan?.files.count ?? -1)"
               + (scan?.folder.shippedFilesLeftOut.map { " shipped-left-out=\($0)" } ?? ""))
     }

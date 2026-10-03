@@ -185,7 +185,11 @@ public struct BackupWriter: Sendable {
         try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         guard FileManager.default.isReadableFile(atPath: file.url.path) else { return .unreadable }
         do {
-            try FileManager.default.copyItem(at: file.url, to: destination)
+            if let contents = file.contents {
+                try contents.write(to: destination)
+            } else {
+                try FileManager.default.copyItem(at: file.url, to: destination)
+            }
         } catch {
             return .unreadable
         }

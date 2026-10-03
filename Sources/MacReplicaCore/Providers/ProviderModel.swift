@@ -12,6 +12,23 @@ public enum VerificationStatus: String, Codable, Sendable {
     case verified
 }
 
+/// How far MacReplica's support for a kind of application data goes. Shown in the backup and restore
+/// selection so nobody assumes more than was proven.
+public enum DataConfidence: String, Codable, Sendable, CaseIterable {
+    /// Backed up, restored, and the result confirmed inside the real application.
+    case full
+    /// Backed up and restored, checked by checksum; that the app uses it was not confirmed by MacReplica.
+    case checkInApp
+    /// Locations only from community sources, or the effect in the app is uncertain.
+    case experimental
+    /// Detected and explained only (guidance), nothing is restored.
+    case notSupported
+
+    public init(from decoder: Decoder) throws {
+        self = DataConfidence(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .checkInApp
+    }
+}
+
 /// What a location contains, which decides whether it may be migrated automatically.
 public enum DataClassification: String, Codable, Sendable {
     /// User-created customization with a stable format: migrated when selected (default on).
@@ -20,10 +37,12 @@ public enum DataClassification: String, Codable, Sendable {
     case compatibilitySensitive
     /// Useful, but user content may contain API keys (e.g. automation workflows): offered, default off, with a warning.
     case mayContainSecrets
+    /// Plug-ins, scripts and macros: code that runs inside the app. Offered, default off, with a note.
+    case containsCode
     /// Never migrated by a provider (listed for documentation and tests).
     case cache, database, temporary, log, credential
 
-    public var isOffered: Bool { self == .safe || self == .compatibilitySensitive || self == .mayContainSecrets }
+    public var isOffered: Bool { self == .safe || self == .compatibilitySensitive || self == .mayContainSecrets || self == .containsCode }
     public var selectedByDefault: Bool { self == .safe }
 
     public init(from decoder: Decoder) throws {
@@ -52,15 +71,26 @@ public struct AppDataCategory: Sendable {
     /// into the version installed on the new Mac. In `files`, `{folder}` stands for the version folder's
     /// name without a trailing " Settings" (e.g. "Adobe Photoshop 2026 Prefs.psp").
     public var movesBetweenVersions: Bool
+    /// Other names the same folder has on some Macs (e.g. Office's `User Content` vs `User Content.localized`);
+    /// the first one that exists is used.
+    public var alternatePaths: [String]
+    /// Only files whose names match this regular expression, directly inside the folder (instead of `files`).
+    public var filePattern: String?
+    /// Text files that contain absolute paths in the home folder: the backup stores a placeholder instead of
+    /// the old home path, and the restore writes this Mac's home path.
+    public var rewritesHomeFolder: Bool
 
     public init(_ key: String, _ path: String, files: [String]? = nil, excluding: [String] = [], _ classification: DataClassification = .safe,
-                movesBetweenVersions: Bool = false) {
+                movesBetweenVersions: Bool = false, alternatePaths: [String] = [], filePattern: String? = nil, rewritesHomeFolder: Bool = false) {
         self.key = key
         self.path = path
         self.files = files
         self.excluding = excluding
         self.classification = classification
         self.movesBetweenVersions = movesBetweenVersions
+        self.alternatePaths = alternatePaths
+        self.filePattern = filePattern
+        self.rewritesHomeFolder = rewritesHomeFolder
     }
 }
 
@@ -71,6 +101,15 @@ public enum AppDataScope: String, Codable, Sendable {
     /// Below `/Library`, shared by all users of the Mac — e.g. DaVinci Resolve's LUT folder. Only provider
     /// locations are ever read or written there; user-chosen folders are always inside the home folder.
     case sharedLibrary
+    /// Below `/Users/Shared` (some vendors keep user-created settings there, e.g. BenQ Palette Master).
+    case usersShared
+}
+
+/// An app-specific check after the files were restored. The engine stays generic; each case only reads
+/// the restored files and reports what the user still has to do.
+public enum AppDataVerification: String, Codable, Sendable {
+    /// Cryptomator's `settings.json`: every registered vault folder exists and contains its vault file.
+    case cryptomatorVaults
 }
 
 /// Everything MacReplica knows about migrating one application's user data.
@@ -101,6 +140,21 @@ public struct AppDataProvider: Sendable {
     public var appMustBeInstalled = false
     /// The files carry the app's database version and must not go to an older version of the app.
     public var notForOlderApp = false
+    /// Categories whose restore was confirmed inside the real application (see docs/VALIDATION_REPORT.md).
+    public var verifiedCategories: Set<String> = []
+    /// Locations from community sources only, or the app's use of the restored data is uncertain.
+    public var experimental = false
+    /// The data is in a location macOS protects (Mail, other developers' app containers): reading and
+    /// writing it needs Full Disk Access for MacReplica.
+    public var requiresFullDiskAccess = false
+    public var verification: AppDataVerification? = nil
+    /// Other names of `base` on some Macs; the first existing one is used.
+    public var alternateBases: [String] = []
+
+    public func confidence(of category: String) -> DataConfidence {
+        if verifiedCategories.contains(category) { return .full }
+        return experimental ? .experimental : .checkInApp
+    }
 }
 
 /// What a backed-up application data folder came from. Stored in the manifest so a
@@ -122,6 +176,10 @@ public struct AppDataProfileReference: Codable, Equatable, Hashable, Sendable {
     public var sourceAppVersion: String?
     public var appMustBeInstalled: Bool
     public var notForOlderApp: Bool
+    /// Nil in backups of earlier versions (shown as "check in the app").
+    public var confidence: DataConfidence?
+    public var requiresFullDiskAccess: Bool = false
+    public var verification: AppDataVerification? = nil
 
     public init(provider: String, appName: String, category: String, appVersion: String? = nil, bundleIdentifiers: [String] = [],
                 mustBeClosed: Bool = false, classification: DataClassification = .safe, versionFolderPattern: String? = nil,
@@ -142,7 +200,7 @@ public struct AppDataProfileReference: Codable, Equatable, Hashable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case provider, appName, category, appVersion, bundleIdentifiers, mustBeClosed, classification, versionFolderPattern, movesBetweenVersions
-        case sourceAppVersion, appMustBeInstalled, notForOlderApp
+        case sourceAppVersion, appMustBeInstalled, notForOlderApp, confidence, requiresFullDiskAccess, verification
     }
 
     public init(from decoder: Decoder) throws {
@@ -159,7 +217,12 @@ public struct AppDataProfileReference: Codable, Equatable, Hashable, Sendable {
         sourceAppVersion = try c.decodeIfPresent(String.self, forKey: .sourceAppVersion)
         appMustBeInstalled = try c.decodeIfPresent(Bool.self, forKey: .appMustBeInstalled) ?? false
         notForOlderApp = try c.decodeIfPresent(Bool.self, forKey: .notForOlderApp) ?? false
+        confidence = try c.decodeIfPresent(DataConfidence.self, forKey: .confidence)
+        requiresFullDiskAccess = try c.decodeIfPresent(Bool.self, forKey: .requiresFullDiskAccess) ?? false
+        verification = try? c.decodeIfPresent(AppDataVerification.self, forKey: .verification)
     }
+
+    public var effectiveConfidence: DataConfidence { confidence ?? .checkInApp }
 }
 
 public struct DetectedAppData: Sendable {
@@ -172,6 +235,7 @@ public struct DetectedAppData: Sendable {
     public var files: [String]?
     /// Names that are skipped wherever they occur.
     public var excluding: [String] = []
+    public var rewritesHomeFolder = false
 }
 
 /// Services and apps whose sign-in or data MacReplica deliberately does not move.

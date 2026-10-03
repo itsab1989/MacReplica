@@ -156,8 +156,19 @@ public struct SystemLayout: Sendable, Equatable {
     /// `/Library`, the folder shared by all users (in a simulation or test sandbox, its stand-in next to the shared fonts).
     public var sharedLibrary: URL { systemFonts.deletingLastPathComponent() }
 
+    /// `/Users/Shared` (in a simulation, its stand-in in the sandbox).
+    public var usersShared: URL {
+        simulationRoot.map { $0.appendingPathComponent("Users/Shared") } ?? URL(fileURLWithPath: "/Users/Shared")
+    }
+
     /// The folder application data paths of a scope are relative to.
-    public func root(of scope: AppDataScope) -> URL { scope == .home ? homeDirectory : sharedLibrary }
+    public func root(of scope: AppDataScope) -> URL {
+        switch scope {
+        case .home: return homeDirectory
+        case .sharedLibrary: return sharedLibrary
+        case .usersShared: return usersShared
+        }
+    }
 
     public func displayPath(_ url: URL) -> String {
         let redacted = Self.redactHome(url.standardizedFileURL.path, home: homeDirectory.standardizedFileURL.path)

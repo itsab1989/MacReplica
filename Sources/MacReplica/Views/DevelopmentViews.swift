@@ -149,9 +149,20 @@ struct AppDataRow: View {
                         let version = profile.appVersion.flatMap { $0 == profile.appName ? nil : " · \($0)" } ?? ""
                         return l.t("appData.category.\(profile.category)") + version
                     } ?? folder.name)
-                    Text(folder.displayPath).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    HStack(spacing: 6) {
+                        ConfidenceBadge(level: folder.profile?.effectiveConfidence)
+                        Text(folder.displayPath).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    }
                     if folder.profile?.classification == .compatibilitySensitive {
                         Text(l.t("appData.compatibilityNote")).font(.caption).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if folder.profile?.classification == .containsCode {
+                        Text(l.t("appData.codeNote")).font(.caption).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if folder.profile?.requiresFullDiskAccess == true {
+                        Text(l.t("appData.fullDiskAccessNote")).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if folder.profile?.classification == .mayContainSecrets {
@@ -506,5 +517,24 @@ struct RestorePassphraseSheet: View {
         }
         .padding(20)
         .frame(width: 480)
+    }
+}
+
+/// How far support for a kind of application data goes (see `DataConfidence`).
+struct ConfidenceBadge: View {
+    @EnvironmentObject var model: AppModel
+    var level: DataConfidence?
+
+    var body: some View {
+        if let level {
+            let color: Color = level == .full ? .green : (level == .experimental ? .orange : (level == .notSupported ? .secondary : .blue))
+            Text(model.l.t("confidence.\(level.rawValue)"))
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(color)
+                .padding(.horizontal, 5).padding(.vertical, 1)
+                .background(Capsule().strokeBorder(color.opacity(0.6)))
+                .help(model.l.t("confidence.\(level.rawValue).help"))
+                .accessibilityLabel(model.l.t("confidence.\(level.rawValue)"))
+        }
     }
 }
