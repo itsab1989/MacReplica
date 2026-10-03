@@ -60,6 +60,41 @@ if arguments.first == "detect-live" {
     for provider in CredentialProviders.all { print("credential \(provider.id) detected=\(!provider.detect(layout: layout).isEmpty)") }
     exit(0)
 }
+// Launchpad on macOS 13–15: export the current user's layout, or rebuild a layout, restart the Dock and verify.
+//   MacReplicaSimulator launchpad-export <file.json>
+//   MacReplicaSimulator launchpad-apply <file.json>     (prints MATCH when the Dock shows the layout afterwards)
+if arguments.first == "launchpad-export" || arguments.first == "launchpad-apply", arguments.count == 2 {
+    guard let store = LaunchpadStore.live() else { print("no Launchpad database location"); exit(2) }
+    let work = FileManager.default.temporaryDirectory.appendingPathComponent("mr-launchpad-\(getpid())")
+    let file = URL(fileURLWithPath: arguments[1])
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    if arguments.first == "launchpad-export" {
+        let layout = try store.read(macOSVersion: SystemInfo.macOSVersion, work: work)
+        try encoder.encode(layout).write(to: file)
+        print("exported \(layout.pages.count) pages, folders: \(layout.folderNames)")
+        exit(0)
+    }
+    let layout = try JSONDecoder().decode(LaunchpadLayout.self, from: Data(contentsOf: file))
+    let placed = try store.apply(layout)
+    let killall = Process()
+    killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+    killall.arguments = ["Dock"]
+    try killall.run()
+    killall.waitUntilExit()
+    try await Task.sleep(nanoseconds: 10_000_000_000)
+    let after = try store.read(macOSVersion: SystemInfo.macOSVersion, work: work)
+    try encoder.encode(after).write(to: file.deletingPathExtension().appendingPathExtension("after.json"))
+    let installed = Set(after.pages.flatMap { $0 }.flatMap { entry -> [String] in
+        if case .folder(_, let pages) = entry { return pages.flatMap { $0 } }
+        if case .app(let id) = entry { return [id] }
+        return []
+    })
+    print("placed \(placed) apps; after the Dock restart: \(after.pages.count) pages, folders: \(after.folderNames)")
+    print(layout.matches(after, installed: installed) ? "MATCH" : "MISMATCH")
+    exit(layout.matches(after, installed: installed) ? 0 : 1)
+}
+
 // Checks the live ColorSync access without changing anything visible: every connected display that has a
 // custom profile gets that same profile assigned again, and the assignment is read back. Prints no names.
 if arguments.first == "display-check-live" {

@@ -1,39 +1,60 @@
-name: Launchpad probe
+name: Launchpad validation
 
-# Manual only: inspects the Launchpad database on macOS 14 and 15 runners (schema, item types, structure)
-# for MacReplica's Launchpad layout support. Changes nothing.
+# Validates MacReplica's Launchpad layout restore on real macOS 14 and 15: Launchpad is reset to Apple's default
+# (as after a fresh installation), a recorded layout is rebuilt, the Dock restarts, and the layout is read back
+# and photographed. Runs only on demand and for changes of this file on the feature branch.
 on:
   workflow_dispatch:
   push:
     branches: [feature/knut-round3]
-    paths: [.github/workflows/launchpad-probe.yml]
+    paths: [.github/workflows/launchpad-probe.yml, Sources/MacReplicaCore/Launchpad/**, Sources/MacReplicaSimulator/main.swift]
 
 permissions:
   contents: read
 
 jobs:
-  probe:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - run: swift build -c release --arch arm64 --product MacReplicaSimulator && cp "$(swift build -c release --arch arm64 --show-bin-path)/MacReplicaSimulator" simulator
+      - uses: actions/upload-artifact@v7
+        with:
+          name: simulator
+          path: simulator
+
+  validate:
+    needs: build
     strategy:
       fail-fast: false
       matrix:
         os: [macos-14, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Launchpad database
+      - uses: actions/download-artifact@v8
+        with:
+          name: simulator
+      - name: Reset, rebuild, restart the Dock, read back
         run: |
-          sw_vers
-          ls /System/Applications | grep -i launchpad || echo "no Launchpad.app"
-          pgrep -l Dock || echo "Dock not running"
-          DIR="$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db"
-          echo "folder: $DIR"; ls -la "$DIR" || true
-          # Launchpad creates its database when it is opened the first time.
-          if [ ! -f "$DIR/db" ]; then open -a Launchpad || true; sleep 8; osascript -e 'tell application "System Events" to key code 53' || true; sleep 2; ls -la "$DIR" || true; fi
-          [ -f "$DIR/db" ] || exit 0
-          cp "$DIR"/db* "$RUNNER_TEMP"/ && DB="$RUNNER_TEMP/db"
-          sqlite3 "$DB" ".schema"
-          echo "--- dbinfo"; sqlite3 "$DB" "select * from dbinfo;"
-          echo "--- item types"; sqlite3 "$DB" "select type, count(*) from items group by type;"
-          echo "--- special items"; sqlite3 "$DB" "select rowid, uuid, type, parent_id, ordering from items where uuid in ('ROOTPAGE','HOLDINGPAGE','HOLDINGPAGE_VERSION') or parent_id=0;"
-          echo "--- pages and folders"; sqlite3 "$DB" "select i.rowid, i.type, i.parent_id, i.ordering, g.title from items i left join groups g on g.item_id=i.rowid where i.type not in (4) order by i.parent_id, i.ordering limit 60;"
-          echo "--- first apps"; sqlite3 "$DB" "select i.rowid, i.parent_id, i.ordering, a.bundleid from items i join apps a on a.item_id=i.rowid order by i.parent_id, i.ordering limit 25;"
-          echo "--- triggers"; sqlite3 "$DB" "select name from sqlite_master where type='trigger';"
+          chmod +x simulator; sw_vers
+          ./simulator launchpad-export original.json
+          # A fresh installation: Launchpad in Apple's default arrangement.
+          defaults write com.apple.dock ResetLaunchPad -bool true; killall Dock; sleep 12
+          ./simulator launchpad-export fresh.json
+          cat > recorded.json <<'JSON'
+          {"macOSVersion": "14", "pages": [
+            [{"folder": {"name": "MacReplica Test", "pages": [["com.apple.Safari", "com.apple.Notes", "com.apple.TextEdit"]]}},
+             {"app": {"_0": "com.apple.AppStore"}}, {"app": {"_0": "com.apple.mail"}}],
+            [{"folder": {"name": "Werkzeuge & Co", "pages": [["com.apple.calculator", "com.apple.Preview"]]}}]
+          ]}
+          JSON
+          ./simulator launchpad-apply recorded.json
+          open -a Launchpad; sleep 4; screencapture -x launchpad.png || true
+          osascript -e 'tell application "System Events" to key code 53' || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: launchpad-${{ matrix.os }}
+          path: |
+            *.json
+            launchpad.png
