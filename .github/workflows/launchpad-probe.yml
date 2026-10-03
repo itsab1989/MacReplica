@@ -40,6 +40,8 @@ jobs:
           ./simulator launchpad-export original.json
           # A fresh installation: Launchpad in Apple's default arrangement.
           defaults write com.apple.dock ResetLaunchPad -bool true; killall Dock; sleep 12
+          echo "ResetLaunchPad after the reset: $(defaults read com.apple.dock ResetLaunchPad 2>&1)"
+          defaults delete com.apple.dock ResetLaunchPad 2>/dev/null || true
           ./simulator launchpad-export fresh.json
           DB="$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db"
           mkdir -p dbs/fresh && cp "$DB"/db* dbs/fresh/
@@ -52,6 +54,8 @@ jobs:
           JSON
           ./simulator launchpad-apply recorded.json || true
           mkdir -p dbs/after && cp "$DB"/db* dbs/after/
+          echo "second application:"; ./simulator launchpad-apply recorded.json || true
+          killall Dock; sleep 10; echo "after another normal Dock restart:"; ./simulator launchpad-export restart.json
           open -a Launchpad; sleep 4; screencapture -x launchpad.png || true
           osascript -e 'tell application "System Events" to key code 53' || true
       - uses: actions/upload-artifact@v7
