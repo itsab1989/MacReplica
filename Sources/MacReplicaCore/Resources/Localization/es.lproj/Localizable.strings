@@ -1046,10 +1046,12 @@
 "failure.permissionDenied.explanation" = "MacReplica no puede escribir en la carpeta de esta app. Reinstala la app (su instalador prepara la carpeta) o copia los archivos de la copia con una cuenta de administrador y luego usa Reintentar elementos fallidos.";
 "items.appVersion" = "Restaurar para:";
 "items.appVersion.notInstalled" = "%1$@ (no está en este Mac)";
-"items.decision.appData" = "%1$d archivos son distintos en este Mac:";
 "items.decision.appData.keep" = "Conservar los de este Mac y añadir el resto";
 "items.decision.appData.replace" = "Sustituir por la copia (los antiguos se guardan aparte)";
 "items.decision.appData.skip" = "Omitir este elemento";
 "items.appData.summary" = "%1$d nuevos, %2$d idénticos, %3$d distintos de este Mac:";
 "items.appData.differentFile" = "%1$@ – copia %2$@, %3$@ · este Mac %4$@, %5$@";
 "items.appData.moreFiles" = "y %1$d más";
+"appData.shippedLeftOut" = "Se omiten %1$d archivos que vienen con %2$@: su instalador los vuelve a poner.";
+"items.differ.one" = "%1$d archivo es distinto en este Mac:";
+"items.differ.other" = "%1$d archivos son distintos en este Mac:";

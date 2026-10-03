@@ -1046,10 +1046,12 @@
 "failure.permissionDenied.explanation" = "MacReplica mag niet schrijven in de map van deze app. Installeer de app opnieuw (het installatieprogramma maakt de map aan) of kopieer de bestanden met een beheerdersaccount uit de reservekopie en gebruik daarna Mislukte onderdelen opnieuw proberen.";
 "items.appVersion" = "Herstellen voor:";
 "items.appVersion.notInstalled" = "%1$@ (niet op deze Mac)";
-"items.decision.appData" = "%1$d bestanden verschillen op deze Mac:";
 "items.decision.appData.keep" = "Bestanden van deze Mac houden, de rest toevoegen";
 "items.decision.appData.replace" = "Vervangen door de reservekopie (oude bestanden worden bewaard)";
 "items.decision.appData.skip" = "Dit onderdeel overslaan";
 "items.appData.summary" = "%1$d nieuw, %2$d identiek, %3$d anders dan op deze Mac:";
 "items.appData.differentFile" = "%1$@ – reservekopie %2$@, %3$@ · deze Mac %4$@, %5$@";
 "items.appData.moreFiles" = "en nog %1$d";
+"appData.shippedLeftOut" = "%1$d bestanden die bij %2$@ horen, worden weggelaten – het installatieprogramma zet ze terug.";
+"items.differ.one" = "%1$d bestand verschilt op deze Mac:";
+"items.differ.other" = "%1$d bestanden verschillen op deze Mac:";

@@ -161,9 +161,14 @@ struct AppDataRow: View {
                     if folder.profile?.mustBeClosed == true {
                         Text(l.t("appData.mustBeClosed", folder.profile?.appName ?? "")).font(.caption).foregroundStyle(.secondary)
                     }
+                    if let shipped = folder.shippedFilesLeftOut {
+                        Text(l.t("appData.shippedLeftOut", shipped, folder.profile?.appName ?? "")).font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             .toggleStyle(.checkbox)
+            .accessibilityIdentifier("appData.\(folder.profile.map { "\($0.provider).\($0.category)" } ?? folder.id)")
             Spacer()
             Text(l.t("appData.summary", l.p("guide.appData.files", folder.files.count), l.fileSize(folder.totalSize)))
                 .font(.callout).foregroundStyle(.secondary)

@@ -1046,10 +1046,12 @@
 "failure.permissionDenied.explanation" = "MacReplica har ikke lov til å skrive til mappen til denne appen. Installer appen på nytt (installasjonsprogrammet setter opp mappen) eller kopier filene fra sikkerhetskopien med en administratorkonto, og bruk deretter Prøv mislykkede på nytt.";
 "items.appVersion" = "Gjenopprett for:";
 "items.appVersion.notInstalled" = "%1$@ (ikke på denne Macen)";
-"items.decision.appData" = "%1$d filer er annerledes på denne Macen:";
 "items.decision.appData.keep" = "Behold filene på denne Macen, legg til resten";
 "items.decision.appData.replace" = "Erstatt med sikkerhetskopien (gamle filer tas vare på)";
 "items.decision.appData.skip" = "Hopp over dette elementet";
 "items.appData.summary" = "%1$d nye, %2$d identiske, %3$d forskjellige fra denne Macen:";
 "items.appData.differentFile" = "%1$@ – sikkerhetskopi %2$@, %3$@ · denne Macen %4$@, %5$@";
 "items.appData.moreFiles" = "og %1$d til";
+"appData.shippedLeftOut" = "%1$d filer som følger med %2$@, utelates – installasjonsprogrammet legger dem tilbake.";
+"items.differ.one" = "%1$d fil er annerledes på denne Macen:";
+"items.differ.other" = "%1$d filer er annerledes på denne Macen:";

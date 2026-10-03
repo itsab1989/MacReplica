@@ -470,7 +470,7 @@ struct AppDataChoicesView: View {
             }
             if !comparison.differentFiles.isEmpty {
                 HStack {
-                    Text(l.t("items.decision.appData", comparison.differentFiles.count)).font(.caption).foregroundStyle(.secondary)
+                    Text(l.p("items.differ", comparison.differentFiles.count)).font(.caption).foregroundStyle(.secondary)
                     Picker(l.t("items.decision"), selection: Binding(
                         get: { model.selection.conflictOverrides[item.id] ?? .keepExisting },
                         set: { model.selection.conflictOverrides[item.id] = $0 })) {

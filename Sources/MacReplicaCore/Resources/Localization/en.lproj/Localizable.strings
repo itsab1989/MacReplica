@@ -1048,10 +1048,12 @@
 "failure.permissionDenied.explanation" = "MacReplica may not write to this app's folder. Reinstall the app (its installer sets up the folder) or copy the files from the backup with an administrator account, then use Retry Failed Items.";
 "items.appVersion" = "Restore for:";
 "items.appVersion.notInstalled" = "%1$@ (not on this Mac)";
-"items.decision.appData" = "%1$d files differ on this Mac:";
 "items.decision.appData.keep" = "Keep this Mac's files, add the rest";
 "items.decision.appData.replace" = "Replace with the backup (old files are kept aside)";
 "items.decision.appData.skip" = "Skip this item";
 "items.appData.summary" = "%1$d new, %2$d identical, %3$d different from this Mac:";
 "items.appData.differentFile" = "%1$@ – backup %2$@, %3$@ · this Mac %4$@, %5$@";
 "items.appData.moreFiles" = "and %1$d more";
+"appData.shippedLeftOut" = "%1$d files that come with %2$@ are left out – its installer puts them back.";
+"items.differ.one" = "%1$d file differs on this Mac:";
+"items.differ.other" = "%1$d files differ on this Mac:";
