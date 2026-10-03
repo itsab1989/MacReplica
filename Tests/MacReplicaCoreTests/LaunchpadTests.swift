@@ -29,6 +29,7 @@ struct LaunchpadTests {
         let placed = try LaunchpadStore(database: db).apply(recorded)
         #expect(placed == 5, "every recorded app that is installed here")
         #expect(SyntheticLaunchpad.appRows(db) == before, "the Dock's app entries are moved, never deleted")
+        #expect(SyntheticLaunchpad.containersWithoutGroupRow(db) == 0, "like the Dock, every page and folder has its groups row")
         let after = try LaunchpadStore(database: db).read(macOSVersion: "14.8.9", work: sandbox.url.appendingPathComponent("work"))
         #expect(recorded.matches(after, installed: Set(installed)))
         #expect(after.pages.count == 3, "the two recorded pages, then the apps that were not in the layout")

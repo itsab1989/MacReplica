@@ -55,6 +55,7 @@ public enum SyntheticLaunchpad {
     END;
     INSERT INTO dbinfo VALUES ('ignore_items_update_triggers','0'), ('launchpad_root','1'), ('launchpad_version_root','5');
     INSERT INTO items VALUES (1,'ROOTPAGE',0,1,0,0), (2,'HOLDINGPAGE',0,3,1,0), (5,'ROOTPAGE_VERS',0,1,0,0), (6,'P-VERS',0,3,5,0);
+    INSERT INTO groups VALUES (1,NULL,NULL), (2,NULL,NULL), (5,NULL,NULL), (6,NULL,NULL);
     """
 
     /// Creates the database with `apps` on one page and `folder` apps in a folder named "Other" at the end of it.
@@ -67,14 +68,14 @@ public enum SyntheticLaunchpad {
         defer { sqlite3_close(db) }
         var sql = schema + "UPDATE dbinfo SET value=1 WHERE key='ignore_items_update_triggers';\n"
         var id = 100
-        sql += "INSERT INTO items VALUES (10,'PAGE1',0,3,1,1);\n"
+        sql += "INSERT INTO items VALUES (10,'PAGE1',0,3,1,1); INSERT INTO groups VALUES (10,NULL,NULL);\n"
         for (index, bundle) in apps.enumerated() {
             id += 1
             sql += "INSERT INTO items VALUES (\(id),'A\(id)',0,4,10,\(index)); INSERT INTO apps VALUES (\(id),'\(bundle)','\(bundle)',NULL,NULL,0,NULL);\n"
         }
         if !folder.isEmpty {
             sql += "INSERT INTO items VALUES (20,'F20',0,2,10,\(apps.count)); INSERT INTO groups VALUES (20,NULL,'Other');\n"
-            sql += "INSERT INTO items VALUES (21,'F21',0,3,20,0);\n"
+            sql += "INSERT INTO items VALUES (21,'F21',0,3,20,0); INSERT INTO groups VALUES (21,NULL,NULL);\n"
             for (index, bundle) in folder.enumerated() {
                 id += 1
                 sql += "INSERT INTO items VALUES (\(id),'A\(id)',0,4,21,\(index)); INSERT INTO apps VALUES (\(id),'\(bundle)','\(bundle)',NULL,NULL,0,NULL);\n"
@@ -97,6 +98,19 @@ public enum SyntheticLaunchpad {
         defer { sqlite3_close(db) }
         var statement: OpaquePointer?
         sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM apps", -1, &statement, nil)
+        defer { sqlite3_finalize(statement) }
+        return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int(statement, 0)) : -1
+    }
+}
+
+extension SyntheticLaunchpad {
+    /// Pages and folders that have no row in `groups` (the Dock treats such a page as broken).
+    public static func containersWithoutGroupRow(_ url: URL) -> Int {
+        var db: OpaquePointer?
+        guard sqlite3_open(url.path, &db) == SQLITE_OK, let db else { return -1 }
+        defer { sqlite3_close(db) }
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM items i WHERE i.type IN (2,3) AND NOT EXISTS (SELECT 1 FROM groups g WHERE g.item_id=i.rowid)", -1, &statement, nil)
         defer { sqlite3_finalize(statement) }
         return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int(statement, 0)) : -1
     }

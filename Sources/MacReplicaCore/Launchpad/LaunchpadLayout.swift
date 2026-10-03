@@ -179,9 +179,13 @@ public struct LaunchpadStore: Sendable {
             // New pages start after every existing one: deleting the old pages afterwards (the database's trigger
             // closes the gaps) leaves them in order right after the holding page.
             var pageIndex = (try Int(scalar(db, "SELECT IFNULL(MAX(ordering),0) FROM items WHERE parent_id=\(root)") ?? "0") ?? 0)
-            func newItem(type: Int, parent: Int, ordering: Int) throws -> Int {
+            // Every container (page or folder) has a row in `groups` as well – the name for folders, none for pages.
+            // The Dock rebuilds a first page of its own if a page lacks it.
+            func newItem(type: Int, parent: Int, ordering: Int, title: String? = nil) throws -> Int {
                 try exec(db, "INSERT INTO items (uuid, flags, type, parent_id, ordering) VALUES ('\(UUID().uuidString)', 0, \(type), \(parent), \(ordering))")
-                return Int(sqlite3_last_insert_rowid(db))
+                let id = Int(sqlite3_last_insert_rowid(db))
+                try exec(db, "INSERT INTO groups (item_id, category_id, title) VALUES (\(id), NULL, \(title.map(quoted) ?? "NULL"))")
+                return id
             }
             func move(_ item: Int, to parent: Int, ordering: Int) throws {
                 try exec(db, "UPDATE items SET parent_id=\(parent), ordering=\(ordering) WHERE rowid=\(item)")
@@ -200,8 +204,7 @@ public struct LaunchpadStore: Sendable {
                     case .folder(let name, let folderPages):
                         let items = folderPages.map { $0.compactMap { appItem[$0] }.filter { !placed.contains($0) } }.filter { !$0.isEmpty }
                         guard !items.isEmpty else { continue }
-                        let folder = try newItem(type: 2, parent: pageID, ordering: slot)
-                        try exec(db, "INSERT INTO groups (item_id, category_id, title) VALUES (\(folder), NULL, \(quoted(name)))")
+                        let folder = try newItem(type: 2, parent: pageID, ordering: slot, title: name)
                         slot += 1
                         for (index, apps) in items.enumerated() {
                             let inner = try newItem(type: 3, parent: folder, ordering: index)
