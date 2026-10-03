@@ -62,11 +62,13 @@ public enum AppDataProviders {
 
 /// Detects services that need a new sign-in or a manual export on the new Mac.
 public enum GuidanceDetector {
-    public static func detect(layout: SystemLayout, installedBundleIDs: Set<String>,
+    public static func detect(layout: SystemLayout, installedBundleIDs: Set<String>, installedAppNames: Set<String> = [],
                               catalog: [MigrationGuidance] = GuidanceCatalog.entries) -> [GuidanceRecord] {
         let lowered = Set(installedBundleIDs.map { $0.lowercased() })
+        let names = Set(installedAppNames.map { $0.lowercased() })
         return catalog.compactMap { entry in
             let installed = entry.bundleIdentifiers.contains { lowered.contains($0.lowercased()) }
+                || entry.appNames.contains { names.contains($0.lowercased()) }
             let configured = entry.paths.contains { path in
                 PathSafety.isSafeRelativePath(path)
                     && FileManager.default.fileExists(atPath: layout.homeDirectory.appendingPathComponent(path).path)

@@ -29,7 +29,7 @@ struct ProviderCatalogTests {
         }
         for entry in GuidanceCatalog.entries {
             #expect(!entry.evidence.isEmpty && entry.evidence.allSatisfy { $0.url.hasPrefix("https://") }, "\(entry.id) cites a source")
-            #expect(!entry.bundleIdentifiers.isEmpty || !entry.paths.isEmpty, "\(entry.id) can be detected")
+            #expect(!entry.bundleIdentifiers.isEmpty || !entry.paths.isEmpty || !entry.appNames.isEmpty, "\(entry.id) can be detected")
             if entry.kind == .manualMigration { #expect(Self.english["guidance.manual.\(entry.id)"] != nil, "\(entry.id) instructions") }
         }
         for provider in CredentialProviders.all {

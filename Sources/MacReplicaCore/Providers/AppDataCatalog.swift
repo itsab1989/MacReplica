@@ -587,6 +587,22 @@ public enum GuidanceCatalog {
                url: "https://affinity.help/photo2/English.lproj/pages/Addons/exportingAddons.html"),
         manual("premierePro", "Adobe Premiere Pro", ids: ["com.adobe.PremierePro"],
                url: "https://helpx.adobe.com/premiere/desktop/get-started/keyboard-shortcuts/copy-keyboard-shortcuts-from-one-computer-to-another.html"),
+        manual("synologyDrive", "Synology Drive Client", ids: ["com.synology.CloudStationUI", "com.synology.SynologyDrive"],
+               paths: ["Library/Application Support/SynologyDrive"],
+               url: "https://kb.synology.com/en-global/DSM/help/SynologyDriveClient/synologydriveclient"),
+        manual("calibrationSoftware", "Calibrite PROFILER / i1Profiler", ids: ["com.xrite.i1Profiler"],
+               url: "https://calibrite.com/calibrite-technical-support/calibrite-profiler-technical-support/",
+               names: ["Calibrite PROFILER", "i1Profiler", "ColorChecker Display"]),
+        manual("benqPaletteMaster", "BenQ Palette Master",
+               url: "https://www.benq.com/en-us/support/downloads-faq/faq/product/application/monitor-faq-kn-00065.html",
+               names: ["Palette Master Element", "Palette Master Ultimate"]),
+        manual("xppenDriver", "XP-Pen tablet driver", ids: ["com.ugee.PenTablet", "com.ugee.PenTabletDriverPro"], paths: [".XPPen"],
+               url: "https://www.xp-pen.com/Uploads/images/manual/artistpro16/en/Artist%20Pro%2016%20(English).pdf"),
+        manual("mailAccounts", "Mail accounts", ids: ["com.apple.mail"], paths: ["Library/Mail"],
+               url: "https://support.apple.com/en-us/102613"),
+        manual("officeActivation", "Microsoft Office sign-in or activation",
+               ids: ["com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.Outlook", "com.microsoft.onenote.mac"],
+               url: "https://support.microsoft.com/en-us/office/activate-office-5bd38f38-db92-448b-a982-ad170b1e187e"),
         manual("resolveLibrary", "DaVinci Resolve (PowerGrades, render and project presets, projects)",
                ids: ["com.blackmagic-design.DaVinciResolve", "com.blackmagic-design.DaVinciResolveLite"],
                url: "https://documents.blackmagicdesign.com/UserManuals/DaVinci_Resolve_20_Reference_Manual.pdf"),
@@ -597,8 +613,8 @@ public enum GuidanceCatalog {
                           evidence: [Evidence(title: name, url: url)])
     }
 
-    static func manual(_ id: String, _ name: String, ids: [String] = [], paths: [String] = [], url: String) -> MigrationGuidance {
+    static func manual(_ id: String, _ name: String, ids: [String] = [], paths: [String] = [], url: String, names: [String] = []) -> MigrationGuidance {
         MigrationGuidance(id: id, name: name, kind: .manualMigration, bundleIdentifiers: ids, paths: paths,
-                          evidence: [Evidence(title: name, url: url)])
+                          evidence: [Evidence(title: name, url: url)], appNames: names)
     }
 }

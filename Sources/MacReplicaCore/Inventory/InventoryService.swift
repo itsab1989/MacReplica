@@ -302,7 +302,8 @@ public struct InventoryService: Sendable {
         manifest.hardwareKeys = keys
         manifest.displayProfiles = DisplayProfileScanner.assignments(displays: displayManager.displays(), profiles: profiles.map(\.record),
                                                                      layout: layout, keys: keys)
-        manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)))
+        manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)),
+                                                    installedAppNames: Set(apps.map(\.name)))
         var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)
         // Known user-created data of supported apps (presets, styles, LUTs …) is suggested automatically.
         for var detected in detectedData {

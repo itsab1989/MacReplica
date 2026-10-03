@@ -255,6 +255,8 @@ public struct MigrationGuidance: Sendable {
     /// … or one of these paths (below the home folder) exists.
     public var paths: [String]
     public var evidence: [Evidence]
+    /// … or an app with one of these names is installed (for apps whose bundle identifier is not documented).
+    public var appNames: [String] = []
 }
 
 /// Manifest entry for a detected service that needs re-authentication or a manual step.
