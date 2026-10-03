@@ -368,6 +368,10 @@ public enum ResultNote: Codable, Equatable, Sendable {
     /// Cryptomator: registered vaults whose folder was found, and the names of those that were not
     /// (on a drive that is not connected, or moved): the user adds them again in Cryptomator.
     case vaultsRegistered(found: Int, missing: [String])
+    /// A further package of the user's own installers (e.g. an activation package) was opened in Installer and
+    /// confirmed by the user; MacReplica cannot check a licence itself.
+    case additionalPackageOpened(name: String)
+    case additionalPackageNotInstalled(name: String)
 }
 
 public struct RestoreSummary: Equatable, Sendable {

@@ -32,6 +32,8 @@ public enum GuidedStep: Equatable, Sendable {
     case installFromAppStore
     /// No official source is known: the user installs the app the way they got it originally.
     case installYourself
+    /// A further package of the user's own installers (e.g. an activation package) is open in Installer.
+    case finishAdditionalPackage(String)
     case runCommand(String)
 }
 
@@ -107,6 +109,8 @@ public actor GuidedInstallation {
             guard offer.isDownloadable else {
                 return await waitForUser(item, step: .installFromWebsite, interaction: interaction, isInstalled: isInstalled)
             }
+        case .ownInstaller:
+            return await installOwn(item, offer: offer, interaction: interaction, isInstalled: isInstalled)
         }
 
         set(item.id, .downloading)
@@ -129,13 +133,17 @@ public actor GuidedInstallation {
             switch try await installer.prepare(file, offer: offer, staging: staging) {
             case .application(let bundle, let mountPoint):
                 set(item.id, .installing)
-                defer { if let mountPoint { Task { await installer.detach(mountPoint) } } }
                 do {
                     _ = try installer.installApplication(bundle, source: offer.url)
                 } catch DownloadError.applicationsFolderNotWritable {
+                    // The user drags the app out of the open image, so it stays mounted for them.
                     await interaction.openInFinder(bundle)
                     return await waitForUser(item, step: .installFromDiskImage, interaction: interaction, isInstalled: isInstalled)
+                } catch {
+                    if let mountPoint { await installer.detach(mountPoint) }
+                    throw error
                 }
+                if let mountPoint { await installer.detach(mountPoint) }
                 guard let version = isInstalled(item) else { return failed(item, .noApplicationFound) }
                 log?.info("\(item.id): installed \(version ?? "")", component: .downloads)
                 return finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version ?? nil))
@@ -154,6 +162,73 @@ public actor GuidedInstallation {
             try? FileManager.default.removeItem(at: file)
             return failed(item, .extractionFailed(String(describing: error)))
         }
+    }
+
+    /// The user's own installer: copied out of the backup or from its drive, checked against the checksum and
+    /// developer recorded on the old Mac, then installed like a verified download. Further packages (e.g. an
+    /// activation package) follow in Installer; their effect (a licence) cannot be checked by MacReplica.
+    private func installOwn(_ item: RestoreItem, offer: DownloadOffer, interaction: GuidedInstallInteraction,
+                            isInstalled: @escaping @Sendable (RestoreItem) -> String??) async -> ItemResult {
+        guard let path = offer.localPath, FileManager.default.fileExists(atPath: path) else { return failed(item, .noApplicationFound) }
+        set(item.id, .verifying)
+        let staging = installer.downloadsFolder.appendingPathComponent("own-" + Hashing.sha256Hex(of: Data(item.id.utf8)).prefix(16))
+        defer { try? FileManager.default.removeItem(at: staging) }
+        var result: ItemResult
+        do {
+            let copy = try Self.copyIntoStaging(URL(fileURLWithPath: path), staging: staging)
+            try installer.verifyFile(copy, offer: offer)
+            log?.info("\(item.id): own installer verified (checksum)", component: .downloads)
+            switch try await installer.prepare(copy, offer: offer, staging: staging) {
+            case .application(let bundle, let mountPoint):
+                set(item.id, .installing)
+                let installed = Result { try installer.installApplication(bundle, source: "file://" + path) }
+                if let mountPoint { await installer.detach(mountPoint) }
+                _ = try installed.get()
+                guard let version = isInstalled(item) else { return failed(item, .noApplicationFound) }
+                result = finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version ?? nil))
+            case .package(let package, _):
+                await interaction.openPackage(package)
+                result = await waitForUser(item, step: .finishInstaller, interaction: interaction, isInstalled: isInstalled)
+            case .openInFinder(let url, _):
+                await interaction.openInFinder(url)
+                result = await waitForUser(item, step: .installFromDiskImage, interaction: interaction, isInstalled: isInstalled)
+            }
+        } catch let error as DownloadError {
+            return failed(item, error)
+        } catch {
+            return failed(item, .extractionFailed(String(describing: error)))
+        }
+        guard result.outcome == .succeeded || result.outcome == .alreadyPresent else { return result }
+        var notes = result.notes
+        for package in offer.followUps ?? [] {
+            do {
+                let copy = try Self.copyIntoStaging(URL(fileURLWithPath: package.path), staging: staging.appendingPathComponent("followup"))
+                guard (try? Hashing.sha256Hex(ofFile: copy)) == package.sha256 else { throw DownloadError.checksumMismatch }
+                var check = offer
+                check.expectedTeamIdentifier = package.teamIdentifier
+                guard case .package(let opened, _) = try await installer.prepare(copy, offer: check, staging: staging.appendingPathComponent("followup")) else {
+                    throw DownloadError.untrustedPackage("not a package")
+                }
+                await interaction.openPackage(opened)
+                switch await interaction.waitForUser(itemID: item.id, step: .finishAdditionalPackage(package.name)) {
+                case .checkAgain: notes.append(.additionalPackageOpened(name: package.name))
+                default: notes.append(.additionalPackageNotInstalled(name: package.name))
+                }
+            } catch {
+                log?.warning("\(item.id): further package not opened (\(error))", component: .downloads)
+                notes.append(.additionalPackageNotInstalled(name: package.name))
+            }
+        }
+        result.notes = notes
+        return finish(item, result)
+    }
+
+    static func copyIntoStaging(_ file: URL, staging: URL) throws -> URL {
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+        let copy = staging.appendingPathComponent(file.lastPathComponent)
+        if FileManager.default.fileExists(atPath: copy.path) { try FileManager.default.removeItem(at: copy) }
+        try FileManager.default.copyItem(at: file, to: copy)
+        return copy
     }
 
     private func waitForDownload(_ id: String) async -> DownloadState? {

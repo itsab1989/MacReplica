@@ -30,7 +30,15 @@ extension Manifest {
 
     /// Every file stored in the backup that has a recorded checksum.
     public var allFileRecords: [FileRecord] {
-        fonts + iccProfiles + python.environments.flatMap(\.projectFiles) + applicationData.flatMap(\.files)
+        fonts + iccProfiles + python.environments.flatMap(\.projectFiles) + applicationData.flatMap(\.files) + installerRecords
+    }
+
+    /// The user's own installers that were copied into the backup.
+    public var installerRecords: [FileRecord] {
+        applications.flatMap { $0.ownInstallers ?? [] }.compactMap { archive in
+            archive.includedPath.map { FileRecord(fileName: archive.fileName, domain: .user, relativePath: archive.fileName,
+                                                  originalPath: archive.originalPath, backupPath: $0, sha256: archive.sha256, size: archive.size) }
+        }
     }
 }
 
@@ -110,6 +118,11 @@ public struct BackupWriter: Sendable {
             }
             for index in manifest.applicationData.indices {
                 manifest.applicationData[index].files.removeAll { failed.contains($0.backupPath) }
+            }
+            for index in manifest.applications.indices {
+                guard var installers = manifest.applications[index].ownInstallers else { continue }
+                for i in installers.indices where installers[i].includedPath.map(failed.contains) == true { installers[i].includedPath = nil }
+                manifest.applications[index].ownInstallers = installers
             }
             log.info("Copied \(files.count - failed.count) of \(files.count) files", component: .backup)
 

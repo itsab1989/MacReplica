@@ -116,6 +116,29 @@ public struct InventoryResult: Sendable {
         manifest.backupIssues += issues
     }
 
+    /// Attaches the user's own installers to an app (replacing earlier ones). Files marked for inclusion are
+    /// copied into the backup (`installers/<id>/<file>`) and checked like every other file.
+    public mutating func attachInstallers(_ installers: [(archive: InstallerArchive, file: URL, include: Bool)], toApp appID: String) {
+        guard let index = manifest.applications.firstIndex(where: { $0.id == appID }) else { return }
+        for old in manifest.applications[index].ownInstallers ?? [] where old.includedPath != nil {
+            extraFiles.removeAll { $0.record.backupPath == old.includedPath }
+        }
+        var archives: [InstallerArchive] = []
+        for (archive, file, include) in installers {
+            var entry = archive
+            entry.includedPath = nil
+            if include, PathSafety.isSafeRelativePath(archive.fileName), !archive.fileName.contains("/") {
+                let path = "installers/\(archive.id)/\(archive.fileName)"
+                entry.includedPath = path
+                let record = FileRecord(fileName: archive.fileName, domain: .user, relativePath: archive.fileName, originalPath: archive.originalPath,
+                                        backupPath: path, sha256: archive.sha256, size: archive.size)
+                if !extraFiles.contains(where: { $0.record.backupPath == path }) { extraFiles.append(ScannedFile(url: file, record: record)) }
+            }
+            archives.append(entry)
+        }
+        manifest.applications[index].ownInstallers = archives.isEmpty ? nil : archives
+    }
+
     public mutating func removeApplicationData(id: String) {
         guard let folder = manifest.applicationData.first(where: { $0.id == id }) else { return }
         let prefix = folder.displayPath + "/"

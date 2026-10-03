@@ -146,6 +146,7 @@ extension Localizer {
         case .homebrewCask: text = t("offer.homebrewCask", offer.host, version)
         case .vendorWebsite: text = t("offer.website", offer.host)
         case .appStore: text = t("offer.appStore")
+        case .ownInstaller: text = t("offer.ownInstaller", offer.localPath.map { ($0 as NSString).lastPathComponent } ?? "", version)
         }
         return offer.recommended ? t("offer.recommended", text) : text
     }
@@ -158,6 +159,7 @@ extension Localizer {
         case .installFromAppStore: return t("guidedStep.installFromAppStore")
         case .installYourself: return t("guidedStep.installYourself")
         case .runCommand(let command): return t("guidedStep.runCommand", command)
+        case .finishAdditionalPackage(let name): return t("guidedStep.finishAdditionalPackage", name)
         }
     }
 
@@ -204,6 +206,8 @@ extension Localizer {
         case .restoredIntoVersion(let original, let target): return t("note.restoredIntoVersion", original, target)
         case .vaultsRegistered(let found, let missing):
             return missing.isEmpty ? p("note.vaultsRegistered", found) : p("note.vaultsRegistered", found) + " " + t("note.vaultsMissing", missing.joined(separator: ", "))
+        case .additionalPackageOpened(let name): return t("note.additionalPackageOpened", name)
+        case .additionalPackageNotInstalled(let name): return t("note.additionalPackageNotInstalled", name)
         }
     }
 

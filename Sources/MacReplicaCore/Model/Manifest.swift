@@ -330,6 +330,9 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     /// Further copies of the same app (same bundle identifier) found in other places, e.g. an older one in
     /// `~/Applications`. The app is listed and restored once; these are shown so the user knows about them.
     public var otherCopies: [OtherCopy]? = nil
+    /// Installers the user keeps for this app, in the order they are run (e.g. the installer, then an
+    /// activation package). See `InstallerArchive`.
+    public var ownInstallers: [InstallerArchive]? = nil
 
     public struct OtherCopy: Codable, Equatable, Hashable, Sendable {
         public var path: String
