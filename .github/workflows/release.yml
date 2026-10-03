@@ -25,7 +25,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Version from the source (tag must match)
@@ -80,7 +80,7 @@ jobs:
           for f in MacReplica-*.dmg; do shasum -a 256 "$f" > "$f.sha256"; shasum -a 256 -c "$f.sha256"; done
       - name: Release notes
         run: scripts/release-notes.sh "${{ steps.version.outputs.version }}" "$HAS_NOTARIZATION" > build/release-notes.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release
           path: |
@@ -100,8 +100,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: release
           path: release
@@ -136,7 +136,7 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release
           path: release

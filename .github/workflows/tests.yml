@@ -22,7 +22,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Toolchain
         run: swift --version && sw_vers
       - name: Localization files are valid
@@ -44,7 +44,7 @@ jobs:
     runs-on: macos-15-intel
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Toolchain
         run: swift --version && sw_vers && uname -m
       - name: Unit, integration and end-to-end tests (native x86_64)
@@ -58,7 +58,7 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Gitleaks (full history)
@@ -84,7 +84,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 300
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Sampled mutation test of the critical modules
         run: |
           # Report only: with 12 sampled mutants per file, single equivalent mutants swing the per-file
@@ -95,7 +95,7 @@ jobs:
       - name: Summary
         if: always()
         run: test -f mutation-report/mutation-report.md && cat mutation-report/mutation-report.md >> "$GITHUB_STEP_SUMMARY" || true
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: mutation-report
