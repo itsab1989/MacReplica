@@ -95,42 +95,36 @@ public enum AppDataCatalog {
             limitations: ["Only Dynamic Profiles; iTerm2's own Export/Import All Settings covers everything else."]),
 
         // MARK: Creative applications
+        photoshopPresets(id: "adobe-photoshop", appName: "Adobe Photoshop", folderPattern: #"^Adobe Photoshop (\d{4}|CC \d{4}|CS\d)$"#),
+        photoshopSettings(id: "adobe-photoshop-settings", appName: "Adobe Photoshop", folderPattern: #"^Adobe Photoshop (\d{4}|CC \d{4}) Settings$"#),
+        // The beta keeps its own folders ("Adobe Photoshop (Beta)"), separate from the release, although the
+        // app has the same bundle ID. Its data only ever goes back into the beta's folders.
+        photoshopPresets(id: "adobe-photoshop-beta", appName: "Adobe Photoshop (Beta)", folderPattern: #"^Adobe Photoshop \(Beta\)$"#),
+        photoshopSettings(id: "adobe-photoshop-beta-settings", appName: "Adobe Photoshop (Beta)", folderPattern: #"^Adobe Photoshop \(Beta\) Settings$"#),
         AppDataProvider(
-            id: "adobe-photoshop", appName: "Adobe Photoshop", bundleIdentifiers: ["com.adobe.Photoshop"],
-            base: "Library/Application Support/Adobe", versionFolderPattern: #"^Adobe Photoshop (\d{4}|CC \d{4}|CS\d)$"#,
-            categories: [AppDataCategory("actions", "Presets/Actions"), AppDataCategory("brushes", "Presets/Brushes"),
-                         AppDataCategory("styles", "Presets/Styles"), AppDataCategory("gradients", "Presets/Gradients"),
-                         AppDataCategory("patterns", "Presets/Patterns"), AppDataCategory("swatches", "Presets/Color Swatches"),
-                         AppDataCategory("shapes", "Presets/Custom Shapes"), AppDataCategory("shortcuts", "Presets/Keyboard Shortcuts")],
-            mustBeClosed: true, status: .fixtureTested,
-            evidence: [Evidence(title: "Adobe: Back up and restore Photoshop preferences",
-                                url: "https://helpx.adobe.com/photoshop/desktop/get-started/settings-and-preferences/backup-and-restore-preferences.html"),
-                       Evidence(title: "Adobe: Migrate presets", url: "https://helpx.adobe.com/photoshop/using/preset-migration.html")],
-            researchedOn: researched,
-            limitations: ["Files in Presets are offered in the panel menus; they are not loaded into the panels automatically.",
+            id: "adobe-color-settings", appName: "Adobe color settings",
+            bundleIdentifiers: ["com.adobe.Photoshop", "com.adobe.illustrator", "com.adobe.InDesign", "com.adobe.LightroomClassicCC7"],
+            base: "Library/Application Support/Adobe/Color", versionFolderPattern: nil,
+            categories: [AppDataCategory("colorSettingsFiles", "Settings"), AppDataCategory("proofSetups", "Proofing")],
+            mustBeClosed: false, status: .fixtureTested,
+            evidence: [Evidence(title: "Adobe: Photoshop preference file names and locations (Userdefined.csf in Color/Settings)",
+                                url: "https://helpx.adobe.com/photoshop/kb/preference-file-names-locations-photoshop.html")],
+            researchedOn: researchedPS,
+            limitations: ["Shared by all Adobe apps; each app shows the files in Edit › Color Settings.",
                           "Adobe pages could only be read through search excerpts."]),
         AppDataProvider(
-            id: "adobe-photoshop-settings", appName: "Adobe Photoshop", bundleIdentifiers: ["com.adobe.Photoshop"],
-            base: "Library/Preferences", versionFolderPattern: #"^Adobe Photoshop (\d{4}|CC \d{4}) Settings$"#,
-            categories: [AppDataCategory("panelsAndWorkspaces", "", files: ["Actions Palette.psp", "Brushes.psp", "Swatches.psp", "Gradients.psp",
-                                                                          "Patterns.psp", "Styles.psp", "CustomShapes.psp"],
-                                         .compatibilitySensitive),
-                         AppDataCategory("workspaces", "WorkSpaces", .compatibilitySensitive)],
-            mustBeClosed: true, status: .fixtureTested,
-            evidence: [Evidence(title: "Adobe: Back up and restore Photoshop preferences",
-                                url: "https://helpx.adobe.com/photoshop/desktop/get-started/settings-and-preferences/backup-and-restore-preferences.html")],
-            researchedOn: researched,
-            limitations: ["Only for the same Photoshop version; caches (MachinePrefs, PluginCache, FMCache) are never copied."]),
-        AppDataProvider(
-            id: "adobe-camera-raw", appName: "Lightroom Classic / Camera Raw", bundleIdentifiers: ["com.adobe.LightroomClassicCC7"],
+            id: "adobe-camera-raw", appName: "Lightroom Classic / Camera Raw", bundleIdentifiers: ["com.adobe.LightroomClassicCC7", "com.adobe.Photoshop"],
             base: "Library/Application Support/Adobe/CameraRaw", versionFolderPattern: nil,
-            categories: [AppDataCategory("developPresets", "Settings"), AppDataCategory("cameraProfiles", "CameraProfiles")],
+            categories: [AppDataCategory("developPresets", "Settings"), AppDataCategory("cameraProfiles", "CameraProfiles"),
+                         AppDataCategory("rawDefaults", "Defaults")],
             mustBeClosed: true, status: .fixtureTested,
             evidence: [Evidence(title: "Adobe: Lightroom Classic preference and other file locations",
-                                url: "https://helpx.adobe.com/lightroom-classic/desktop/kb/preference-file-and-other-file-locations.html")],
+                                url: "https://helpx.adobe.com/lightroom-classic/desktop/kb/preference-file-and-other-file-locations.html"),
+                       Evidence(title: "Adobe: Camera Raw default settings (RawDefaults.xmp)", url: "https://helpx.adobe.com/camera-raw/kb/acr-raw-defaults.html")],
             researchedOn: researched,
             limitations: ["Catalogs (.lrcat) are databases and never copied.",
-                          "Presets stored with a catalog are not in this folder."]),
+                          "Presets stored with a catalog are not in this folder.",
+                          "Camera Raw is also used inside Photoshop, so the data is not restored while Photoshop is open either."]),
         AppDataProvider(
             id: "capture-one", appName: "Capture One", bundleIdentifiers: ["com.captureone.captureone16"],
             base: "Library/Application Support/Capture One", versionFolderPattern: nil,
@@ -144,16 +138,57 @@ public enum AppDataCatalog {
             researchedOn: researched,
             limitations: ["Catalogs and sessions are moved separately; activation is account-based."]),
         AppDataProvider(
-            id: "davinci-resolve", appName: "DaVinci Resolve",
-            bundleIdentifiers: ["com.blackmagic-design.DaVinciResolve", "com.blackmagic-design.DaVinciResolveLite"],
+            id: "davinci-resolve", appName: "DaVinci Resolve", bundleIdentifiers: resolveIDs,
             base: "Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion", versionFolderPattern: nil,
             categories: [AppDataCategory("fusionTemplates", "Templates"), AppDataCategory("fusionMacros", "Macros"),
-                         AppDataCategory("fuses", "Fuses")],
+                         AppDataCategory("fuses", "Fuses"), AppDataCategory("fusionSettings", "Settings"),
+                         AppDataCategory("fusionLUTs", "LUTs"),
+                         // Scripts can hold API keys or server addresses.
+                         AppDataCategory("fusionScripts", "Scripts", .mayContainSecrets)],
             mustBeClosed: true, status: .fixtureTested,
             evidence: [Evidence(title: "DaVinci Resolve 20 Reference Manual (Fusion template and macro folders)",
-                                url: "https://documents.blackmagicdesign.com/UserManuals/DaVinci_Resolve_20_Reference_Manual.pdf")],
-            researchedOn: researched,
-            limitations: ["LUTs are stored system-wide in /Library and PowerGrades in the project library; both need Resolve's own export."]),
+                                url: "https://documents.blackmagicdesign.com/UserManuals/DaVinci_Resolve_20_Reference_Manual.pdf")] + resolveEvidence,
+            researchedOn: researchedResolve,
+            limitations: ["Resolve scans templates and scripts when it starts.",
+                          "Fusion's DiskCache and profile preferences (machine paths) are never copied."]),
+        AppDataProvider(
+            id: "davinci-resolve-luts", appName: "DaVinci Resolve", bundleIdentifiers: resolveIDs,
+            base: "Application Support/Blackmagic Design/DaVinci Resolve/LUT", versionFolderPattern: nil,
+            categories: [AppDataCategory("luts", "")],
+            mustBeClosed: false, status: .fixtureTested, evidence: resolveEvidence, researchedOn: researchedResolve,
+            limitations: ["The LUT folder is shared by all users (/Library); Resolve's installer creates it, so the LUTs wait until Resolve is installed.",
+                          "LUTs that come with Resolve (listed in its installer receipt) are left out.",
+                          "Resolve shows new LUTs after a restart or Project Settings › Color Management › Update Lists.",
+                          "Additional LUT locations set in Preferences are machine paths and not restored."],
+            scope: .sharedLibrary, shippedByPackage: "com.blackmagic-design.Manifest", appMustBeInstalled: true),
+        AppDataProvider(
+            id: "davinci-resolve-aces", appName: "DaVinci Resolve", bundleIdentifiers: resolveIDs,
+            base: "Library/Application Support/Blackmagic Design/DaVinci Resolve/ACES Transforms", versionFolderPattern: nil,
+            categories: [AppDataCategory("acesTransforms", "")],
+            mustBeClosed: false, status: .fixtureTested, evidence: resolveEvidence, researchedOn: researchedResolve,
+            limitations: ["Resolve loads ACES transforms (IDT, ODT, AMF) when it starts."]),
+        AppDataProvider(
+            id: "davinci-resolve-fairlight", appName: "DaVinci Resolve", bundleIdentifiers: resolveIDs,
+            base: "Library/Application Support/Blackmagic Design/DaVinci Resolve/Fairlight", versionFolderPattern: nil,
+            categories: [AppDataCategory("fairlightPresets", "Presets")],
+            mustBeClosed: true, status: .fixtureTested, evidence: resolveEvidence, researchedOn: researchedResolve,
+            limitations: ["Plug-in scans, monitoring and control-surface settings are hardware-specific and never copied."]),
+        AppDataProvider(
+            id: "davinci-resolve-preferences", appName: "DaVinci Resolve", bundleIdentifiers: resolveIDs,
+            base: "Library/Preferences/Blackmagic Design/DaVinci Resolve", versionFolderPattern: nil,
+            categories: [AppDataCategory("keyboardPresets", "", files: ["keyboard.preset.xml"]),
+                         AppDataCategory("layoutPresets", "", files: ["UI.preset"]),
+                         AppDataCategory("userPreferencePresets", "", files: ["config.user.presets.xml"]),
+                         AppDataCategory("smartBins", "", files: ["usersmartfolder.xml", "usersmartfilter.xml"]),
+                         AppDataCategory("metadataPresets", "", files: ["mediametadata.preset.xml", "primaryhdr.preset.xml"]),
+                         // User preferences also hold absolute paths (project backups, last project).
+                         AppDataCategory("userPreferences", "", files: ["config.user.xml"], .compatibilitySensitive)],
+            mustBeClosed: true, status: .fixtureTested, evidence: resolveEvidence, researchedOn: researchedResolve,
+            limitations: ["Resolve rewrites these files when it quits, so it must be closed.",
+                          "Each file holds all presets of its kind and carries Resolve's database version: restored only into the same or a newer Resolve.",
+                          "System preferences (config.dat: GPU, video I/O, media storage, scripting), the project library list and the licence are never copied.",
+                          "PowerGrades, render presets and project presets are stored in the project library; see the guidance."],
+            appMustBeInstalled: true, notForOlderApp: true),
         AppDataProvider(
             id: "blender", appName: "Blender", bundleIdentifiers: ["org.blenderfoundation.blender"],
             base: "Library/Application Support/Blender", versionFolderPattern: #"^\d+\.\d+$"#,
@@ -202,6 +237,68 @@ public enum AppDataCatalog {
                           "Users who already sync Alfred preferences should point the new Mac to the sync folder instead.",
                           "The Powerpack licence must be entered again."]),
     ]
+
+    static let researchedPS = "2026-10-03"
+    static let researchedResolve = "2026-10-03"
+    static let resolveIDs = ["com.blackmagic-design.DaVinciResolve", "com.blackmagic-design.DaVinciResolveLite"]
+    static let resolveEvidence = [
+        Evidence(title: "DaVinci Resolve 21.1 Reference Manual (LUT folder p. 3484/4328, keyboard presets p. 122–124, layouts p. 60, Gallery p. 3342–3347, project libraries p. 4225–4227)",
+                 url: "https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion"),
+        Evidence(title: "DaVinci Resolve: Technical Documentation › User Configuration folders and customization (ships with Resolve)",
+                 url: "https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion"),
+    ]
+    static let photoshopEvidence = [
+        Evidence(title: "Adobe: Back up and restore Photoshop preferences",
+                 url: "https://helpx.adobe.com/photoshop/desktop/get-started/settings-and-preferences/backup-and-restore-preferences.html"),
+        Evidence(title: "Adobe: Migrate presets (files that can be copied from one installation to another)",
+                 url: "https://helpx.adobe.com/photoshop/using/preset-migration.html"),
+        Evidence(title: "Adobe: Photoshop beta – separate preferences", url: "https://helpx.adobe.com/photoshop/desktop/whats-new/photoshop-desktop-beta-overview.html"),
+    ]
+
+    /// `~/Library/Application Support/Adobe/<Photoshop>/Presets`: files the user saved from the panels. Adobe
+    /// names this folder as the place presets are saved to and loaded from; the files work in later versions.
+    static func photoshopPresets(id: String, appName: String, folderPattern: String) -> AppDataProvider {
+        let folders = [("actions", "Actions"), ("brushes", "Brushes"), ("styles", "Styles"), ("gradients", "Gradients"),
+                       ("patterns", "Patterns"), ("swatches", "Color Swatches"), ("shapes", "Custom Shapes"),
+                       ("shortcuts", "Keyboard Shortcuts"), ("toolPresets", "Tools"), ("contours", "Contours"),
+                       ("menuCustomization", "Menu Customization"), ("customToolbars", "Custom Toolbars"),
+                       ("curvesPresets", "Curves"), ("levelsPresets", "Levels"), ("hueSaturationPresets", "Hue and Saturation"),
+                       ("blackWhitePresets", "Black and White"), ("channelMixerPresets", "Channel Mixer"),
+                       ("exposurePresets", "Exposure"), ("selectiveColorPresets", "Selective Color"), ("duotonePresets", "Duotones")]
+        return AppDataProvider(
+            id: id, appName: appName, bundleIdentifiers: ["com.adobe.Photoshop"],
+            base: "Library/Application Support/Adobe", versionFolderPattern: folderPattern,
+            categories: folders.map { AppDataCategory($0.0, "Presets/" + $0.1, movesBetweenVersions: true) },
+            mustBeClosed: true, status: .fixtureTested, evidence: photoshopEvidence, researchedOn: researchedPS,
+            limitations: ["Files in Presets are offered in the panel menus; they are not loaded into the panels automatically.",
+                          "AutoRecover, font caches and downloaded modules next to Presets are never copied.",
+                          "Adobe pages could only be read through search excerpts."])
+    }
+
+    /// `~/Library/Preferences/<Photoshop> Settings`: the panel contents, workspaces and preferences.
+    static func photoshopSettings(id: String, appName: String, folderPattern: String) -> AppDataProvider {
+        AppDataProvider(
+            id: id, appName: appName, bundleIdentifiers: ["com.adobe.Photoshop"],
+            base: "Library/Preferences", versionFolderPattern: folderPattern,
+            categories: [
+                // Exactly the files Adobe lists as copyable "from one installation to another".
+                AppDataCategory("panelsAndWorkspaces", "", files: ["Actions Palette.psp", "Brushes.psp", "Swatches.psp", "Gradients.psp",
+                                                                 "Patterns.psp", "Styles.psp", "CustomShapes.psp", "Contours.psp",
+                                                                 "Default Type Styles.psp", "ToolPresets.psp"],
+                                movesBetweenVersions: true),
+                AppDataCategory("colorSettings", "", files: ["Color Settings.csf"], movesBetweenVersions: true),
+                AppDataCategory("workspaces", "WorkSpaces", .compatibilitySensitive),
+                AppDataCategory("modifiedWorkspaces", "WorkSpaces (Modified)", .compatibilitySensitive),
+                AppDataCategory("workspaceState", "", files: ["Workspace Prefs.psp"], .compatibilitySensitive),
+                AppDataCategory("documentPresets", "", files: ["New Doc Sizes.json", "Favorite New Doc Sizes.json"], .compatibilitySensitive),
+                // The Preferences dialog; contains paths (scratch disks, plug-ins), so only for the same version.
+                AppDataCategory("generalPreferences", "", files: ["{folder} Prefs.psp"], .compatibilitySensitive),
+            ],
+            mustBeClosed: true, status: .fixtureTested, evidence: photoshopEvidence, researchedOn: researchedPS,
+            limitations: ["Photoshop saves its preferences when it quits, so it must be closed during the restore.",
+                          "Machine and cache files (MachinePrefs, PluginCache, FMCache, sniffer logs, launch flags) are never copied.",
+                          "Workspaces, document presets and the Preferences dialog are offered for the same Photoshop version only (not selected by default)."])
+    }
 }
 
 /// Services that MacReplica detects only to tell the user what to do on the new Mac.
@@ -242,7 +339,7 @@ public enum GuidanceCatalog {
                url: "https://affinity.help/photo2/English.lproj/pages/Addons/exportingAddons.html"),
         manual("premierePro", "Adobe Premiere Pro", ids: ["com.adobe.PremierePro"],
                url: "https://helpx.adobe.com/premiere/desktop/get-started/keyboard-shortcuts/copy-keyboard-shortcuts-from-one-computer-to-another.html"),
-        manual("resolveLibrary", "DaVinci Resolve (LUTs, PowerGrades, projects)",
+        manual("resolveLibrary", "DaVinci Resolve (PowerGrades, render and project presets, projects)",
                ids: ["com.blackmagic-design.DaVinciResolve", "com.blackmagic-design.DaVinciResolveLite"],
                url: "https://documents.blackmagicdesign.com/UserManuals/DaVinci_Resolve_20_Reference_Manual.pdf"),
     ]

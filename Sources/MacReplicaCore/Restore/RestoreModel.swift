@@ -224,6 +224,8 @@ public enum FailureCategory: String, Codable, Sendable, CaseIterable {
     case pythonEnvironmentConflict
     case credentialCannotBeOpened
     case applicationRunning
+    /// A folder MacReplica must write to does not allow it.
+    case permissionDenied
     /// The version or package manager a step needs is not installed.
     case toolUnavailable
     /// A download did not pass verification (checksum, signature, vendor).
@@ -272,6 +274,10 @@ public enum SkipReason: Codable, Equatable, Sendable {
     case displayOfAnotherMac
     /// The assigned profile is neither in the backup nor on this Mac.
     case profileNotAvailable
+    /// The data belongs to an app that is not installed on this Mac yet; offered again when the restore continues.
+    case applicationNotInstalled(name: String)
+    /// The app on this Mac is older than the one the data came from; its files could not be read by it.
+    case applicationVersionOlder(name: String, installed: String, backup: String)
 }
 
 public enum ItemOutcome: Codable, Equatable, Sendable {
@@ -301,7 +307,8 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
     public var isOpen: Bool {
         guard case .skipped(let reason) = self else { return false }
         switch reason {
-        case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected: return true
+        case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected,
+             .applicationNotInstalled, .applicationVersionOlder: return true
         default: return false
         }
     }
@@ -354,6 +361,8 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case applicationDataCopied(copied: Int, identical: Int, kept: Int)
     /// Data was restored into the folder of a different app version than the one installed.
     case applicationVersionDiffers(original: String)
+    /// The app version of the backup is not on this Mac; the data went into another installed version.
+    case restoredIntoVersion(original: String, target: String)
 }
 
 public struct RestoreSummary: Equatable, Sendable {
@@ -391,7 +400,7 @@ extension ItemResult {
             case .userSkipped: return "skipped_by_user"
             case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile, .displayOfAnotherMac: return "incompatible"
             case .projectFolderMissing, .passphraseNotProvided, .manualStepRequired, .waitingForManualStep, .displayNotConnected,
-                 .profileNotAvailable: return "manual_action_required"
+                 .profileNotAvailable, .applicationNotInstalled, .applicationVersionOlder: return "manual_action_required"
             case .postponedByUser: return "postponed_by_user"
             case .cancelledByUser: return "cancelled_by_user"
             default: return "skipped"

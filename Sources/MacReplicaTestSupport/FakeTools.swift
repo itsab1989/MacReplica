@@ -472,6 +472,11 @@ enum FakeTools {
     #!/bin/bash
     . "${MACREPLICA_SIMULATION_ROOT:?}/tools/lib.sh"
     log_call "pkgutil $*"
+    if [ "${1:-}" = "--files" ]; then
+      if [ -f "$S/receipts/${2:-}" ]; then cat "$S/receipts/${2:-}"; exit 0; fi
+      echo "No receipt for '${2:-}' found at '/'." >&2
+      exit 1
+    fi
     if [ "${1:-}" = "--file-info" ]; then
       echo "volume: /"
       echo "path: ${2:-}"

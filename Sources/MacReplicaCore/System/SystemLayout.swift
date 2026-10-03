@@ -153,6 +153,12 @@ public struct SystemLayout: Sendable, Equatable {
 
     /// Replaces the home directory with `~` so that manifests, logs and reports
     /// never contain the user's account name.
+    /// `/Library`, the folder shared by all users (in a simulation or test sandbox, its stand-in next to the shared fonts).
+    public var sharedLibrary: URL { systemFonts.deletingLastPathComponent() }
+
+    /// The folder application data paths of a scope are relative to.
+    public func root(of scope: AppDataScope) -> URL { scope == .home ? homeDirectory : sharedLibrary }
+
     public func displayPath(_ url: URL) -> String {
         let redacted = Self.redactHome(url.standardizedFileURL.path, home: homeDirectory.standardizedFileURL.path)
         guard let root = simulationRoot?.standardizedFileURL.path, redacted.hasPrefix(root + "/") else { return redacted }

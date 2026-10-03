@@ -4,22 +4,31 @@ import Foundation
 public struct AppDataFolder: Codable, Equatable, Hashable, Sendable, Identifiable {
     public var id: String
     public var name: String
-    /// Path relative to the home folder, e.g. `Library/Application Support/Example Editor`.
+    /// Path relative to the home folder, e.g. `Library/Application Support/Example Editor`
+    /// (relative to `/Library` when `scope` is `.sharedLibrary`).
     public var relativePath: String
     /// Files inside the folder; `relativePath` of each file is relative to this folder.
     public var files: [FileRecord]
     /// Set when the folder was suggested by an application data profile.
     public var profile: AppDataProfileReference?
+    /// Nil (backups of earlier versions) means the home folder.
+    public var scope: AppDataScope?
+    /// Files in the folder that came with the app (listed in the installer receipt) and were left out.
+    public var shippedFilesLeftOut: Int?
 
-    public init(id: String, name: String, relativePath: String, files: [FileRecord], profile: AppDataProfileReference? = nil) {
+    public init(id: String, name: String, relativePath: String, files: [FileRecord], profile: AppDataProfileReference? = nil,
+                scope: AppDataScope? = nil, shippedFilesLeftOut: Int? = nil) {
         self.id = id
         self.name = name
         self.relativePath = relativePath
         self.files = files
         self.profile = profile
+        self.scope = scope == .home ? nil : scope
+        self.shippedFilesLeftOut = shippedFilesLeftOut
     }
 
-    public var displayPath: String { "~/" + relativePath }
+    public var effectiveScope: AppDataScope { scope ?? .home }
+    public var displayPath: String { effectiveScope == .home ? "~/" + relativePath : "/Library/" + relativePath }
     public var totalSize: Int64 { files.reduce(0) { $0 + $1.size } }
 }
 
@@ -28,6 +37,8 @@ public enum AppDataError: Error, Equatable, Sendable {
     case wholeHomeOrLibrary
     case sensitiveLocation(String)
     case notAFolder
+    /// A `/Library` location that is not a provider's application folder.
+    case notAProviderLocation
 }
 
 /// Collects files from a folder the user picked. MacReplica never copies all of
@@ -70,15 +81,31 @@ public struct AppDataScanner: Sendable {
         return relative
     }
 
+    /// Provider locations in `/Library` must be an application's own folder in Application Support
+    /// (at least two levels below it), never Application Support itself or anything else in `/Library`.
+    public func validateShared(_ folder: URL) throws -> String {
+        let support = layout.sharedLibrary.appendingPathComponent("Application Support").standardizedFileURL.resolvingSymlinksInPath().path
+        let path = folder.standardizedFileURL.resolvingSymlinksInPath().path
+        guard path.hasPrefix(support + "/"), path.dropFirst(support.count + 1).split(separator: "/").count >= 2 else {
+            throw AppDataError.notAProviderLocation
+        }
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { throw AppDataError.notAFolder }
+        let library = layout.sharedLibrary.standardizedFileURL.resolvingSymlinksInPath().path
+        return String(path.dropFirst(library.count + 1))
+    }
+
     static func isRefusedFile(_ name: String) -> Bool {
         refusedFilePatterns.contains { name.range(of: $0, options: .regularExpression) != nil }
     }
 
     /// - Parameter onlyFiles: restrict to these file names directly inside `folder` (for providers that list files).
-    public func scan(_ folder: URL, profile: AppDataProfileReference? = nil,
-                     onlyFiles: [String]? = nil, excluding: [String] = []) throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
-        let relative = try validate(folder)
-        var identity = relative
+    /// - Parameter shipped: paths relative to `folder` that came with the app (installer receipt); left out.
+    public func scan(_ folder: URL, profile: AppDataProfileReference? = nil, onlyFiles: [String]? = nil, excluding: [String] = [],
+                     scope: AppDataScope = .home, shipped: Set<String> = []) throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
+        let relative = scope == .home ? try validate(folder) : try validateShared(folder)
+        var identity = scope == .home ? relative : "/Library/" + relative
+        var shippedLeftOut = 0
         if let onlyFiles { identity += ":" + onlyFiles.joined(separator: ",") }
         let id = "appdata-" + String(Hashing.sha256Hex(of: Data(identity.utf8)).prefix(12))
         let base = folder.standardizedFileURL.resolvingSymlinksInPath()
@@ -94,6 +121,10 @@ public struct AppDataScanner: Sendable {
             guard let fileRelative = FileScanner.relativePath(of: url, below: base) else { continue }
             if let onlyFiles, !onlyFiles.contains(fileRelative) { continue }
             if !excluding.isEmpty, fileRelative.split(separator: "/").contains(where: { excluding.contains(String($0)) }) { continue }
+            if shipped.contains(fileRelative) {
+                shippedLeftOut += 1
+                continue
+            }
             if Self.isRefusedFile(url.lastPathComponent) {
                 issues.append(BackupIssue(path: layout.displayPath(url), reason: .refusedSensitive))
                 continue
@@ -108,7 +139,7 @@ public struct AppDataScanner: Sendable {
                 continue
             }
             total += size
-            let record = FileRecord(fileName: url.lastPathComponent, domain: .user, relativePath: fileRelative,
+            let record = FileRecord(fileName: url.lastPathComponent, domain: scope == .home ? .user : .system, relativePath: fileRelative,
                                     originalPath: layout.displayPath(url), backupPath: "application-data/\(id)/\(fileRelative)",
                                     sha256: hash, size: size, modifiedAt: values.contentModificationDate)
             files.append(ScannedFile(url: url, record: record))
@@ -116,7 +147,8 @@ public struct AppDataScanner: Sendable {
         files.sort { $0.record.relativePath < $1.record.relativePath }
         // "Adobe Photoshop 2025 · Actions": app (version) and the real folder name, language independent.
         let name = profile.map { "\($0.appVersion ?? $0.appName) · \(base.lastPathComponent)" } ?? base.lastPathComponent
-        let folderRecord = AppDataFolder(id: id, name: name, relativePath: relative, files: files.map(\.record), profile: profile)
+        let folderRecord = AppDataFolder(id: id, name: name, relativePath: relative, files: files.map(\.record), profile: profile,
+                                         scope: scope, shippedFilesLeftOut: shippedLeftOut > 0 ? shippedLeftOut : nil)
         return (folderRecord, files, issues)
     }
 }

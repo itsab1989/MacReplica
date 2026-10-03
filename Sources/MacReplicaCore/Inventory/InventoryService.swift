@@ -116,7 +116,7 @@ public struct InventoryResult: Sendable {
 
     public mutating func removeApplicationData(id: String) {
         guard let folder = manifest.applicationData.first(where: { $0.id == id }) else { return }
-        let prefix = "~/" + folder.relativePath + "/"
+        let prefix = folder.displayPath + "/"
         manifest.applicationData.removeAll { $0.id == id }
         extraFiles.removeAll { $0.record.backupPath.hasPrefix("application-data/\(id)/") }
         manifest.backupIssues.removeAll { $0.path.hasPrefix(prefix) }
@@ -295,9 +295,15 @@ public struct InventoryService: Sendable {
         manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)))
         var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)
         // Known user-created data of supported apps (presets, styles, LUTs …) is suggested automatically.
-        for detected in detectedData {
+        for var detected in detectedData {
+            if detected.profile.notForOlderApp {
+                let ids = Set(detected.profile.bundleIdentifiers.map { $0.lowercased() })
+                detected.profile.sourceAppVersion = apps.first { $0.bundleIdentifier.map { ids.contains($0.lowercased()) } ?? false }?.version
+            }
+            var shipped: Set<String> = []
+            if let package = detected.shippedByPackage { shipped = await shippedFiles(package: package, below: detected.folder) }
             if let scan = try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
-                                                                     excluding: detected.excluding),
+                                                                     excluding: detected.excluding, scope: detected.scope, shipped: shipped),
                !scan.files.isEmpty {
                 result.addApplicationData(scan.folder, files: scan.files, issues: scan.issues)
             } else {
@@ -349,6 +355,30 @@ public struct InventoryService: Sendable {
     static func isWebURL(_ value: String) -> Bool {
         guard let url = URL(string: value), let scheme = url.scheme?.lowercased() else { return false }
         return (scheme == "https" || scheme == "http") && url.host != nil
+    }
+
+    /// Files an installer package placed below `folder` (paths relative to it), from its receipt via
+    /// `pkgutil --files`. Empty if the package is not installed or the receipt cannot be read.
+    func shippedFiles(package: String, below folder: URL) async -> Set<String> {
+        await Self.shippedFiles(package: package, below: folder, layout: layout, runner: runner)
+    }
+
+    public static func shippedFiles(package: String, below folder: URL, layout: SystemLayout, runner: CommandRunning) async -> Set<String> {
+        guard package.range(of: #"^[A-Za-z0-9][A-Za-z0-9._-]{0,200}$"#, options: .regularExpression) != nil,
+              let result = try? await runner.run(Command(executable: layout.pkgutil, arguments: ["--files", package],
+                                                         environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 60)),
+              result.succeeded else { return [] }
+        return receiptPaths(result.stdout, below: folder, root: layout.simulationRoot)
+    }
+
+    /// Receipt paths are relative to `/` (or the simulation root standing in for it).
+    static func receiptPaths(_ output: String, below folder: URL, root: URL?) -> Set<String> {
+        var prefix = folder.standardizedFileURL.path
+        if let root = root?.standardizedFileURL.path, prefix.hasPrefix(root + "/") { prefix = String(prefix.dropFirst(root.count)) }
+        prefix = String(prefix.drop { $0 == "/" }) + "/"
+        return Set(output.split(whereSeparator: \.isNewline).compactMap { line in
+            line.hasPrefix(prefix) ? String(line.dropFirst(prefix.count)) : nil
+        })
     }
 
     /// The installer package that placed a bundle, via `pkgutil --file-info`.

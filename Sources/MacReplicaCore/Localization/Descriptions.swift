@@ -125,6 +125,8 @@ extension Localizer {
         case .displayNotConnected(let name): return t("skip.displayNotConnected", name)
         case .displayOfAnotherMac: return t("skip.displayOfAnotherMac")
         case .profileNotAvailable: return t("skip.profileNotAvailable")
+        case .applicationNotInstalled(let name): return t("skip.applicationNotInstalled", name)
+        case .applicationVersionOlder(let name, let installed, let backup): return t("skip.applicationVersionOlder", name, installed, backup)
         }
     }
 
@@ -198,6 +200,7 @@ extension Localizer {
         case .pythonSettingsToApply(let count): return p("note.pythonSettings", count)
         case .applicationDataCopied(let copied, let identical, let kept): return t("note.applicationData", copied, identical, kept)
         case .applicationVersionDiffers(let original): return t("note.applicationVersionDiffers", original)
+        case .restoredIntoVersion(let original, let target): return t("note.restoredIntoVersion", original, target)
         }
     }
 

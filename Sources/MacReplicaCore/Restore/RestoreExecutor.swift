@@ -109,6 +109,8 @@ public struct DryRunEntry: Equatable, Sendable, Identifiable {
     public var notes: [ResultNote]
     /// For fonts and profiles: how the backup copy relates to what this Mac has.
     public var fileAssessment: FileAssessment?
+    /// For application data: new, identical and different files, and the app version it goes into.
+    public var appDataComparison: AppDataComparison? = nil
 }
 
 extension RestoreSelection {
@@ -384,8 +386,10 @@ public final class RestoreExecutor: Sendable {
                 }
             }
             let assessment = item.kind.isFile ? inspector.assessFile(item)?.assessment : nil
-            entries.append(DryRunEntry(item: item, prediction: prediction, requiresAdmin: requiresAdmin, notes: inspector.notes(for: item),
-                                       fileAssessment: assessment))
+            let isData = item.kind == .applicationData
+            entries.append(DryRunEntry(item: item, prediction: prediction, requiresAdmin: requiresAdmin,
+                                       notes: inspector.notes(for: item) + (isData ? inspector.applicationDataNotes(item) : []),
+                                       fileAssessment: assessment, appDataComparison: isData ? inspector.applicationDataComparison(item) : nil))
         }
         return entries
     }

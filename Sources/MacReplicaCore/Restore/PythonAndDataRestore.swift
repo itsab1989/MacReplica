@@ -85,9 +85,57 @@ extension Inspector {
         enum State { case new, identical, different, damaged }
     }
 
-    func applicationDataPlan(_ folder: AppDataFolder) -> [DataFilePlan]? {
-        guard PathSafety.isSafeRelativePath(folder.relativePath),
-              let base = PathSafety.resolve(folder.relativePath, inside: layout.homeDirectory) else { return nil }
+    /// Where an application data folder goes on this Mac.
+    ///
+    /// Data of a versioned app (e.g. "Adobe Photoshop 2025") goes back into its version's folder. If the data
+    /// also works in other versions and that version is not on this Mac, the newest other version that is
+    /// (same app, same channel: the folder pattern keeps release and beta apart) is used instead; the user
+    /// can choose another one (`sourceChoices[item.id]`). Shared-library data (`/Library`) needs the app's
+    /// own folder, which its installer creates.
+    func applicationDataTarget(_ folder: AppDataFolder, itemID: String?) -> AppDataTarget? {
+        guard PathSafety.isSafeRelativePath(folder.relativePath) else { return nil }
+        let root = layout.root(of: folder.effectiveScope)
+        var target = AppDataTarget(root: root, relativePath: folder.relativePath)
+        let components = folder.relativePath.split(separator: "/").map(String.init)
+        if let version = folder.profile?.appVersion, let index = components.firstIndex(of: version) {
+            let parent = components[..<index].joined(separator: "/")
+            let parentURL = parent.isEmpty ? root : root.appendingPathComponent(parent)
+            let fm = FileManager.default
+            let originalExists = fm.fileExists(atPath: parentURL.appendingPathComponent(version).path)
+            var alternatives: [String] = []
+            if folder.profile?.movesBetweenVersions == true, let pattern = folder.profile?.versionFolderPattern {
+                alternatives = ((try? fm.contentsOfDirectory(atPath: parentURL.path)) ?? [])
+                    .filter { $0 != version && $0.range(of: pattern, options: .regularExpression) != nil && PathSafety.isSafeRelativePath($0) }
+                    .sorted { VersionComparison.compare(Self.versionNumber($0), Self.versionNumber($1)) == .orderedDescending }
+            }
+            var chosen = version
+            if let itemID, let choice = selection.sourceChoices[itemID], choice == version || alternatives.contains(choice) {
+                chosen = choice
+            } else if !originalExists, let newest = alternatives.first {
+                chosen = newest
+            }
+            var replaced = components
+            replaced[index] = chosen
+            target.relativePath = replaced.joined(separator: "/")
+            target.version = VersionTarget(original: version, chosen: chosen, originalExists: originalExists, alternatives: alternatives)
+        }
+        if folder.effectiveScope == .sharedLibrary {
+            target.appFolderMissing = !FileManager.default.fileExists(atPath: root.appendingPathComponent(folder.relativePath).path)
+        }
+        return target
+    }
+
+    /// The number in a version folder name, e.g. "2026" in "Adobe Photoshop 2026" or "4.2" in "4.2".
+    static func versionNumber(_ name: String) -> String {
+        guard let range = name.range(of: #"\d+(\.\d+)*"#, options: [.regularExpression, .backwards]) else { return "0" }
+        return String(name[range])
+    }
+
+    func applicationDataPlan(_ folder: AppDataFolder) -> [DataFilePlan]? { applicationDataPlan(folder, itemID: nil) }
+
+    func applicationDataPlan(_ folder: AppDataFolder, itemID: String?) -> [DataFilePlan]? {
+        guard let target = applicationDataTarget(folder, itemID: itemID),
+              let base = PathSafety.resolve(target.relativePath, inside: target.root) else { return nil }
         var result: [DataFilePlan] = []
         for record in folder.files {
             guard let source = PathSafety.resolve(record.backupPath, inside: backupRoot),
@@ -103,13 +151,105 @@ extension Inspector {
         return result
     }
 
+    /// What the restore selection shows for an application data item: which files differ and, for
+    /// versioned apps, which version the data goes into.
+    func applicationDataComparison(_ item: RestoreItem) -> AppDataComparison? {
+        guard let folder = item.applicationData, let target = applicationDataTarget(folder, itemID: item.id),
+              let plan = applicationDataPlan(folder, itemID: item.id) else { return nil }
+        let different = plan.filter { $0.state == .different }.map { file in
+            let values = try? file.destination.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+            return AppDataComparison.DifferentFile(path: file.record.relativePath, backupSize: file.record.size, backupModified: file.record.modifiedAt,
+                                                   existingSize: Int64(values?.fileSize ?? 0), existingModified: values?.contentModificationDate)
+        }
+        return AppDataComparison(newFiles: plan.filter { $0.state == .new }.count, identicalFiles: plan.filter { $0.state == .identical }.count,
+                                 differentFiles: different, version: target.version)
+    }
+
+    /// The installed copy of an app, found by bundle identifier in the application folders and one folder
+    /// below them (some apps install into a folder, e.g. /Applications/DaVinci Resolve/DaVinci Resolve.app).
+    func installedAppVersion(bundleIdentifiers: [String]) -> (found: Bool, version: String?) {
+        let wanted = Set(bundleIdentifiers.map { $0.lowercased() })
+        let fm = FileManager.default
+        func check(_ url: URL) -> (Bool, String?)? {
+            guard url.pathExtension == "app",
+                  let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any],
+                  let id = info["CFBundleIdentifier"] as? String, wanted.contains(id.lowercased()) else { return nil }
+            return (true, info["CFBundleShortVersionString"] as? String)
+        }
+        for folder in layout.applicationFolders {
+            for url in (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [] {
+                if let found = check(url) { return found }
+                guard url.pathExtension.isEmpty else { continue }
+                for inner in (try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? [] {
+                    if let found = check(inner) { return found }
+                }
+            }
+        }
+        return (false, nil)
+    }
+
+    /// Data that needs its app: waits until the app is installed, and never goes to an older version of it.
+    func applicationDataRequirement(_ folder: AppDataFolder) -> SkipReason? {
+        guard let profile = folder.profile, profile.appMustBeInstalled || profile.notForOlderApp else { return nil }
+        let installed = installedAppVersion(bundleIdentifiers: profile.bundleIdentifiers)
+        if !installed.found { return profile.appMustBeInstalled ? .applicationNotInstalled(name: profile.appName) : nil }
+        if profile.notForOlderApp, let backup = profile.sourceAppVersion, let version = installed.version,
+           VersionComparison.compare(version, backup) == .orderedAscending {
+            return .applicationVersionOlder(name: profile.appName, installed: version, backup: backup)
+        }
+        return nil
+    }
+
     func predictApplicationData(_ item: RestoreItem) -> Prediction {
-        guard let folder = item.applicationData, let plan = applicationDataPlan(folder) else { return .backupFileDamaged }
+        guard let folder = item.applicationData, let target = applicationDataTarget(folder, itemID: item.id),
+              let plan = applicationDataPlan(folder, itemID: item.id) else { return .backupFileDamaged }
         if plan.contains(where: { $0.state == .damaged }) { return .backupFileDamaged }
+        if target.appFolderMissing { return .willSkip(.applicationNotInstalled(name: folder.profile?.appName ?? folder.name)) }
+        if let reason = applicationDataRequirement(folder) { return .willSkip(reason) }
         if plan.contains(where: { $0.state == .different }) { return .conflict(resolution: selection.resolution(for: item.id)) }
         if plan.allSatisfy({ $0.state == .identical }) { return .identicalFileExists }
         return .willCopy
     }
+
+    /// Notes shown before the restore: the data goes into another version, or into one that is not installed.
+    func applicationDataNotes(_ item: RestoreItem) -> [ResultNote] {
+        guard let folder = item.applicationData, let version = applicationDataTarget(folder, itemID: item.id)?.version else { return [] }
+        if version.chosen != version.original { return [.restoredIntoVersion(original: version.original, target: version.chosen)] }
+        return version.originalExists ? [] : [.applicationVersionDiffers(original: version.original)]
+    }
+}
+
+/// Where an application data folder is restored to (see `Inspector.applicationDataTarget`).
+struct AppDataTarget {
+    var root: URL
+    var relativePath: String
+    var version: VersionTarget?
+    /// Shared-library data whose app folder does not exist: the app is not installed.
+    var appFolderMissing = false
+}
+
+/// The app version folder application data is restored into.
+public struct VersionTarget: Equatable, Sendable {
+    public var original: String
+    public var chosen: String
+    public var originalExists: Bool
+    /// Other versions of the same app on this Mac that the data also works in, newest first.
+    public var alternatives: [String]
+}
+
+/// How the backup copy of an application data folder relates to what this Mac has.
+public struct AppDataComparison: Equatable, Sendable {
+    public struct DifferentFile: Equatable, Sendable {
+        public var path: String
+        public var backupSize: Int64
+        public var backupModified: Date?
+        public var existingSize: Int64
+        public var existingModified: Date?
+    }
+    public var newFiles: Int
+    public var identicalFiles: Int
+    public var differentFiles: [DifferentFile]
+    public var version: VersionTarget?
 }
 
 // MARK: - Restore
@@ -334,24 +474,32 @@ extension RestoreExecutor {
 
     func restoreApplicationData(_ item: RestoreItem, inspector: Inspector, session: RestoreSession,
                                 onEvent: @escaping @Sendable (RestoreEvent) -> Void) -> ItemResult {
-        guard let folder = item.applicationData, let plan = inspector.applicationDataPlan(folder) else {
+        guard let folder = item.applicationData, let target = inspector.applicationDataTarget(folder, itemID: item.id),
+              let plan = inspector.applicationDataPlan(folder, itemID: item.id) else {
             return failed(item, .backupFileDamaged, "unsafe paths in backup")
         }
+        if target.appFolderMissing {
+            return ItemResult(itemID: item.id, outcome: .skipped(.applicationNotInstalled(name: folder.profile?.appName ?? folder.name)))
+        }
+        if let reason = inspector.applicationDataRequirement(folder) { return ItemResult(itemID: item.id, outcome: .skipped(reason)) }
         // Some apps overwrite their files on quit; never write underneath a running app.
         if let profile = folder.profile, profile.mustBeClosed,
            let running = profile.bundleIdentifiers.first(where: environment.isApplicationRunning) {
             return failed(item, .applicationRunning, "\(profile.appName) (\(running)) is running")
         }
         let resolution = inspector.selection.resolution(for: item.id)
+        if resolution == .skip, plan.contains(where: { $0.state == .different }) {
+            return ItemResult(itemID: item.id, outcome: .skipped(.userSkipped))
+        }
         let fm = FileManager.default
         var copied = 0, identical = 0, kept = 0
         var problems: [String] = []
-        var versionNotes: [ResultNote] = []
-        // Presets of a versioned app (e.g. "Adobe Photoshop 2025") go back into that version's folder.
-        // If that version is not on this Mac, the data is still restored but the user is told.
-        if let version = folder.profile?.appVersion, let range = folder.relativePath.range(of: "/" + version + "/") {
-            let versionFolder = layout.homeDirectory.appendingPathComponent(String(folder.relativePath[..<range.upperBound]))
-            if !fm.fileExists(atPath: versionFolder.path) { versionNotes.append(.applicationVersionDiffers(original: version)) }
+        // Data of a versioned app goes into the version chosen in the plan (see `applicationDataTarget`);
+        // the user is told when that is another version, or one that is not installed.
+        let versionNotes = inspector.applicationDataNotes(item)
+        if folder.effectiveScope == .sharedLibrary, let base = PathSafety.resolve(target.relativePath, inside: target.root),
+           !fm.isWritableFile(atPath: base.path) {
+            return failed(item, .permissionDenied, layout.displayPath(base))
         }
         onEvent(.activity(itemID: item.id, .copying))
         for file in plan {

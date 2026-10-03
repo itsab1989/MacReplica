@@ -41,9 +41,14 @@ let arguments = Array(CommandLine.arguments.dropFirst())
 if arguments.first == "detect-live" {
     let layout = SystemLayout.live()
     for detected in AppDataProviders.detect(layout: layout) {
-        let count = (try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
-                                                              excluding: detected.excluding).files.count) ?? -1
-        print("appdata \(detected.profile.provider)/\(detected.profile.category) files=\(count)")
+        var shipped: Set<String> = []
+        if let package = detected.shippedByPackage {
+            shipped = await InventoryService.shippedFiles(package: package, below: detected.folder, layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]))
+        }
+        let scan = try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
+                                                            excluding: detected.excluding, scope: detected.scope, shipped: shipped)
+        print("appdata \(detected.profile.provider)/\(detected.profile.appVersion ?? "-")/\(detected.profile.category) files=\(scan?.files.count ?? -1)"
+              + (scan?.folder.shippedFilesLeftOut.map { " shipped-left-out=\($0)" } ?? ""))
     }
     for provider in CredentialProviders.all { print("credential \(provider.id) detected=\(!provider.detect(layout: layout).isEmpty)") }
     exit(0)
