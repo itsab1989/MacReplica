@@ -122,6 +122,12 @@ public struct SimulationEnvironment: Sendable {
         LocalHomebrewPackageSource(package: root.appendingPathComponent(config.homebrewPackage))
     }
 
+    /// The simulated Mac's administrator password is `state/admin-password` (default "macreplica"); the
+    /// real `sudo` is never used in a simulation.
+    public func makeAdminPasswordValidator() -> AdminPasswordValidating {
+        SimulatedPasswordValidator(file: root.appendingPathComponent("state/admin-password"))
+    }
+
     public func makePrivilegedExecutor() -> PrivilegedExecuting {
         let root = self.root
         return DirectPrivilegedExecutor(packageInstaller: { package in
@@ -162,5 +168,15 @@ public struct LocalHomebrewPackageSource: HomebrewPackageSource {
             throw HomebrewInstallError.downloadFailed("simulated package missing")
         }
         return destination
+    }
+}
+
+/// Compares with the simulated Mac's administrator password.
+public struct SimulatedPasswordValidator: AdminPasswordValidating {
+    public var file: URL
+    public init(file: URL) { self.file = file }
+    public func isValid(_ password: String) async -> Bool {
+        let expected = (try? String(contentsOf: file, encoding: .utf8))?.trimmingCharacters(in: .newlines) ?? "macreplica"
+        return !password.isEmpty && password == expected
     }
 }

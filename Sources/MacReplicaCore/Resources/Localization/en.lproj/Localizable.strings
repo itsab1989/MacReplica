@@ -1061,3 +1061,6 @@
 "summary.waitingForAppsMessage" = "This data belongs to apps that are not installed yet (or are older than on the old Mac). Install or update them, then choose Continue – MacReplica restores the data then.";
 "items.status.waitsForApp" = "Waits for %1$@";
 "items.status.needsNewerApp" = "Needs %1$@ %2$@ or newer";
+"adminPassword.title" = "Administrator password";
+"adminPassword.message" = "Homebrew needs administrator rights to install some of the apps you are restoring. MacReplica asks once, checks the password, uses it only for this restore and forgets it afterwards. It is never stored.";
+"adminPassword.wrong" = "That password was not accepted. Enter the password of an administrator account on this Mac.";

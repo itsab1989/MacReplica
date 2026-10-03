@@ -602,6 +602,12 @@ final class AppModel: ObservableObject {
             homebrewSource: services.homebrewSource, localizer: l, log: log, targetArchitecture: services.architecture,
             askpassPath: services.askpassPath)
         environment.credentialPassphrase = restorePassphrase
+        environment.adminPasswordValidator = services.adminPasswordValidator
+        let texts = (title: l.t("adminPassword.title"), message: l.t("adminPassword.message"), wrong: l.t("adminPassword.wrong"),
+                     ok: l.t("askpass.ok"), cancel: l.t("common.cancel"))
+        environment.adminPasswordPrompt = { reason in
+            await MainActor.run { AdminPasswordDialog.ask(reason: reason, texts: texts) }
+        }
         environment.isApplicationRunning = { bundleID in
             !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty
         }
@@ -947,5 +953,27 @@ extension AppModel {
             developer.removedGitSections = []
         }
         inventory.manifest.developer = developer
+    }
+}
+
+/// MacReplica's own administrator password dialog (used once per restore; see `AdminPasswordBroker`).
+enum AdminPasswordDialog {
+    @MainActor
+    static func ask(reason: AdminPasswordPrompt, texts: (title: String, message: String, wrong: String, ok: String, cancel: String)) -> String? {
+        let alert = NSAlert()
+        alert.messageText = texts.title
+        alert.informativeText = reason == .wrongPassword ? texts.wrong + "\n\n" + texts.message : texts.message
+        alert.alertStyle = reason == .wrongPassword ? .warning : .informational
+        alert.addButton(withTitle: texts.ok)
+        alert.addButton(withTitle: texts.cancel)
+        let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        field.setAccessibilityIdentifier("adminPassword.field")
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        alert.layout()
+        NSApp.activate(ignoringOtherApps: true)
+        DispatchQueue.main.async { alert.window.makeFirstResponder(field) }
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        return field.stringValue
     }
 }

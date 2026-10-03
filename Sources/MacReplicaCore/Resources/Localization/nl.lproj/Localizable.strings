@@ -1059,3 +1059,6 @@
 "summary.waitingForAppsMessage" = "Deze gegevens horen bij apps die nog niet zijn geïnstalleerd (of ouder zijn dan op de oude Mac). Installeer of werk ze bij en kies daarna Ga verder – MacReplica herstelt de gegevens dan.";
 "items.status.waitsForApp" = "Wacht op %1$@";
 "items.status.needsNewerApp" = "Vereist %1$@ %2$@ of nieuwer";
+"adminPassword.title" = "Beheerderswachtwoord";
+"adminPassword.message" = "Homebrew heeft beheerdersrechten nodig om sommige apps te installeren die je herstelt. MacReplica vraagt één keer, controleert het wachtwoord, gebruikt het alleen voor dit herstel en vergeet het daarna. Het wordt nooit bewaard.";
+"adminPassword.wrong" = "Dat wachtwoord is niet geaccepteerd. Voer het wachtwoord in van een beheerdersaccount op deze Mac.";

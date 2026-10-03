@@ -1059,3 +1059,6 @@
 "summary.waitingForAppsMessage" = "Ces données appartiennent à des apps pas encore installées (ou plus anciennes que sur l’ancien Mac). Installe-les ou mets-les à jour, puis choisis Continuer – MacReplica restaurera alors les données.";
 "items.status.waitsForApp" = "Attend %1$@";
 "items.status.needsNewerApp" = "Nécessite %1$@ %2$@ ou plus récent";
+"adminPassword.title" = "Mot de passe administrateur";
+"adminPassword.message" = "Homebrew a besoin des droits d’administrateur pour installer certaines des apps que tu restaures. MacReplica le demande une seule fois, vérifie le mot de passe, ne l’utilise que pour cette restauration et l’oublie ensuite. Il n’est jamais enregistré.";
+"adminPassword.wrong" = "Ce mot de passe n’a pas été accepté. Saisis le mot de passe d’un compte administrateur de ce Mac.";

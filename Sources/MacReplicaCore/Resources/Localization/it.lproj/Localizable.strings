@@ -1059,3 +1059,6 @@
 "summary.waitingForAppsMessage" = "Questi dati appartengono ad app non ancora installate (o più vecchie che sul Mac precedente). Installale o aggiornale, poi scegli Continua: MacReplica ripristinerà allora i dati.";
 "items.status.waitsForApp" = "Attende %1$@";
 "items.status.needsNewerApp" = "Richiede %1$@ %2$@ o successivo";
+"adminPassword.title" = "Password amministratore";
+"adminPassword.message" = "Homebrew ha bisogno dei diritti di amministratore per installare alcune delle app che stai ripristinando. MacReplica la chiede una volta, controlla la password, la usa solo per questo ripristino e poi la dimentica. Non viene mai salvata.";
+"adminPassword.wrong" = "Questa password non è stata accettata. Inserisci la password di un account amministratore di questo Mac.";

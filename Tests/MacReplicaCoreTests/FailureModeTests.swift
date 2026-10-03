@@ -131,8 +131,11 @@ struct FailureModeTests {
         try c2.fresh.setFlag("needs-admin/pixel-forge", true)
         let s2 = await restore(c2, selection: RestoreSelection(components: [.applications]))
         #expect(label(s2, "cask:pixel-forge") == "failed(adminRightsDenied)")
+        let helper = c2.fresh.url.appendingPathComponent("askpass-test.sh")
+        try Data("#!/bin/sh\necho macreplica\n".utf8).write(to: helper)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helper.path)
         let s3 = await restore(c2, selection: RestoreSelection(components: [.applications]),
-                               environment: TestEnvironment.restoreEnvironment(c2.target, askpass: "/usr/bin/true"))
+                               environment: TestEnvironment.restoreEnvironment(c2.target, askpass: helper.path))
         #expect(label(s3, "cask:pixel-forge") == "succeeded")
     }
 
