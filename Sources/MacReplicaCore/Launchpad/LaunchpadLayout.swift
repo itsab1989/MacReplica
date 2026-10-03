@@ -124,6 +124,34 @@ public struct LaunchpadStore: Sendable {
 
     // MARK: Rebuilding
 
+    /// Rebuilds the layout and makes the Dock load it. The Dock keeps the arrangement in memory and writes it
+    /// back when it quits normally, which would undo the change: it is paused while the database is written
+    /// and then ended without saving (launchd starts it again at once, and it reads the new arrangement).
+    @discardableResult
+    public func applyAndReloadDock(_ layout: LaunchpadLayout, signal: (Int32) -> Void = LaunchpadStore.signalDock) throws -> Int {
+        signal(SIGSTOP)
+        let placed: Int
+        do {
+            placed = try apply(layout)
+        } catch {
+            signal(SIGCONT)
+            throw error
+        }
+        signal(SIGKILL)
+        return placed
+    }
+
+    /// Sends a signal to the current user's Dock process.
+    public static func signalDock(_ signal: Int32) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+        process.arguments = ["-\(signal)", "-u", NSUserName(), "Dock"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
+        process.waitUntilExit()
+    }
+
     /// Arranges the Dock's apps as in `layout`. Returns how many recorded apps were placed (apps that are not
     /// installed here are left out; their folders keep the others).
     @discardableResult

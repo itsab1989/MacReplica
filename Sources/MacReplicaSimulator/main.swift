@@ -76,12 +76,7 @@ if arguments.first == "launchpad-export" || arguments.first == "launchpad-apply"
         exit(0)
     }
     let layout = try JSONDecoder().decode(LaunchpadLayout.self, from: Data(contentsOf: file))
-    let placed = try store.apply(layout)
-    let killall = Process()
-    killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-    killall.arguments = ["Dock"]
-    try killall.run()
-    killall.waitUntilExit()
+    let placed = try store.applyAndReloadDock(layout)
     try await Task.sleep(nanoseconds: 10_000_000_000)
     let after = try store.read(macOSVersion: SystemInfo.macOSVersion, work: work)
     try encoder.encode(after).write(to: file.deletingPathExtension().appendingPathExtension("after.json"))
