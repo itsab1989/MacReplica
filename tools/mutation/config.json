@@ -150,7 +150,8 @@
         "RealPythonPreservationTests",
         "PythonRestoreEdgeTests",
         "PythonPreservationEdgeTests",
-        "DataRestoreEdgeTests"
+        "DataRestoreEdgeTests",
+        "CreativeAppProviderTests"
       ],
       "area": "Python, application data and credential restore",
       "threshold": 75
@@ -159,7 +160,8 @@
       "file": "Providers/AppDataProviders.swift",
       "tests": [
         "ProviderCatalogTests",
-        "ProviderTests"
+        "ProviderTests",
+        "CreativeAppProviderTests"
       ],
       "area": "Provider selection and discovery"
     },
@@ -168,7 +170,8 @@
       "tests": [
         "ApplicationDataTests",
         "ProviderCatalogTests",
-        "AppDataScannerEdgeTests"
+        "AppDataScannerEdgeTests",
+        "CreativeAppProviderTests"
       ],
       "area": "Application data path handling and refusal rules"
     },
