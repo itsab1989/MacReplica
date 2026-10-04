@@ -328,14 +328,16 @@ struct DownloadInstallerTests {
         let twice = ScriptedDiskImages(attachFailures: 2)
         var runner = ScriptedRunner { twice.answer($0, image: image) }
         let attached = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: "/usr/bin/hdiutil", environment: [:], pause: 1_000, arguments: attach)
-        #expect(attached.succeeded && runner.commands.map { $0.arguments.first } == ["attach", "attach", "attach"])
+        #expect(attached.succeeded)
+        #expect(runner.commands.map { $0.arguments.first } == ["attach", "info", "detach", "attach", "info", "detach", "attach"],
+                "an attachment a failed attempt may have left is detached before each retry")
         // Busy every time: five attempts, then only the attachments of this image are detached (by its whole-disk device).
         let always = ScriptedDiskImages(attachFailures: 99)
         runner = ScriptedRunner { always.answer($0, image: image) }
         let failed = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: "/usr/bin/hdiutil", environment: [:], pause: 1_000, arguments: attach)
         #expect(!failed.succeeded)
         #expect(runner.commands.filter { $0.arguments.first == "attach" }.count == 5)
-        #expect(runner.commands.filter { $0.arguments.first == "detach" }.map(\.arguments) == [["detach", "/dev/disk9", "-force"]],
+        #expect(Set(runner.commands.filter { $0.arguments.first == "detach" }.map(\.arguments)) == [["detach", "/dev/disk9", "-force"]],
                 "only this image, never the other one")
 
         // Detach: busy once → a second, normal detach; busy twice → the third attempt forces it.

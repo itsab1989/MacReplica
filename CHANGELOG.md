@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- A disk image that macOS attached during an attempt it reported as failed is detached before the next attempt,
+  so no second copy stays attached until logout.
+
 ## [1.0.3] - 2026-10-04
 
 ### Added

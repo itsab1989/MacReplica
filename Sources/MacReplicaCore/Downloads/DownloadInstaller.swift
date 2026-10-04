@@ -152,6 +152,9 @@ public struct DownloadInstaller: Sendable {
         var result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
         for attempt in 1...4 where !result.succeeded {
             try await Task.sleep(nanoseconds: UInt64(attempt) * pause)
+            // A "failed" attempt may have attached the image anyway; it is detached before trying again,
+            // so at most one attachment exists afterwards.
+            if let image = arguments.last { await detachAttachments(of: image, runner: runner, hdiutil: hdiutil, environment: environment) }
             result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
         }
         if !result.succeeded, let image = arguments.last {
