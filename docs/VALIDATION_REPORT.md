@@ -11,7 +11,7 @@
 | Explain the options | Hover text for every kind of application data (104 kinds × 7 languages): what it is, contents with example names, origin, support level, notes | **real app**: hover texts read through accessibility (AXHelp) for LibreOffice settings and macros and Krita; automated (every kind explained in every language) |
 
 Found during the on-screen run and fixed: the *Use It* button could not be pressed through accessibility because
-its row carried an identifier (VoiceOver users would have had the same problem).
+its row carried an identifier that hid the button's own.
 
 ## Addendum 2026-10-04: MacReplica 1.0.2 (round 3)
 
