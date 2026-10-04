@@ -23,6 +23,8 @@ public struct DownloadInstaller: Sendable {
     public var macOSVersion: String
     public var architecture: CPUArchitecture
     public var rosettaInstalled: Bool
+    /// Pause between attempts when macOS reports a disk image as busy (shorter in tests).
+    public var retryPause: UInt64 = 1_000_000_000
 
     public init(layout: SystemLayout, runner: CommandRunning, macOSVersion: String, architecture: CPUArchitecture, rosettaInstalled: Bool = true) {
         self.layout = layout
@@ -109,7 +111,7 @@ public struct DownloadInstaller: Sendable {
         }
         let mountRoot = staging.appendingPathComponent("mount")
         try FileManager.default.createDirectory(at: mountRoot, withIntermediateDirectories: true)
-        let attach = try await Self.attachWithRetry(runner: runner, hdiutil: layout.hdiutil, environment: environment,
+        let attach = try await Self.attachWithRetry(runner: runner, hdiutil: layout.hdiutil, environment: environment, pause: retryPause,
                                                     arguments: ["attach", "-plist", "-nobrowse", "-readonly", "-noautoopen", "-mountrandom", mountRoot.path, file.path])
         guard attach.succeeded, let mountPoint = Self.mountPoint(fromAttachOutput: attach.stdout) else {
             throw DownloadError.extractionFailed("hdiutil attach failed: " + layout.redact(String(attach.stderr.prefix(200))))
@@ -145,10 +147,11 @@ public struct DownloadInstaller: Sendable {
     /// `hdiutil attach` can fail for a moment ("Resource temporarily unavailable") while another image is attached
     /// or Spotlight reads one; it is tried again with growing pauses. A failed attempt can still leave the image
     /// attached, so after the last failure every attachment of exactly this image is detached.
-    static func attachWithRetry(runner: CommandRunning, hdiutil: String, environment: [String: String], arguments: [String]) async throws -> CommandResult {
+    static func attachWithRetry(runner: CommandRunning, hdiutil: String, environment: [String: String], pause: UInt64 = 1_000_000_000,
+                                arguments: [String]) async throws -> CommandResult {
         var result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
         for attempt in 1...4 where !result.succeeded {
-            try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+            try await Task.sleep(nanoseconds: UInt64(attempt) * pause)
             result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
         }
         if !result.succeeded, let image = arguments.last {
@@ -178,7 +181,7 @@ public struct DownloadInstaller: Sendable {
             let arguments = attempt == 2 ? ["detach", "-force", mountPoint.path] : ["detach", mountPoint.path]
             let result = try? await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: arguments, environment: environment, timeout: 120))
             if result?.succeeded == true { return }
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            try? await Task.sleep(nanoseconds: retryPause)
         }
     }
 

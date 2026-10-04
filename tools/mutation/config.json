@@ -614,6 +614,11 @@
       "file": "Homebrew/HomebrewClient.swift",
       "pattern": "sorted \\{ \\$0\\.(name|token) < \\$1\\.(name|token) \\}",
       "reason": "Package names and tokens are unique, so < and <= sort the same (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
+      "reason": "File names in one folder are unique, so < and <= sort the same (equivalent mutant)."
     }
   ]
 }
