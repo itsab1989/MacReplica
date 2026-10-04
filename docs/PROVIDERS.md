@@ -1,7 +1,8 @@
 # Migration providers: evidence, status and limitations
 
 Research date: **2026-10-02**; Photoshop, Adobe colour settings, Camera Raw defaults and DaVinci Resolve
-**2026-10-03** (evidence in [APP_DATA_RESEARCH.md](APP_DATA_RESEARCH.md)). Status terms:
+**2026-10-03**; creative, office, mail, calibration, tablet and configuration-folder providers **2026-10-04**
+(evidence in [APP_DATA_RESEARCH.md](APP_DATA_RESEARCH.md)). Status terms:
 
 - **Fixture-tested** — implemented; the complete path (detection → backup → manifest → restore → verification → error
   handling) is covered by automated tests with synthetic data that mirrors the documented layout. The real
@@ -10,6 +11,17 @@ Research date: **2026-10-02**; Photoshop, Adobe colour settings, Camera Raw defa
   Mac (`MacReplicaSimulator detect-live`, which prints only provider, category and file counts).
 - **Verified** — backup and restore of the user's real data on the development Mac, and the restored data
   confirmed *inside the real application* (scripting probe after launching it). Listed per category below.
+
+**Confidence shown in the app** (per category, in the backup and restore selection):
+
+| Badge | Meaning |
+|---|---|
+| *Fully supported* | the category is **verified** (restored data confirmed inside the real app) |
+| *Check in the app* | fixture-tested; open the app after restoring and check it |
+| *Experimental* | locations from community sources, or the app's use of the restored files could not be confirmed |
+
+Categories that contain code (plug-ins, scripts, add-ins: class `containsCode`) are offered but never selected
+automatically.
 
 The restore engine contains no application knowledge. Providers are data in
 `Sources/MacReplicaCore/Providers/AppDataCatalog.swift` (applications and guidance) and
@@ -25,6 +37,7 @@ Every category of every provider is classified. Only offered classes are ever co
 | `safe` — user-created customization, stable format | yes | selected |
 | `compatibilitySensitive` — may not work in another app version | yes | **not selected**, explained |
 | `mayContainSecrets` — user content that can hold API keys (automation workflows, macros) | yes | **not selected**, warned |
+| `containsCode` — plug-ins, scripts, add-ins that run inside the app | yes | **not selected**, warned |
 | `cache`, `database`, `temporary`, `log`, `credential` | never | — |
 
 Apps marked *must be closed* are not restored while they run (the restore step fails with "The app is open" and can be
@@ -55,6 +68,31 @@ retried).
 | Adobe After Effects | `com.adobe.AfterEffects` | `Library/Preferences/Adobe/After Effects/<version>/{aeks,ModifiedWorkspaces}` — *compatibility-sensitive* | — | Fixture-tested | [preferences](https://helpx.adobe.com/after-effects/using/preferences.html) (search excerpt) |
 | Keyboard Maestro | `com.stairways.keyboardmaestro.editor`, `.engine` | `Library/Application Support/Keyboard Maestro/` — *may contain secrets* | licence (Preferences) | Fixture-tested | [vendor FAQ](https://wiki.keyboardmaestro.com/Frequently_Asked_Questions) |
 | Alfred | `com.runningwithcrayons.Alfred` | `Library/Application Support/Alfred/Alfred.alfredpreferences` — *may contain secrets* | caches, clipboard history | Fixture-tested | [disable sync](https://www.alfredapp.com/help/advanced/sync/disable-sync/), [sync](https://www.alfredapp.com/help/advanced/sync/) |
+
+
+### Added 2026-10-04
+
+| Provider | Copied (relative to `~/` unless noted) | Not copied | Status |
+|---|---|---|---|
+| Krita | `Library/Application Support/krita/` as one unit (resources, bundles, tags database `resourcecache.sqlite`, workspaces); `pykrita/` *contains code*; `Library/Preferences/kritarc` (home path as placeholder), `kritashortcutsrc` | `krita.log`, `krita-sysinfo.log`, `kritadisplayrc`, `kritaopenglrc` | **Resources and kritarc: verified** (Krita 5.3.4) |
+| GIMP 2.10 / 3.x | `Library/Application Support/GIMP/<X.Y>/` (brushes, palettes, gradients, patterns, tool presets, `gimprc`, shortcuts, `tags.xml` with home path as placeholder); `plug-ins/`, `scripts/` *contain code* | `pluginrc`, `documents`, `tmp`, `cache`, `CrashLog`, `backups`, `theme.css`, `themerc`, `gtkrc`, `environ`, `interpreters`, `modules` | **Profile: verified** (GIMP 3.2.6) |
+| Inkscape | `Library/Application Support/org.inkscape.Inkscape/config/inkscape/` `preferences.xml`, `keys/`, `templates/`, `palettes/`, `symbols/`, `filters/`; `extensions/` *contains code* | `extension-errors.log`, fonts/icons/themes caches | **Preferences, templates, palettes: verified** (Inkscape 1.4.4) |
+| Scribus | `Library/Application Support/Scribus/{palettes,scrapbook,dicts}`; `Library/Preferences/Scribus/prefs1xx.xml`, `scribus1xx.rc` (home path as placeholder) | `checkfonts*.xml`, scrapbook `tmp` | **Palettes and preferences: verified** (Scribus 1.6.6) |
+| Microsoft Office (Word, Excel, PowerPoint) | `Library/Group Containers/UBF8T346G9.Office/`: templates incl. `Normal.dotm`, `Microsoft Office ACL [<language>]` (AutoCorrect), `Custom Dictionary`; Word/Excel start-up folders *contain code*; ribbon customizations *experimental* — needs Full Disk Access | `MicrosoftRegistrationDB*`, licensing, `ComRPC32`, `FontCache`, lock files | **AutoCorrect: verified** in Word and Excel; templates: checksum-identical, check in the app |
+| Apple Mail | `Library/Mail/V<n>/MailData/`: `Signatures/`, rules, smart mailboxes, VIPs — needs Full Disk Access | mailboxes, `Envelope Index`, accounts and passwords | **Experimental**: Apple's layout up to macOS 15; Mail itself could not be checked (see the validation report) |
+| Cryptomator | `Library/Application Support/Cryptomator/settings.json` (the vault list; home path as placeholder); after the restore MacReplica reports which vaults it finds | vault contents, `key.p12`, passwords (Keychain), IPC socket, logs | **Vault list: verified** (Cryptomator 1.19.3) |
+| DisplayCAL / ArgyllCMS | `Library/Application Support/DisplayCAL/storage/` (calibrations, profiles, measurements), `Library/Preferences/DisplayCAL/DisplayCAL.ini` (home path as placeholder), `Library/Application Support/ArgyllCMS/` (instrument corrections) | `dl/` (downloads), lock files, logs | **Calibrations and settings: verified** (DisplayCAL 3.9.19, the maintainer's real calibrations) |
+| BenQ Palette Master Element | `/Users/Shared/RD/strings/benq_params` (calibration targets) | the monitor's internal calibration (stays in the monitor) | Experimental (community source) |
+| XP-Pen tablet driver | `~/.XPPen/config.xml` (buttons, pressure, app profiles) — *compatibility-sensitive*, only once the driver is installed | — | Experimental |
+| Karabiner-Elements, Hammerspoon, Ghostty, kitty, WezTerm, Alacritty, Zed | their configuration folders (`~/.config/<app>`, `~/.hammerspoon`) | automatic backups, prompts and conversations (Zed) | Fixture-tested |
+| Motion templates, Logic Pro | `Movies/Motion Templates.localized`; `Music/Audio Music Apps/{Channel Strip Settings,Patches,Plug-In Settings}` | — | Fixture-tested |
+
+Guidance only (nothing copied): Synology Drive (no settings export, the connection is registered on the NAS:
+create the sync tasks again on the existing folders), calibration software such as Calibrite Profiler (profiles
+come back with the colour profiles; presets are exported in the app; the licence is tied to the instrument), BenQ
+Palette Master (the hardware calibration stays in the monitor), XP-Pen (install the driver, allow its
+permissions, use the driver's own export/import), mail accounts (Internet Accounts first) and Office activation
+(sign in again, or run the volume-licence activation package again — see *Your installers*).
 
 Plus **user-chosen folders** (any folder in the home folder except credential stores, `~/Library` itself and other
 too-broad or sensitive locations; secret-looking files are always skipped).
@@ -124,3 +162,23 @@ discontinued), DaVinci Resolve PowerGrades, render/project presets and project l
   the custom LUTs (`SetLUT` on a temporary project, a non-existent LUT still refused). Evidence:
   `~/Desktop/MacReplica-Staging/validation/real-apps/`, screenshots R1–R8. Photoshop release (non-beta) was not
   installed and is verified with synthetic data only.
+- **Real applications (2026-10-04, development Mac, macOS 27):** Krita 5.3.4, GIMP 3.2.6, Inkscape 1.4.4, Scribus
+  1.6.6 and Cryptomator 1.19.3 were installed with Homebrew for the test, test data was created *through the apps*
+  or in their documented formats, and each app was run once (baseline probe). MacReplica's real inventory, backup
+  writer and restore (`MacReplicaSimulator real-appdata-backup/-restore`) backed up 282 files, exactly those were
+  moved aside, the apps were run again (negative control: palette gone from Krita's resource database and GIMP,
+  markers gone, Cryptomator's vault list empty, GIMP's undo levels back to 5), the restore with *Replace* reported
+  9/9 successful, all 282 files matched their checksums, and after running the apps again every probe was
+  identical to the baseline (Krita resource database, GIMP through `gimp-console` Python, preference markers kept
+  by Inkscape and Scribus, vault listed in Cryptomator's window). The apps and every file they created were removed
+  again (listing of the affected folders identical to before the installation).
+  DisplayCAL 3.9.19 with the maintainer's real calibrations: safety copy, backup, files moved aside (DisplayCAL
+  then hung at start-up), restore, DisplayCAL started normally and its scripting interface reported the same
+  calibration file, profile, white point and luminance as before; the original settings were put back afterwards.
+  Word and Excel (16.x): a test AutoCorrect entry was created through Word, backed up, moved aside (Word: 400
+  default entries, entry absent), restored, and Word and Excel both returned it; afterwards the original files
+  were put back. Real-app checks found two defects that were fixed: GIMP 3.2's `cache` folder (2,275 files) was
+  backed up, and `tags.xml` stored absolute home paths.
+- **Apple Mail:** on macOS 27 Mail no longer keeps signatures and rules in `MailData` (and scripted ones are not
+  saved), and on GitHub's macOS 14/15 runners Mail has no account and does not answer for signatures or rules.
+  The provider follows Apple's documented layout up to macOS 15 and is marked experimental.

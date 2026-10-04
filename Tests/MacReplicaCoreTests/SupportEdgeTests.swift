@@ -201,6 +201,31 @@ struct CredentialEdgeTests {
 
 @Suite("Application data scanner details")
 struct AppDataScannerEdgeTests {
+    /// The home path is replaced only as a whole path component, wherever settings files put it.
+    @Test func homePathPlaceholderOnlyReplacesTheHomeFolderItself() throws {
+        let sandbox = try Sandbox("placeholder-boundaries")
+        let (_, source) = try TestEnvironment.sourceMac(sandbox)
+        let home = source.layout.homeDirectory.standardizedFileURL.path
+        let scanner = AppDataScanner(layout: source.layout)
+        func converted(_ text: String) throws -> String? {
+            let file = sandbox.url.appendingPathComponent("settings-\(UUID().uuidString)")
+            try Data(text.utf8).write(to: file)
+            return scanner.withHomePlaceholder(file).map { String(decoding: $0, as: UTF8.self) }
+        }
+        let p = AppDataScanner.homePlaceholder
+        #expect(try converted("dir=\(home)/Pictures\n") == "dir=\(p)/Pictures\n")
+        #expect(try converted("<path>\(home)</path>") == "<path>\(p)</path>")
+        #expect(try converted("{\"home\": \"\(home)\"}") == "{\"home\": \"\(p)\"}")
+        #expect(try converted("home = \(home)") == "home = \(p)", "at the end of the file")
+        #expect(try converted("home = \(home)\nnext") == "home = \(p)\nnext")
+        #expect(try converted("a=\(home)xyz/Documents") == nil, "another user's folder with a longer name is not touched")
+        #expect(try converted("a=\(home)/x b=\(home)xyz/y") == "a=\(p)/x b=\(home)xyz/y")
+        #expect(try converted("no paths here") == nil)
+        let binary = sandbox.url.appendingPathComponent("binary")
+        try Data([0xff, 0xfe, 0x00, 0x81]).write(to: binary)
+        #expect(scanner.withHomePlaceholder(binary) == nil, "not text")
+    }
+
     @Test func sizeLimitIsInclusiveAndSymbolicLinksAreSkipped() throws {
         let sandbox = try Sandbox("appdata-limit")
         var layout = SystemLayout.live()

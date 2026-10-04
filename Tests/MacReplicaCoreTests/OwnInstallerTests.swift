@@ -151,4 +151,42 @@ struct OwnInstallerTests {
         #expect(refused.outcome.isFailure)
         #expect(!FileManager.default.fileExists(atPath: applications.appendingPathComponent("Pen Tablet.app").path))
     }
+
+    @Test func signerFollowUpsAndUnusableInstallers() throws {
+        let output = """
+        Package "Office.pkg":
+           Status: signed by a developer certificate issued by Apple for distribution
+           Certificate Chain:
+            1. Developer ID Installer: Example Inc (TEAMID1234)
+               Expires: 2030-01-01
+            2. Developer ID Certification Authority
+            3. Apple Root CA
+        """
+        #expect(InstallerArchiveInspector.signer(output) == "Developer ID Installer: Example Inc (TEAMID1234)", "the leaf certificate")
+        #expect(InstallerArchiveInspector.signer("Status: no signature") == nil)
+        let plain = InstallerArchive(id: "x", fileName: "a.pkg", kind: .pkg, size: 1, sha256: "x", originalPath: "/x")
+        #expect(!plain.containsLicence && plain.includedPath == nil && !plain.trustedSignature && plain.architectures.isEmpty)
+
+        let sandbox = try Sandbox("own-followups")
+        let drive = try sandbox.folder("drive")
+        for name in ["App.dmg", "Activation.pkg", "Extra.dmg", "Other.pkg"] { try Data(name.utf8).write(to: drive.appendingPathComponent(name)) }
+        func archive(_ name: String, _ kind: InstallerArchive.Kind, team: String = "TEAMID1234") -> InstallerArchive {
+            InstallerArchive(id: name, fileName: name, kind: kind, size: 1, sha256: name, teamIdentifier: team, trustedSignature: true,
+                             originalPath: drive.appendingPathComponent(name).path)
+        }
+        var app = AppRecord(name: "Office", bundleIdentifier: "com.example.office", path: "/Applications/Office.app")
+        app.teamIdentifier = "TEAMID1234"
+        app.ownInstallers = [archive("App.dmg", .dmg), archive("Activation.pkg", .pkg), archive("Extra.dmg", .dmg),
+                             archive("Other.pkg", .pkg, team: "OTHERTEAM1"), archive("Missing.pkg", .pkg)]
+        let layout = toolchainLayout(sandbox)
+        let offer = try #require(OwnInstallerSource.offer(for: app, itemID: "manual:office", backupRoot: nil, layout: layout))
+        #expect(offer.localPath == drive.appendingPathComponent("App.dmg").path && !offer.isPackage)
+        #expect(offer.followUps?.map(\.name) == ["Activation.pkg"],
+                "only further packages of the same developer that are available; disk images and other developers' packages are not opened")
+        #expect(Set(OwnInstallerSource.unusable(for: app, backupRoot: nil, layout: layout).map(\.fileName)) == ["Other.pkg", "Missing.pkg"])
+        var firstMissing = app
+        firstMissing.ownInstallers?.removeFirst(2)
+        firstMissing.ownInstallers?.insert(archive("Gone.dmg", .dmg), at: 0)
+        #expect(OwnInstallerSource.offer(for: firstMissing, itemID: "x", backupRoot: nil, layout: layout) == nil, "the first installer must be there")
+    }
 }

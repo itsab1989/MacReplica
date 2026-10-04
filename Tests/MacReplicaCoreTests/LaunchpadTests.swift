@@ -65,4 +65,23 @@ struct LaunchpadTests {
         #expect(!LaunchpadLayout.isSupported(macOSVersion: "27.0.1"))
         #expect(throws: LaunchpadError.databaseMissing) { try LaunchpadStore(database: URL(fileURLWithPath: "/nonexistent/db")).apply(LaunchpadLayout(pages: [], macOSVersion: "14")) }
     }
+
+    /// Apps that were not in the layout fill further pages of 35, in their previous order.
+    @Test func appsNotInTheLayoutFillFurtherPages() throws {
+        let sandbox = try Sandbox("launchpad-overflow")
+        let extra = (1...40).map { "com.example.app\(String(format: "%02d", $0))" }
+        let db = try SyntheticLaunchpad.create(at: sandbox.url.appendingPathComponent("db/db"), apps: ["com.apple.Safari"] + extra,
+                                               folder: ["com.apple.Notes"])
+        let recorded = LaunchpadLayout(pages: [[.folder(name: "Mine", pages: [["com.apple.Safari"], [], ["com.apple.Notes"]])]], macOSVersion: "14")
+        #expect(try LaunchpadStore(database: db).apply(recorded) == 2)
+        let after = try LaunchpadStore(database: db).read(macOSVersion: "14", work: sandbox.url.appendingPathComponent("work"))
+        #expect(after.pages.map(\.count) == [1, 35, 5])
+        #expect(after.pages[0] == [.folder(name: "Mine", pages: [["com.apple.Safari"], ["com.apple.Notes"]])], "empty folder pages are dropped")
+        #expect(after.pages[1].first == .app(extra[0]) && after.pages[2].last == .app(extra[39]), "previous order kept")
+        #expect(after.appEntryCounts["com.apple.Notes"] == 1 && after.appEntryCounts[extra[0]] == 1 && after.appEntryCounts.count == 42)
+        #expect(after.appCount == 42)
+        #expect(recorded.matches(after, installed: after.appEntryCounts))
+        #expect(!LaunchpadLayout(pages: [[.folder(name: "Other name", pages: [["com.apple.Safari", "com.apple.Notes"]])]], macOSVersion: "14")
+            .matches(after, installed: after.appEntryCounts), "a different folder name is a difference")
+    }
 }

@@ -56,6 +56,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - GIMP 3: thumbnails, font caches and crash reports are no longer backed up; resource tags stay valid
   under another user name.
 - Inspecting a disk image no longer leaves it mounted.
+- Home-folder paths in settings files are replaced only as a whole path component (another user's folder
+  with a longer name stays as it is).
 
 ## [1.0.1] - 2026-10-03
 

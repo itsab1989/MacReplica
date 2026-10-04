@@ -122,4 +122,29 @@ struct LaunchpadRestoreTests {
         #expect(resumed.results[RestoreItem.launchpadID]?.outcome == .succeeded)
         #expect(try layout(db, c).pages == c.manifest.launchpadLayout?.pages)
     }
+
+    /// The Dock lists a newly installed app after a moment: the step waits for apps this restore installed
+    /// (up to the settle time) before arranging, so they get their recorded place.
+    @Test func waitsForTheDockToListAppsThisRestoreInstalled() async throws {
+        let c = try await backup("launchpad-settle")
+        var (_, environment, db) = try target(c, apps: Self.page + ["com.example.quillwriter", "com.example.ledgerlite"])
+        environment.launchpadSettleTimeout = 20
+        var plan = RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.launchpad]))
+        let mixer = RestoreItem(id: "cask:studio-mixer", kind: .cask, title: "Studio Mixer", identifier: "studio-mixer",
+                                bundleIdentifier: "com.example.studiomixer", appBundleNames: ["Studio Mixer.app"], component: .brewCasks)
+        // Application data of an app is not an installation: it never makes Launchpad wait.
+        var data = RestoreItem(id: "appdata:x", kind: .applicationData, title: "Data", identifier: "~/x", bundleIdentifier: "com.example.pixelforge")
+        data.component = .applicationData
+        plan.items.insert(contentsOf: [mixer, data], at: 0)
+        var session = RestoreSession(backupPath: "", selection: RestoreSelection(components: [.launchpad]), itemIDs: plan.items.map(\.id))
+        session.results[mixer.id] = ItemResult(itemID: mixer.id, outcome: .succeeded)
+        session.results[data.id] = ItemResult(itemID: data.id, outcome: .skipped(.applicationNotInstalled(name: "Data")))
+        let started = Date()
+        let database = db
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1.5) { try? SyntheticLaunchpad.addApp("com.example.studiomixer", to: database) }
+        let result = await run(plan, environment, c, session: session)
+        #expect(result.results[RestoreItem.launchpadID]?.outcome == .succeeded, "nothing of this restore is still waiting")
+        #expect(Date().timeIntervalSince(started) < 15, "it stops waiting as soon as the Dock lists the app")
+        #expect(try layout(db, c).pages.first == c.manifest.launchpadLayout?.pages.first, "the app the Dock listed late is in its folder")
+    }
 }

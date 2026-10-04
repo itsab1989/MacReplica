@@ -120,4 +120,45 @@ struct AdminPasswordTests {
             .split(separator: "\n").map(String.init)
         #expect(calls == ["pixel-forge", "terminal-plus"], "each Homebrew process asked once and got the right password at once")
     }
+
+    /// The validator hands the password to sudo on standard input only, and refuses what sudo could misread.
+    @Test func theValidatorPassesThePasswordOnStandardInputOnly() async throws {
+        let sandbox = try Sandbox("admin-validator")
+        let fakeSudo = sandbox.url.appendingPathComponent("sudo")
+        // Stands for sudo: reads one line and accepts "secret"; the arguments must be exactly sudo's validation flags.
+        try Data("#!/bin/sh\n[ \"$*\" = \"-S -k -v -p \" ] || exit 3\nread pw\n[ \"$pw\" = secret ]\n".utf8).write(to: fakeSudo)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fakeSudo.path)
+        let validator = SudoPasswordValidator(sudo: fakeSudo.path)
+        #expect(await validator.isValid("secret"))
+        #expect(!(await validator.isValid("wrong")))
+        #expect(!(await validator.isValid("")), "an empty password is never sent")
+        #expect(!(await validator.isValid("secret\nsecret")), "a line break would be read as a second answer")
+        #expect(!(await SudoPasswordValidator(sudo: sandbox.url.appendingPathComponent("missing").path).isValid("secret")))
+        #expect(SudoPasswordValidator().sudo == "/usr/bin/sudo")
+    }
+
+    @Test func promptsAreCountedAndTokensComparedExactly() async throws {
+        let prompts = Prompts(["a", "secret"])
+        let broker = AdminPasswordBroker(prompt: { prompts.next($0) }, validator: Accepts(password: "secret"))
+        #expect(await broker.promptCount == 0)
+        _ = await broker.validatedPassword()
+        _ = await broker.validatedPassword()
+        #expect(await broker.promptCount == 2)
+        #expect(AskpassServer.constantTimeEqual("abc", "abc"))
+        #expect(!AskpassServer.constantTimeEqual("abc", "abd"))
+        #expect(!AskpassServer.constantTimeEqual("abc", "abcd") && !AskpassServer.constantTimeEqual("", "a"))
+
+        let server = try AskpassServer(broker: broker)
+        #expect(server.token.count == 64 && server.environment[AskpassServer.tokenVariable] == server.token)
+        #expect(server.environment[AskpassServer.socketVariable] == server.socketPath)
+        let other = try AskpassServer(broker: broker)
+        #expect(other.token != server.token && other.socketPath != server.socketPath, "every restore gets its own channel")
+        #expect(Self.request(server.socketPath, server.token) == "OK\tsecret\n")
+        server.stop()
+        server.stop()
+        #expect(Self.request(server.socketPath, server.token) == nil, "no answers after the restore")
+        #expect(Self.request(other.socketPath, other.token) == "OK\tsecret\n", "stopping one channel leaves the other")
+        other.stop()
+        #expect(!FileManager.default.fileExists(atPath: (other.socketPath as NSString).deletingLastPathComponent))
+    }
 }

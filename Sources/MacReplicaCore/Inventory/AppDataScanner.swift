@@ -166,8 +166,12 @@ public struct AppDataScanner: Sendable {
     func withHomePlaceholder(_ url: URL) -> Data? {
         guard let data = try? Data(contentsOf: url), data.count < 8_000_000, let text = String(data: data, encoding: .utf8) else { return nil }
         let home = layout.homeDirectory.standardizedFileURL.path
-        guard text.contains(home + "/") || text.hasSuffix(home) || text.contains(home + "\"") || text.contains(home + "\n") else { return nil }
-        return Data(text.replacingOccurrences(of: home, with: Self.homePlaceholder).utf8)
+        // Only the home folder as a whole path component: `/Users/anna` must not change `/Users/annabelle`.
+        guard let expression = try? NSRegularExpression(pattern: NSRegularExpression.escapedPattern(for: home) + #"(?![^/"'\s<>,;:=)\]}&|])"#) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        guard expression.firstMatch(in: text, range: range) != nil else { return nil }
+        let template = NSRegularExpression.escapedTemplate(for: Self.homePlaceholder)
+        return Data(expression.stringByReplacingMatches(in: text, range: range, withTemplate: template).utf8)
     }
 
     static func isRefusedFile(_ name: String) -> Bool {
