@@ -358,11 +358,11 @@ struct BackupSetupCard: View {
                     Image(systemName: "clock.arrow.circlepath").foregroundStyle(.blue)
                     Text(l.t("selection.found", l.date(found.savedAt))).font(.callout)
                         .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("selection.found")
                     Spacer()
                     Button(l.t("selection.apply")) { model.applySelection(found) }
                         .accessibilityIdentifier("selection.apply")
                 }
-                .accessibilityIdentifier("selection.found")
             }
         }
     }

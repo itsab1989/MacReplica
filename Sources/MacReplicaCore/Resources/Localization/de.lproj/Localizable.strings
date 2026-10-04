@@ -1305,7 +1305,7 @@
 "appData.help.workspaces" = "Deine Arbeitsbereiche (Anordnung von Fenstern und Bedienfeldern).";
 "appData.help.workspaceState" = "Welcher Arbeitsbereich aktiv ist.";
 "appData.help.custom" = "Ein Ordner, den du selbst hinzugefügt hast.";
-"appData.help.contents" = "Im Backup: %1$@, z. B. %2$@.";
+"appData.help.contents" = "Im Backup: %1$@, z. B. %2$@";
 "appData.help.location" = "Aus: %1$@";
 "confidence.help.full" = "Vollständig unterstützt: Die Wiederherstellung wurde in der echten App bestätigt.";
 "confidence.help.checkInApp" = "In der App prüfen: MacReplica stellt die Dateien an dem Ort wieder her, den die App dokumentiert; öffne die App danach und prüfe sie.";

@@ -1305,7 +1305,7 @@
 "appData.help.workspaces" = "Je werkruimten (indeling van vensters en panelen).";
 "appData.help.workspaceState" = "Welke werkruimte actief is.";
 "appData.help.custom" = "Een map die je zelf hebt toegevoegd.";
-"appData.help.contents" = "In de back-up: %1$@, bijv. %2$@.";
+"appData.help.contents" = "In de back-up: %1$@, bijv. %2$@";
 "appData.help.location" = "Uit: %1$@";
 "confidence.help.full" = "Volledig ondersteund: het herstel is in de echte app bevestigd.";
 "confidence.help.checkInApp" = "Controleer in de app: MacReplica zet de bestanden terug op de plek die de app documenteert; open daarna de app en controleer ze.";

@@ -1305,7 +1305,7 @@
 "appData.help.workspaces" = "Arbeidsområdene dine (ordning av vinduer og paneler).";
 "appData.help.workspaceState" = "Hvilket arbeidsområde som er aktivt.";
 "appData.help.custom" = "En mappe du har lagt til selv.";
-"appData.help.contents" = "I sikkerhetskopien: %1$@, f.eks. %2$@.";
+"appData.help.contents" = "I sikkerhetskopien: %1$@, f.eks. %2$@";
 "appData.help.location" = "Fra: %1$@";
 "confidence.help.full" = "Fullt støttet: gjenopprettingen ble bekreftet i den ekte appen.";
 "confidence.help.checkInApp" = "Sjekk i appen: MacReplica gjenoppretter filene der appen dokumenterer dem; åpne appen etterpå og sjekk dem.";

@@ -12,6 +12,11 @@
 
 1. Open MacReplica and click **Create Backup**. The scan only reads; nothing on the Mac changes.
 2. The results screen, **What do you want to take with you?**, shows:
+   - **Backup location** — where the backup will be saved, with the drive's name, its free space and how large
+     the backup will be. Click **Choose …** (or **Change …**) to pick a folder or an external drive; nothing is
+     written until you click **Save Backup**. **Save Selection …** keeps your choices for next time (the selection
+     is also saved next to the backup automatically) and **Load Selection …** applies saved choices; when you scan
+     again and the location has a saved selection, MacReplica offers **Use It**;
    - how each app will come back (Homebrew, App Store, vendor website, manual);
    - **Possible matches found** — apps where several Homebrew packages could fit. Pick the right one
      or *None of these* (you can also decide later on the new Mac);
@@ -28,9 +33,9 @@
    - **Developer Settings** — Git settings (your email only if you tick it);
    - **Application Data** — detected app settings and presets, per app and kind (for example Photoshop and
      the Photoshop beta separately, DaVinci Resolve LUTs, Krita resources, GIMP and Inkscape settings, Word
-     templates and AutoCorrect, Mail signatures and rules, the Cryptomator vault list, DisplayCAL calibrations);
+     templates and AutoCorrect, LibreOffice settings, templates and dictionaries, Mail signatures and rules, the Cryptomator vault list, DisplayCAL calibrations);
      items that may not work in another app version, may contain keys or contain code (plug-ins, scripts,
-     add-ins) are not selected. Each item shows how well it is supported: *Fully supported* (confirmed in the
+     add-ins) are not selected. Hold the pointer over an item to see what it contains and what it means. Each item shows how well it is supported: *Fully supported* (confirmed in the
      real app), *Check in the app* or *Experimental*. Mail and Office need **Full Disk Access** for MacReplica
      (System Settings › Privacy & Security). Add more with **Add Folder …**.
      *Application data* means the settings, presets, templates and resources you created in an app — never
@@ -51,7 +56,7 @@
    The **Launchpad** layout (macOS 13–15: pages, folders with their names, the order of the apps) is
    recorded automatically. If App Store apps could not be identified, MacReplica says so and offers to install
    the helper tool `mas`, which can look them up.
-3. Click **Save Backup …** and choose the destination folder. MacReplica creates a folder named
+3. Click **Save Backup** (or **Save Backup …** if no location is chosen yet). MacReplica creates a folder named
    `MacReplica-Backup-<date>-<time>`, verifies it and shows its size, location and contents.
 4. Copy that folder to the new Mac (or keep it on the external drive).
 

@@ -394,7 +394,7 @@ public enum AppDataCatalog {
                          AppDataCategory("gallery", "gallery"),
                          AppDataCategory("basicMacros", "basic", .containsCode),
                          AppDataCategory("userScripts", "Scripts", .containsCode)],
-            mustBeClosed: true, status: .fixtureTested,
+            mustBeClosed: true, status: .verified,
             evidence: [Evidence(title: "The Document Foundation Wiki: LibreOffice user profile (content; \"most of the content of the user profile can be safely copied from a machine to another\")",
                                 url: "https://wiki.documentfoundation.org/UserProfile"),
                        Evidence(title: "LibreOffice Help: Paths (AutoCorrect, AutoText, Backups, Dictionaries, Gallery, Templates in the user profile)",
@@ -405,7 +405,9 @@ public enum AppDataCatalog {
             limitations: ["Extensions are installed again from the LibreOffice extension site (their registration is tied to the installation).",
                           "Registered databases point to database files elsewhere; register them again if needed.",
                           "Automatic backup copies of documents, temporary files and crash data are never copied.",
-                          "Settings contain paths of the home folder; they are adjusted to the new Mac's home folder."]),
+                          "Settings contain paths of the home folder; they are adjusted to the new Mac's home folder."],
+            // Verified with LibreOffice 26.8 (Basic probe inside LibreOffice): user name, custom dictionary word, template, toolbar.
+            verifiedCategories: ["libreofficeSettings", "templates", "dictionaries", "menusToolbarsShortcuts"]),
         AppDataProvider(
             id: "microsoft-office-ribbons", appName: "Microsoft Office",
             bundleIdentifiers: ["com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint"],

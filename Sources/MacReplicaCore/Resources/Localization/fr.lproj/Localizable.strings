@@ -1305,7 +1305,7 @@
 "appData.help.workspaces" = "Vos espaces de travail (disposition des fenêtres et panneaux).";
 "appData.help.workspaceState" = "L'espace de travail actif.";
 "appData.help.custom" = "Un dossier que vous avez ajouté vous-même.";
-"appData.help.contents" = "Dans la sauvegarde : %1$@, p. ex. %2$@.";
+"appData.help.contents" = "Dans la sauvegarde : %1$@, p. ex. %2$@";
 "appData.help.location" = "Depuis : %1$@";
 "confidence.help.full" = "Entièrement pris en charge : la restauration a été confirmée dans la vraie app.";
 "confidence.help.checkInApp" = "À vérifier dans l'app : MacReplica restaure les fichiers à l'endroit documenté par l'app ; ouvrez ensuite l'app pour les vérifier.";

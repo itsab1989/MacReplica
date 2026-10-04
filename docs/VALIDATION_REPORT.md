@@ -1,5 +1,18 @@
 # MacReplica – validation report
 
+## Addendum 2026-10-04 (round 4): Knut's test on an Intel Mac, LibreOffice, location, selection, explanations
+
+| Request | Result | Evidence |
+|---|---|---|
+| Homebrew "installed but does not respond" on Knut's Intel MacBook Pro (Sonoma, MacReplica 1.0.2) | Cause: Homebrew could not read its version from git and printed `Homebrew >=4.3.0 (shallow or no git repository)` (Homebrew's `brew.sh`/`utils/git.sh`: without git — no Command Line Tools — or with a repository owned by another administrator, and no describe cache). MacReplica only accepted a number after "Homebrew ", so it treated a working Homebrew as broken. Fixed; the log now names the reason and every inventory warning | automated (`homebrewWithoutGitIsUsed` with that exact output, parser cases); Homebrew's source read on this Mac |
+| LibreOffice settings like Office's Normal.dotm | Provider for the user profile | **real** (LibreOffice 26.8, see PROVIDERS.md); fixture test incl. everything that is never copied |
+| Choose where to save the backup before starting | *Backup location* card with path, drive, free space and backup size; *Save Backup* saves there; "Nothing is written until you click Save Backup" | **real app, simulated Mac** (screenshot G1) |
+| Save and load the selection, next to the backup | *Save Selection … / Load Selection …*; saved automatically next to the backup; offered at the next scan (*Use It*) | **real app, simulated Mac**: two choices changed, backup saved (selection file next to it), new scan → offered → applied → both choices back; *Load Selection …* likewise; automated (format, defaults for new items, newer format refused) |
+| Explain the options | Hover text for every kind of application data (104 kinds × 7 languages): what it is, contents with example names, origin, support level, notes | **real app**: hover texts read through accessibility (AXHelp) for LibreOffice settings and macros and Krita; automated (every kind explained in every language) |
+
+Found during the on-screen run and fixed: the *Use It* button could not be pressed through accessibility because
+its row carried an identifier (VoiceOver users would have had the same problem).
+
 ## Addendum 2026-10-04: MacReplica 1.0.2 (round 3)
 
 Host: development Mac, macOS 27.0.1 (Apple silicon), Command Line Tools / Swift 6.4; GitHub-hosted macOS 14.8

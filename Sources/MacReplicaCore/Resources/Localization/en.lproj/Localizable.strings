@@ -1307,7 +1307,7 @@
 "appData.help.workspaces" = "Your workspaces (window and panel arrangements).";
 "appData.help.workspaceState" = "Which workspace is active.";
 "appData.help.custom" = "A folder you added yourself.";
-"appData.help.contents" = "In the backup: %1$@, e.g. %2$@.";
+"appData.help.contents" = "In the backup: %1$@, e.g. %2$@";
 "appData.help.location" = "From: %1$@";
 "confidence.help.full" = "Fully supported: restoring it was confirmed inside the real app.";
 "confidence.help.checkInApp" = "Check in the app: MacReplica restores the files in the place the app documents; open the app afterwards and check them.";
