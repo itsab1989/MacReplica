@@ -188,5 +188,9 @@ struct OwnInstallerTests {
         firstMissing.ownInstallers?.removeFirst(2)
         firstMissing.ownInstallers?.insert(archive("Gone.dmg", .dmg), at: 0)
         #expect(OwnInstallerSource.offer(for: firstMissing, itemID: "x", backupRoot: nil, layout: layout) == nil, "the first installer must be there")
+        var packageFirst = app
+        packageFirst.ownInstallers = [archive("Activation.pkg", .pkg)]
+        #expect(OwnInstallerSource.offer(for: packageFirst, itemID: "x", backupRoot: nil, layout: layout)?.isPackage == true,
+                "a package opens in Apple's Installer")
     }
 }

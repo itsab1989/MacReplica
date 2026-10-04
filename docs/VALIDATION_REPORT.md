@@ -66,7 +66,47 @@ each keep their place.
 (format 2) are read and migrated; 1.0.1 refuses format-3 backups. Existing providers keep their behaviour;
 verified categories were only added where a real-app check exists (enforced by `ProviderCatalogTests`).
 
-MUTATION_SECTION
+### On-screen run (real app, simulated Mac)
+
+The real MacReplica.app (1.0.2 build) was driven end to end against a simulated old Mac with the new app data, a
+Launchpad and an own folder, and a simulated fresh Mac, through accessibility actions only (`tools/ui/ax-press`;
+the macOS file panels are bypassed in simulation mode by `stagingSkipPanels`, which uses the remembered folders):
+
+1. Inventory → backup selection with confidence badges, code and Full Disk Access notes (screenshots), *Your own
+   folders* → **Add Folder …** → `~/Documents/Novel` listed with size and total.
+2. **Save Backup** → *The backup is complete and was checked* (70 files, format 3, Launchpad layout and the own
+   folder in the manifest).
+3. Fresh Mac → **Restore** → selection with *Your own folders* and *Launchpad layout* → conflict sheet (3 font/profile
+   decisions) → *Before the restore starts* → restore: **53 successful, 0 failed, 3 skipped, 5 waiting**; Launchpad
+   *arranged with the apps installed so far*, waiting for 4 guided apps.
+4. The 4 apps installed (simulated) → **Continue** → **Restore complete, 58 successful, 0 failed**; Launchpad
+   arranged again (Dock paused and reloaded twice), the own folder's file and Krita's settings (home path filled
+   in) on the new Mac, Launchpad database in the recorded order.
+
+Found and fixed during the run: Krita's Python plug-ins were restored with the resource folder although their
+own category was not selected; the note before the restore still described the old password dialog; the summary
+listed apps to install that were installed by then. Evidence: `~/Desktop/MacReplica-Staging/validation/round3-gui/`.
+
+### Mutation testing of the new modules
+
+Run on 2026-10-04 (6 shards; then only the survivors again after adding tests — `AdminPasswordTests`,
+`OwnInstallerTests`, `LaunchpadTests`, `LaunchpadRestoreTests`, `AppDataScannerEdgeTests` gained cases). Overall
+**84.7 %** (177 of 209 counted mutants killed); equivalent mutants of the password channel are
+excluded with their reasons in `tools/mutation/config.json`.
+
+| Module | Killed | Survived | Invalid | Excluded | Score |
+|---|---:|---:|---:|---:|---:|
+| `Downloads/InstallerArchive.swift` | 18 | 9 | 0 | 0 | 66.7 % |
+| `Inventory/AppDataScanner.swift` | 44 | 8 | 5 | 5 | 84.6 % |
+| `Launchpad/LaunchpadLayout.swift` | 65 | 11 | 3 | 0 | 85.5 % |
+| `Providers/AppDataProviders.swift` | 22 | 3 | 2 | 1 | 88.0 % |
+| `Restore/LaunchpadRestore.swift` | 10 | 1 | 0 | 2 | 90.9 % |
+| `System/AdminPasswordBroker.swift` | 18 | 0 | 1 | 8 | 100.0 % |
+
+Remaining survivors: in `InstallerArchive.swift` the paths that need an installer signed with a real Developer ID
+(`pkgutil` reports a trusted signature, a signed app inside a disk image) or `hdiutil detach` failing, plus the
+nesting limits for zip/disk-image containers; in `AppDataScanner.swift` partly the home-path check that was
+rewritten during the run (the new version is covered by `homePathPlaceholderOnlyReplacesTheHomeFolderItself`).
 
 ### Limitations and what is not supported
 
@@ -78,10 +118,6 @@ MUTATION_SECTION
 - XP-Pen and BenQ data: experimental (community sources); install the vendor driver first.
 - Synology Drive: guidance only.
 - Your own folders: no deduplication, no incremental backups — MacReplica is not a replacement for Time Machine.
-- The complete GUI flow (choose folder, save, restore) of the new sections was not clicked through on screen:
-  the macOS file panels run out of process and can only be confirmed with keystrokes, which are not sent during
-  unattended validation. The screens were checked (screenshots), the flows are covered end-to-end in the
-  automated tests.
 - No test ran on a freshly installed macOS or a second physical Mac.
 
 ### Legal note on the reseller's installation guide

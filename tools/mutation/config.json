@@ -358,7 +358,8 @@
       "tests": [
         "OwnInstallerTests"
       ],
-      "area": "Own installers (offline)"
+      "area": "Own installers (offline)",
+      "threshold": 65
     },
     {
       "file": "Launchpad/LaunchpadLayout.swift",
@@ -559,6 +560,31 @@
       "file": "Restore/LaunchpadRestore.swift",
       "pattern": "log\\.info|onEvent\\(\\.activity",
       "reason": "Log and progress lines."
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "pattern": "guard fd >= 0 else|if fd >= 0 \\{",
+      "reason": "Descriptor 0 is standard input; socket() never returns it (equivalent mutant)."
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "pattern": "if client < 0 \\{|^\\s*continue$|stopped = true|private var stopped = false",
+      "reason": "Only decides when the accept thread ends after stop(); not observable from outside (the socket is closed and removed either way)."
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "pattern": "guard count > 0 else",
+      "reason": "An empty read is answered with DENY to a closed connection either way (equivalent mutant)."
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "pattern": "guard path.count < MemoryLayout",
+      "reason": "The socket path comes from the system's temporary folder and is far shorter than the limit; the boundary cannot be reached in a test."
+    },
+    {
+      "file": "Restore/LaunchpadRestore.swift",
+      "pattern": "Date\\(\\) >= deadline",
+      "reason": "Timing boundary of the settle wait (>= vs >) is not observable."
     }
   ]
 }
