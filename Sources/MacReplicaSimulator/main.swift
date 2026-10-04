@@ -84,16 +84,12 @@ if arguments.first == "launchpad-export" || arguments.first == "launchpad-apply"
     if let written {
         try encoder.encode(written).write(to: file.deletingPathExtension().appendingPathExtension("written.json"))
         print("written (before the Dock restart): \(written.pages.count) pages, folders: \(written.folderNames); "
-              + (layout.matches(written, installed: Set(written.pages.flatMap { $0 }.compactMap { if case .app(let id) = $0 { return id }; return nil })) ? "as recorded" : "differs"))
+              + (layout.matches(written, installed: written.appEntryCounts) ? "as recorded" : "differs"))
     }
     try await Task.sleep(nanoseconds: 10_000_000_000)
     let after = try store.read(macOSVersion: SystemInfo.macOSVersion, work: work)
     try encoder.encode(after).write(to: file.deletingPathExtension().appendingPathExtension("after.json"))
-    let installed = Set(after.pages.flatMap { $0 }.flatMap { entry -> [String] in
-        if case .folder(_, let pages) = entry { return pages.flatMap { $0 } }
-        if case .app(let id) = entry { return [id] }
-        return []
-    })
+    let installed = after.appEntryCounts
     print("placed \(placed) apps; after the Dock restart: \(after.pages.count) pages, folders: \(after.folderNames)")
     print(layout.matches(after, installed: installed) ? "MATCH" : "MISMATCH")
     exit(layout.matches(after, installed: installed) ? 0 : 1)

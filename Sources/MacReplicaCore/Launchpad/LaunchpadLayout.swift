@@ -34,20 +34,47 @@ public struct LaunchpadLayout: Codable, Equatable, Sendable {
 
     /// How well `actual` (read back after restoring) matches this layout for the apps both contain: every folder
     /// with its apps, and the order of top-level entries.
-    public func matches(_ actual: LaunchpadLayout, installed: Set<String>) -> Bool {
+    /// `installed` counts the entries per app on the restored Mac (an app can be there in several copies, or in
+    /// fewer than recorded): the layout's entries beyond that count are left out of the comparison.
+    public func matches(_ actual: LaunchpadLayout, installed: [String: Int]) -> Bool {
         func normalized(_ layout: LaunchpadLayout) -> [[Entry]] {
-            layout.pages.map { page in
+            var left = installed
+            func keep(_ id: String) -> Bool {
+                guard let count = left[id], count > 0 else { return false }
+                left[id] = count - 1
+                return true
+            }
+            return layout.pages.map { page in
                 page.compactMap { entry -> Entry? in
                     switch entry {
-                    case .app(let id): return installed.contains(id) ? entry : nil
+                    case .app(let id): return keep(id) ? entry : nil
                     case .folder(let name, let pages):
-                        let apps = pages.map { $0.filter(installed.contains) }.filter { !$0.isEmpty }
-                        return .folder(name: name, pages: apps)
+                        let apps = pages.map { $0.filter(keep) }.filter { !$0.isEmpty }
+                        return apps.isEmpty ? nil : .folder(name: name, pages: apps)
                     }
                 }
             }.filter { !$0.isEmpty }
         }
-        return normalized(self) == Array(normalized(actual).prefix(normalized(self).count))
+        let expected = normalized(self)
+        return expected == Array(normalized(actual).prefix(expected.count))
+    }
+
+    public func matches(_ actual: LaunchpadLayout, installed: Set<String>) -> Bool {
+        matches(actual, installed: Dictionary(uniqueKeysWithValues: installed.map { ($0, 1) }))
+    }
+
+    /// Entries per app in this layout.
+    public var appEntryCounts: [String: Int] {
+        var counts: [String: Int] = [:]
+        for page in pages {
+            for entry in page {
+                switch entry {
+                case .app(let id): counts[id, default: 0] += 1
+                case .folder(_, let folderPages): for id in folderPages.joined() { counts[id, default: 0] += 1 }
+                }
+            }
+        }
+        return counts
     }
 }
 
@@ -164,11 +191,15 @@ public struct LaunchpadStore: Sendable {
 
     static func apply(_ layout: LaunchpadLayout, to db: OpaquePointer) throws -> Int {
         let root = try Int(scalar(db, "SELECT value FROM dbinfo WHERE key='launchpad_root'") ?? "1") ?? 1
-        var appItem: [String: Int] = [:]
-        for row in try rows(db, "SELECT i.rowid, a.bundleid FROM items i JOIN apps a ON a.item_id=i.rowid WHERE i.type=4") {
-            let id = Int(row[0]) ?? 0
-            // The visible entry of an app is the one on a page of the Launchpad root (not on the version page).
-            if appItem[row[1]] == nil || isOnRootPage(db, item: id, root: root) { appItem[row[1]] = id }
+        // An app can have several entries: copies with the same bundle identifier (e.g. two Xcode versions) each
+        // have their own. The visible entries are those on a page of the Launchpad root (not on the version page).
+        var entries: [String: [Int]] = [:]
+        for row in try rows(db, "SELECT i.rowid, a.bundleid FROM items i JOIN apps a ON a.item_id=i.rowid WHERE i.type=4 ORDER BY i.rowid") {
+            entries[row[1], default: []].append(Int(row[0]) ?? 0)
+        }
+        for (bundle, ids) in entries {
+            let visible = ids.filter { isVisible(db, item: $0, root: root) }
+            entries[bundle] = visible.isEmpty ? Array(ids.prefix(1)) : visible
         }
         try exec(db, "BEGIN IMMEDIATE")
         do {
@@ -187,6 +218,8 @@ public struct LaunchpadStore: Sendable {
                 try exec(db, "INSERT INTO groups (item_id, category_id, title) VALUES (\(id), NULL, \(title.map(quoted) ?? "NULL"))")
                 return id
             }
+            /// The next entry of the app that is not placed yet.
+            func appItem(_ bundle: String) -> Int? { entries[bundle]?.first { !placed.contains($0) } }
             func move(_ item: Int, to parent: Int, ordering: Int) throws {
                 try exec(db, "UPDATE items SET parent_id=\(parent), ordering=\(ordering) WHERE rowid=\(item)")
                 placed.insert(item)
@@ -198,17 +231,22 @@ public struct LaunchpadStore: Sendable {
                 for entry in page {
                     switch entry {
                     case .app(let bundle):
-                        guard let item = appItem[bundle], !placed.contains(item) else { continue }
+                        guard let item = appItem(bundle) else { continue }
                         try move(item, to: pageID, ordering: slot)
                         slot += 1
                     case .folder(let name, let folderPages):
-                        let items = folderPages.map { $0.compactMap { appItem[$0] }.filter { !placed.contains($0) } }.filter { !$0.isEmpty }
-                        guard !items.isEmpty else { continue }
+                        guard folderPages.joined().contains(where: { appItem($0) != nil }) else { continue }
                         let folder = try newItem(type: 2, parent: pageID, ordering: slot, title: name)
                         slot += 1
-                        for (index, apps) in items.enumerated() {
-                            let inner = try newItem(type: 3, parent: folder, ordering: index)
-                            for (order, item) in apps.enumerated() where !placed.contains(item) { try move(item, to: inner, ordering: order) }
+                        var index = 0
+                        for apps in folderPages {
+                            var inner: Int?, order = 0
+                            for bundle in apps {
+                                guard let item = appItem(bundle) else { continue }
+                                if inner == nil { inner = try newItem(type: 3, parent: folder, ordering: index); index += 1 }
+                                try move(item, to: inner!, ordering: order)
+                                order += 1
+                            }
                         }
                     }
                 }
@@ -253,6 +291,13 @@ public struct LaunchpadStore: Sendable {
         // Inside a folder: page → folder → page → root.
         guard let folder = parent(db, page), let outer = parent(db, folder) else { return false }
         return parent(db, outer) == root
+    }
+
+    /// On a page of the root, or in a folder on such a page.
+    private static func isVisible(_ db: OpaquePointer, item: Int, root: Int) -> Bool {
+        if isOnRootPage(db, item: item, root: root) { return true }
+        guard let page = parent(db, item), let folder = parent(db, page), let folderPage = parent(db, folder) else { return false }
+        return parent(db, folderPage) == root
     }
 
     private static func isInFolder(_ db: OpaquePointer, item: Int, folders: [Int]) -> Bool {

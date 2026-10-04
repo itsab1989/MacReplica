@@ -40,6 +40,23 @@ struct LaunchpadTests {
         #expect(try LaunchpadStore(database: db).read(macOSVersion: "14.8.9", work: sandbox.url.appendingPathComponent("work")) == after)
     }
 
+    /// Copies with the same bundle identifier (two Xcode versions) have an entry each; a Mac with fewer copies
+    /// than recorded gets the ones it has, in the recorded places.
+    @Test func severalCopiesOfAnAppKeepTheirPlaces() throws {
+        let sandbox = try Sandbox("launchpad-copies")
+        let db = try SyntheticLaunchpad.create(at: sandbox.url.appendingPathComponent("db/db"),
+                                               apps: ["com.apple.dt.Xcode", "com.apple.Safari", "com.apple.dt.Xcode"])
+        let recorded = LaunchpadLayout(pages: [
+            [.folder(name: "Dev", pages: [["com.apple.dt.Xcode"]]), .app("com.apple.Safari")],
+            [.app("com.apple.dt.Xcode"), .app("com.apple.dt.Xcode")],
+        ], macOSVersion: "14.8.9")
+        #expect(try LaunchpadStore(database: db).apply(recorded) == 3)
+        let after = try LaunchpadStore(database: db).read(macOSVersion: "15.7", work: sandbox.url.appendingPathComponent("work"))
+        #expect(after.pages == [[.folder(name: "Dev", pages: [["com.apple.dt.Xcode"]]), .app("com.apple.Safari")], [.app("com.apple.dt.Xcode")]])
+        #expect(recorded.matches(after, installed: after.appEntryCounts), "the third recorded copy is not on this Mac")
+        #expect(!recorded.matches(after, installed: ["com.apple.dt.Xcode": 3, "com.apple.Safari": 1]))
+    }
+
     @Test func launchpadExistsOnlyUpToMacOS15() {
         #expect(LaunchpadLayout.isSupported(macOSVersion: "13.7"))
         #expect(LaunchpadLayout.isSupported(macOSVersion: "14.8.9"))
