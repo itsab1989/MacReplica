@@ -12,6 +12,20 @@ struct ProviderCatalogTests {
                                                  "krita", "krita-settings", "gimp", "inkscape", "scribus", "scribus-settings",
                                                  "cryptomator", "displaycal", "displaycal-settings", "microsoft-office"]
 
+    /// A category that takes a whole folder leaves out the sub-folders other categories of the same provider
+    /// handle, so deselecting one of them (for example Krita's Python plug-ins) really leaves it out.
+    @Test func categoriesDoNotContainEachOther() {
+        for provider in AppDataCatalog.providers {
+            for outer in provider.categories where outer.files == nil && outer.filePattern == nil {
+                for inner in provider.categories where inner.key != outer.key && inner.path != outer.path {
+                    let prefix = outer.path.isEmpty ? "" : outer.path + "/"
+                    guard inner.path.hasPrefix(prefix), let first = inner.path.dropFirst(prefix.count).split(separator: "/").first else { continue }
+                    #expect(outer.excluding.contains(String(first)), "\(provider.id): \(outer.key) must leave out \(first) (\(inner.key))")
+                }
+            }
+        }
+    }
+
     @Test func everyProviderIsDocumentedLocalizedAndSafe() {
         let providers = AppDataCatalog.providers
         #expect(providers.count >= 15)

@@ -159,7 +159,7 @@
 "admin.password.message" = "macOS vraagt om je beheerderswachtwoord, omdat:";
 "admin.password.homebrew" = "Homebrew moet worden geïnstalleerd. Dat gebeurt in een systeemmap.";
 "admin.password.files" = "Sommige lettertypen of kleurprofielen komen terecht in mappen die door alle gebruikers van deze Mac worden gedeeld.";
-"admin.password.privacy" = "Je voert het wachtwoord in een standaardvenster van macOS in. MacReplica ziet of bewaart het nooit.";
+"admin.password.privacy" = "Voor Homebrew-pakketten vraagt MacReplica het één keer in een eigen venster, controleert het wachtwoord met macOS en houdt het alleen in het geheugen tot het herstel klaar is – het wordt nooit bewaard of gelogd. Het installeren van Homebrew en schrijven in gedeelde mappen gebruiken het standaard macOS-venster; dat wachtwoord ziet MacReplica niet.";
 "admin.continue" = "Ga door";
 "admin.reason.homebrew" = "MacReplica wil Homebrew installeren, waarvoor beheerdersrechten nodig zijn.";
 "admin.reason.files" = "MacReplica wil lettertypen en kleurprofielen kopiëren naar mappen die door alle gebruikers van deze Mac worden gedeeld (lettertypen: %1$d, kleurprofielen: %2$d).";

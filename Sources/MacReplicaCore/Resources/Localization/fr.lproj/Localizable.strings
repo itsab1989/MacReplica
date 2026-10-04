@@ -159,7 +159,7 @@
 "admin.password.message" = "macOS va te demander ton mot de passe administrateur, car :";
 "admin.password.homebrew" = "Homebrew doit être installé. Il s’installe dans un dossier système.";
 "admin.password.files" = "Certaines polices ou certains profils colorimétriques vont dans des dossiers partagés par tous les utilisateurs de ce Mac.";
-"admin.password.privacy" = "Le mot de passe est saisi dans une fenêtre standard de macOS. MacReplica ne le voit jamais et ne l’enregistre pas.";
+"admin.password.privacy" = "Pour les paquets Homebrew, MacReplica le demande une seule fois dans sa propre fenêtre, vérifie le mot de passe avec macOS et le garde uniquement en mémoire jusqu'à la fin de la restauration – il n'est jamais enregistré ni journalisé. L'installation de Homebrew et l'écriture dans des dossiers partagés utilisent la fenêtre standard de macOS ; MacReplica ne voit pas ce mot de passe.";
 "admin.continue" = "Continuer";
 "admin.reason.homebrew" = "MacReplica veut installer Homebrew, ce qui nécessite des droits d’administrateur.";
 "admin.reason.files" = "MacReplica veut copier des polices et des profils colorimétriques dans des dossiers partagés par tous les utilisateurs de ce Mac (polices : %1$d, profils colorimétriques : %2$d).";

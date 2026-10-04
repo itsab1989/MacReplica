@@ -56,6 +56,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - GIMP 3: thumbnails, font caches and crash reports are no longer backed up; resource tags stay valid
   under another user name.
 - Inspecting a disk image no longer leaves it mounted.
+- Krita's Python plug-ins are only restored when chosen (they were also part of the resource folder).
+- The restore summary no longer lists apps to install yourself that are installed by then.
+- The note before a restore describes how the administrator password is now asked for.
 - Home-folder paths in settings files are replaced only as a whole path component (another user's folder
   with a longer name stays as it is).
 

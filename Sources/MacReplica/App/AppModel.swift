@@ -438,8 +438,13 @@ final class AppModel: ObservableObject {
         panel.prompt = l.t("appData.add.choose")
         panel.message = l.t("personal.add.message")
         panel.directoryURL = services.layout.homeDirectory
-        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
-        let folders = panel.urls
+        let folders: [URL]
+        if services.simulationRoot != nil, defaults.bool(forKey: "stagingSkipPanels"), let paths = defaults.stringArray(forKey: "stagingPersonalFolders") {
+            folders = paths.map { URL(fileURLWithPath: $0) }
+        } else {
+            guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
+            folders = panel.urls
+        }
         let scanner = AppDataScanner(layout: services.layout)
         addingApplicationData = true
         task = Task.detached { [weak self] in
@@ -483,6 +488,10 @@ final class AppModel: ObservableObject {
         panel.prompt = l.t("inventory.save.choose")
         panel.message = l.t("inventory.save.message")
         panel.directoryURL = lastFolder(key: "lastBackupParent") ?? defaultBackupParent
+        if let staged = stagingFolder(key: "lastBackupParent") {
+            saveBackup(into: staged)
+            return
+        }
         guard panel.runModal() == .OK, let parent = panel.url else { return }
         defaults.set(parent.path, forKey: "lastBackupParent")
         saveBackup(into: parent)
@@ -490,6 +499,14 @@ final class AppModel: ObservableObject {
 
     private var defaultBackupParent: URL {
         services.layout.homeDirectory.appendingPathComponent("Desktop")
+    }
+
+    /// Staging only (a simulated Mac and `stagingSkipPanels` set in the simulation's defaults): the folder
+    /// remembered under `key` is used without showing the file panel, so the whole flow can be driven on screen
+    /// through accessibility actions. Never active outside a simulation.
+    private func stagingFolder(key: String) -> URL? {
+        guard services.simulationRoot != nil, defaults.bool(forKey: "stagingSkipPanels") else { return nil }
+        return lastFolder(key: key)
     }
 
     private func lastFolder(key: String) -> URL? {
@@ -573,7 +590,14 @@ final class AppModel: ObservableObject {
         panel.prompt = l.t("backup.open.choose")
         panel.message = l.t("backup.open.message")
         panel.directoryURL = lastFolder(key: "lastBackup") ?? defaultBackupParent
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let chosen: URL
+        if let staged = stagingFolder(key: "lastBackup") {
+            chosen = staged
+        } else {
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            chosen = url
+        }
+        let url = chosen
         switch purpose {
         case .restore: openBackupForRestore(url)
         case .verify: verifyBackup(url)

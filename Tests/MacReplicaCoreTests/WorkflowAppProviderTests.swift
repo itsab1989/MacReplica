@@ -57,6 +57,8 @@ struct WorkflowAppProviderTests {
         #expect(Self.folder(manifest, "microsoft-office", "officeTemplates")?.profile?.requiresFullDiskAccess == true)
         #expect(Self.folder(manifest, "xppen", "tabletSettings")?.profile?.effectiveConfidence == .experimental)
         #expect(Self.folder(manifest, "krita", "kritaResources")?.profile?.effectiveConfidence == .full, "checked in the real Krita")
+        #expect(Self.folder(manifest, "krita", "kritaResources")?.files.contains { $0.relativePath.hasPrefix("pykrita/") } == false,
+                "the plug-ins are only in their own category, which is not selected")
         #expect(Self.folder(manifest, "apple-mail", "mailSignatures")?.profile?.effectiveConfidence == .experimental)
         let everything = BackupWriter.allFiles(in: backup)
         for never in ["krita.log", "kritadisplayrc", "pluginrc", "documents", "tmp/swap", "cache/thumbnails", "CrashLog/", "extension-errors.log", "cache/img", "/dl/", ".lock",

@@ -122,10 +122,14 @@ extension SyntheticLaunchpad {
         var db: OpaquePointer?
         guard sqlite3_open(url.path, &db) == SQLITE_OK, let db else { throw CocoaError(.fileWriteUnknown) }
         defer { sqlite3_close(db) }
+        // MacReplica may be reading the database at the same moment, like the real Dock and Launchpad.
+        sqlite3_busy_timeout(db, 10_000)
         let sql = """
+        BEGIN IMMEDIATE;
         INSERT INTO items (uuid, flags, type, parent_id, ordering)
           VALUES ('\(UUID().uuidString)', 0, 4, (SELECT MAX(rowid) FROM items WHERE type=3 AND parent_id=1), 0);
         INSERT INTO apps VALUES (last_insert_rowid(), '\(bundle)', '\(bundle)', NULL, NULL, 0, NULL);
+        COMMIT;
         """
         guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw CocoaError(.fileWriteUnknown) }
     }

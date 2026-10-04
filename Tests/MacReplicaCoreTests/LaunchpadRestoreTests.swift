@@ -7,6 +7,15 @@ import MacReplicaTestSupport
 /// restore, and arranged again once apps that were still being installed are there.
 @Suite("Launchpad backup and restore", .serialized)
 struct LaunchpadRestoreTests {
+    final class Flag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored = false
+        var value: Bool {
+            get { lock.withLock { stored } }
+            set { lock.withLock { stored = newValue } }
+        }
+    }
+
     static let page = ["com.example.nimbusnotes", "com.example.pixelforge"]
     static let folder = ["com.example.quillwriter", "com.example.ledgerlite", "com.example.studiomixer"]
 
@@ -128,7 +137,7 @@ struct LaunchpadRestoreTests {
     @Test func waitsForTheDockToListAppsThisRestoreInstalled() async throws {
         let c = try await backup("launchpad-settle")
         var (_, environment, db) = try target(c, apps: Self.page + ["com.example.quillwriter", "com.example.ledgerlite"])
-        environment.launchpadSettleTimeout = 20
+        environment.launchpadSettleTimeout = 40
         var plan = RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.launchpad]))
         let mixer = RestoreItem(id: "cask:studio-mixer", kind: .cask, title: "Studio Mixer", identifier: "studio-mixer",
                                 bundleIdentifier: "com.example.studiomixer", appBundleNames: ["Studio Mixer.app"], component: .brewCasks)
@@ -141,10 +150,18 @@ struct LaunchpadRestoreTests {
         session.results[data.id] = ItemResult(itemID: data.id, outcome: .skipped(.applicationNotInstalled(name: "Data")))
         let started = Date()
         let database = db
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1.5) { try? SyntheticLaunchpad.addApp("com.example.studiomixer", to: database) }
+        let added = Flag()
+        // Its own thread, so a busy test run cannot delay the simulated Dock.
+        Thread {
+            Thread.sleep(forTimeInterval: 1.5)
+            for _ in 0..<20 where !added.value {
+                if (try? SyntheticLaunchpad.addApp("com.example.studiomixer", to: database)) != nil { added.value = true } else { Thread.sleep(forTimeInterval: 0.2) }
+            }
+        }.start()
         let result = await run(plan, environment, c, session: session)
+        #expect(added.value, "the simulated Dock listed the app")
         #expect(result.results[RestoreItem.launchpadID]?.outcome == .succeeded, "nothing of this restore is still waiting")
-        #expect(Date().timeIntervalSince(started) < 15, "it stops waiting as soon as the Dock lists the app")
+        #expect(Date().timeIntervalSince(started) < 30, "it stops waiting as soon as the Dock lists the app")
         #expect(try layout(db, c).pages.first == c.manifest.launchpadLayout?.pages.first, "the app the Dock listed late is in its folder")
     }
 }

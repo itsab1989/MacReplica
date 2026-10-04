@@ -186,8 +186,8 @@ update, download the new disk image and replace the app.
    that are not recommended on this Mac. Leave out what you do not want; use
    **Choose Individual Items …** for details and decisions.
 3. Click **Preview (Dry Run)** to see exactly what would happen, or **Start Restore**.
-4. If something needs administrator rights (Homebrew, shared folders), MacReplica explains why and
-   macOS asks for your password.
+4. If something needs administrator rights (Homebrew, packages with installers, shared folders),
+   MacReplica explains why; for Homebrew packages it asks once per restore in its own window.
 5. Read the summary: what worked, what failed and what to do about it, apps to install yourself
    and services to sign in to again. **Retry Failed Items** runs only the failed steps again.
 
@@ -320,8 +320,11 @@ profiles). The rules and the research behind them are in
 **Permissions.** MacReplica runs with your normal user rights. It asks for **administrator rights**
 only when a step needs them — installing the Command Line Tools or Homebrew, or copying fonts and
 profiles into the shared folders in `/Library` — using the standard macOS password dialog. Files for
-the shared folders are copied together after a single prompt. It does **not** request Full Disk
-Access. If macOS does not allow it to read a location,
+the shared folders are copied together after a single prompt. Homebrew packages with installers (for
+example some casks) need `sudo`: MacReplica asks once per restore in its own window, checks the password
+with macOS and hands it to Homebrew through a private, token-protected channel; it stays in memory until the
+restore ends and is never stored or logged. Full Disk Access is only needed for Mail and Microsoft Office
+data. If macOS does not allow it to read a location,
 the scan reports that location as *no permission* and offers a button to the privacy settings, in
 case you want to grant access.
 

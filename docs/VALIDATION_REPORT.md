@@ -1,5 +1,95 @@
 # MacReplica – validation report
 
+## Addendum 2026-10-04: MacReplica 1.0.2 (round 3)
+
+Host: development Mac, macOS 27.0.1 (Apple silicon), Command Line Tools / Swift 6.4; GitHub-hosted macOS 14.8
+and 15.7 runners for Launchpad. Evidence levels as below (**real**, **real app, simulated Mac**, **automated**,
+**not verified**); in addition **CI real** = the real macOS on a GitHub-hosted runner.
+
+### Requirements and results
+
+| Requirement | Result | Evidence |
+|---|---|---|
+| Launchpad: pages, folders, folder names, order | Implemented for macOS 13–15; recorded with the backup, arranged as the last restore step, again when apps arrive later; report keeps it on macOS 26+ | **CI real** on macOS 14 and 15: Launchpad reset to Apple's default, layout rebuilt, Dock restarted twice, read back identical (MATCH), screenshot; a layout recorded on macOS 14 rebuilt on macOS 15: MATCH; automated (5 + 5 tests) |
+| Krita, GIMP, Inkscape, Scribus | Providers with verified categories | **real** (see below) |
+| Word, Excel, OneNote, Office shared settings | Templates incl. Normal.dotm, AutoCorrect, custom dictionary, Word/Excel start-up (code, not pre-selected), ribbons (experimental) | **real** for AutoCorrect (Word and Excel); templates checksum-identical. OneNote keeps its notebooks in OneDrive or SharePoint; they come back after signing in (Office sign-in guidance) |
+| Apple Mail | Signatures, rules, smart mailboxes, VIPs; Full Disk Access; **experimental** | automated only — see *Apple Mail* below |
+| Synology Drive | Guidance (no export; tasks are set up again on the existing folders) | automated (guidance detection) |
+| Cryptomator | Vault list (`settings.json`), vaults found reported after restore | **real** |
+| DisplayCAL, Calibrite Profiler, BenQ Palette Master Element | DisplayCAL/ArgyllCMS providers (verified); Calibrite: guidance (profiles come back as ICC profiles); BenQ: `benq_params` (experimental) + guidance | **real** for DisplayCAL; BenQ and Calibrite automated |
+| XP-Pen Artist Pro 16 | `~/.XPPen/config.xml` (experimental, compatibility-sensitive) + driver guidance; driver installers via *Your installers* | automated |
+| Installer archive / offline recovery (Office LTSC + activation pkg) | *Your installers*: `.pkg`/`.dmg`/`.zip` recorded, optionally in the backup, used offline only with matching checksum and developer; follow-up packages (activation) opened in Apple's Installer only when signed by the same developer | automated (5 tests incl. disk images, zip-in-dmg, unsigned packages) |
+| Provider framework, confidence model, two-stage selection | Confidence per category shown in backup and restore selection; `containsCode` class; alternate paths, file patterns, `/Users/Shared` scope, home placeholders | **real app, simulated Mac** (screenshots of the backup selection); automated |
+| More popular apps | Karabiner-Elements, Hammerspoon, Ghostty, kitty, WezTerm, Alacritty, Zed, Motion, Logic Pro | automated |
+| Repeated password prompt | Root cause: without a terminal `sudo` caches per parent process, so every `brew` process asked again, and a rejected password made it ask three times. Fixed: one MacReplica dialog per restore, checked with `sudo -S -k -v`, handed to Homebrew's `sudo` through a token-protected socket | automated with a fake `brew` that emulates `sudo` per process (one dialog for two casks with five privileged steps, wrong password first) |
+| Automatic `mas` handling | Asked for only when an App Store app cannot be identified otherwise; MacReplica offers to install it | automated |
+| Duplicate Zoom entry | Copies of an app (same bundle ID) merged; the other locations recorded | automated |
+| User data beyond application data | *Your own folders*: home folders outside `~/Library`, each on its own, no size limit; free-space check; iCloud placeholders left out | automated (3 tests) |
+
+### Real-application validation (2026-10-04)
+
+| App (version) | Data | Negative control (files moved aside) | After the restore |
+|---|---|---|---|
+| Krita 5.3.4 | palette in the resource folder (indexed in `resourcecache.sqlite`), `kritarc` marker | palette not in the resource database, marker gone | palette active in the resource database, marker kept by Krita |
+| GIMP 3.2.6 | palette, `gimprc` (`undo-levels 42`) | `gimp-console`: no palette, undo levels 5 | `gimp-console`: palette loaded, undo levels 42 |
+| Inkscape 1.4.4 | `preferences.xml` group, template, palette | gone | kept by Inkscape after running it |
+| Scribus 1.6.6 | `prefs150.xml` context, palette | gone | kept by Scribus after running it |
+| Cryptomator 1.19.3 | vault entry in `settings.json` | vault list empty | vault listed in Cryptomator's window; MacReplica reported "1 vault registered and found" |
+| DisplayCAL 3.9.19 | the maintainer's real calibrations and settings (29 files) | DisplayCAL hung at start-up | DisplayCAL started normally; its scripting interface reported the same calibration, profile, white point and luminance |
+| Word / Excel 16.x | AutoCorrect entry created through Word | Word: 400 defaults, entry absent | Word and Excel return the entry |
+
+Every restored file matched its checksum (282 + 29 + 2 files). The five apps installed for the test were removed
+with every file they created (listing of the affected folders identical to before). DisplayCAL and Office were
+put back to their state before the test (safety copies). Two defects were found only with the real apps and
+fixed: GIMP 3.2 keeps a `cache` folder (2,275 files) inside its profile, and `tags.xml` stores absolute home
+paths. During the run DisplayCAL reset one of its own settings (`testchart.file`) on start-up; that happened
+before the backup and is not caused by MacReplica.
+
+### Apple Mail
+
+On the development Mac (macOS 27) Mail no longer keeps signatures and rules in `~/Library/Mail/V10/MailData`,
+and signatures or rules created by script are not saved. On GitHub's macOS 14 and 15 runners Mail has no
+account and stops answering scripts for signatures and rules. The provider therefore follows Apple's
+documented layout up to macOS 15 (Knut's Sonoma) with synthetic files and is marked **experimental**: after
+restoring, check signatures and rules in Mail.
+
+### Launchpad findings
+
+The Dock rebuilds its first page if a page has no row in `groups`; MacReplica now creates that row like the Dock.
+The Dock keeps the arrangement in memory and writes it back on quit, so it is paused while the database is
+written and ended without saving. Copies of an app with the same bundle identifier (several Xcode versions)
+each keep their place.
+
+### Regression check
+
+457 automated tests pass (451 before the mutation follow-up tests). Backups of 1.0.0 (format 1) and 1.0.1
+(format 2) are read and migrated; 1.0.1 refuses format-3 backups. Existing providers keep their behaviour;
+verified categories were only added where a real-app check exists (enforced by `ProviderCatalogTests`).
+
+MUTATION_SECTION
+
+### Limitations and what is not supported
+
+- Launchpad: macOS 13 not tested (14 and 15 on CI); macOS 26 and later have no Launchpad.
+- Apple Mail: experimental (see above); accounts and passwords are never copied.
+- Office: OneNote notebooks, licences and sign-ins are not copied; ribbon customizations are experimental.
+- Calibration: the monitor's own hardware calibration (BenQ) stays in the monitor; Calibrite presets are
+  exported in the app; instrument licences are not copied.
+- XP-Pen and BenQ data: experimental (community sources); install the vendor driver first.
+- Synology Drive: guidance only.
+- Your own folders: no deduplication, no incremental backups — MacReplica is not a replacement for Time Machine.
+- The complete GUI flow (choose folder, save, restore) of the new sections was not clicked through on screen:
+  the macOS file panels run out of process and can only be confirmed with keystrokes, which are not sent during
+  unattended validation. The screens were checked (screenshots), the flows are covered end-to-end in the
+  automated tests.
+- No test ran on a freshly installed macOS or a second physical Mac.
+
+### Legal note on the reseller's installation guide
+
+The PDF guide that came with Knut's Office LTSC licence was only read to learn the file names of the installer
+and activation packages. Nothing from it is included in MacReplica, its documentation or its tests. Installers
+and activation packages a user adds stay in that user's own backup and are never shared.
+
 ## Addendum 2026-10-03: display profiles, Python preservation, Photoshop and DaVinci Resolve
 
 Host: development Mac, macOS 27.0.1 (Apple silicon), Command Line Tools / Swift 6.4. Evidence levels used below:

@@ -223,7 +223,7 @@ public enum AppDataCatalog {
             id: "krita", appName: "Krita", bundleIdentifiers: ["org.krita"],
             base: "Library/Application Support/krita", versionFolderPattern: nil,
             // The resource folder as one unit: Krita's resource database (tags, active bundles) belongs to it.
-            categories: [AppDataCategory("kritaResources", "", excluding: ["krita.log", "krita-sysinfo.log"]),
+            categories: [AppDataCategory("kritaResources", "", excluding: ["krita.log", "krita-sysinfo.log", "pykrita"]),
                          AppDataCategory("kritaPlugins", "pykrita", .containsCode)],
             mustBeClosed: true, status: .verified,
             evidence: [Evidence(title: "Krita: Resource management", url: "https://docs.krita.org/en/reference_manual/resource_management.html"),

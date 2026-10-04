@@ -278,7 +278,9 @@ struct RestoreSummaryView: View {
                         Text(l.t("summary.failedHeading")).font(.headline)
                         ForEach(failed, id: \.0.id) { item, result in FailureRow(item: item, result: result) }
                     }
-                    if let manual = plan?.manualApps, !manual.isEmpty, complete {
+                    // Apps the user has installed in the meantime are no longer listed.
+                    let installedManually = Set(results.filter { $0.1.outcome.isSuccessLike }.map(\.0.id))
+                    if let manual = plan?.manualApps.filter({ !installedManually.contains("manual:\($0.path)") }), !manual.isEmpty, complete {
                         Text(l.t("summary.manualHeading")).font(.headline)
                         Text(l.t("summary.manualMessage")).foregroundStyle(.secondary).font(.callout)
                             .fixedSize(horizontal: false, vertical: true)
