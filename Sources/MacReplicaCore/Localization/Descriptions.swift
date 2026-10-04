@@ -46,6 +46,8 @@ extension Localizer {
         case .credentials: return t("component.credentials")
         case .fonts: return t("component.fonts")
         case .colorProfiles: return t("component.colorProfiles")
+        case .launchpad: return t("component.launchpad")
+        case .personalFolders: return t("component.personalFolders")
         }
     }
 
@@ -63,6 +65,8 @@ extension Localizer {
         case .credentials: return t("component.credentials.hint")
         case .fonts: return t("component.fonts.hint")
         case .colorProfiles: return t("component.colorProfiles.hint")
+        case .launchpad: return t("component.launchpad.hint")
+        case .personalFolders: return t("component.personalFolders.hint")
         }
     }
 
@@ -85,6 +89,7 @@ extension Localizer {
         case .toolchainStep: return t("kind.toolchainStep")
         case .manualApp: return t("kind.manualApp")
         case .displayProfile: return t("kind.displayProfile")
+        case .launchpadLayout: return t("kind.launchpadLayout")
         }
     }
 
@@ -127,6 +132,9 @@ extension Localizer {
         case .profileNotAvailable: return t("skip.profileNotAvailable")
         case .applicationNotInstalled(let name): return t("skip.applicationNotInstalled", name)
         case .applicationVersionOlder(let name, let installed, let backup): return t("skip.applicationVersionOlder", name, installed, backup)
+        case .needsFullDiskAccess(let name): return t("skip.needsFullDiskAccess", name)
+        case .launchpadNotAvailable: return t("skip.launchpadNotAvailable")
+        case .launchpadWaitingForApps(let count): return p("skip.launchpadWaitingForApps", count)
         }
     }
 
@@ -145,6 +153,7 @@ extension Localizer {
         case .homebrewCask: text = t("offer.homebrewCask", offer.host, version)
         case .vendorWebsite: text = t("offer.website", offer.host)
         case .appStore: text = t("offer.appStore")
+        case .ownInstaller: text = t("offer.ownInstaller", offer.localPath.map { ($0 as NSString).lastPathComponent } ?? "", version)
         }
         return offer.recommended ? t("offer.recommended", text) : text
     }
@@ -157,6 +166,7 @@ extension Localizer {
         case .installFromAppStore: return t("guidedStep.installFromAppStore")
         case .installYourself: return t("guidedStep.installYourself")
         case .runCommand(let command): return t("guidedStep.runCommand", command)
+        case .finishAdditionalPackage(let name): return t("guidedStep.finishAdditionalPackage", name)
         }
     }
 
@@ -201,6 +211,10 @@ extension Localizer {
         case .applicationDataCopied(let copied, let identical, let kept): return t("note.applicationData", copied, identical, kept)
         case .applicationVersionDiffers(let original): return t("note.applicationVersionDiffers", original)
         case .restoredIntoVersion(let original, let target): return t("note.restoredIntoVersion", original, target)
+        case .vaultsRegistered(let found, let missing):
+            return missing.isEmpty ? p("note.vaultsRegistered", found) : p("note.vaultsRegistered", found) + " " + t("note.vaultsMissing", missing.joined(separator: ", "))
+        case .additionalPackageOpened(let name): return t("note.additionalPackageOpened", name)
+        case .additionalPackageNotInstalled(let name): return t("note.additionalPackageNotInstalled", name)
         }
     }
 
@@ -297,6 +311,7 @@ extension Localizer {
             case .commandLineTools: return t("prediction.installCommandLineTools")
             case .homebrew: return t("prediction.installHomebrew")
             case .tap: return t("prediction.addTap")
+            case .launchpadLayout: return t("prediction.arrangeLaunchpad")
             default: return t("prediction.install", itemMethodText(kind))
             }
         case .willCopy: return t("prediction.copy")
@@ -342,9 +357,10 @@ extension Localizer {
         case .homebrewNotInstalled: return t("inventory.warning.homebrewNotInstalled")
         case .homebrewBroken: return t("inventory.warning.homebrewBroken")
         case .homebrewListFailed: return t("inventory.warning.homebrewListFailed")
-        case .masNotInstalled: return t("inventory.warning.masNotInstalled")
+        case .masNeeded(let count, _): return p("inventory.warning.masNeeded", count)
         case .masListFailed: return t("inventory.warning.masListFailed")
         case .catalogUnavailable: return t("inventory.warning.catalogUnavailable")
+        case .launchpadUnreadable: return t("inventory.warning.launchpadUnreadable")
         }
     }
 

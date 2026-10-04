@@ -9,6 +9,8 @@
 //   MacReplicaSimulator reinstall <folder>                        (simulates erasing macOS on the same Mac)
 //   MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
 //   MacReplicaSimulator creative <folder>                         (adds Photoshop release/beta and DaVinci Resolve data)
+//   MacReplicaSimulator workflow <folder>                         (adds Krita, GIMP, Office, Mail, Cryptomator … data)
+//   MacReplicaSimulator launchpad <folder>                        (adds a Launchpad with the sample apps)
 //   MacReplicaSimulator install-resolve <folder> <version>        (simulates installing DaVinci Resolve)
 //   MacReplicaSimulator launch-photoshop <folder> <folder name>   (simulates opening e.g. "Adobe Photoshop 2026" once)
 //   MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
@@ -30,6 +32,8 @@ func usage() -> Never {
            MacReplicaSimulator reinstall <folder>
            MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
            MacReplicaSimulator creative <folder>
+           MacReplicaSimulator workflow <folder>
+           MacReplicaSimulator launchpad <folder>
            MacReplicaSimulator install-resolve <folder> <version>
            MacReplicaSimulator launch-photoshop <folder> <folder name>
            MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
@@ -52,13 +56,107 @@ if arguments.first == "detect-live" {
             shipped = await InventoryService.shippedFiles(package: package, below: detected.folder, layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]))
         }
         let scan = try? AppDataScanner(layout: layout).scan(detected.folder, profile: detected.profile, onlyFiles: detected.files,
-                                                            excluding: detected.excluding, scope: detected.scope, shipped: shipped)
+                                                            excluding: detected.excluding, scope: detected.scope, shipped: shipped,
+                                                            rewritesHomeFolder: detected.rewritesHomeFolder, allowProviderExceptions: true)
         print("appdata \(detected.profile.provider)/\(detected.profile.appVersion ?? "-")/\(detected.profile.category) files=\(scan?.files.count ?? -1)"
               + (scan?.folder.shippedFilesLeftOut.map { " shipped-left-out=\($0)" } ?? ""))
     }
     for provider in CredentialProviders.all { print("credential \(provider.id) detected=\(!provider.detect(layout: layout).isEmpty)") }
     exit(0)
 }
+// Real-app validation: the real inventory, backup writer and restore of application data on this Mac, limited
+// to the given providers. The backup contains only their data; the restore keeps existing files unless
+// `replace` is given (then they are moved to "Replaced Files" as in the app).
+//   MacReplicaSimulator real-appdata-backup <parent folder> <provider> [provider …]
+//   MacReplicaSimulator real-appdata-restore <backup folder> [replace]
+if arguments.first == "real-appdata-backup", arguments.count >= 3 {
+    let layout = SystemLayout.live()
+    let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables),
+                                      baseEnvironment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil))
+    let providers = Set(arguments.dropFirst(2))
+    var inventory = try await InventoryService(layout: layout, runner: runner, catalogProvider: RemoteCatalogProvider(cacheFolder: layout.caches),
+                                               macOSVersion: SystemInfo.macOSVersion, architecture: SystemInfo.currentArchitecture).run()
+    for folder in inventory.manifest.applicationData where !providers.contains(folder.profile?.provider ?? "") {
+        inventory.removeApplicationData(id: folder.id)
+    }
+    inventory.excludeFiles(Set(inventory.fonts.map { InventoryResult.selectionID($0.record, kind: .font) }
+        + inventory.colorProfiles.map { InventoryResult.selectionID($0.record, kind: .colorProfile) }))
+    inventory.keepPythonEnvironments([], includeSettings: false)
+    inventory.keepToolchains([])
+    inventory.manifest.displayProfiles = []
+    inventory.manifest.launchpadLayout = nil
+    let log = LogStore(fileURL: nil, homeDirectory: layout.homeDirectory)
+    let outcome = try BackupWriter(layout: layout, localizer: Localizer(language: .english)).write(inventory, into: URL(fileURLWithPath: arguments[1]), log: log)
+    for folder in outcome.manifest.applicationData {
+        print("backed up \(folder.profile?.provider ?? "-")/\(folder.profile?.category ?? "-"): \(folder.files.count) files "
+              + "[\(folder.profile?.effectiveConfidence.rawValue ?? "-")] \(folder.displayPath)")
+    }
+    for issue in outcome.manifest.backupIssues { print("issue: \(issue)") }
+    print("verified: \(BackupVerifier(layout: layout).verify(backupAt: outcome.url).isIntact)")
+    print(outcome.url.path)
+    exit(0)
+}
+if arguments.first == "real-appdata-restore", arguments.count >= 2 {
+    let layout = SystemLayout.live()
+    let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables),
+                                      baseEnvironment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil))
+    let backup = URL(fileURLWithPath: arguments[1])
+    let manifest = try ManifestIO.read(from: backup)
+    var selection = RestoreSelection(components: [.applicationData])
+    if arguments.dropFirst(2).contains("replace") { selection.conflictResolution = .replace }
+    let plan = RestorePlanner().plan(manifest: manifest, selection: selection)
+    let log = LogStore(fileURL: nil, homeDirectory: layout.homeDirectory)
+    var environment = RestoreEnvironment(layout: layout, runner: runner, privileged: AppleScriptPrivilegedExecutor(runner: runner, osascript: layout.osascript),
+                                         homebrewSource: GitHubHomebrewPackageSource(runner: runner, pkgutil: layout.pkgutil),
+                                         localizer: Localizer(language: .english), log: log)
+    environment.isApplicationRunning = { _ in false }
+    let executor = RestoreExecutor(environment: environment, backupRoot: backup, sessionStore: nil)
+    let localizer = Localizer(language: .english)
+    for entry in await executor.dryRun(plan: plan, selection: selection) {
+        print("dry run \(entry.item.title): \(localizer.predictionText(entry.prediction, kind: entry.item.kind))")
+    }
+    let session = await executor.run(plan: plan, session: RestoreSession(backupPath: backup.path, selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
+    for item in plan.items {
+        guard let result = session.results[item.id] else { continue }
+        print("restored \(item.title) [\(item.identifier)]: \(localizer.outcomeText(result.outcome)) \(result.notes.map { localizer.noteText($0) })")
+    }
+    exit(0)
+}
+// Launchpad on macOS 13–15: export the current user's layout, or rebuild a layout, restart the Dock and verify.
+//   MacReplicaSimulator launchpad-export <file.json>
+//   MacReplicaSimulator launchpad-apply <file.json>     (prints MATCH when the Dock shows the layout afterwards)
+if arguments.first == "launchpad-export" || arguments.first == "launchpad-apply", arguments.count == 2 {
+    guard let store = LaunchpadStore.live() else { print("no Launchpad database location"); exit(2) }
+    let work = FileManager.default.temporaryDirectory.appendingPathComponent("mr-launchpad-\(getpid())")
+    let file = URL(fileURLWithPath: arguments[1])
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    if arguments.first == "launchpad-export" {
+        let layout = try store.read(macOSVersion: SystemInfo.macOSVersion, work: work)
+        try encoder.encode(layout).write(to: file)
+        print("exported \(layout.pages.count) pages, folders: \(layout.folderNames)")
+        exit(0)
+    }
+    let layout = try JSONDecoder().decode(LaunchpadLayout.self, from: Data(contentsOf: file))
+    var written: LaunchpadLayout?
+    let placed = try store.applyAndReloadDock(layout, signal: { signal in
+        if signal == SIGKILL { written = try? store.read(macOSVersion: SystemInfo.macOSVersion, work: work) }
+        LaunchpadStore.signalDock(signal)
+    })
+    if let written {
+        try encoder.encode(written).write(to: file.deletingPathExtension().appendingPathExtension("written.json"))
+        print("written (before the Dock restart): \(written.pages.count) pages, folders: \(written.folderNames); "
+              + (layout.matches(written, installed: written.appEntryCounts) ? "as recorded" : "differs"))
+    }
+    try await Task.sleep(nanoseconds: 10_000_000_000)
+    let after = try store.read(macOSVersion: SystemInfo.macOSVersion, work: work)
+    try encoder.encode(after).write(to: file.deletingPathExtension().appendingPathExtension("after.json"))
+    let installed = after.appEntryCounts
+    print("placed \(placed) apps; after the Dock restart: \(after.pages.count) pages, folders: \(after.folderNames)")
+    print(layout.matches(after, installed: installed) ? "MATCH" : "MISMATCH")
+    exit(layout.matches(after, installed: installed) ? 0 : 1)
+}
+
 // Checks the live ColorSync access without changing anything visible: every connected display that has a
 // custom profile gets that same profile assigned again, and the assignment is read back. Prints no names.
 if arguments.first == "display-check-live" {
@@ -104,6 +202,15 @@ do {
     case "creative":
         try root.addCreativeAppData()
         print("Added Photoshop and DaVinci Resolve data")
+    case "workflow":
+        try root.addWorkflowAppData()
+        print("Added Krita, GIMP, Inkscape, Scribus, Office, Mail, Cryptomator, DisplayCAL and other app data")
+    case "launchpad":
+        // A Launchpad with the sample apps on one page and a folder (the simulated Dock is never signalled).
+        let apps = ["com.example.nimbusnotes", "com.example.pixelforge", "org.example.orbit", "com.example.terminalplus", "com.example.ledgerlite", "com.example.quillwriter", "com.example.studiomixer"]
+        try SyntheticLaunchpad.create(at: root.state.appendingPathComponent("launchpad/db/db"),
+                                      apps: Array(apps.suffix(from: min(3, apps.count))) + ["com.apple.Safari"], folder: Array(apps.prefix(3)))
+        print("Added a Launchpad with \(apps.count + 1) apps")
     case "install-resolve":
         guard arguments.count == 3 else { usage() }
         try root.installResolve(version: arguments[2])

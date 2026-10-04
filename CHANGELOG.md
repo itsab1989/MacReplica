@@ -7,6 +7,61 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-04
+
+### Added
+- Launchpad layout (macOS 13–15): pages, folders with their names and the order of the apps are recorded
+  with the backup and arranged again as the last step of the restore, once the apps are installed. Apps
+  that are not restored are left out (their folders keep the others); apps that were not in the layout
+  follow on further pages; while apps of the restore still wait to be installed, Launchpad is arranged
+  with what is there and again when the restore continues. Validated on real macOS 14 and 15, including
+  a macOS 14 layout on macOS 15. macOS 26 and later have no Launchpad: the backup's report keeps the
+  layout as a reference.
+- Application data for Krita, GIMP, Inkscape, Scribus, Microsoft Word/Excel/PowerPoint (templates incl.
+  Normal.dotm, AutoCorrect, custom dictionary; start-up add-ins offered separately), Apple Mail
+  (signatures, rules, smart mailboxes, VIPs – needs Full Disk Access), Cryptomator (the vault list; vaults
+  stay where they are), DisplayCAL and ArgyllCMS (calibrations, settings, instrument corrections), BenQ
+  Palette Master Element and XP-Pen (experimental), Karabiner-Elements, Hammerspoon, Ghostty, kitty,
+  WezTerm, Alacritty, Zed, Motion templates and Logic Pro patches. Paths that contain the home folder are
+  stored as a placeholder and filled in with the new Mac's home folder.
+- Confidence levels for every kind of application data (*verified*, *check in the app*, *experimental*),
+  shown in the backup and restore selection. Data that contains code (plug-ins, scripts, add-ins) is
+  offered but never selected automatically.
+- Your own installers (offline): installer packages, disk images and zip archives kept for an app (for
+  example Microsoft Office LTSC with its activation package, or a tablet driver) can be recorded and
+  optionally copied into the backup. On the new Mac they are used without internet, only if checksum and
+  developer still match; packages open in Apple's Installer, nothing in them is run by MacReplica.
+- Guidance for Synology Drive, calibration software, BenQ Palette Master, XP-Pen, mail accounts and Office
+  activation (what MacReplica cannot carry over and why).
+- Restore: steps that need Full Disk Access wait for it and continue after it is granted.
+- Your own folders: folders of the home folder (documents, pictures, projects) can be added to the backup,
+  each on its own and without a size limit, and are restored as their own group. The home folder as a whole
+  and `~/Library` are not offered; files that are only in iCloud are left out and listed.
+- The backup checks the free space of the destination before writing and stops with a clear message if
+  it does not fit.
+
+### Changed
+- Confidence levels from real-app checks: Krita, GIMP, Inkscape, Scribus, Cryptomator, DisplayCAL and Word's
+  AutoCorrect were confirmed in the apps themselves (*verified*); Apple Mail is *experimental* (its files
+  follow Apple's layout up to macOS 15, but Mail itself could not be checked).
+- Backup format version 3. MacReplica 1.0.1 refuses these backups instead of restoring them wrongly.
+
+### Fixed
+- The administrator password is asked for once per restore instead of once per package (Homebrew's
+  `sudo` gets it from MacReplica through a private, token-protected channel; a wrong password is asked
+  for again, never stored).
+- `mas` is only asked for when an App Store app cannot be identified otherwise, and MacReplica offers to
+  install it.
+- An app found in several places (for example Zoom in `/Applications` and `~/Applications`) is listed once.
+- GIMP 3: thumbnails, font caches and crash reports are no longer backed up; resource tags stay valid
+  under another user name.
+- Inspecting a disk image no longer leaves it mounted.
+- Krita's Python plug-ins are only restored when chosen (they were also part of the resource folder).
+- The restore summary no longer lists apps to install yourself that are installed by then.
+- The note before a restore describes how the administrator password is now asked for.
+- Home-folder paths in settings files are replaced only as a whole path component (another user's folder
+  with a longer name stays as it is).
+
 ## [1.0.1] - 2026-10-03
 
 ### Added
@@ -110,6 +165,7 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/itsab1989/MacReplica/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/itsab1989/MacReplica/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/itsab1989/MacReplica/releases/tag/v1.0.0

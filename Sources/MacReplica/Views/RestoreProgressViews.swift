@@ -246,7 +246,7 @@ struct RestoreSummaryView: View {
                     } else if failed.isEmpty {
                         NoticeView(style: .success, title: l.t("summary.allDone.title"), message: l.t("summary.allDone.message"))
                     }
-                    let waitingForApps = results.filter { $0.0.kind == .applicationData && $0.1.outcome.isOpen }
+                    let waitingForApps = results.filter { ($0.0.kind == .applicationData || $0.0.kind == .launchpadLayout) && $0.1.outcome.isOpen }
                     if !waitingForApps.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(l.t("summary.waitingForAppsHeading")).font(.headline)
@@ -261,6 +261,13 @@ struct RestoreSummaryView: View {
                                         .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
                                 }
                             }
+                            if waitingForApps.contains(where: { if case .skipped(.needsFullDiskAccess) = $0.1.outcome { return true }; return false }) {
+                                HStack {
+                                    Spacer()
+                                    Button(l.t("summary.openFullDiskAccess")) { NSWorkspace.shared.open(AccessProbe.fullDiskAccessSettingsURL) }
+                                        .accessibilityIdentifier("summary.openFullDiskAccess")
+                                }
+                            }
                         }
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -271,7 +278,9 @@ struct RestoreSummaryView: View {
                         Text(l.t("summary.failedHeading")).font(.headline)
                         ForEach(failed, id: \.0.id) { item, result in FailureRow(item: item, result: result) }
                     }
-                    if let manual = plan?.manualApps, !manual.isEmpty, complete {
+                    // Apps the user has installed in the meantime are no longer listed.
+                    let installedManually = Set(results.filter { $0.1.outcome.isSuccessLike }.map(\.0.id))
+                    if let manual = plan?.manualApps.filter({ !installedManually.contains("manual:\($0.path)") }), !manual.isEmpty, complete {
                         Text(l.t("summary.manualHeading")).font(.headline)
                         Text(l.t("summary.manualMessage")).foregroundStyle(.secondary).font(.callout)
                             .fixedSize(horizontal: false, vertical: true)

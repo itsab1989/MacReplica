@@ -34,6 +34,11 @@ python3 tools/mutation/mutate.py --merge r0 r1 r2 r3 r4 r5 --report merged --che
 
 ## Results
 
+**2026-10-04 (MacReplica 1.0.2, new modules only):** 84.7 % (177 of 209); details in
+[VALIDATION_REPORT.md](VALIDATION_REPORT.md#mutation-testing-of-the-new-modules). `InstallerArchive.swift` has a
+threshold of 65 %: its signature and detach paths need real Developer-ID-signed installers.
+
+
 Run on 2026-10-02 (macOS 27, Swift 6.4, 6 shards). First full run: **68.5 %** (488 of 712 valid
 mutants killed, 6 of 18 modules at threshold). The surviving mutants were analysed one by one; where
 they showed a real gap, tests were added (suites `SelectionPlannerTests`, `DestinationIndexTests`,

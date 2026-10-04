@@ -11,8 +11,13 @@ import Foundation
 /// Version 2 (MacReplica 1.0.1) adds data an older MacReplica would restore wrongly if it
 /// ignored it, above all application data in the shared `/Library` (`scope`). MacReplica
 /// 1.0.0 refuses version 2 backups instead of misplacing files.
+///
+/// Version 3 (MacReplica 1.0.2) adds application data whose files contain a placeholder for the home
+/// folder (`homePlaceholder`), data in `/Users/Shared` (`usersShared` scope), the Launchpad layout and the
+/// user's own installers. MacReplica 1.0.1 would write the placeholder into the files as it is, so it
+/// refuses version 3 backups.
 public struct Manifest: Codable, Equatable, Sendable {
-    public static let currentVersion = 2
+    public static let currentVersion = 3
 
     public var manifestVersion: Int
     public var macreplicaVersion: String
@@ -46,6 +51,8 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var hardwareKeys: HardwareKeys?
     /// Profiles the user assigned to displays (System Settings › Displays › Color profile).
     public var displayProfiles: [DisplayProfileAssignment]
+    /// The Launchpad arrangement (macOS 13–15): pages, folders with their names, and the order of the apps.
+    public var launchpadLayout: LaunchpadLayout?
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -98,7 +105,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
         case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
-        case hardwareKeys, displayProfiles
+        case hardwareKeys, displayProfiles, launchpadLayout
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -132,6 +139,8 @@ public struct Manifest: Codable, Equatable, Sendable {
         toolchains = try c.decodeIfPresent(LenientList<ToolchainRecord>.self, forKey: .toolchains)?.elements ?? []
         hardwareKeys = try c.decodeIfPresent(HardwareKeys.self, forKey: .hardwareKeys)
         displayProfiles = try c.decodeIfPresent(LenientList<DisplayProfileAssignment>.self, forKey: .displayProfiles)?.elements ?? []
+        // A layout this version cannot read is left out rather than failing the manifest.
+        launchpadLayout = try? c.decodeIfPresent(LaunchpadLayout.self, forKey: .launchpadLayout)
     }
 }
 
@@ -327,6 +336,18 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     public var updateFeed: UpdateFeed?
     /// Apple Developer Team ID of the bundle's signature; downloads must carry the same one.
     public var teamIdentifier: String?
+    /// Further copies of the same app (same bundle identifier) found in other places, e.g. an older one in
+    /// `~/Applications`. The app is listed and restored once; these are shown so the user knows about them.
+    public var otherCopies: [OtherCopy]? = nil
+    /// Installers the user keeps for this app, in the order they are run (e.g. the installer, then an
+    /// activation package). See `InstallerArchive`.
+    public var ownInstallers: [InstallerArchive]? = nil
+
+    public struct OtherCopy: Codable, Equatable, Hashable, Sendable {
+        public var path: String
+        public var version: String?
+        public init(path: String, version: String?) { self.path = path; self.version = version }
+    }
 
     public init(
         name: String,
@@ -473,7 +494,8 @@ public enum FileDomain: String, Codable, Sendable, CaseIterable {
 
 /// Something that was selected for the backup but could not be included.
 public struct BackupIssue: Codable, Equatable, Sendable {
-    public enum Reason: String, Codable, Sendable { case unreadable, refusedSensitive, tooLarge, changedDuringBackup }
+    /// `notDownloaded`: an iCloud file whose contents are not on the Mac (reading it would download it).
+    public enum Reason: String, Codable, Sendable { case unreadable, refusedSensitive, tooLarge, changedDuringBackup, notDownloaded }
     /// Display path (home written as `~`).
     public var path: String
     public var reason: Reason

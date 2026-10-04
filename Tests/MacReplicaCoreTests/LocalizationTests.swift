@@ -158,7 +158,7 @@ struct LocalizationTests {
                   .existingFileMovedAside(path: "~/x")].map(l.noteText)
         texts += [VerificationIssue.checksumMissing, .checksumMismatch, .fileMissing("a"), .hashMismatch("a"), .sizeMismatch("a"),
                   .unsafePath("a"), .unsupportedVersion(found: 2, supported: 1), .manifestUnreadable("x")].map(l.verificationIssueText)
-        texts += [InventoryWarning.homebrewNotInstalled, .homebrewBroken(reason: "x"), .homebrewListFailed, .masNotInstalled,
+        texts += [InventoryWarning.homebrewNotInstalled, .homebrewBroken(reason: "x"), .homebrewListFailed, .masNeeded(unidentifiedApps: 2, homebrewAvailable: true),
                   .masListFailed, .catalogUnavailable].map(l.inventoryWarningText)
         for text in texts {
             #expect(!text.isEmpty && text != "…" && !text.contains("%"), "\(language.rawValue): \(text)")

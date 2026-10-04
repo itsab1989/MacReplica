@@ -12,7 +12,9 @@ public enum AppDataProviders {
         let fm = FileManager.default
         var result: [DetectedAppData] = []
         for provider in providers {
-            let base = layout.root(of: provider.scope).appendingPathComponent(provider.base)
+            let root = layout.root(of: provider.scope)
+            let base = ([provider.base] + provider.alternateBases).filter(PathSafety.isSafeRelativePath).map { root.appendingPathComponent($0) }
+                .first { fm.fileExists(atPath: $0.path) } ?? root.appendingPathComponent(provider.base)
             var appFolders: [(URL, String?)] = []
             if let pattern = provider.versionFolderPattern {
                 let names = ((try? fm.contentsOfDirectory(atPath: base.path)) ?? [])
@@ -23,11 +25,16 @@ public enum AppDataProviders {
             }
             for (folder, version) in appFolders {
                 for category in provider.categories where category.classification.isOffered {
-                    guard PathSafety.isSafeRelativePath(category.path) || category.path.isEmpty else { continue }
-                    let url = category.path.isEmpty ? folder : folder.appendingPathComponent(category.path)
+                    let candidates = ([category.path] + category.alternatePaths).filter { $0.isEmpty || PathSafety.isSafeRelativePath($0) }
+                    guard let url = candidates.map({ $0.isEmpty ? folder : folder.appendingPathComponent($0) })
+                        .first(where: { fm.fileExists(atPath: $0.path) }) ?? candidates.first.map({ $0.isEmpty ? folder : folder.appendingPathComponent($0) })
+                    else { continue }
                     guard let items = try? fm.contentsOfDirectory(atPath: url.path) else { continue }
                     let folderName = version.map { $0.hasSuffix(" Settings") ? String($0.dropLast(" Settings".count)) : $0 } ?? ""
-                    let wanted = category.files?.map { $0.replacingOccurrences(of: "{folder}", with: folderName) }
+                    var wanted = category.files?.map { $0.replacingOccurrences(of: "{folder}", with: folderName) }
+                    if let pattern = category.filePattern {
+                        wanted = items.filter { $0.range(of: pattern, options: .regularExpression) != nil }.sorted()
+                    }
                     let present = wanted.map { names in names.filter { items.contains($0) } }
                     if let present, present.isEmpty { continue }
                     if present == nil, !items.contains(where: { !$0.hasPrefix(".") }) { continue }
@@ -38,8 +45,12 @@ public enum AppDataProviders {
                         versionFolderPattern: version == nil ? nil : provider.versionFolderPattern,
                         movesBetweenVersions: version != nil && category.movesBetweenVersions,
                         appMustBeInstalled: provider.appMustBeInstalled, notForOlderApp: provider.notForOlderApp)
-                    result.append(DetectedAppData(profile: profile, folder: url, scope: provider.scope, shippedByPackage: provider.shippedByPackage,
-                                                  files: present, excluding: category.excluding))
+                    var reference = profile
+                    reference.confidence = provider.confidence(of: category.key)
+                    reference.requiresFullDiskAccess = provider.requiresFullDiskAccess
+                    reference.verification = provider.verification
+                    result.append(DetectedAppData(profile: reference, folder: url, scope: provider.scope, shippedByPackage: provider.shippedByPackage,
+                                                  files: present, excluding: category.excluding, rewritesHomeFolder: category.rewritesHomeFolder))
                 }
             }
         }
@@ -51,11 +62,13 @@ public enum AppDataProviders {
 
 /// Detects services that need a new sign-in or a manual export on the new Mac.
 public enum GuidanceDetector {
-    public static func detect(layout: SystemLayout, installedBundleIDs: Set<String>,
+    public static func detect(layout: SystemLayout, installedBundleIDs: Set<String>, installedAppNames: Set<String> = [],
                               catalog: [MigrationGuidance] = GuidanceCatalog.entries) -> [GuidanceRecord] {
         let lowered = Set(installedBundleIDs.map { $0.lowercased() })
+        let names = Set(installedAppNames.map { $0.lowercased() })
         return catalog.compactMap { entry in
             let installed = entry.bundleIdentifiers.contains { lowered.contains($0.lowercased()) }
+                || entry.appNames.contains { names.contains($0.lowercased()) }
             let configured = entry.paths.contains { path in
                 PathSafety.isSafeRelativePath(path)
                     && FileManager.default.fileExists(atPath: layout.homeDirectory.appendingPathComponent(path).path)

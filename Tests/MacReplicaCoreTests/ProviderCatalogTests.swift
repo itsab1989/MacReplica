@@ -7,6 +7,25 @@ import MacReplicaTestSupport
 struct ProviderCatalogTests {
     static let english = Localizer.loadTable(language: .english, resourcesFolder: LocalizationResources.folder)
 
+    /// Providers whose restore was confirmed inside the real application (see docs/VALIDATION_REPORT.md).
+    static let checkedInRealApp: Set<String> = ["adobe-photoshop-beta-settings", "davinci-resolve-luts", "davinci-resolve-preferences",
+                                                 "krita", "krita-settings", "gimp", "inkscape", "scribus", "scribus-settings",
+                                                 "cryptomator", "displaycal", "displaycal-settings", "microsoft-office"]
+
+    /// A category that takes a whole folder leaves out the sub-folders other categories of the same provider
+    /// handle, so deselecting one of them (for example Krita's Python plug-ins) really leaves it out.
+    @Test func categoriesDoNotContainEachOther() {
+        for provider in AppDataCatalog.providers {
+            for outer in provider.categories where outer.files == nil && outer.filePattern == nil {
+                for inner in provider.categories where inner.key != outer.key && inner.path != outer.path {
+                    let prefix = outer.path.isEmpty ? "" : outer.path + "/"
+                    guard inner.path.hasPrefix(prefix), let first = inner.path.dropFirst(prefix.count).split(separator: "/").first else { continue }
+                    #expect(outer.excluding.contains(String(first)), "\(provider.id): \(outer.key) must leave out \(first) (\(inner.key))")
+                }
+            }
+        }
+    }
+
     @Test func everyProviderIsDocumentedLocalizedAndSafe() {
         let providers = AppDataCatalog.providers
         #expect(providers.count >= 15)
@@ -14,8 +33,13 @@ struct ProviderCatalogTests {
         for provider in providers {
             #expect(!provider.bundleIdentifiers.isEmpty, "\(provider.id) has bundle identifiers")
             #expect(!provider.evidence.isEmpty && provider.evidence.allSatisfy { $0.url.hasPrefix("https://") }, "\(provider.id) cites sources")
-            #expect(["2026-10-02", "2026-10-03"].contains(provider.researchedOn))
-            #expect(provider.status == .fixtureTested, "\(provider.id) is not claimed as verified with the real app")
+            #expect(["2026-10-02", "2026-10-03", "2026-10-04"].contains(provider.researchedOn))
+            // Only providers checked inside the real app (docs/VALIDATION_REPORT.md) say so, and only for those categories.
+            if provider.status == .verified {
+                #expect(Self.checkedInRealApp.contains(provider.id) && !provider.verifiedCategories.isEmpty, "\(provider.id) verified with evidence")
+            } else {
+                #expect(provider.status == .fixtureTested && provider.verifiedCategories.isEmpty, "\(provider.id) is not claimed as verified")
+            }
             #expect(PathSafety.isSafeRelativePath(provider.base), "\(provider.id) base")
             #expect(!provider.base.hasPrefix("Library/Caches") && !provider.base.hasPrefix("Library/Keychains"))
             for category in provider.categories {
@@ -29,7 +53,7 @@ struct ProviderCatalogTests {
         }
         for entry in GuidanceCatalog.entries {
             #expect(!entry.evidence.isEmpty && entry.evidence.allSatisfy { $0.url.hasPrefix("https://") }, "\(entry.id) cites a source")
-            #expect(!entry.bundleIdentifiers.isEmpty || !entry.paths.isEmpty, "\(entry.id) can be detected")
+            #expect(!entry.bundleIdentifiers.isEmpty || !entry.paths.isEmpty || !entry.appNames.isEmpty, "\(entry.id) can be detected")
             if entry.kind == .manualMigration { #expect(Self.english["guidance.manual.\(entry.id)"] != nil, "\(entry.id) instructions") }
         }
         for provider in CredentialProviders.all {

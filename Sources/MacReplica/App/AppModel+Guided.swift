@@ -110,6 +110,8 @@ extension AppModel {
         let catalogProvider = services.catalogProvider
         let macOS = services.macOSVersion
         let architecture = services.architecture
+        let backupRoot = backupURL
+        let layout = services.layout
         appLog.info("Looking up official downloads for \(items.count) apps", component: .downloads)
         guidedTask = Task { [weak self] in
             let catalog = try? await catalogProvider.loadCatalog()
@@ -119,7 +121,11 @@ extension AppModel {
                 let app = item.app ?? manifest.applications.first { $0.bundleIdentifier == item.bundleIdentifier }
                     ?? AppRecord(name: item.title, bundleIdentifier: item.bundleIdentifier, path: item.identifier, source: .appStore,
                                  restoreMethod: Int(item.identifier).map { .appStore(id: $0) } ?? .manual)
-                found[item.id] = await finder.offers(for: app, itemID: item.id)
+                // The user's own installer comes first: it works offline and is exactly the version of the old Mac.
+                let own = OwnInstallerSource.offer(for: app, itemID: item.id, backupRoot: backupRoot, layout: layout)
+                var offers = await finder.offers(for: app, itemID: item.id)
+                if let own { offers = [own] + offers.map { var o = $0; o.recommended = false; return o } }
+                found[item.id] = offers
             }
             guard let self else { return }
             self.guided.offers = found

@@ -53,7 +53,8 @@ let package = Package(
         ),
         .testTarget(
             name: "MacReplicaCoreTests",
-            dependencies: ["MacReplicaCore", "MacReplicaTestSupport"],
+            // The askpass helper is built for the tests that run it against MacReplica's password channel.
+            dependencies: ["MacReplicaCore", "MacReplicaTestSupport", "MacReplicaAskpass"],
             resources: [
                 .copy("Fixtures")
             ],

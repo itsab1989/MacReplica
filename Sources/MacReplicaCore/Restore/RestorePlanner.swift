@@ -268,10 +268,18 @@ public struct RestorePlanner: Sendable {
             }
         }
         if components.contains(.applicationData) {
-            for folder in manifest.applicationData {
+            for folder in manifest.applicationData where !folder.isPersonal {
                 applicationData.append(RestoreItem(
                     id: "appdata:\(folder.id)", kind: .applicationData, title: folder.name, identifier: folder.displayPath,
                     component: .applicationData, applicationData: folder))
+            }
+        }
+        // The user's own folders: restored like application data, as their own group.
+        if components.contains(.personalFolders) {
+            for folder in manifest.applicationData where folder.isPersonal {
+                applicationData.append(RestoreItem(
+                    id: "appdata:\(folder.id)", kind: .applicationData, title: folder.name, identifier: folder.displayPath,
+                    component: .personalFolders, applicationData: folder))
             }
         }
 
@@ -335,6 +343,13 @@ public struct RestorePlanner: Sendable {
         // Guided installs come last: everything automatic runs first, then the user is asked to act.
         items += appStore.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
         items += manualItems.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        // Launchpad is arranged last, when the apps are installed.
+        if components.contains(.launchpad), let recorded = manifest.launchpadLayout, !excluded.contains(RestoreItem.launchpadID) {
+            var item = RestoreItem(id: RestoreItem.launchpadID, kind: .launchpadLayout, title: "Launchpad",
+                                   identifier: recorded.macOSVersion, component: .launchpad)
+            item.launchpadLayout = recorded
+            items.append(item)
+        }
         manual.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         return RestorePlan(items: items, manualApps: manual)
     }

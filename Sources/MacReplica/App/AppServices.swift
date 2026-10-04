@@ -12,12 +12,18 @@ struct AppServices: Sendable {
     let macOSVersion: String
     let architecture: CPUArchitecture
     let askpassPath: String?
+    let adminPasswordValidator: AdminPasswordValidating
     let defaultsSuite: String?
     let simulationRoot: URL?
     let releaseFetcher: ReleaseFetching
     /// Appcasts and downloads for guided installations; the simulation serves them from its own folder.
     let downloadFetcher: HTTPFetching
     let downloadTransport: DownloadTransport
+
+    static var bundledAskpass: String? {
+        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/MacReplicaAskpass").path
+        return FileManager.default.isExecutableFile(atPath: helper) ? helper : nil
+    }
 
     static func make(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppServices {
         if let simulation = SimulationEnvironment.fromLaunchArguments(arguments) {
@@ -29,7 +35,10 @@ struct AppServices: Sendable {
                 homebrewSource: simulation.makeHomebrewSource(),
                 macOSVersion: simulation.config.macosVersion,
                 architecture: simulation.config.architecture,
-                askpassPath: nil,
+                // The bundled helper is used in the simulation as well; it talks to MacReplica, and the
+                // password is checked against the simulated Mac's, never with the real sudo.
+                askpassPath: Self.bundledAskpass,
+                adminPasswordValidator: simulation.makeAdminPasswordValidator(),
                 // Simulation runs keep their own preferences so they never touch the real ones.
                 defaultsSuite: "io.github.itsab1989.MacReplica.simulation",
                 simulationRoot: simulation.root,
@@ -52,6 +61,7 @@ struct AppServices: Sendable {
             macOSVersion: SystemInfo.macOSVersion,
             architecture: SystemInfo.currentArchitecture,
             askpassPath: FileManager.default.isExecutableFile(atPath: helper) ? helper : nil,
+            adminPasswordValidator: SudoPasswordValidator(),
             defaultsSuite: nil,
             simulationRoot: nil,
             releaseFetcher: GitHubReleaseFetcher(),

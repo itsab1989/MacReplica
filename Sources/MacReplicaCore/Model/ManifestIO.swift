@@ -94,6 +94,8 @@ public enum ManifestIO {
         // 1 → 2: every field version 2 adds is optional and means "as before" when absent
         // (application data in the home folder, no display assignments, no saved Python copies).
         1: { $0 },
+        // 2 → 3: likewise (no home-folder placeholders, no Launchpad layout, no own installers or other copies).
+        2: { $0 },
     ]
 
     public static func read(from backupRoot: URL) throws -> Manifest {

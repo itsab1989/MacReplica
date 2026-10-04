@@ -100,7 +100,9 @@ public enum AppDataCatalog {
         // The beta keeps its own folders ("Adobe Photoshop (Beta)"), separate from the release, although the
         // app has the same bundle ID. Its data only ever goes back into the beta's folders.
         photoshopPresets(id: "adobe-photoshop-beta", appName: "Adobe Photoshop (Beta)", folderPattern: #"^Adobe Photoshop \(Beta\)$"#),
-        photoshopSettings(id: "adobe-photoshop-beta-settings", appName: "Adobe Photoshop (Beta)", folderPattern: #"^Adobe Photoshop \(Beta\) Settings$"#),
+        // Verified with Photoshop beta 27.12: action sets and preset lists identical after the restore.
+        photoshopSettings(id: "adobe-photoshop-beta-settings", appName: "Adobe Photoshop (Beta)", folderPattern: #"^Adobe Photoshop \(Beta\) Settings$"#,
+                          verified: ["panelsAndWorkspaces"]),
         AppDataProvider(
             id: "adobe-color-settings", appName: "Adobe color settings",
             bundleIdentifiers: ["com.adobe.Photoshop", "com.adobe.illustrator", "com.adobe.InDesign", "com.adobe.LightroomClassicCC7"],
@@ -155,12 +157,14 @@ public enum AppDataCatalog {
             id: "davinci-resolve-luts", appName: "DaVinci Resolve", bundleIdentifiers: resolveIDs,
             base: "Application Support/Blackmagic Design/DaVinci Resolve/LUT", versionFolderPattern: nil,
             categories: [AppDataCategory("luts", "")],
-            mustBeClosed: false, status: .fixtureTested, evidence: resolveEvidence, researchedOn: researchedResolve,
+            mustBeClosed: false, status: .verified, evidence: resolveEvidence, researchedOn: researchedResolve,
             limitations: ["The LUT folder is shared by all users (/Library); Resolve's installer creates it, so the LUTs wait until Resolve is installed.",
                           "LUTs that come with Resolve (listed in its installer receipt) are left out.",
                           "Resolve shows new LUTs after a restart or Project Settings › Color Management › Update Lists.",
                           "Additional LUT locations set in Preferences are machine paths and not restored."],
-            scope: .sharedLibrary, shippedByPackage: "com.blackmagic-design.Manifest", appMustBeInstalled: true),
+            scope: .sharedLibrary, shippedByPackage: "com.blackmagic-design.Manifest", appMustBeInstalled: true,
+            // Verified with Resolve Studio 21.1: restored LUTs are applied by Graph.SetLUT.
+            verifiedCategories: ["luts"]),
         AppDataProvider(
             id: "davinci-resolve-aces", appName: "DaVinci Resolve", bundleIdentifiers: resolveIDs,
             base: "Library/Application Support/Blackmagic Design/DaVinci Resolve/ACES Transforms", versionFolderPattern: nil,
@@ -183,12 +187,14 @@ public enum AppDataCatalog {
                          AppDataCategory("metadataPresets", "", files: ["mediametadata.preset.xml", "primaryhdr.preset.xml"]),
                          // User preferences also hold absolute paths (project backups, last project).
                          AppDataCategory("userPreferences", "", files: ["config.user.xml"], .compatibilitySensitive)],
-            mustBeClosed: true, status: .fixtureTested, evidence: resolveEvidence, researchedOn: researchedResolve,
+            mustBeClosed: true, status: .verified, evidence: resolveEvidence, researchedOn: researchedResolve,
             limitations: ["Resolve rewrites these files when it quits, so it must be closed.",
                           "Each file holds all presets of its kind and carries Resolve's database version: restored only into the same or a newer Resolve.",
                           "System preferences (config.dat: GPU, video I/O, media storage, scripting), the project library list and the licence are never copied.",
                           "PowerGrades, render presets and project presets are stored in the project library; see the guidance."],
-            appMustBeInstalled: true, notForOlderApp: true),
+            appMustBeInstalled: true, notForOlderApp: true,
+            // Verified with Resolve Studio 21.1: the custom keyboard preset is listed and active again.
+            verifiedCategories: ["keyboardPresets", "userPreferences"]),
         AppDataProvider(
             id: "blender", appName: "Blender", bundleIdentifiers: ["org.blenderfoundation.blender"],
             base: "Library/Application Support/Blender", versionFolderPattern: #"^\d+\.\d+$"#,
@@ -211,6 +217,251 @@ public enum AppDataCatalog {
             evidence: [Evidence(title: "Adobe: After Effects preferences", url: "https://helpx.adobe.com/after-effects/using/preferences.html")],
             researchedOn: researched,
             limitations: ["After Effects can migrate previous-version preferences itself (Preferences › Startup & Repair)."]),
+
+        // MARK: Creative applications (open source)
+        AppDataProvider(
+            id: "krita", appName: "Krita", bundleIdentifiers: ["org.krita"],
+            base: "Library/Application Support/krita", versionFolderPattern: nil,
+            // The resource folder as one unit: Krita's resource database (tags, active bundles) belongs to it.
+            categories: [AppDataCategory("kritaResources", "", excluding: ["krita.log", "krita-sysinfo.log", "pykrita"]),
+                         AppDataCategory("kritaPlugins", "pykrita", .containsCode)],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "Krita: Resource management", url: "https://docs.krita.org/en/reference_manual/resource_management.html"),
+                       Evidence(title: "Krita FAQ (configuration files)", url: "https://docs.krita.org/en/KritaFAQ.html")],
+            researchedOn: researchedR3,
+            limitations: ["Compiled Python plug-ins only work with the same processor and Krita's Python version.",
+                          "Display and OpenGL settings (kritadisplayrc, kritaopenglrc) are machine-specific and not copied."],
+            verifiedCategories: ["kritaResources"]),
+        AppDataProvider(
+            id: "krita-settings", appName: "Krita", bundleIdentifiers: ["org.krita"],
+            base: "Library/Preferences", versionFolderPattern: nil,
+            categories: [AppDataCategory("preferences", "", files: ["kritarc"], rewritesHomeFolder: true),
+                         AppDataCategory("shortcuts", "", files: ["kritashortcutsrc"])],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "Krita FAQ (configuration files)", url: "https://docs.krita.org/en/KritaFAQ.html")],
+            researchedOn: researchedR3,
+            limitations: ["kritarc holds the resource folder as an absolute path; it is adjusted to this Mac's home folder."],
+            verifiedCategories: ["preferences"]),
+        AppDataProvider(
+            id: "gimp", appName: "GIMP", bundleIdentifiers: ["org.gimp.gimp-2.10", "org.gimp.gimp-3.0", "org.gimp.gimp-3.2", "org.gimp.gimp"],
+            // One folder per minor version. Only the version of the old Mac is restored: a newer GIMP imports it on
+            // its first start, which it skips if its own folder already exists.
+            base: "Library/Application Support/GIMP", versionFolderPattern: #"^\d+\.\d+$"#,
+            categories: [AppDataCategory("gimpProfile", "", excluding: ["pluginrc", "documents", "tmp", "themerc", "gtkrc", "plug-ins", "scripts",
+                                                                       "interpreters", "environ", "modules",
+                                                                       // Thumbnails and font caches, crash reports, autosaved images (seen in GIMP 3.2)
+                                                                       "cache", "CrashLog", "backups", "theme.css"],
+                                         // tags.xml names resources by absolute path (seen in GIMP 3.2)
+                                         rewritesHomeFolder: true),
+                         AppDataCategory("gimpPlugins", "plug-ins", .containsCode),
+                         AppDataCategory("gimpScripts", "scripts", .containsCode)],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "GIMP: Setting up GIMP (personal folder)", url: "https://docs.gimp.org/2.10/en/gimp-concepts-setup.html"),
+                       Evidence(title: "GIMP 3.0 RC2: importing 2.10 settings", url: "https://www.gimp.org/news/2024/12/27/gimp-3-0-RC2-released/")],
+            researchedOn: researchedR3,
+            limitations: ["GIMP 3 does not take over 2.10 plug-ins and scripts; Python 2 plug-ins and old Script-Fu need porting.",
+                          "Compiled plug-ins depend on the processor and the GIMP version.",
+                          "Swap, temporary files, the plug-in cache and recent documents are never copied."],
+            verifiedCategories: ["gimpProfile"]),
+        AppDataProvider(
+            id: "inkscape", appName: "Inkscape", bundleIdentifiers: ["org.inkscape.Inkscape"],
+            base: "Library/Application Support/org.inkscape.Inkscape/config/inkscape", versionFolderPattern: nil,
+            categories: [AppDataCategory("preferences", "", files: ["preferences.xml"]),
+                         AppDataCategory("shortcuts", "keys"),
+                         AppDataCategory("templates", "templates"),
+                         AppDataCategory("palettes", "palettes"),
+                         AppDataCategory("symbols", "symbols"),
+                         AppDataCategory("inkscapeMarkersFilters", "filters"),
+                         AppDataCategory("inkscapeExtensions", "extensions", .containsCode)],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "Inkscape source: macOS profile location (XDG_CONFIG_HOME in the app bundle)",
+                                url: "https://gitlab.com/inkscape/inkscape/-/blob/1.4.x/src/path-prefix.cpp")],
+            researchedOn: researchedR3,
+            limitations: ["Extensions with compiled parts depend on the processor and Inkscape's Python version.",
+                          "Logs, history and caches are never copied."],
+            verifiedCategories: ["preferences", "templates", "palettes"]),
+        AppDataProvider(
+            id: "scribus", appName: "Scribus", bundleIdentifiers: ["net.scribus"],
+            base: "Library/Application Support/Scribus", versionFolderPattern: nil,
+            categories: [AppDataCategory("palettes", "palettes"), AppDataCategory("scrapbook", "scrapbook", excluding: ["tmp"]),
+                         AppDataCategory("dictionaries", "dicts")],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "Scribus source: configuration and data folders", url: "https://github.com/scribusproject/scribus/blob/Version16x/scribus/scpaths.cpp")],
+            researchedOn: researchedR3,
+            limitations: ["Templates and scripts live where the preferences point; add those folders with Add Folder."],
+            verifiedCategories: ["palettes"]),
+        AppDataProvider(
+            id: "scribus-settings", appName: "Scribus", bundleIdentifiers: ["net.scribus"],
+            base: "Library/Preferences/Scribus", versionFolderPattern: nil,
+            categories: [AppDataCategory("preferences", "", filePattern: #"^(prefs|scribus|scripter)1[0-9]{2}\.(xml|rc)$"#, rewritesHomeFolder: true)],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "Scribus source: preferences manager", url: "https://github.com/scribusproject/scribus/blob/Version16x/scribus/prefsmanager.cpp")],
+            researchedOn: researchedR3,
+            limitations: ["The preferences include keyboard shortcuts and absolute paths, which are adjusted to this Mac's home folder."],
+            verifiedCategories: ["preferences"]),
+
+        // MARK: Display calibration
+        AppDataProvider(
+            id: "displaycal", appName: "DisplayCAL", bundleIdentifiers: ["net.displaycal.DisplayCAL"],
+            base: "Library/Application Support/DisplayCAL", versionFolderPattern: nil,
+            // Profiles, calibration curves and measurements per calibration; downloads, failed runs and logs stay behind.
+            categories: [AppDataCategory("calibrations", "storage")],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "DisplayCAL: user data and configuration file locations (README)", url: "https://displaycal.net/")],
+            researchedOn: researchedR3,
+            limitations: ["Profiles and measurements fit the display and instrument they were made with; on another display, recalibrate.",
+                          "Downloaded instrument corrections (dl) and ArgyllCMS itself are installed again, not copied."],
+            verifiedCategories: ["calibrations"]),
+        AppDataProvider(
+            id: "displaycal-settings", appName: "DisplayCAL", bundleIdentifiers: ["net.displaycal.DisplayCAL"],
+            base: "Library/Preferences/DisplayCAL", versionFolderPattern: nil,
+            categories: [AppDataCategory("calibrationSettings", "", files: ["DisplayCAL.ini"], rewritesHomeFolder: true)],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "DisplayCAL: user data and configuration file locations (README)", url: "https://displaycal.net/")],
+            researchedOn: researchedR3,
+            limitations: ["The settings name the display and instrument; DisplayCAL updates them when it scans the hardware.",
+                          "ArgyllCMS must be installed (Homebrew argyll-cms, or DisplayCAL offers to download it)."],
+            verifiedCategories: ["calibrationSettings"]),
+        AppDataProvider(
+            id: "argyllcms", appName: "ArgyllCMS", bundleIdentifiers: ["net.displaycal.DisplayCAL"],
+            base: "Library/Application Support/ArgyllCMS", versionFolderPattern: nil,
+            categories: [AppDataCategory("instrumentCorrections", "")],
+            mustBeClosed: false, status: .fixtureTested,
+            evidence: [Evidence(title: "ArgyllCMS: oeminst (per-user correction folder)", url: "https://www.argyllcms.com/doc/oeminst.html")],
+            researchedOn: researchedR3,
+            limitations: ["Corrections installed for all users (/Library/ArgyllCMS) are re-imported with DisplayCAL or oeminst."]),
+        AppDataProvider(
+            id: "benq-palette-master", appName: "BenQ Palette Master", bundleIdentifiers: ["com.BenQ.PaletteMasterElement", "com.benq.PaletteMasterUltimate"],
+            base: "RD/strings", versionFolderPattern: nil,
+            categories: [AppDataCategory("calibrationTargets", "", files: ["benq_params"])],
+            mustBeClosed: true, status: .fixtureTested,
+            evidence: [Evidence(title: "BenQ Palette Master Element user guide (saved settings in /Users/Shared/RD)",
+                                url: "https://esupportdownload.benq.com/esupport/LCD%20MONITOR/UserManual/Palette%20Master%20Element/PME_EN_230105172340.pdf")],
+            researchedOn: researchedR3,
+            limitations: ["The calibration itself is stored in the monitor; its ICC profiles are restored with the color profiles.",
+                          "Bundle identifiers are not documented by BenQ; detection relies on the settings file."],
+            scope: .usersShared, experimental: true),
+        AppDataProvider(
+            id: "xppen", appName: "XP-Pen tablet driver", bundleIdentifiers: ["com.ugee.PenTablet", "com.ugee.PenTabletDriverPro"],
+            base: ".XPPen", versionFolderPattern: nil,
+            categories: [AppDataCategory("tabletSettings", "", files: ["config.xml"], .compatibilitySensitive)],
+            mustBeClosed: true, status: .fixtureTested,
+            evidence: [Evidence(title: "XP-Pen Artist Pro 16 manual (export/import of driver settings)",
+                                url: "https://www.xp-pen.com/Uploads/images/manual/artistpro16/en/Artist%20Pro%2016%20(English).pdf")],
+            researchedOn: researchedR3,
+            limitations: ["Location found in the 4.0 driver package, not documented by XP-Pen; the driver's own Export config (.pcfg) is the vendor's way.",
+                          "Screen mapping belongs to the old Mac's displays: set it again and calibrate.",
+                          "Accessibility and Screen Recording for the driver must be allowed again in System Settings."],
+            appMustBeInstalled: true, experimental: true),
+
+        // MARK: Microsoft Office
+        AppDataProvider(
+            id: "microsoft-office", appName: "Microsoft Office",
+            bundleIdentifiers: ["com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.onenote.mac", "com.microsoft.Outlook"],
+            base: "Library/Group Containers/UBF8T346G9.Office", versionFolderPattern: nil,
+            categories: [AppDataCategory("officeTemplates", "User Content.localized/Templates.localized",
+                                         alternatePaths: ["User Content/Templates", "User Content.localized/Templates", "User Content/Templates.localized"]),
+                         AppDataCategory("autoCorrect", "", filePattern: #"^Microsoft Office ACL \[.+\]$"#),
+                         AppDataCategory("customDictionary", "", files: ["Custom Dictionary"]),
+                         AppDataCategory("wordStartup", "User Content.localized/Startup.localized/Word", .containsCode,
+                                         alternatePaths: ["User Content/Startup/Word", "User Content/Start-up/Word"]),
+                         AppDataCategory("excelStartup", "User Content.localized/Startup.localized/Excel", .containsCode,
+                                         alternatePaths: ["User Content/Startup/Excel", "User Content/Start-up/Excel"])],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "Microsoft: Change the Normal template (Normal.dotm)", url: "https://support.microsoft.com/en-us/word/change-the-default-settings-for-new-documents"),
+                       Evidence(title: "Microsoft: Customize how Excel starts in Excel for Mac", url: "https://support.microsoft.com/en-us/excel/customize-how-excel-starts-in-excel-for-mac"),
+                       Evidence(title: "Microsoft Q&A: migrate Word custom dictionary and AutoCorrect on Mac",
+                                url: "https://learn.microsoft.com/en-us/answers/questions/5341306/how-to-migrate-word-custom-dictionary-and-autocorr")],
+            researchedOn: researchedR3,
+            limitations: ["Sign-in, licence and activation are never copied: sign in or activate again.",
+                          "macOS protects Office's shared container: MacReplica needs Full Disk Access to read and write it.",
+                          "OneNote notebooks live in OneDrive or SharePoint and come back after signing in."],
+            verifiedCategories: ["autoCorrect"],
+            requiresFullDiskAccess: true),
+        AppDataProvider(
+            id: "microsoft-office-ribbons", appName: "Microsoft Office",
+            bundleIdentifiers: ["com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint"],
+            base: "Library/Containers", versionFolderPattern: #"^com\.microsoft\.(Word|Excel|Powerpoint)$"#,
+            categories: [AppDataCategory("ribbons", "Data/Library/Preferences", .compatibilitySensitive, filePattern: #"^(Word|Excel|PowerPoint)\.OfficeUI$"#)],
+            mustBeClosed: true, status: .fixtureTested,
+            evidence: [Evidence(title: "Microsoft Q&A: exporting custom ribbons in Word for Mac",
+                                url: "https://learn.microsoft.com/en-us/answers/questions/4999048/exporting-custom-ribbons-on-word-365-for-mac")],
+            researchedOn: researchedR3,
+            limitations: ["Office for Mac has no ribbon export; copying the customization file is community advice."],
+            experimental: true, requiresFullDiskAccess: true),
+
+        // MARK: Apple Mail
+        AppDataProvider(
+            id: "apple-mail", appName: "Mail", bundleIdentifiers: ["com.apple.mail"],
+            base: "Library/Mail", versionFolderPattern: #"^V\d+$"#,
+            categories: [AppDataCategory("mailSignatures", "MailData/Signatures"),
+                         AppDataCategory("mailRules", "MailData", files: ["SyncedRules.plist", "UnsyncedRules.plist", "RulesActiveState.plist"],
+                                         .compatibilitySensitive),
+                         AppDataCategory("smartMailboxes", "MailData", files: ["SyncedSmartMailboxes.plist", "SmartMailboxesLocalProperties.plist"],
+                                         .compatibilitySensitive),
+                         AppDataCategory("vips", "MailData", files: ["VIPs.plist"], .compatibilitySensitive)],
+            mustBeClosed: true, status: .fixtureTested,
+            evidence: [Evidence(title: "Apple: Change Signatures settings in Mail", url: "https://support.apple.com/guide/mail/change-signatures-settings-cpmlprefsig/mac"),
+                       Evidence(title: "Apple: Move content to a new Mac", url: "https://support.apple.com/en-us/102613")],
+            researchedOn: researchedR3,
+            limitations: ["Accounts and passwords are never copied: add the accounts again in System Settings › Internet Accounts first.",
+                          "Rules and smart mailboxes may refer to mailboxes of the old accounts; check them after the accounts are back.",
+                          "With iCloud Drive for Mail, signatures and rules sync by themselves.",
+                          "macOS protects the Mail folder: MacReplica needs Full Disk Access.",
+                          "Validated with files in the layout Mail uses up to macOS 15 only; Mail itself could not be checked (no account on test Macs, and Mail on macOS 27 stores these settings elsewhere). Check signatures and rules in Mail after restoring."],
+            experimental: true, requiresFullDiskAccess: true),
+
+        // MARK: Security and sync
+        AppDataProvider(
+            id: "cryptomator", appName: "Cryptomator", bundleIdentifiers: ["org.cryptomator"],
+            base: "Library/Application Support/Cryptomator", versionFolderPattern: nil,
+            // The vault list and app settings. Never the device key (key.p12), never vault contents; passwords are
+            // in the Keychain only (if the user saved them) and are not touched.
+            categories: [AppDataCategory("vaultList", "", files: ["settings.json"], rewritesHomeFolder: true)],
+            mustBeClosed: true, status: .verified,
+            evidence: [Evidence(title: "Cryptomator: settings path (macOS build script)", url: "https://github.com/cryptomator/cryptomator/blob/develop/dist/mac/dmg/build.sh"),
+                       Evidence(title: "Cryptomator docs: Adding vaults", url: "https://docs.cryptomator.org/desktop/adding-vaults/")],
+            researchedOn: researchedR3,
+            limitations: ["Vaults on drives that are not connected, or in moved folders, show as missing: add them again (choose the vault file).",
+                          "The optional supporter certificate is part of the settings."],
+            verifiedCategories: ["vaultList"],
+            verification: .cryptomatorVaults),
+
+        // MARK: Configuration folders of tools
+        configFolder(id: "karabiner", name: "Karabiner-Elements", ids: ["org.pqrs.Karabiner-Elements.Settings"], path: ".config/karabiner",
+                     key: "keyboardRules", excluding: ["automatic_backups"],
+                     evidence: Evidence(title: "Karabiner-Elements: configuration file path", url: "https://karabiner-elements.pqrs.org/docs/manual/misc/configuration-file-path/")),
+        configFolder(id: "hammerspoon", name: "Hammerspoon", ids: ["org.hammerspoon.Hammerspoon"], path: ".hammerspoon", key: "automationScripts",
+                     classification: .containsCode, evidence: Evidence(title: "Hammerspoon: Getting started", url: "https://www.hammerspoon.org/go/")),
+        configFolder(id: "ghostty", name: "Ghostty", ids: ["com.mitchellh.ghostty"], path: ".config/ghostty", key: "terminalConfig",
+                     evidence: Evidence(title: "Ghostty: Configuration", url: "https://ghostty.org/docs/config")),
+        configFolder(id: "kitty", name: "kitty", ids: ["net.kovidgoyal.kitty"], path: ".config/kitty", key: "terminalConfig",
+                     evidence: Evidence(title: "kitty: Configuration", url: "https://sw.kovidgoyal.net/kitty/conf/")),
+        configFolder(id: "wezterm", name: "WezTerm", ids: ["com.github.wez.wezterm"], path: ".config/wezterm", key: "terminalConfig",
+                     evidence: Evidence(title: "WezTerm: Configuration files", url: "https://github.com/wezterm/wezterm/blob/main/docs/config/files.md")),
+        configFolder(id: "alacritty", name: "Alacritty", ids: ["org.alacritty"], path: ".config/alacritty", key: "terminalConfig",
+                     evidence: Evidence(title: "Alacritty: Configuration", url: "https://alacritty.org/config-alacritty.html")),
+        configFolder(id: "zed", name: "Zed", ids: ["dev.zed.Zed"], path: ".config/zed", key: "editorSettings", excluding: ["prompts", "conversations"],
+                     evidence: Evidence(title: "Zed: Configuring Zed", url: "https://github.com/zed-industries/zed/blob/main/docs/src/configuring-zed.md")),
+        AppDataProvider(
+            id: "motion-templates", appName: "Final Cut Pro / Motion", bundleIdentifiers: ["com.apple.FinalCut", "com.apple.motionapp"],
+            base: "Movies/Motion Templates.localized", versionFolderPattern: nil,
+            categories: [AppDataCategory("motionTemplates", "")],
+            mustBeClosed: true, status: .fixtureTested,
+            evidence: [Evidence(title: "Apple: Manage Motion content in Final Cut Pro", url: "https://support.apple.com/guide/final-cut-pro/manage-motion-content-ver37e11fb98/mac")],
+            researchedOn: researchedR3,
+            limitations: ["Templates saved inside a Final Cut library travel with the library."],
+            alternateBases: ["Movies/Motion Templates"]),
+        AppDataProvider(
+            id: "logic-pro", appName: "Logic Pro", bundleIdentifiers: ["com.apple.logic10"],
+            base: "Music/Audio Music Apps", versionFolderPattern: nil,
+            categories: [AppDataCategory("channelStripSettings", "Channel Strip Settings"), AppDataCategory("patches", "Patches"),
+                         AppDataCategory("pluginSettings", "Plug-In Settings")],
+            mustBeClosed: true, status: .fixtureTested,
+            evidence: [Evidence(title: "Apple: Logic Pro storage locations", url: "https://support.apple.com/guide/logicpro/storage-locations-lgcp4598b412/mac")],
+            researchedOn: researchedR3,
+            limitations: ["Sampler instruments and samples are large and not offered automatically; add them with Add Folder.",
+                          "Third-party plug-ins are installed again from their vendors."]),
 
         // MARK: Productivity
         AppDataProvider(
@@ -239,6 +490,16 @@ public enum AppDataCatalog {
     ]
 
     static let researchedPS = "2026-10-03"
+    static let researchedR3 = "2026-10-04"
+
+    /// A tool whose whole configuration is one folder of plain files in the home folder.
+    static func configFolder(id: String, name: String, ids: [String], path: String, key: String, excluding: [String] = [],
+                             classification: DataClassification = .safe, evidence: Evidence) -> AppDataProvider {
+        AppDataProvider(id: id, appName: name, bundleIdentifiers: ids, base: path, versionFolderPattern: nil,
+                        categories: [AppDataCategory(key, "", excluding: excluding, classification)],
+                        mustBeClosed: false, status: .fixtureTested, evidence: [evidence], researchedOn: researchedR3,
+                        limitations: ["Plain configuration files; the tool reads them when it starts or reloads."])
+    }
     static let researchedResolve = "2026-10-03"
     static let resolveIDs = ["com.blackmagic-design.DaVinciResolve", "com.blackmagic-design.DaVinciResolveLite"]
     static let resolveEvidence = [
@@ -276,8 +537,8 @@ public enum AppDataCatalog {
     }
 
     /// `~/Library/Preferences/<Photoshop> Settings`: the panel contents, workspaces and preferences.
-    static func photoshopSettings(id: String, appName: String, folderPattern: String) -> AppDataProvider {
-        AppDataProvider(
+    static func photoshopSettings(id: String, appName: String, folderPattern: String, verified: Set<String> = []) -> AppDataProvider {
+        var provider = AppDataProvider(
             id: id, appName: appName, bundleIdentifiers: ["com.adobe.Photoshop"],
             base: "Library/Preferences", versionFolderPattern: folderPattern,
             categories: [
@@ -294,10 +555,12 @@ public enum AppDataCatalog {
                 // The Preferences dialog; contains paths (scratch disks, plug-ins), so only for the same version.
                 AppDataCategory("generalPreferences", "", files: ["{folder} Prefs.psp"], .compatibilitySensitive),
             ],
-            mustBeClosed: true, status: .fixtureTested, evidence: photoshopEvidence, researchedOn: researchedPS,
+            mustBeClosed: true, status: verified.isEmpty ? .fixtureTested : .verified, evidence: photoshopEvidence, researchedOn: researchedPS,
             limitations: ["Photoshop saves its preferences when it quits, so it must be closed during the restore.",
                           "Machine and cache files (MachinePrefs, PluginCache, FMCache, sniffer logs, launch flags) are never copied.",
                           "Workspaces, document presets and the Preferences dialog are offered for the same Photoshop version only (not selected by default)."])
+        provider.verifiedCategories = verified
+        return provider
     }
 }
 
@@ -339,6 +602,22 @@ public enum GuidanceCatalog {
                url: "https://affinity.help/photo2/English.lproj/pages/Addons/exportingAddons.html"),
         manual("premierePro", "Adobe Premiere Pro", ids: ["com.adobe.PremierePro"],
                url: "https://helpx.adobe.com/premiere/desktop/get-started/keyboard-shortcuts/copy-keyboard-shortcuts-from-one-computer-to-another.html"),
+        manual("synologyDrive", "Synology Drive Client", ids: ["com.synology.CloudStationUI", "com.synology.SynologyDrive"],
+               paths: ["Library/Application Support/SynologyDrive"],
+               url: "https://kb.synology.com/en-global/DSM/help/SynologyDriveClient/synologydriveclient"),
+        manual("calibrationSoftware", "Calibrite PROFILER / i1Profiler", ids: ["com.xrite.i1Profiler"],
+               url: "https://calibrite.com/calibrite-technical-support/calibrite-profiler-technical-support/",
+               names: ["Calibrite PROFILER", "i1Profiler", "ColorChecker Display"]),
+        manual("benqPaletteMaster", "BenQ Palette Master",
+               url: "https://www.benq.com/en-us/support/downloads-faq/faq/product/application/monitor-faq-kn-00065.html",
+               names: ["Palette Master Element", "Palette Master Ultimate"]),
+        manual("xppenDriver", "XP-Pen tablet driver", ids: ["com.ugee.PenTablet", "com.ugee.PenTabletDriverPro"], paths: [".XPPen"],
+               url: "https://www.xp-pen.com/Uploads/images/manual/artistpro16/en/Artist%20Pro%2016%20(English).pdf"),
+        manual("mailAccounts", "Mail accounts", ids: ["com.apple.mail"], paths: ["Library/Mail"],
+               url: "https://support.apple.com/en-us/102613"),
+        manual("officeActivation", "Microsoft Office sign-in or activation",
+               ids: ["com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.Outlook", "com.microsoft.onenote.mac"],
+               url: "https://support.microsoft.com/en-us/office/activate-office-5bd38f38-db92-448b-a982-ad170b1e187e"),
         manual("resolveLibrary", "DaVinci Resolve (PowerGrades, render and project presets, projects)",
                ids: ["com.blackmagic-design.DaVinciResolve", "com.blackmagic-design.DaVinciResolveLite"],
                url: "https://documents.blackmagicdesign.com/UserManuals/DaVinci_Resolve_20_Reference_Manual.pdf"),
@@ -349,8 +628,8 @@ public enum GuidanceCatalog {
                           evidence: [Evidence(title: name, url: url)])
     }
 
-    static func manual(_ id: String, _ name: String, ids: [String] = [], paths: [String] = [], url: String) -> MigrationGuidance {
+    static func manual(_ id: String, _ name: String, ids: [String] = [], paths: [String] = [], url: String, names: [String] = []) -> MigrationGuidance {
         MigrationGuidance(id: id, name: name, kind: .manualMigration, bundleIdentifiers: ids, paths: paths,
-                          evidence: [Evidence(title: name, url: url)])
+                          evidence: [Evidence(title: name, url: url)], appNames: names)
     }
 }

@@ -69,6 +69,29 @@ struct InventoryResultsView: View {
 
                     ForEach(Array((model.inventory?.warnings ?? []).enumerated()), id: \.offset) { _, warning in
                         NoticeView(style: .warning, title: l.inventoryWarningText(warning))
+                        if case .masNeeded(_, true) = warning {
+                            HStack {
+                                Spacer()
+                                if model.installingMas { ProgressView().controlSize(.small); Text(l.t("inventory.mas.installing")).font(.callout) }
+                                Button(l.t("inventory.mas.install")) { model.installMasAndRescan() }
+                                    .disabled(model.installingMas)
+                                    .accessibilityIdentifier("inventory.installMas")
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(l.t("ownInstaller.section.title")).font(.headline)
+                        Text(l.t("ownInstaller.section.message")).foregroundStyle(.secondary).font(.callout)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            let count = model.ownInstallerFiles.values.reduce(0) { $0 + $1.count }
+                            if count > 0 { Text(l.p("ownInstaller.section.count", count)).font(.callout) }
+                            Spacer()
+                            Button(l.t("ownInstaller.folder.choose")) { model.scanInstallerFolder() }
+                                .disabled(model.inspectingInstallers)
+                                .accessibilityIdentifier("ownInstaller.folder")
+                        }
                     }
 
                     // Apps with possible matches stay listed after a choice so it can be changed.
@@ -90,6 +113,7 @@ struct InventoryResultsView: View {
                     DeveloperToolsSection()
                     DeveloperSettingsSection()
                     ApplicationDataSection()
+                    PersonalFoldersSection()
                     CredentialsSection()
                     LocationsSection()
 
@@ -133,6 +157,7 @@ struct MatchDecisionRow: View {
 
     var body: some View {
         let l = model.l
+        VStack(alignment: .leading, spacing: 6) {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(app.name).fontWeight(.medium)
@@ -152,12 +177,68 @@ struct MatchDecisionRow: View {
             .labelsHidden()
             .frame(maxWidth: 300)
         }
+        OwnInstallerControls(app: app)
+        }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
     }
 }
 
+/// "Use my installer …" and the installers the user chose for an app (offline restore source).
+struct OwnInstallerControls: View {
+    @EnvironmentObject var model: AppModel
+    var app: AppRecord
+
+    var body: some View {
+        let l = model.l
+        let current = model.inventory?.manifest.applications.first { $0.id == app.id } ?? app
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(model.ownInstallerFiles[app.id] ?? [], id: \.archive.id) { file in
+                let archive = file.archive
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: archive.matchesDeveloper(of: current) ? "checkmark.seal" : "exclamationmark.triangle")
+                        .foregroundStyle(archive.matchesDeveloper(of: current) ? .green : .orange)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(archive.fileName).font(.callout).lineLimit(1).truncationMode(.middle)
+                        Text([archive.version.map { l.t("common.version", $0) }, archive.signer ?? archive.teamIdentifier.map { l.t("ownInstaller.team", $0) },
+                              l.fileSize(archive.size)].compactMap { $0 }.joined(separator: " · "))
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                        if !archive.matchesDeveloper(of: current) {
+                            Text(l.t("ownInstaller.untrusted")).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    Spacer()
+                    Toggle(l.t("ownInstaller.licence"), isOn: Binding(get: { archive.containsLicence },
+                                                                      set: { model.setOwnInstaller(app.id, archive.id, licence: $0) }))
+                        .toggleStyle(.checkbox).font(.caption)
+                        .help(l.t("ownInstaller.licence.help"))
+                    Toggle(l.t("ownInstaller.include"), isOn: Binding(get: { file.include },
+                                                                      set: { model.setOwnInstaller(app.id, archive.id, include: $0) }))
+                        .toggleStyle(.checkbox).font(.caption)
+                        .accessibilityIdentifier("ownInstaller.include.\(archive.id)")
+                    Button { model.removeOwnInstaller(app.id, archive.id) } label: { Image(systemName: "minus.circle") }
+                        .buttonStyle(.borderless).help(l.t("ownInstaller.remove")).accessibilityLabel(l.t("ownInstaller.remove"))
+                }
+            }
+            HStack {
+                Spacer()
+                if model.inspectingInstallers { ProgressView().controlSize(.small) }
+                Button(l.t("ownInstaller.add")) { model.chooseOwnInstallers(for: app.id) }
+                    .controlSize(.small)
+                    .accessibilityIdentifier("ownInstaller.add.\(app.id)")
+            }
+        }
+    }
+}
+
 struct AppRow: View {
+    static func needsInstaller(_ app: AppRecord) -> Bool {
+        switch app.restoreMethod {
+        case .manual, .officialDownload: return true
+        default: return false
+        }
+    }
+
     @EnvironmentObject var model: AppModel
     var app: AppRecord
 
@@ -183,6 +264,11 @@ struct AppRow: View {
                 Text([app.version.map { l.t("common.version", $0) }, app.vendor].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption).foregroundStyle(.secondary)
                     .lineLimit(1)
+                ForEach(app.otherCopies ?? [], id: \.path) { copy in
+                    Text(l.t("apps.otherCopy", copy.path, copy.version ?? "–"))
+                        .font(.caption).foregroundStyle(.orange)
+                        .lineLimit(1).truncationMode(.middle)
+                }
             }
             Spacer()
             Text(l.methodText(app.restoreMethod))
@@ -190,6 +276,7 @@ struct AppRow: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 6)
+        if app.candidates.isEmpty, Self.needsInstaller(app) { OwnInstallerControls(app: app).padding(.leading, 26) }
     }
 }
 

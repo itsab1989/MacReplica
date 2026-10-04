@@ -11,6 +11,22 @@ public struct DownloadOffer: Codable, Equatable, Hashable, Sendable, Identifiabl
         case vendorWebsite
         /// The app's page in the Mac App Store.
         case appStore
+        /// The user's own installer, from the backup or from where it was kept (e.g. an external drive). Works offline.
+        case ownInstaller
+    }
+
+    /// A further package of the user's own installers, opened in Installer after the app (e.g. an activation package).
+    public struct LocalPackage: Codable, Equatable, Hashable, Sendable {
+        public var name: String
+        public var path: String
+        public var sha256: String
+        public var teamIdentifier: String?
+        public init(name: String, path: String, sha256: String, teamIdentifier: String?) {
+            self.name = name
+            self.path = path
+            self.sha256 = sha256
+            self.teamIdentifier = teamIdentifier
+        }
     }
 
     /// What MacReplica verifies before anything is installed, strongest first.
@@ -47,6 +63,9 @@ public struct DownloadOffer: Codable, Equatable, Hashable, Sendable, Identifiabl
     /// Suggested choice: same channel and source as on the old Mac, best verification.
     public var recommended: Bool
     public var trust: Trust
+    /// For `.ownInstaller`: the installer file on this Mac (in the backup or on the drive it was kept on).
+    public var localPath: String?
+    public var followUps: [LocalPackage]?
 
     public init(id: String, itemID: String, kind: Kind, url: String, version: String? = nil, channel: ReleaseChannel? = nil,
                 expectedLength: Int64? = nil, sha256: String? = nil, edSignature: String? = nil, publicEDKey: String? = nil,

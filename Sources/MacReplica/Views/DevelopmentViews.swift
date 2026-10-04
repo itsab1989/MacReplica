@@ -92,7 +92,7 @@ struct ApplicationDataSection: View {
 
     var body: some View {
         let l = model.l
-        let folders = model.inventory?.manifest.applicationData ?? []
+        let folders = (model.inventory?.manifest.applicationData ?? []).filter { !$0.isPersonal }
         let groups = Dictionary(grouping: folders) { $0.profile?.appName ?? l.t("appData.group.custom") }
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
@@ -132,6 +132,45 @@ struct ApplicationDataSection: View {
     }
 }
 
+/// "Your own folders": folders of the user's own files, each on its own, without a size limit.
+struct PersonalFoldersSection: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        let folders = (model.inventory?.manifest.applicationData ?? []).filter(\.isPersonal)
+        let notDownloaded = (model.inventory?.manifest.backupIssues ?? []).filter { $0.reason == .notDownloaded }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(l.t("personal.section.title")).font(.headline)
+                Spacer()
+                if model.addingApplicationData { ProgressView().controlSize(.small) }
+                Button(l.t("appData.add.button")) { model.addPersonalFolder() }
+                    .disabled(model.addingApplicationData)
+                    .accessibilityIdentifier("personal.add")
+            }
+            Text(l.t("personal.section.message"))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if !folders.isEmpty {
+                Card {
+                    ForEach(folders) { folder in AppDataRow(folder: folder) }
+                    let total = folders.filter { !model.excludedApplicationData.contains($0.id) }.reduce(Int64(0)) { $0 + $1.totalSize }
+                    Text(l.t("personal.total", l.fileSize(total))).font(.caption).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("personal.total")
+                }
+            }
+            if !notDownloaded.isEmpty {
+                Text(l.p("personal.notDownloaded", notDownloaded.count))
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
 struct AppDataRow: View {
     @EnvironmentObject var model: AppModel
     var folder: AppDataFolder
@@ -149,9 +188,20 @@ struct AppDataRow: View {
                         let version = profile.appVersion.flatMap { $0 == profile.appName ? nil : " · \($0)" } ?? ""
                         return l.t("appData.category.\(profile.category)") + version
                     } ?? folder.name)
-                    Text(folder.displayPath).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    HStack(spacing: 6) {
+                        ConfidenceBadge(level: folder.profile?.effectiveConfidence)
+                        Text(folder.displayPath).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    }
                     if folder.profile?.classification == .compatibilitySensitive {
                         Text(l.t("appData.compatibilityNote")).font(.caption).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if folder.profile?.classification == .containsCode {
+                        Text(l.t("appData.codeNote")).font(.caption).foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if folder.profile?.requiresFullDiskAccess == true {
+                        Text(l.t("appData.fullDiskAccessNote")).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if folder.profile?.classification == .mayContainSecrets {
@@ -506,5 +556,24 @@ struct RestorePassphraseSheet: View {
         }
         .padding(20)
         .frame(width: 480)
+    }
+}
+
+/// How far support for a kind of application data goes (see `DataConfidence`).
+struct ConfidenceBadge: View {
+    @EnvironmentObject var model: AppModel
+    var level: DataConfidence?
+
+    var body: some View {
+        if let level {
+            let color: Color = level == .full ? .green : (level == .experimental ? .orange : (level == .notSupported ? .secondary : .blue))
+            Text(model.l.t("confidence.\(level.rawValue)"))
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(color)
+                .padding(.horizontal, 5).padding(.vertical, 1)
+                .background(Capsule().strokeBorder(color.opacity(0.6)))
+                .help(model.l.t("confidence.\(level.rawValue).help"))
+                .accessibilityLabel(model.l.t("confidence.\(level.rawValue)"))
+        }
     }
 }

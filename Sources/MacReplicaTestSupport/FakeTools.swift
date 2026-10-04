@@ -319,6 +319,20 @@ enum FakeTools {
         esac
         if [ -f "$S/needs-admin/$name" ]; then
           if [ -z "${SUDO_ASKPASS:-}" ]; then echo "sudo: a terminal is required to read the password" >&2; exit 1; fi
+          # Like sudo without a terminal: every privileged step of this brew process asks the askpass helper
+          # until one answer is right (then it is remembered for this process), three tries per step.
+          expected="$(cat "$S/admin-password" 2>/dev/null || echo macreplica)"
+          steps="$(cat "$S/needs-admin/$name")"; [ -n "$steps" ] || steps=1
+          authenticated=no
+          for _ in $(seq 1 "$steps"); do
+            [ "$authenticated" = yes ] && continue
+            for _ in 1 2 3; do
+              answer="$("$SUDO_ASKPASS" 2>/dev/null)"; echo "$name" >> "$S/askpass-calls"
+              if [ -n "$answer" ] && [ "$answer" = "$expected" ]; then authenticated=yes; break; fi
+              echo "Sorry, try again." >&2
+            done
+            if [ "$authenticated" != yes ]; then echo "sudo: 3 incorrect password attempts" >&2; exit 1; fi
+          done
         fi
         if [ -n "$app" ]; then
           appdir="$(cat "$S/appdir")"

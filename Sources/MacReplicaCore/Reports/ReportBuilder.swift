@@ -164,6 +164,24 @@ public struct ReportBuilder: Sendable {
                       manifest.iccProfiles.map { [text($0.fileName), text($0.metadata["description"]), HTML.escape(locationText($0.domain)),
                                                   HTML.escape(l.fileSize($0.size))] })
 
+        if let launchpad = manifest.launchpadLayout {
+            // Kept as a reference, also for a Mac without Launchpad (macOS 26 and later).
+            var names: [String: String] = [:]
+            for app in manifest.applications { if let id = app.bundleIdentifier { names[id] = names[id] ?? app.name } }
+            func name(_ id: String) -> String { names[id] ?? id }
+            var rows: [[String]] = []
+            for (index, page) in launchpad.pages.enumerated() {
+                let apps = page.compactMap { entry -> String? in if case .app(let id) = entry { return name(id) }; return nil }
+                if !apps.isEmpty { rows.append([HTML.escape(l.number(index + 1)), "", text(apps.joined(separator: ", "))]) }
+                for case .folder(let folder, let folderPages) in page {
+                    rows.append([HTML.escape(l.number(index + 1)), text(folder), text(folderPages.joined().map(name).joined(separator: ", "))])
+                }
+            }
+            body += "<h2>\(HTML.escape(l.t("component.launchpad")))</h2>"
+            body += "<p>\(HTML.escape(l.t("report.launchpad.intro", launchpad.macOSVersion)))</p>"
+            body += table([l.t("report.column.page"), l.t("report.column.folder"), l.t("report.column.apps")], rows)
+        }
+
         if !manifest.locations.isEmpty {
             body += "<h2>\(HTML.escape(l.t("report.locations")))</h2>"
             body += table([l.t("report.column.area"), l.t("report.column.location"), l.t("report.column.result")],

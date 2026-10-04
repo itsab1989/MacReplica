@@ -15,6 +15,9 @@ public struct AppDataFolder: Codable, Equatable, Hashable, Sendable, Identifiabl
     public var scope: AppDataScope?
     /// Files in the folder that came with the app (listed in the installer receipt) and were left out.
     public var shippedFilesLeftOut: Int?
+    /// A folder of the user's own files (documents, pictures, projects …) chosen in "Your own folders":
+    /// no size limit, restored as its own group. Nil for application data.
+    public var personal: Bool?
 
     public init(id: String, name: String, relativePath: String, files: [FileRecord], profile: AppDataProfileReference? = nil,
                 scope: AppDataScope? = nil, shippedFilesLeftOut: Int? = nil) {
@@ -28,7 +31,14 @@ public struct AppDataFolder: Codable, Equatable, Hashable, Sendable, Identifiabl
     }
 
     public var effectiveScope: AppDataScope { scope ?? .home }
-    public var displayPath: String { effectiveScope == .home ? "~/" + relativePath : "/Library/" + relativePath }
+    public var isPersonal: Bool { personal == true }
+    public var displayPath: String {
+        switch effectiveScope {
+        case .home: return "~/" + relativePath
+        case .sharedLibrary: return "/Library/" + relativePath
+        case .usersShared: return "/Users/Shared/" + relativePath
+        }
+    }
     public var totalSize: Int64 { files.reduce(0) { $0 + $1.size } }
 }
 
@@ -39,6 +49,8 @@ public enum AppDataError: Error, Equatable, Sendable {
     case notAFolder
     /// A `/Library` location that is not a provider's application folder.
     case notAProviderLocation
+    /// "Your own folders" are folders of the home folder outside `~/Library` (application data has its own section).
+    case insideLibrary
 }
 
 /// Collects files from a folder the user picked. MacReplica never copies all of
@@ -59,26 +71,66 @@ public struct AppDataScanner: Sendable {
                                    "Library/Group Containers/group.com.apple.notes", "Library/Application Support/AddressBook",
                                    "Library/Application Support/com.apple.TCC", "Library/Caches", "Library/Logs", ".Trash"]
 
+    /// Settings folders inside refused locations that a provider may read: Mail's settings (signatures, rules,
+    /// smart mailboxes), never its mailboxes or accounts.
+    static let providerExceptions = [#"^Library/Mail/V[0-9]+/MailData(/Signatures)?$"#]
+
     /// Individual files that look like secrets are skipped and listed as not included.
     static let refusedFilePatterns = [#"\.keychain(-db)?$"#, #"\.(pem|key|p12|pfx|cer|crt|der|kdbx|asc|gpg)$"#, #"^id_(rsa|dsa|ecdsa|ed25519)"#,
                                       #"(?i)^(cookies|login data|web data)(-journal)?$"#, #"(?i)(token|secret|credential|password)s?(\.|$)"#,
                                       #"^\.netrc$"#, #"^\.env(\..*)?$"#]
 
-    public func validate(_ folder: URL) throws -> String {
+    /// - Parameter allowBroadFolder: a provider names exact files (e.g. `kritarc` directly in `~/Library/Preferences`):
+    ///   the folder may be one that is too broad to copy as a whole, because only those files are read.
+    public func validate(_ folder: URL, allowProviderExceptions: Bool = false, allowBroadFolder: Bool = false) throws -> String {
         let home = layout.homeDirectory.standardizedFileURL.resolvingSymlinksInPath().path
         let path = folder.standardizedFileURL.resolvingSymlinksInPath().path
         guard path.hasPrefix(home + "/") else { throw AppDataError.outsideHome }
         let relative = String(path.dropFirst(home.count + 1))
-        if ["Library", "Library/Application Support", "Library/Preferences", "Library/Containers", "Library/Group Containers"].contains(relative)
-            || relative.isEmpty {
+        if (["Library", "Library/Application Support", "Library/Preferences", "Library/Containers", "Library/Group Containers"].contains(relative)
+            && !allowBroadFolder) || relative.isEmpty {
             throw AppDataError.wholeHomeOrLibrary
         }
+        let providerException = allowProviderExceptions && Self.providerExceptions.contains { relative.range(of: $0, options: .regularExpression) != nil }
+        for refused in Self.refusedLocations where (relative == refused || relative.hasPrefix(refused + "/")) && !providerException {
+            throw AppDataError.sensitiveLocation(refused)
+        }
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { throw AppDataError.notAFolder }
+        return relative
+    }
+
+    /// A folder for "Your own folders": inside the home folder, not the home folder itself, nothing in
+    /// `~/Library` (application data is chosen in its own section) and no sensitive location.
+    public func validatePersonal(_ folder: URL) throws -> String {
+        let home = layout.homeDirectory.standardizedFileURL.resolvingSymlinksInPath().path
+        let path = folder.standardizedFileURL.resolvingSymlinksInPath().path
+        guard path.hasPrefix(home + "/") else { throw path == home ? AppDataError.wholeHomeOrLibrary : AppDataError.outsideHome }
+        let relative = String(path.dropFirst(home.count + 1))
+        if relative == "Library" || relative.hasPrefix("Library/") { throw AppDataError.insideLibrary }
         for refused in Self.refusedLocations where relative == refused || relative.hasPrefix(refused + "/") {
             throw AppDataError.sensitiveLocation(refused)
         }
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { throw AppDataError.notAFolder }
         return relative
+    }
+
+    /// Scans one of the user's own folders: like application data, but without a size limit.
+    public func scanPersonal(_ folder: URL) throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
+        _ = try validatePersonal(folder)
+        var scanner = self
+        scanner.maxFolderSize = .max
+        var result = try scanner.scan(folder, personalFolder: true)
+        result.folder.personal = true
+        return result
+    }
+
+    /// The file is an iCloud placeholder (its contents are not on this Mac). Reading it would download it, so it is left out.
+    static func isDataless(_ url: URL) -> Bool {
+        var info = stat()
+        guard lstat(url.path, &info) == 0 else { return false }
+        return info.st_flags & UInt32(SF_DATALESS) != 0
     }
 
     /// Provider locations in `/Library` must be an application's own folder in Application Support
@@ -95,6 +147,33 @@ public struct AppDataScanner: Sendable {
         return String(path.dropFirst(library.count + 1))
     }
 
+    /// Provider locations in `/Users/Shared` must be a folder below it, never `/Users/Shared` itself.
+    public func validateUsersShared(_ folder: URL) throws -> String {
+        let shared = layout.usersShared.standardizedFileURL.resolvingSymlinksInPath().path
+        let path = folder.standardizedFileURL.resolvingSymlinksInPath().path
+        guard path.hasPrefix(shared + "/") else { throw AppDataError.notAProviderLocation }
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { throw AppDataError.notAFolder }
+        return String(path.dropFirst(shared.count + 1))
+    }
+
+    /// Stands for the home folder in backed-up text files of providers that store absolute home paths.
+    public static let homePlaceholder = "{{MACREPLICA_HOME}}"
+    static let homePlaceholderKey = "homePlaceholder"
+
+    /// The file with this Mac's home path replaced by the placeholder; nil if it is not text, too large or
+    /// contains no home path.
+    func withHomePlaceholder(_ url: URL) -> Data? {
+        guard let data = try? Data(contentsOf: url), data.count < 8_000_000, let text = String(data: data, encoding: .utf8) else { return nil }
+        let home = layout.homeDirectory.standardizedFileURL.path
+        // Only the home folder as a whole path component: `/Users/anna` must not change `/Users/annabelle`.
+        guard let expression = try? NSRegularExpression(pattern: NSRegularExpression.escapedPattern(for: home) + #"(?![^/"'\s<>,;:=)\]}&|])"#) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        guard expression.firstMatch(in: text, range: range) != nil else { return nil }
+        let template = NSRegularExpression.escapedTemplate(for: Self.homePlaceholder)
+        return Data(expression.stringByReplacingMatches(in: text, range: range, withTemplate: template).utf8)
+    }
+
     static func isRefusedFile(_ name: String) -> Bool {
         refusedFilePatterns.contains { name.range(of: $0, options: .regularExpression) != nil }
     }
@@ -102,12 +181,26 @@ public struct AppDataScanner: Sendable {
     /// - Parameter onlyFiles: restrict to these file names directly inside `folder` (for providers that list files).
     /// - Parameter shipped: paths relative to `folder` that came with the app (installer receipt); left out.
     public func scan(_ folder: URL, profile: AppDataProfileReference? = nil, onlyFiles: [String]? = nil, excluding: [String] = [],
-                     scope: AppDataScope = .home, shipped: Set<String> = []) throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
-        let relative = scope == .home ? try validate(folder) : try validateShared(folder)
-        var identity = scope == .home ? relative : "/Library/" + relative
+                     scope: AppDataScope = .home, shipped: Set<String> = [], rewritesHomeFolder: Bool = false,
+                     allowProviderExceptions: Bool = false, personalFolder: Bool = false)
+        throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
+        let relative: String
+        switch scope {
+        case .home where personalFolder: relative = try validatePersonal(folder)
+        case .home: relative = try validate(folder, allowProviderExceptions: allowProviderExceptions,
+                                            allowBroadFolder: allowProviderExceptions && onlyFiles != nil)
+        case .sharedLibrary: relative = try validateShared(folder)
+        case .usersShared: relative = try validateUsersShared(folder)
+        }
+        var identity: String
+        switch scope {
+        case .home: identity = relative
+        case .sharedLibrary: identity = "/Library/" + relative
+        case .usersShared: identity = "/Users/Shared/" + relative
+        }
         var shippedLeftOut = 0
         if let onlyFiles { identity += ":" + onlyFiles.joined(separator: ",") }
-        let id = "appdata-" + String(Hashing.sha256Hex(of: Data(identity.utf8)).prefix(12))
+        let id = (personalFolder ? "personal-" : "appdata-") + String(Hashing.sha256Hex(of: Data(identity.utf8)).prefix(12))
         let base = folder.standardizedFileURL.resolvingSymlinksInPath()
         var files: [ScannedFile] = []
         var issues: [BackupIssue] = []
@@ -119,6 +212,8 @@ public struct AppDataScanner: Sendable {
             if values.isSymbolicLink == true { continue }
             guard values.isRegularFile == true, url.lastPathComponent != ".DS_Store" else { continue }
             guard let fileRelative = FileScanner.relativePath(of: url, below: base) else { continue }
+            // Finder's translations of folder names, not user data.
+            if fileRelative.split(separator: "/").contains(".localized") { continue }
             if let onlyFiles, !onlyFiles.contains(fileRelative) { continue }
             if !excluding.isEmpty, fileRelative.split(separator: "/").contains(where: { excluding.contains(String($0)) }) { continue }
             if shipped.contains(fileRelative) {
@@ -129,20 +224,26 @@ public struct AppDataScanner: Sendable {
                 issues.append(BackupIssue(path: layout.displayPath(url), reason: .refusedSensitive))
                 continue
             }
+            if Self.isDataless(url) {
+                issues.append(BackupIssue(path: layout.displayPath(url), reason: .notDownloaded))
+                continue
+            }
             let size = Int64(values.fileSize ?? 0)
             if total + size > maxFolderSize {
                 issues.append(BackupIssue(path: layout.displayPath(url), reason: .tooLarge))
                 continue
             }
-            guard let hash = try? Hashing.sha256Hex(ofFile: url) else {
+            let converted = rewritesHomeFolder ? withHomePlaceholder(url) : nil
+            guard let hash = converted.map({ Hashing.sha256Hex(of: $0) }) ?? (try? Hashing.sha256Hex(ofFile: url)) else {
                 issues.append(BackupIssue(path: layout.displayPath(url), reason: .unreadable))
                 continue
             }
             total += size
-            let record = FileRecord(fileName: url.lastPathComponent, domain: scope == .home ? .user : .system, relativePath: fileRelative,
+            var record = FileRecord(fileName: url.lastPathComponent, domain: scope == .home ? .user : .system, relativePath: fileRelative,
                                     originalPath: layout.displayPath(url), backupPath: "application-data/\(id)/\(fileRelative)",
-                                    sha256: hash, size: size, modifiedAt: values.contentModificationDate)
-            files.append(ScannedFile(url: url, record: record))
+                                    sha256: hash, size: converted.map { Int64($0.count) } ?? size, modifiedAt: values.contentModificationDate)
+            if converted != nil { record.metadata[Self.homePlaceholderKey] = "1" }
+            files.append(ScannedFile(url: url, record: record, contents: converted))
         }
         files.sort { $0.record.relativePath < $1.record.relativePath }
         // "Adobe Photoshop 2025 · Actions": app (version) and the real folder name, language independent.

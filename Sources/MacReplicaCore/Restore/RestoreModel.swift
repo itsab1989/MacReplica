@@ -13,8 +13,12 @@ public enum RestoreComponent: String, Codable, Sendable, CaseIterable, Identifia
     case packageManagers
     case developerSettings
     case applicationData
+    /// Folders of the user's own files chosen in "Your own folders".
+    case personalFolders
     case fonts
     case colorProfiles
+    /// The Launchpad arrangement: pages, folders and the order of the apps (macOS 13–15).
+    case launchpad
     /// Encrypted credentials; only restored when the user switches this on.
     case credentials
 
@@ -44,6 +48,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
     case manualApp
     /// A profile assigned to a display on the old Mac, assigned again here.
     case displayProfile
+    /// The Launchpad arrangement; the last step, once the apps are installed.
+    case launchpadLayout
 
     /// Rough relative duration, used to estimate the remaining time before real timings exist.
     var weight: Double {
@@ -61,6 +67,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .gitConfiguration, .credential: return 1
         case .toolchainStep: return 60
         case .manualApp, .displayProfile: return 1
+        case .launchpadLayout: return 15
         }
     }
 
@@ -76,7 +83,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .credential: return .permissions
         case .toolchainStep: return .developerTools
         case .manualApp: return .downloads
-        case .displayProfile: return .restore
+        case .displayProfile, .launchpadLayout: return .restore
         }
     }
 }
@@ -110,6 +117,8 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     /// For `displayProfile`: the assignment and the keys to recognise the display.
     public var displayAssignment: DisplayProfileAssignment?
     public var hardwareKeys: HardwareKeys?
+    /// For `launchpadLayout`: the arrangement recorded on the old Mac.
+    public var launchpadLayout: LaunchpadLayout?
 
     public init(id: String, kind: RestoreItemKind, title: String, identifier: String, originalVersion: String? = nil,
                 bundleIdentifier: String? = nil, appBundleNames: [String] = [], tapRemote: String? = nil, file: FileRecord? = nil,
@@ -134,6 +143,7 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     public static let commandLineToolsID = "prerequisite:command-line-tools"
     public static let homebrewID = "prerequisite:homebrew"
     public static let masToolID = "prerequisite:mas"
+    public static let launchpadID = "launchpad:layout"
 }
 
 /// What to do when a font or profile already exists with different content.
@@ -278,6 +288,14 @@ public enum SkipReason: Codable, Equatable, Sendable {
     case applicationNotInstalled(name: String)
     /// The app on this Mac is older than the one the data came from; its files could not be read by it.
     case applicationVersionOlder(name: String, installed: String, backup: String)
+    /// macOS protects the location (Mail, another developer's app data); MacReplica needs Full Disk Access.
+    case needsFullDiskAccess(name: String)
+    /// Launchpad does not exist on this macOS (replaced by the Apps view in macOS 26); the layout stays in the
+    /// backup's report as a reference.
+    case launchpadNotAvailable
+    /// Launchpad was arranged with the apps installed so far; it is arranged again when the restore continues
+    /// and the remaining apps are installed.
+    case launchpadWaitingForApps(count: Int)
 }
 
 public enum ItemOutcome: Codable, Equatable, Sendable {
@@ -308,7 +326,7 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
         guard case .skipped(let reason) = self else { return false }
         switch reason {
         case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected,
-             .applicationNotInstalled, .applicationVersionOlder: return true
+             .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess, .launchpadWaitingForApps: return true
         default: return false
         }
     }
@@ -363,6 +381,13 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case applicationVersionDiffers(original: String)
     /// The app version of the backup is not on this Mac; the data went into another installed version.
     case restoredIntoVersion(original: String, target: String)
+    /// Cryptomator: registered vaults whose folder was found, and the names of those that were not
+    /// (on a drive that is not connected, or moved): the user adds them again in Cryptomator.
+    case vaultsRegistered(found: Int, missing: [String])
+    /// A further package of the user's own installers (e.g. an activation package) was opened in Installer and
+    /// confirmed by the user; MacReplica cannot check a licence itself.
+    case additionalPackageOpened(name: String)
+    case additionalPackageNotInstalled(name: String)
 }
 
 public struct RestoreSummary: Equatable, Sendable {
@@ -400,7 +425,7 @@ extension ItemResult {
             case .userSkipped: return "skipped_by_user"
             case .fileNotSupported, .incompatibleArchitecture, .displaySpecificProfile, .displayOfAnotherMac: return "incompatible"
             case .projectFolderMissing, .passphraseNotProvided, .manualStepRequired, .waitingForManualStep, .displayNotConnected,
-                 .profileNotAvailable, .applicationNotInstalled, .applicationVersionOlder: return "manual_action_required"
+                 .profileNotAvailable, .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess: return "manual_action_required"
             case .postponedByUser: return "postponed_by_user"
             case .cancelledByUser: return "cancelled_by_user"
             default: return "skipped"

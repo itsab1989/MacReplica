@@ -7,6 +7,8 @@ public struct BackupProgress: Sendable, Equatable {
 
 public enum BackupError: Error, Equatable, Sendable {
     case destinationNotWritable(String)
+    /// The destination has less free space than the backup needs (bytes).
+    case notEnoughSpace(needed: Int64, available: Int64)
     case copyFailed(String)
     case verificationFailed(String)
 }
@@ -30,7 +32,15 @@ extension Manifest {
 
     /// Every file stored in the backup that has a recorded checksum.
     public var allFileRecords: [FileRecord] {
-        fonts + iccProfiles + python.environments.flatMap(\.projectFiles) + applicationData.flatMap(\.files)
+        fonts + iccProfiles + python.environments.flatMap(\.projectFiles) + applicationData.flatMap(\.files) + installerRecords
+    }
+
+    /// The user's own installers that were copied into the backup.
+    public var installerRecords: [FileRecord] {
+        applications.flatMap { $0.ownInstallers ?? [] }.compactMap { archive in
+            archive.includedPath.map { FileRecord(fileName: archive.fileName, domain: .user, relativePath: archive.fileName,
+                                                  originalPath: archive.originalPath, backupPath: $0, sha256: archive.sha256, size: archive.size) }
+        }
     }
 }
 
@@ -80,10 +90,28 @@ public struct BackupWriter: Sendable {
     /// Creates the backup inside `parent`. Files that cannot be read are left out
     /// and recorded as backup issues (a partial backup). Anything that would make
     /// the backup unusable removes the incomplete folder again and throws.
+    /// The files plus a margin for the manifest, checksums and reports.
+    static func estimatedSize(of inventory: InventoryResult) -> Int64 {
+        let files = (inventory.fonts + inventory.colorProfiles + inventory.extraFiles).reduce(Int64(0)) { $0 + $1.record.size }
+        return files + files / 100 + 50_000_000
+    }
+
+    /// Free space of the volume (nil if it cannot be read, e.g. some network shares; then the copy itself reports a full disk).
+    static func availableSpace(at folder: URL) -> Int64? {
+        let values = try? folder.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
+        if let important = values?.volumeAvailableCapacityForImportantUsage, important > 0 { return important }
+        return values?.volumeAvailableCapacity.map(Int64.init)
+    }
+
     public func write(_ inventory: InventoryResult, into parent: URL, log: LogStore, credentials: CredentialExportRequest? = nil,
                       progress: @Sendable (BackupProgress) -> Void = { _ in }) throws -> BackupOutcome {
         guard FileManager.default.isWritableFile(atPath: parent.path) else {
             throw BackupError.destinationNotWritable(layout.displayPath(parent))
+        }
+        // Checked before anything is written: own folders have no size limit.
+        let needed = Self.estimatedSize(of: inventory)
+        if let available = Self.availableSpace(at: parent), needed > available {
+            throw BackupError.notEnoughSpace(needed: needed, available: available)
         }
         let root = Self.uniqueFolder(in: parent, baseName: Self.folderName(for: inventory.manifest.createdAt))
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
@@ -110,6 +138,11 @@ public struct BackupWriter: Sendable {
             }
             for index in manifest.applicationData.indices {
                 manifest.applicationData[index].files.removeAll { failed.contains($0.backupPath) }
+            }
+            for index in manifest.applications.indices {
+                guard var installers = manifest.applications[index].ownInstallers else { continue }
+                for i in installers.indices where installers[i].includedPath.map(failed.contains) == true { installers[i].includedPath = nil }
+                manifest.applications[index].ownInstallers = installers
             }
             log.info("Copied \(files.count - failed.count) of \(files.count) files", component: .backup)
 
@@ -185,7 +218,11 @@ public struct BackupWriter: Sendable {
         try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         guard FileManager.default.isReadableFile(atPath: file.url.path) else { return .unreadable }
         do {
-            try FileManager.default.copyItem(at: file.url, to: destination)
+            if let contents = file.contents {
+                try contents.write(to: destination)
+            } else {
+                try FileManager.default.copyItem(at: file.url, to: destination)
+            }
         } catch {
             return .unreadable
         }

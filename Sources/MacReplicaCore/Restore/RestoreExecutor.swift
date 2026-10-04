@@ -44,6 +44,15 @@ public struct RestoreEnvironment: Sendable {
     public var displayColor: DisplayColorManaging?
     /// macOS version of this Mac (compared with the minimum version of native code in saved environments).
     public var macOSVersion: String = SystemInfo.macOSVersion
+    /// Asks the user for the administrator password (in MacReplica's window). With it, Homebrew's `sudo`
+    /// calls get the password from MacReplica through the askpass helper, so the user is asked once per
+    /// restore instead of once per package. Without it, the helper shows its own dialog.
+    public var adminPasswordPrompt: AdminPasswordBroker.Prompt?
+    public var adminPasswordValidator: AdminPasswordValidating = SudoPasswordValidator()
+    /// Additional variables for the askpass helper (tests: `MACREPLICA_ASKPASS_NO_DIALOG`).
+    public var askpassExtraEnvironment: [String: String] = [:]
+    /// How long the Launchpad step waits for the Dock to list apps installed by this restore.
+    public var launchpadSettleTimeout: TimeInterval = 60
 
     public init(layout: SystemLayout, runner: CommandRunning, privileged: PrivilegedExecuting, homebrewSource: HomebrewPackageSource,
                 localizer: Localizer, log: LogStore, targetArchitecture: CPUArchitecture = SystemInfo.currentArchitecture,
@@ -69,7 +78,7 @@ public struct RestoreEnvironment: Sendable {
         ["MACREPLICA_ASKPASS_TITLE": localizer.t("askpass.title"),
          "MACREPLICA_ASKPASS_MESSAGE": localizer.t("askpass.message"),
          "MACREPLICA_ASKPASS_OK": localizer.t("askpass.ok"),
-         "MACREPLICA_ASKPASS_CANCEL": localizer.t("common.cancel")]
+         "MACREPLICA_ASKPASS_CANCEL": localizer.t("common.cancel")].merging(askpassExtraEnvironment) { $1 }
     }
 }
 
@@ -321,6 +330,8 @@ struct Inspector: Sendable {
             return .manualStep
         case .displayProfile:
             return predictDisplayProfile(item)
+        case .launchpadLayout:
+            return predictLaunchpad(item)
         }
     }
 }
@@ -403,6 +414,15 @@ public final class RestoreExecutor: Sendable {
         var session = initial
         let inspector = Inspector(environment: environment, backupRoot: backupRoot, selection: session.selection, damagedFiles: damagedFiles)
         var context = RunContext()
+        if environment.askpassPath != nil, let prompt = environment.adminPasswordPrompt {
+            let broker = AdminPasswordBroker(prompt: prompt, validator: environment.adminPasswordValidator)
+            context.askpassBroker = broker
+            context.askpassServer = try? AskpassServer(broker: broker)
+        }
+        defer {
+            context.askpassServer?.stop()
+            if let broker = context.askpassBroker { Task { await broker.forget() } }
+        }
         context.brew = await environment.homebrew.locate().installation
         prepareToolchains(plan: plan, context: &context)
         let total = plan.items.count
@@ -489,6 +509,13 @@ public final class RestoreExecutor: Sendable {
         /// Results of the batched administrator copy for files in shared folders.
         var privilegedFileResults: [String: Result<FileAction, PrivilegedError>] = [:]
         var privilegedBatchDone = false
+        /// The channel the askpass helper gets the administrator password from during this run.
+        var askpassServer: AskpassServer?
+        var askpassBroker: AdminPasswordBroker?
+
+        func askpassEnvironment(_ base: [String: String]) -> [String: String] {
+            base.merging(askpassServer?.environment ?? [:]) { $1 }
+        }
     }
 
     func failed(_ item: RestoreItem, _ category: FailureCategory, _ detail: String = "") -> ItemResult {
@@ -528,6 +555,8 @@ public final class RestoreExecutor: Sendable {
                 return checkGuidedInstall(item, inspector: inspector)
             case .displayProfile:
                 return restoreDisplayProfile(item, inspector: inspector, onEvent: onEvent)
+            case .launchpadLayout:
+                return await restoreLaunchpad(item, inspector: inspector, plan: plan, session: session, onEvent: onEvent)
             }
         } catch is CancellationError {
             return failed(item, .cancelled)
@@ -656,7 +685,7 @@ public final class RestoreExecutor: Sendable {
         onEvent(.activity(itemID: item.id, .installing))
         let head = inspector.selection.installsHead(item)
         let result = try await environment.homebrew.install(brew, package: head ? .formulaHead(item.identifier) : .formula(item.identifier),
-                                                           askpass: environment.askpassPath, extraEnvironment: environment.askpassEnvironment)
+                                                           askpass: environment.askpassPath, extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment))
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let version = try await environment.homebrew.installedFormulaVersion(brew, name: item.identifier) else {
@@ -678,7 +707,7 @@ public final class RestoreExecutor: Sendable {
         }
         onEvent(.activity(itemID: item.id, .installing))
         let result = try await environment.homebrew.install(brew, package: .cask(item.identifier), askpass: environment.askpassPath,
-                                                           extraEnvironment: environment.askpassEnvironment)
+                                                           extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment))
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let version = try await environment.homebrew.installedCaskVersion(brew, token: item.identifier) else {
