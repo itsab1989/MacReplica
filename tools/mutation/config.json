@@ -399,6 +399,13 @@
         "GuidedInstallationTests"
       ],
       "area": "Disk images"
+    },
+    {
+      "file": "Homebrew/HomebrewSupport.swift",
+      "tests": [
+        "HomebrewTests"
+      ],
+      "area": "Homebrew support tiers"
     }
   ],
   "exclusions": [

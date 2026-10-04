@@ -69,6 +69,13 @@ struct InventoryResultsView: View {
 
                     BackupSetupCard()
 
+                    // Before the user erases this Mac: how well Homebrew supports the macOS they will set up again.
+                    if let counts, counts.homebrew + counts.formulae + counts.casks > 0,
+                       let notice = l.homebrewSupportNotice(macOSVersion: model.services.macOSVersion, architecture: model.services.architecture, beforeErasing: true) {
+                        NoticeView(style: .warning, title: notice.title, message: notice.message)
+                            .accessibilityIdentifier("homebrewSupport")
+                    }
+
                     ForEach(Array((model.inventory?.warnings ?? []).enumerated()), id: \.offset) { _, warning in
                         NoticeView(style: .warning, title: l.inventoryWarningText(warning))
                         if case .masNeeded(_, true) = warning {

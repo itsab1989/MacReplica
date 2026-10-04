@@ -1330,3 +1330,11 @@
 "appData.help.shapes" = "Your custom shapes.";
 "appData.help.swatches" = "Your color swatches.";
 "appData.help.toolPresets" = "Tool presets you saved.";
+"homebrewSupport.system" = "macOS %1$@ on %2$@";
+"homebrewSupport.limited.title" = "Homebrew support is limited on %1$@";
+"homebrewSupport.limited.before" = "Homebrew lists this system as Tier 3 (not supported). After erasing this Mac and setting up the same macOS again, Homebrew installs and usually works, but fewer ready-made packages exist: some command-line tools are built from source, which takes longer, and some may fail. Apps from Homebrew are mostly unaffected. MacReplica reports every package that fails and continues.";
+"homebrewSupport.limited.here" = "Homebrew lists this system as Tier 3 (not supported). It installs and usually works, but fewer ready-made packages exist: some command-line tools are built from source, which takes longer, and some may fail. Apps from Homebrew are mostly unaffected. MacReplica reports every package that fails and continues.";
+"homebrewSupport.intelEnd" = "Homebrew expects to stop supporting Intel Macs from %1$@ or later.";
+"homebrewSupport.unsupported.title" = "Homebrew does not support %1$@";
+"homebrewSupport.unsupported.message" = "Homebrew no longer runs on this macOS version, so MacReplica cannot reinstall Homebrew packages there. Install those apps from their vendors, or use a newer macOS.";
+"homebrewSupport.asOf" = "(Homebrew's support tiers as of %1$@: %2$@)";

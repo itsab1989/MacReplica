@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Before you erase your Mac: when the backup includes Homebrew packages, MacReplica says how well Homebrew supports
+  this Mac's macOS and processor (Homebrew's support tiers, dated, with the source). On Tier 3 systems — Intel Macs
+  and Apple silicon with macOS 14 or older — some command-line tools may be built from source or fail after a fresh
+  installation; Homebrew expects to end Intel support from September 2027. The notice is also in the backup's report
+  and restore instructions, and on the new Mac in the restore selection.
+
 ### Fixed
 - A disk image that macOS attached during an attempt it reported as failed is detached before the next attempt,
   so no second copy stays attached until logout.

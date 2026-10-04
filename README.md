@@ -383,6 +383,9 @@ More in [Troubleshooting](docs/TROUBLESHOOTING.md).
   may not work in another. Data of a versioned app is restored into the matching version folder.
   Apple Mail's signatures and rules are experimental: Mail itself could not be checked, and macOS 27 stores
   them differently.
+- **Homebrew support depends on the Mac:** Homebrew fully supports Apple silicon with the three newest macOS
+  versions; Intel Macs and older macOS versions are Tier 3 (packages may be built from source or fail), and Intel
+  support is expected to end from September 2027. MacReplica shows this before the backup and on the new Mac.
 - **Launchpad** exists only up to macOS 15; on macOS 26 and later the recorded layout is a reference.
 - **App Store apps are installed by you** from the page MacReplica opens (signed in with your Apple
   Account); `mas install` needs administrator rights since mas 7.

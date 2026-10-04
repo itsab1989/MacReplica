@@ -125,6 +125,7 @@ public struct ReportBuilder: Sendable {
         body += card(counts.fonts, l.t("component.fonts"))
         body += card(counts.colorProfiles, l.t("component.colorProfiles"))
         body += "</div>"
+        body += homebrewSupportNote(manifest)
 
         body += "<h2>\(HTML.escape(l.t("component.applications")))</h2>"
         body += table(
@@ -192,6 +193,15 @@ public struct ReportBuilder: Sendable {
                           })
         }
         return page(title: l.t("report.inventory.title"), subtitle: subtitle(manifest), body: body)
+    }
+
+    /// How well Homebrew supports the macOS of the backup (set up again after erasing the Mac), if not fully.
+    func homebrewSupportNote(_ manifest: Manifest) -> String {
+        let counts = InventoryCounts(manifest)
+        guard counts.homebrew + counts.formulae + counts.casks > 0,
+              let notice = l.homebrewSupportNotice(macOSVersion: manifest.macosVersion, architecture: manifest.architecture, beforeErasing: true)
+        else { return "" }
+        return "<p class=\"warn\"><strong>\(HTML.escape(notice.title))</strong><br>\(HTML.escape(notice.message))</p>"
     }
 
     func locationText(_ domain: FileDomain) -> String {

@@ -113,6 +113,11 @@ struct RestoreSelectionView: View {
             NoticeView(style: .info, title: l.t(same == true ? "restore.select.sameMac" : (same == false ? "restore.select.otherMac" : "restore.select.unknownMac")),
                        message: l.t("restore.select.displayHint"))
         }
+        if let plan = model.currentPlan(), plan.items.contains(where: { $0.kind == .formula || $0.kind == .cask }),
+           let notice = l.homebrewSupportNotice(macOSVersion: model.services.macOSVersion, architecture: model.services.architecture, beforeErasing: false) {
+            NoticeView(style: .warning, title: notice.title, message: notice.message)
+                .accessibilityIdentifier("homebrewSupport")
+        }
         if let manifest = model.manifest, manifest.architecture != .unknown, manifest.architecture != model.services.architecture {
             NoticeView(style: .info, title: l.t("restore.select.otherArchitecture"),
                        message: l.t("restore.select.otherArchitectureHint", l.architectureText(manifest.architecture),

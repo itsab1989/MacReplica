@@ -53,6 +53,9 @@
    - locations macOS did not let MacReplica read;
    - under **Show apps**, every app with a checkbox (untick apps you do not want in the backup) and a
      badge for beta, nightly and other pre-release channels. An app found in several places is listed once.
+   If the backup contains Homebrew packages and Homebrew does not fully support this Mac (an Intel Mac, or macOS 14
+   or older on Apple silicon), a notice explains what to expect after a fresh installation of the same macOS —
+   read it before you erase the Mac.
    The **Launchpad** layout (macOS 13–15: pages, folders with their names, the order of the apps) is
    recorded automatically. If App Store apps could not be identified, MacReplica says so and offers to install
    the helper tool `mas`, which can look them up.
