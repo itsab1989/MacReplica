@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-10-04
+
 ### Added
 - Before you erase your Mac: when the backup includes Homebrew packages, MacReplica says how well Homebrew supports
   this Mac's macOS and processor (Homebrew's support tiers, dated, with the source). On Tier 3 systems — Intel Macs
@@ -199,7 +201,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/itsab1989/MacReplica/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/itsab1989/MacReplica/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/itsab1989/MacReplica/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/itsab1989/MacReplica/compare/v1.0.0...v1.0.1
