@@ -1,0 +1,84 @@
+name: Mail validation
+
+# Validates MacReplica's Apple Mail provider with the real Mail app on macOS 14 (Sonoma) and 15: a signature and
+# a rule are created in Mail, backed up, moved aside (Mail then lacks them), restored, and read back from Mail.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/knut-round3]
+    paths: [.github/workflows/mail-probe.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - run: swift build -c release --arch arm64 --product MacReplicaSimulator && cp "$(swift build -c release --arch arm64 --show-bin-path)/MacReplicaSimulator" simulator
+      - uses: actions/upload-artifact@v7
+        with:
+          name: simulator-mail
+          path: simulator
+
+  validate:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: simulator-mail
+      - name: Create, back up, move aside, restore, read back
+        run: |
+          chmod +x simulator; sw_vers; mkdir -p out
+          probe() {
+            osascript -e 'tell application "Mail"
+              set s to "absent"
+              try
+                set s to content of signature "MacReplica Test Signature"
+              end try
+              set r to "absent"
+              try
+                set r to "present, enabled=" & (enabled of rule "MacReplica Test Rule")
+              end try
+              return "PROBE signature=" & s & " | rule=" & r & " | signatures=" & (count of signatures) & " rules=" & (count of rules)
+            end tell' 2>&1
+          }
+          start_mail() { open -g -j -a Mail; for i in $(seq 1 30); do osascript -e 'tell application "Mail" to get name' >/dev/null 2>&1 && break; sleep 3; done; sleep 3; }
+          quit_mail() { osascript -e 'tell application "Mail" to quit' >/dev/null 2>&1; for i in $(seq 1 20); do pgrep -x Mail >/dev/null || break; sleep 2; done; pkill -x Mail || true; sleep 2; }
+          start_mail
+          echo "before: $(probe)"
+          osascript -e 'tell application "Mail"
+            make new signature with properties {name:"MacReplica Test Signature", content:"Sent from a MacReplica test"}
+            set r to make new rule at end of rules with properties {name:"MacReplica Test Rule", enabled:false}
+            tell r to make new rule condition at end of rule conditions with properties {rule type:subject header, qualifier:does contain value, expression:"MacReplica-Test-XYZ"}
+          end tell' 2>&1 || true
+          echo "created: $(probe)"
+          quit_mail
+          echo "files Mail wrote:"; find ~/Library/Mail -path '*MailData*' \( -name '*Rules*' -o -name '*.mailsignature' -o -name 'AllSignatures.plist' -o -name '*SmartMailboxes*' -o -name 'VIPs.plist' \) 2>&1 | sed "s|$HOME|~|"
+          start_mail; echo "after reopening: $(probe)"; quit_mail
+          ./simulator real-appdata-backup out apple-mail | tee out/backup.txt
+          B=$(tail -1 out/backup.txt)
+          python3 - "$B" <<'PY'
+          import json, sys, os, shutil
+          m = json.load(open(sys.argv[1] + "/manifest.json")); home = os.path.expanduser("~")
+          for f in m["application_data"]:
+              for r in f["files"]:
+                  p = os.path.join(home, f["relative_path"], r["relative_path"])
+                  dst = "out/moved-aside" + p.replace(home, "", 1)
+                  os.makedirs(os.path.dirname(dst), exist_ok=True); shutil.move(p, dst); print("moved aside", p.replace(home, "~"))
+          PY
+          start_mail; echo "after moving aside: $(probe)"; quit_mail
+          ./simulator real-appdata-restore "$B" replace | tee out/restore.txt
+          start_mail; echo "after restore: $(probe)" | tee out/result.txt; quit_mail
+          grep -q "signature=Sent from a MacReplica test" out/result.txt && grep -q "rule=present" out/result.txt
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mail-${{ matrix.os }}
+          path: out/

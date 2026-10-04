@@ -58,7 +58,7 @@ struct WorkflowAppProviderTests {
         #expect(Self.folder(manifest, "xppen", "tabletSettings")?.profile?.effectiveConfidence == .experimental)
         #expect(Self.folder(manifest, "krita", "kritaResources")?.profile?.effectiveConfidence == .checkInApp)
         let everything = BackupWriter.allFiles(in: backup)
-        for never in ["krita.log", "kritadisplayrc", "pluginrc", "documents", "tmp/swap", "extension-errors.log", "cache/img", "/dl/", ".lock",
+        for never in ["krita.log", "kritadisplayrc", "pluginrc", "documents", "tmp/swap", "cache/thumbnails", "CrashLog/", "extension-errors.log", "cache/img", "/dl/", ".lock",
                       "mymac.ini", "MicrosoftRegistrationDB", "licensingV2", ".localized/de.strings", "Envelope Index", "INBOX.mbox", "key.p12",
                       "ipc.socket", "cipher.c9r", "automatic_backups"] {
             #expect(!everything.contains { $0.contains(never) }, "\(never) must not be in the backup")
@@ -84,6 +84,8 @@ struct WorkflowAppProviderTests {
         #expect(!restored.contains("{{MACREPLICA_HOME}}") && !restored.contains(root.homePath))
         let kritarc = try String(contentsOf: fresh.url.appendingPathComponent("home/Library/Preferences/kritarc"), encoding: .utf8)
         #expect(kritarc.contains("ResourceDirectory=\(fresh.homePath)/Library/Application Support/krita"))
+        let tags = try String(contentsOf: fresh.url.appendingPathComponent("home/Library/Application Support/GIMP/2.10/tags.xml"), encoding: .utf8)
+        #expect(tags.contains("external:\(fresh.homePath)/Library/Fonts/Brand.otf"), "GIMP's tags name resources by absolute path")
         // Second run: the restored files are recognised as identical, nothing is written again.
         let again = await Self.restore(manifest, backup, target)
         #expect(again.results[id]?.outcome == .alreadyPresent)

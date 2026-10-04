@@ -60,6 +60,64 @@ if arguments.first == "detect-live" {
     for provider in CredentialProviders.all { print("credential \(provider.id) detected=\(!provider.detect(layout: layout).isEmpty)") }
     exit(0)
 }
+// Real-app validation: the real inventory, backup writer and restore of application data on this Mac, limited
+// to the given providers. The backup contains only their data; the restore keeps existing files unless
+// `replace` is given (then they are moved to "Replaced Files" as in the app).
+//   MacReplicaSimulator real-appdata-backup <parent folder> <provider> [provider …]
+//   MacReplicaSimulator real-appdata-restore <backup folder> [replace]
+if arguments.first == "real-appdata-backup", arguments.count >= 3 {
+    let layout = SystemLayout.live()
+    let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables),
+                                      baseEnvironment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil))
+    let providers = Set(arguments.dropFirst(2))
+    var inventory = try await InventoryService(layout: layout, runner: runner, catalogProvider: RemoteCatalogProvider(cacheFolder: layout.caches),
+                                               macOSVersion: SystemInfo.macOSVersion, architecture: SystemInfo.currentArchitecture).run()
+    for folder in inventory.manifest.applicationData where !providers.contains(folder.profile?.provider ?? "") {
+        inventory.removeApplicationData(id: folder.id)
+    }
+    inventory.excludeFiles(Set(inventory.fonts.map { InventoryResult.selectionID($0.record, kind: .font) }
+        + inventory.colorProfiles.map { InventoryResult.selectionID($0.record, kind: .colorProfile) }))
+    inventory.keepPythonEnvironments([], includeSettings: false)
+    inventory.keepToolchains([])
+    inventory.manifest.displayProfiles = []
+    inventory.manifest.launchpadLayout = nil
+    let log = LogStore(fileURL: nil, homeDirectory: layout.homeDirectory)
+    let outcome = try BackupWriter(layout: layout, localizer: Localizer(language: .english)).write(inventory, into: URL(fileURLWithPath: arguments[1]), log: log)
+    for folder in outcome.manifest.applicationData {
+        print("backed up \(folder.profile?.provider ?? "-")/\(folder.profile?.category ?? "-"): \(folder.files.count) files "
+              + "[\(folder.profile?.effectiveConfidence.rawValue ?? "-")] \(folder.displayPath)")
+    }
+    for issue in outcome.manifest.backupIssues { print("issue: \(issue)") }
+    print("verified: \(BackupVerifier(layout: layout).verify(backupAt: outcome.url).isIntact)")
+    print(outcome.url.path)
+    exit(0)
+}
+if arguments.first == "real-appdata-restore", arguments.count >= 2 {
+    let layout = SystemLayout.live()
+    let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables),
+                                      baseEnvironment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil))
+    let backup = URL(fileURLWithPath: arguments[1])
+    let manifest = try ManifestIO.read(from: backup)
+    var selection = RestoreSelection(components: [.applicationData])
+    if arguments.dropFirst(2).contains("replace") { selection.conflictResolution = .replace }
+    let plan = RestorePlanner().plan(manifest: manifest, selection: selection)
+    let log = LogStore(fileURL: nil, homeDirectory: layout.homeDirectory)
+    var environment = RestoreEnvironment(layout: layout, runner: runner, privileged: AppleScriptPrivilegedExecutor(runner: runner, osascript: layout.osascript),
+                                         homebrewSource: GitHubHomebrewPackageSource(runner: runner, pkgutil: layout.pkgutil),
+                                         localizer: Localizer(language: .english), log: log)
+    environment.isApplicationRunning = { _ in false }
+    let executor = RestoreExecutor(environment: environment, backupRoot: backup, sessionStore: nil)
+    let localizer = Localizer(language: .english)
+    for entry in await executor.dryRun(plan: plan, selection: selection) {
+        print("dry run \(entry.item.title): \(localizer.predictionText(entry.prediction, kind: entry.item.kind))")
+    }
+    let session = await executor.run(plan: plan, session: RestoreSession(backupPath: backup.path, selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
+    for item in plan.items {
+        guard let result = session.results[item.id] else { continue }
+        print("restored \(item.title) [\(item.identifier)]: \(localizer.outcomeText(result.outcome)) \(result.notes.map { localizer.noteText($0) })")
+    }
+    exit(0)
+}
 // Launchpad on macOS 13–15: export the current user's layout, or rebuild a layout, restart the Dock and verify.
 //   MacReplicaSimulator launchpad-export <file.json>
 //   MacReplicaSimulator launchpad-apply <file.json>     (prints MATCH when the Dock shows the layout afterwards)

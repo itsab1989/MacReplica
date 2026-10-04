@@ -32,10 +32,14 @@ extension SimulationRoot {
         try put("\(support)/GIMP/2.10/brushes/Grain.gbr", "brush")
         try put("\(support)/GIMP/2.10/palettes/Brand.gpl", "GIMP Palette")
         try put("\(support)/GIMP/2.10/gimprc", "(theme \"Dark\")")
+        try put("\(support)/GIMP/2.10/tags.xml", "<resource identifier=\"external:\(homePath)/Library/Fonts/Brand.otf//Brand\"/>")
         try put("\(support)/GIMP/2.10/menurc", "(action \"file-new\" \"<Primary>n\")")
         try put("\(support)/GIMP/2.10/pluginrc", "plug-in cache")
         try put("\(support)/GIMP/2.10/documents", "recent files")
         try put("\(support)/GIMP/2.10/tmp/swap", "temporary")
+        // GIMP 3.2 keeps thumbnails and font caches inside the profile.
+        try put("\(support)/GIMP/2.10/cache/thumbnails/a.png", "thumbnail")
+        try put("\(support)/GIMP/2.10/CrashLog/gimp-crash-1.txt", "crash")
         try put("\(support)/GIMP/2.10/plug-ins/sharpen/sharpen.py", "#!/usr/bin/env python\n", executable: true)
         try put("\(support)/GIMP/2.10/scripts/frame.scm", "(define (frame) 1)")
         // Inkscape.

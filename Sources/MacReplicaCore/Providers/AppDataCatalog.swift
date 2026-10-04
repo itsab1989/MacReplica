@@ -246,7 +246,11 @@ public enum AppDataCatalog {
             // its first start, which it skips if its own folder already exists.
             base: "Library/Application Support/GIMP", versionFolderPattern: #"^\d+\.\d+$"#,
             categories: [AppDataCategory("gimpProfile", "", excluding: ["pluginrc", "documents", "tmp", "themerc", "gtkrc", "plug-ins", "scripts",
-                                                                       "interpreters", "environ", "modules"]),
+                                                                       "interpreters", "environ", "modules",
+                                                                       // Thumbnails and font caches, crash reports, autosaved images (seen in GIMP 3.2)
+                                                                       "cache", "CrashLog", "backups", "theme.css"],
+                                         // tags.xml names resources by absolute path (seen in GIMP 3.2)
+                                         rewritesHomeFolder: true),
                          AppDataCategory("gimpPlugins", "plug-ins", .containsCode),
                          AppDataCategory("gimpScripts", "scripts", .containsCode)],
             mustBeClosed: true, status: .fixtureTested,
