@@ -29,6 +29,7 @@ jobs:
       matrix:
         os: [macos-14, macos-15]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -37,7 +38,8 @@ jobs:
         run: |
           chmod +x simulator; sw_vers; mkdir -p out
           probe() {
-            osascript -e 'tell application "Mail"
+            osascript -e 'with timeout of 30 seconds
+            tell application "Mail"
               set s to "absent"
               try
                 set s to content of signature "MacReplica Test Signature"
@@ -47,17 +49,27 @@ jobs:
                 set r to "present, enabled=" & (enabled of rule "MacReplica Test Rule")
               end try
               return "PROBE signature=" & s & " | rule=" & r & " | signatures=" & (count of signatures) & " rules=" & (count of rules)
-            end tell' 2>&1
+            end tell
+            end timeout' 2>&1
           }
-          start_mail() { open -g -j -a Mail; for i in $(seq 1 30); do osascript -e 'tell application "Mail" to get name' >/dev/null 2>&1 && break; sleep 3; done; sleep 3; }
+          start_mail() {
+            open -a Mail; sleep 15; screencapture -x "out/mail-$(date +%s).png" || true
+            # The first start shows the account setup; it is closed so that Mail answers scripts.
+            osascript -e 'tell application "System Events" to tell process "Mail" to get name of every window' 2>&1 | sed 's/^/windows: /'
+            osascript -e 'tell application "System Events" to tell process "Mail" to key code 53' >/dev/null 2>&1 || true
+            osascript -e 'tell application "System Events" to tell process "Mail" to click (first button of (first sheet of window 1) whose name is in {"Cancel", "Abbrechen", "Quit", "Not Now"})' >/dev/null 2>&1 || true
+            osascript -e 'with timeout of 20 seconds' -e 'tell application "Mail" to get name' -e 'end timeout' 2>&1 | sed 's/^/answers: /'
+          }
           quit_mail() { osascript -e 'tell application "Mail" to quit' >/dev/null 2>&1; for i in $(seq 1 20); do pgrep -x Mail >/dev/null || break; sleep 2; done; pkill -x Mail || true; sleep 2; }
           start_mail
           echo "before: $(probe)"
-          osascript -e 'tell application "Mail"
+          osascript -e 'with timeout of 30 seconds
+          tell application "Mail"
             make new signature with properties {name:"MacReplica Test Signature", content:"Sent from a MacReplica test"}
             set r to make new rule at end of rules with properties {name:"MacReplica Test Rule", enabled:false}
             tell r to make new rule condition at end of rule conditions with properties {rule type:subject header, qualifier:does contain value, expression:"MacReplica-Test-XYZ"}
-          end tell' 2>&1 || true
+          end tell
+          end timeout' 2>&1 || true
           echo "created: $(probe)"
           quit_mail
           echo "files Mail wrote:"; find ~/Library/Mail -path '*MailData*' \( -name '*Rules*' -o -name '*.mailsignature' -o -name 'AllSignatures.plist' -o -name '*SmartMailboxes*' -o -name 'VIPs.plist' \) 2>&1 | sed "s|$HOME|~|"

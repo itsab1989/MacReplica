@@ -23,7 +23,8 @@
         "EndToEndTests",
         "TwoStageSelectionTests",
         "SelectionPlannerTests",
-        "DeveloperEnvironmentTests"
+        "DeveloperEnvironmentTests",
+        "LaunchpadRestoreTests"
       ],
       "area": "Restore"
     },
@@ -54,7 +55,9 @@
         "ExecutorPredictionTests",
         "EndToEndTests",
         "ExecutorEdgeTests",
-        "RestorePlannerTests"
+        "RestorePlannerTests",
+        "AdminPasswordTests",
+        "LaunchpadRestoreTests"
       ],
       "area": "Restore, conflicts, dry run, verification",
       "threshold": 75
@@ -152,7 +155,8 @@
         "PythonPreservationEdgeTests",
         "DataRestoreEdgeTests",
         "CreativeAppProviderTests",
-        "AppDataVersionTargetTests"
+        "AppDataVersionTargetTests",
+        "WorkflowAppProviderTests"
       ],
       "area": "Python, application data and credential restore",
       "threshold": 75
@@ -163,7 +167,8 @@
         "ProviderCatalogTests",
         "ProviderTests",
         "CreativeAppProviderTests",
-        "AppDataVersionTargetTests"
+        "AppDataVersionTargetTests",
+        "WorkflowAppProviderTests"
       ],
       "area": "Provider selection and discovery"
     },
@@ -174,7 +179,8 @@
         "ProviderCatalogTests",
         "AppDataScannerEdgeTests",
         "CreativeAppProviderTests",
-        "AppDataVersionTargetTests"
+        "AppDataVersionTargetTests",
+        "WorkflowAppProviderTests"
       ],
       "area": "Application data path handling and refusal rules"
     },
@@ -299,7 +305,8 @@
       "tests": [
         "GuidedInstallationTests",
         "DownloadEdgeTests",
-        "MoreRecoveryEdgeTests"
+        "MoreRecoveryEdgeTests",
+        "OwnInstallerTests"
       ],
       "area": "Manual installation, cancellation"
     },
@@ -337,6 +344,36 @@
         "PythonPreservationEdgeTests"
       ],
       "area": "Python strategy selection and verification"
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "tests": [
+        "AdminPasswordTests",
+        "FailureModeTests"
+      ],
+      "area": "Security: administrator password"
+    },
+    {
+      "file": "Downloads/InstallerArchive.swift",
+      "tests": [
+        "OwnInstallerTests"
+      ],
+      "area": "Own installers (offline)"
+    },
+    {
+      "file": "Launchpad/LaunchpadLayout.swift",
+      "tests": [
+        "LaunchpadTests",
+        "LaunchpadRestoreTests"
+      ],
+      "area": "Launchpad layout"
+    },
+    {
+      "file": "Restore/LaunchpadRestore.swift",
+      "tests": [
+        "LaunchpadRestoreTests"
+      ],
+      "area": "Launchpad layout"
     }
   ],
   "exclusions": [
@@ -443,73 +480,73 @@
     {
       "file": "ColorProfiles/DisplayProfiles.swift",
       "pattern": "isConnected: Bool = true",
-      "operator": "true → false",
+      "operator": "true \u2192 false",
       "reason": "Parameter default only; every caller in the app passes isConnected explicitly (equivalent mutant)."
     },
     {
       "file": "ColorProfiles/DisplayProfiles.swift",
       "pattern": "profiles\\.first\\(where: \\{ \\$0\\.originalPath == path \\}\\)",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "A backup holds at most one profile record per original path, so first and last are the same record (equivalent mutant)."
     },
     {
       "file": "Restore/DisplayProfileRestore.swift",
       "pattern": "index\\.entries\\.first \\{ index\\.hash\\(of: \\$0\\) == sha \\}",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "Every identical copy of the backed-up profile is a correct profile to assign; which one is used when several exist is not specified."
     },
     {
       "file": "Restore/DisplayProfileRestore.swift",
       "pattern": "manager\\.displays\\(\\)\\.first \\{",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "ColorSync device IDs (and their salted keys) are unique, so at most one display matches (equivalent mutant)."
     },
     {
       "file": "Python/PythonPreservation.swift",
       "pattern": "referencesLocalPaths: Bool = false\\) \\{",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "Parameter default only; preserve() always passes the value (equivalent mutant)."
     },
     {
       "file": "Python/PythonPreservation.swift",
       "pattern": "architectures\\.sorted \\{ \\$0\\.rawValue < \\$1\\.rawValue \\}",
-      "operator": "< → <=",
+      "operator": "< \u2192 <=",
       "reason": "Sorts the elements of a set: there are no equal elements (equivalent mutant)."
     },
     {
       "file": "Restore/PythonAndDataRestore.swift",
       "pattern": "createDirectory\\(at: folder, withIntermediateDirectories: true, attributes",
-      "operator": "true → false",
+      "operator": "true \u2192 false",
       "reason": "Every credential folder (~/.ssh, ~/.aws, ~/.kube, ~/.terraform.d) is directly in the home folder, which always exists (equivalent mutant)."
     },
     {
       "file": "Restore/PythonAndDataRestore.swift",
       "pattern": "if case \\.existingFileMovedAside = \\$0 \\{ return true \\}; return false",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "At this point the notes only ever hold the moved-aside note, so the fallback value is never used (equivalent mutant)."
     },
     {
       "file": "Restore/PythonAndDataRestore.swift",
       "pattern": "profile\\.bundleIdentifiers\\.first\\(where: environment\\.isApplicationRunning\\)",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "Any running identifier blocks the restore (tested); which one the detail names when several run at once is not specified."
     },
     {
       "file": "Inventory/AppDataScanner.swift",
       "pattern": "var isDirectory: ObjCBool = false",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "fileExists(atPath:isDirectory:) always sets the flag when the path exists, and a missing path fails the same guard (equivalent mutant)."
     },
     {
       "file": "Inventory/AppDataScanner.swift",
       "pattern": "files\\.sort \\{ \\$0\\.record\\.relativePath < \\$1\\.record\\.relativePath \\}",
-      "operator": "< → <=",
+      "operator": "< \u2192 <=",
       "reason": "Relative paths inside one folder are unique, so < and <= give the same order (equivalent mutant)."
     },
     {
       "file": "Providers/AppDataProviders.swift",
       "pattern": "providers\\.first \\{ \\$0\\.id == id \\}",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "Provider identifiers are unique (tested in ProviderCatalogTests), so the first and the last match are the same provider (equivalent mutant)."
     },
     {
@@ -517,6 +554,11 @@
       "pattern": "if values\\.isSymbolicLink == true \\{ continue \\}",
       "operator": "remove continue",
       "reason": "URL resource values describe the link itself, so a symbolic link is never a regular file and the next guard skips it too (equivalent mutant; the rule is tested in AppDataVersionTargetTests)."
+    },
+    {
+      "file": "Restore/LaunchpadRestore.swift",
+      "pattern": "log\\.info|onEvent\\(\\.activity",
+      "reason": "Log and progress lines."
     }
   ]
 }
