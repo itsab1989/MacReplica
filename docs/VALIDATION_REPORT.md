@@ -20,6 +20,12 @@ Mutation testing of the new code: `BackupSelectionPreset.swift` 100 % (8 of 8), 
 3 equivalent sort mutants excluded), after adding tests for the defaults, version lists, tap trust, name length and a
 dangling `brew` link.
 
+Disk images: two full runs of the test suites showed that on macOS 27 parallel attaches fail with "resource temporarily
+unavailable" and can leave images attached — also with 1.0.2 (4 of 6 runs of the disk-image suites failed, up to 7
+images left attached). MacReplica now queues `hdiutil`, retries attaches and detaches and detaches every attachment of
+an image after a final failure: 8 of 8 runs passed with nothing left attached. Mutation score of the changed code:
+`DownloadInstaller.swift` 92.6 % (50 of 54, before the new tests 69.1 %), `DiskImageCommands.swift` 100 %.
+
 Found during the on-screen run and fixed: the *Use It* button could not be pressed through accessibility because
 its row carried an identifier that hid the button's own.
 
