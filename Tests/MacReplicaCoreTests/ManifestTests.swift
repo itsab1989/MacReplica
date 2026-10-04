@@ -78,21 +78,23 @@ struct ManifestTests {
     }
 
     @Test func rejectsNewerMajorVersion() {
-        #expect(throws: ManifestError.unsupportedVersion(found: 3, supported: 2)) {
-            try ManifestIO.decode(Data(#"{"manifest_version": 3}"#.utf8))
+        #expect(throws: ManifestError.unsupportedVersion(found: 4, supported: 3)) {
+            try ManifestIO.decode(Data(#"{"manifest_version": 4}"#.utf8))
         }
     }
 
-    /// Backups of MacReplica 1.0.0 (version 1) are read as before; new backups are written as version 2.
-    @Test func version1BackupsAreMigratedAndNewBackupsAreVersion2() throws {
+    /// Backups of MacReplica 1.0.0 (version 1) and 1.0.1 (version 2) are read as before; new backups are version 3.
+    @Test func olderBackupsAreMigratedAndNewBackupsAreVersion3() throws {
         let v1 = #"{"manifest_version": 1, "application_data": [{"id": "appdata-1", "name": "Old", "relative_path": "Library/Application Support/Old", "files": [], "profile": {"provider": "p", "app_name": "A", "category": "c"}}]}"#
         let decoded = try ManifestIO.decode(Data(v1.utf8))
-        #expect(decoded.manifestVersion == 2)
+        #expect(decoded.manifestVersion == 3)
         #expect(decoded.applicationData.first?.effectiveScope == .home)
+        #expect(decoded.launchpadLayout == nil)
+        #expect(try ManifestIO.decode(Data(#"{"manifest_version": 2}"#.utf8)).manifestVersion == 3)
         #expect(decoded.applicationData.first?.displayPath == "~/Library/Application Support/Old")
         #expect(decoded.displayProfiles.isEmpty)
         let written = try JSONSerialization.jsonObject(with: ManifestIO.encode(Manifest(macreplicaVersion: "1.0.1", createdAt: Date(), macosVersion: "15.0", architecture: .arm64))) as? [String: Any]
-        #expect(written?["manifest_version"] as? Int == 2)
+        #expect(written?["manifest_version"] as? Int == 3)
     }
 
     @Test func rejectsInvalidInput() {

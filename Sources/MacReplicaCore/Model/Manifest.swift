@@ -11,8 +11,13 @@ import Foundation
 /// Version 2 (MacReplica 1.0.1) adds data an older MacReplica would restore wrongly if it
 /// ignored it, above all application data in the shared `/Library` (`scope`). MacReplica
 /// 1.0.0 refuses version 2 backups instead of misplacing files.
+///
+/// Version 3 (MacReplica 1.0.2) adds application data whose files contain a placeholder for the home
+/// folder (`homePlaceholder`), data in `/Users/Shared` (`usersShared` scope), the Launchpad layout and the
+/// user's own installers. MacReplica 1.0.1 would write the placeholder into the files as it is, so it
+/// refuses version 3 backups.
 public struct Manifest: Codable, Equatable, Sendable {
-    public static let currentVersion = 2
+    public static let currentVersion = 3
 
     public var manifestVersion: Int
     public var macreplicaVersion: String
