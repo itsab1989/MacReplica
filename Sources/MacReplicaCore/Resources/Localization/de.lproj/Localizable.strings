@@ -1158,3 +1158,15 @@
 "report.column.page" = "Seite";
 "report.column.folder" = "Ordner";
 "report.column.apps" = "Apps";
+"component.personalFolders" = "Eigene Ordner";
+"component.personalFolders.hint" = "Ordner mit deinen eigenen Dateien, die du dem Backup hinzugefügt hast, jeder für sich. Dateien, die es hier schon mit anderem Inhalt gibt, bleiben erhalten, sofern du nichts anderes wählst.";
+"personal.section.title" = "Eigene Ordner";
+"personal.section.message" = "Optional: Füge Ordner aus deinem Benutzerordner hinzu – Dokumente, Bilder, Projekte –, jeden für sich und ohne Größenbegrenzung. Achte darauf, dass das Backup-Laufwerk genug freien Platz hat; MacReplica prüft das vor dem Sichern. Der ganze Benutzerordner und ~/Library werden nicht angeboten: Die Einstellungen deiner Apps findest du oben unter „Programmdaten“.";
+"personal.add.message" = "Wähle einen oder mehrere Ordner mit deinen eigenen Dateien für das Backup.";
+"personal.error.home" = "Der ganze Benutzerordner kann nicht hinzugefügt werden – er enthält ~/Library mit dem Zustand dieses Macs. Füge stattdessen die Ordner darin hinzu, zum Beispiel Dokumente und Bilder.";
+"personal.error.library" = "Ordner in ~/Library sind App-Daten: Füge sie unter „Programmdaten“ hinzu, wo MacReplica Caches und den Zustand des Macs auslässt.";
+"personal.total" = "Ausgewählt: %1$@";
+"personal.notDownloaded.one" = "1 Datei liegt nur in iCloud (nicht geladen) und wurde ausgelassen. Lade sie zuerst im Finder, wenn sie ins Backup soll.";
+"personal.notDownloaded.other" = "%1$d Dateien liegen nur in iCloud (nicht geladen) und wurden ausgelassen. Lade sie zuerst im Finder, wenn sie ins Backup sollen.";
+"backup.failed.notEnoughSpace" = "Das Backup braucht etwa %1$@, am Ziel sind aber nur %2$@ frei. Wähle ein anderes Laufwerk oder lass einige eigene Ordner weg.";
+"backupIssue.notDownloaded" = "ausgelassen (nur in iCloud, nicht geladen)";

@@ -268,10 +268,18 @@ public struct RestorePlanner: Sendable {
             }
         }
         if components.contains(.applicationData) {
-            for folder in manifest.applicationData {
+            for folder in manifest.applicationData where !folder.isPersonal {
                 applicationData.append(RestoreItem(
                     id: "appdata:\(folder.id)", kind: .applicationData, title: folder.name, identifier: folder.displayPath,
                     component: .applicationData, applicationData: folder))
+            }
+        }
+        // The user's own folders: restored like application data, as their own group.
+        if components.contains(.personalFolders) {
+            for folder in manifest.applicationData where folder.isPersonal {
+                applicationData.append(RestoreItem(
+                    id: "appdata:\(folder.id)", kind: .applicationData, title: folder.name, identifier: folder.displayPath,
+                    component: .personalFolders, applicationData: folder))
             }
         }
 

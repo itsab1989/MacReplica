@@ -1158,3 +1158,15 @@
 "report.column.page" = "Side";
 "report.column.folder" = "Mappe";
 "report.column.apps" = "Apper";
+"component.personalFolders" = "Egne mapper";
+"component.personalFolders.hint" = "Mapper med dine egne filer som du la til i sikkerhetskopien, hver for seg. Filer som allerede finnes med annet innhold, beholdes med mindre du velger noe annet.";
+"personal.section.title" = "Egne mapper";
+"personal.section.message" = "Valgfritt: legg til mapper fra hjemmemappen din – dokumenter, bilder, prosjekter – hver for seg, uten størrelsesgrense. Sørg for at disken for sikkerhetskopien har nok ledig plass; MacReplica sjekker dette før lagring. Hele hjemmemappen og ~/Library tilbys ikke: innstillingene til appene dine finner du under «Programdata» ovenfor.";
+"personal.add.message" = "Velg én eller flere mapper med dine egne filer som skal med i sikkerhetskopien.";
+"personal.error.home" = "Hele hjemmemappen kan ikke legges til – den inneholder ~/Library med tilstanden til denne Macen. Legg i stedet til mappene i den, for eksempel Dokumenter og Bilder.";
+"personal.error.library" = "Mapper i ~/Library er appdata: legg dem til under «Programdata», der MacReplica utelater hurtigbuffere og maskintilstand.";
+"personal.total" = "Valgt: %1$@";
+"personal.notDownloaded.one" = "1 fil finnes bare i iCloud (ikke lastet ned) og ble utelatt. Last den ned i Finder først hvis den skal med i sikkerhetskopien.";
+"personal.notDownloaded.other" = "%1$d filer finnes bare i iCloud (ikke lastet ned) og ble utelatt. Last dem ned i Finder først hvis de skal med i sikkerhetskopien.";
+"backup.failed.notEnoughSpace" = "Sikkerhetskopien trenger omtrent %1$@, men målet har bare %2$@ ledig. Velg en annen disk eller utelat noen av de egne mappene.";
+"backupIssue.notDownloaded" = "utelatt (bare i iCloud, ikke lastet ned)";

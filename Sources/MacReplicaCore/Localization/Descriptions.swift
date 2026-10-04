@@ -47,6 +47,7 @@ extension Localizer {
         case .fonts: return t("component.fonts")
         case .colorProfiles: return t("component.colorProfiles")
         case .launchpad: return t("component.launchpad")
+        case .personalFolders: return t("component.personalFolders")
         }
     }
 
@@ -65,6 +66,7 @@ extension Localizer {
         case .fonts: return t("component.fonts.hint")
         case .colorProfiles: return t("component.colorProfiles.hint")
         case .launchpad: return t("component.launchpad.hint")
+        case .personalFolders: return t("component.personalFolders.hint")
         }
     }
 

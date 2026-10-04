@@ -1160,3 +1160,15 @@
 "report.column.page" = "Page";
 "report.column.folder" = "Folder";
 "report.column.apps" = "Apps";
+"component.personalFolders" = "Your own folders";
+"component.personalFolders.hint" = "Folders of your own files you added to the backup, each on its own. Files that already exist with different content are kept unless you choose otherwise.";
+"personal.section.title" = "Your own folders";
+"personal.section.message" = "Optional: add folders of your home folder – documents, pictures, projects – each on its own, without a size limit. Make sure the backup drive has enough free space; MacReplica checks before saving. The home folder as a whole and ~/Library are not offered: settings of your apps are under “Application Data” above.";
+"personal.add.message" = "Choose one or more folders of your own files to include in the backup.";
+"personal.error.home" = "The home folder as a whole cannot be added – it contains ~/Library with the state of this Mac. Add the folders inside it instead, for example Documents and Pictures.";
+"personal.error.library" = "Folders in ~/Library are application data: add them under “Application Data”, where MacReplica leaves out caches and machine state.";
+"personal.total" = "Selected: %1$@";
+"personal.notDownloaded.one" = "1 file is only in iCloud (not downloaded) and was left out. Download it in Finder first if you want it in the backup.";
+"personal.notDownloaded.other" = "%1$d files are only in iCloud (not downloaded) and were left out. Download them in Finder first if you want them in the backup.";
+"backup.failed.notEnoughSpace" = "The backup needs about %1$@, but the destination has only %2$@ free. Choose another drive or leave out some of your own folders.";
+"backupIssue.notDownloaded" = "left out (only in iCloud, not downloaded)";

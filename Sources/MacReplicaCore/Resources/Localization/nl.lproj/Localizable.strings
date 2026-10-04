@@ -1158,3 +1158,15 @@
 "report.column.page" = "Pagina";
 "report.column.folder" = "Map";
 "report.column.apps" = "Apps";
+"component.personalFolders" = "Eigen mappen";
+"component.personalFolders.hint" = "Mappen met je eigen bestanden die je aan de back-up hebt toegevoegd, elk afzonderlijk. Bestanden die hier al met andere inhoud bestaan, blijven behouden tenzij je anders kiest.";
+"personal.section.title" = "Eigen mappen";
+"personal.section.message" = "Optioneel: voeg mappen uit je thuismap toe – documenten, afbeeldingen, projecten –, elk afzonderlijk en zonder groottelimiet. Zorg dat de back-upschijf genoeg vrije ruimte heeft; MacReplica controleert dit vóór het bewaren. De hele thuismap en ~/Library worden niet aangeboden: de instellingen van je apps staan hierboven bij ‘Appgegevens’.";
+"personal.add.message" = "Kies een of meer mappen met je eigen bestanden om in de back-up op te nemen.";
+"personal.error.home" = "De hele thuismap kan niet worden toegevoegd – die bevat ~/Library met de toestand van deze Mac. Voeg in plaats daarvan de mappen erin toe, bijvoorbeeld Documenten en Afbeeldingen.";
+"personal.error.library" = "Mappen in ~/Library zijn app-gegevens: voeg ze toe bij ‘Appgegevens’, waar MacReplica caches en de toestand van de computer weglaat.";
+"personal.total" = "Geselecteerd: %1$@";
+"personal.notDownloaded.one" = "1 bestand staat alleen in iCloud (niet gedownload) en is weggelaten. Download het eerst in de Finder als je het in de back-up wilt.";
+"personal.notDownloaded.other" = "%1$d bestanden staan alleen in iCloud (niet gedownload) en zijn weggelaten. Download ze eerst in de Finder als je ze in de back-up wilt.";
+"backup.failed.notEnoughSpace" = "De back-up heeft ongeveer %1$@ nodig, maar op de bestemming is maar %2$@ vrij. Kies een andere schijf of laat enkele eigen mappen weg.";
+"backupIssue.notDownloaded" = "weggelaten (alleen in iCloud, niet gedownload)";

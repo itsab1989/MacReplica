@@ -429,6 +429,47 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// "Your own folders": any folder of the home folder outside ~/Library, without a size limit.
+    func addPersonalFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = true
+        panel.prompt = l.t("appData.add.choose")
+        panel.message = l.t("personal.add.message")
+        panel.directoryURL = services.layout.homeDirectory
+        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
+        let folders = panel.urls
+        let scanner = AppDataScanner(layout: services.layout)
+        addingApplicationData = true
+        task = Task.detached { [weak self] in
+            var outcomes: [Result<(folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]), Error>] = []
+            for folder in folders { outcomes.append(Result { try scanner.scanPersonal(folder) }) }
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.addingApplicationData = false
+                for outcome in outcomes {
+                    switch outcome {
+                    case .success(let scan):
+                        self.inventory?.addApplicationData(scan.folder, files: scan.files, issues: scan.issues)
+                        self.appLog.info("Added own folder with \(scan.files.count) files, \(scan.issues.count) left out", component: .applicationData)
+                    case .failure(let error):
+                        let message: String
+                        switch error as? AppDataError {
+                        case .outsideHome?: message = self.l.t("appData.error.outsideHome")
+                        case .wholeHomeOrLibrary?: message = self.l.t("personal.error.home")
+                        case .insideLibrary?: message = self.l.t("personal.error.library")
+                        case .sensitiveLocation?: message = self.l.t("appData.error.sensitive")
+                        default: message = self.l.t("appData.error.notAFolder")
+                        }
+                        self.appLog.warning("Own folder refused: \(error)", component: .applicationData)
+                        self.notice = ProblemInfo(title: self.l.t("appData.error.title"), message: message, detail: nil)
+                    }
+                }
+            }
+        }
+    }
+
     func removeApplicationData(id: String) {
         inventory?.removeApplicationData(id: id)
     }
@@ -509,6 +550,8 @@ final class AppModel: ObservableObject {
                     let message: String
                     if case BackupError.destinationNotWritable = error {
                         message = self.l.t("backup.failed.notWritable")
+                    } else if case BackupError.notEnoughSpace(let needed, let available) = error {
+                        message = self.l.t("backup.failed.notEnoughSpace", self.l.fileSize(needed), self.l.fileSize(available))
                     } else {
                         message = self.l.t("backup.failed.message")
                     }

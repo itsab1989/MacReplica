@@ -7,6 +7,8 @@ public struct BackupProgress: Sendable, Equatable {
 
 public enum BackupError: Error, Equatable, Sendable {
     case destinationNotWritable(String)
+    /// The destination has less free space than the backup needs (bytes).
+    case notEnoughSpace(needed: Int64, available: Int64)
     case copyFailed(String)
     case verificationFailed(String)
 }
@@ -88,10 +90,28 @@ public struct BackupWriter: Sendable {
     /// Creates the backup inside `parent`. Files that cannot be read are left out
     /// and recorded as backup issues (a partial backup). Anything that would make
     /// the backup unusable removes the incomplete folder again and throws.
+    /// The files plus a margin for the manifest, checksums and reports.
+    static func estimatedSize(of inventory: InventoryResult) -> Int64 {
+        let files = (inventory.fonts + inventory.colorProfiles + inventory.extraFiles).reduce(Int64(0)) { $0 + $1.record.size }
+        return files + files / 100 + 50_000_000
+    }
+
+    /// Free space of the volume (nil if it cannot be read, e.g. some network shares; then the copy itself reports a full disk).
+    static func availableSpace(at folder: URL) -> Int64? {
+        let values = try? folder.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey])
+        if let important = values?.volumeAvailableCapacityForImportantUsage, important > 0 { return important }
+        return values?.volumeAvailableCapacity.map(Int64.init)
+    }
+
     public func write(_ inventory: InventoryResult, into parent: URL, log: LogStore, credentials: CredentialExportRequest? = nil,
                       progress: @Sendable (BackupProgress) -> Void = { _ in }) throws -> BackupOutcome {
         guard FileManager.default.isWritableFile(atPath: parent.path) else {
             throw BackupError.destinationNotWritable(layout.displayPath(parent))
+        }
+        // Checked before anything is written: own folders have no size limit.
+        let needed = Self.estimatedSize(of: inventory)
+        if let available = Self.availableSpace(at: parent), needed > available {
+            throw BackupError.notEnoughSpace(needed: needed, available: available)
         }
         let root = Self.uniqueFolder(in: parent, baseName: Self.folderName(for: inventory.manifest.createdAt))
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)

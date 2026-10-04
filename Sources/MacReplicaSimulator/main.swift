@@ -9,6 +9,8 @@
 //   MacReplicaSimulator reinstall <folder>                        (simulates erasing macOS on the same Mac)
 //   MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
 //   MacReplicaSimulator creative <folder>                         (adds Photoshop release/beta and DaVinci Resolve data)
+//   MacReplicaSimulator workflow <folder>                         (adds Krita, GIMP, Office, Mail, Cryptomator … data)
+//   MacReplicaSimulator launchpad <folder>                        (adds a Launchpad with the sample apps)
 //   MacReplicaSimulator install-resolve <folder> <version>        (simulates installing DaVinci Resolve)
 //   MacReplicaSimulator launch-photoshop <folder> <folder name>   (simulates opening e.g. "Adobe Photoshop 2026" once)
 //   MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
@@ -30,6 +32,8 @@ func usage() -> Never {
            MacReplicaSimulator reinstall <folder>
            MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
            MacReplicaSimulator creative <folder>
+           MacReplicaSimulator workflow <folder>
+           MacReplicaSimulator launchpad <folder>
            MacReplicaSimulator install-resolve <folder> <version>
            MacReplicaSimulator launch-photoshop <folder> <folder name>
            MacReplicaSimulator set <folder> offline|signed-out|brew-broken on|off
@@ -198,6 +202,15 @@ do {
     case "creative":
         try root.addCreativeAppData()
         print("Added Photoshop and DaVinci Resolve data")
+    case "workflow":
+        try root.addWorkflowAppData()
+        print("Added Krita, GIMP, Inkscape, Scribus, Office, Mail, Cryptomator, DisplayCAL and other app data")
+    case "launchpad":
+        // A Launchpad with the sample apps on one page and a folder (the simulated Dock is never signalled).
+        let apps = ["com.example.nimbusnotes", "com.example.pixelforge", "org.example.orbit", "com.example.terminalplus", "com.example.ledgerlite", "com.example.quillwriter", "com.example.studiomixer"]
+        try SyntheticLaunchpad.create(at: root.state.appendingPathComponent("launchpad/db/db"),
+                                      apps: Array(apps.suffix(from: min(3, apps.count))) + ["com.apple.Safari"], folder: Array(apps.prefix(3)))
+        print("Added a Launchpad with \(apps.count + 1) apps")
     case "install-resolve":
         guard arguments.count == 3 else { usage() }
         try root.installResolve(version: arguments[2])

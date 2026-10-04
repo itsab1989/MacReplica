@@ -1158,3 +1158,15 @@
 "report.column.page" = "Page";
 "report.column.folder" = "Dossier";
 "report.column.apps" = "Apps";
+"component.personalFolders" = "Vos dossiers";
+"component.personalFolders.hint" = "Dossiers de vos propres fichiers ajoutés à la sauvegarde, chacun séparément. Les fichiers déjà présents avec un autre contenu sont conservés, sauf si vous choisissez autrement.";
+"personal.section.title" = "Vos dossiers";
+"personal.section.message" = "Facultatif : ajoutez des dossiers de votre dossier personnel – documents, images, projets –, chacun séparément et sans limite de taille. Vérifiez que le disque de sauvegarde a assez d'espace libre ; MacReplica le contrôle avant d'enregistrer. Le dossier personnel entier et ~/Library ne sont pas proposés : les réglages de vos apps se trouvent plus haut, dans « Données d’applications ».";
+"personal.add.message" = "Choisissez un ou plusieurs dossiers de vos propres fichiers à inclure dans la sauvegarde.";
+"personal.error.home" = "Le dossier personnel entier ne peut pas être ajouté – il contient ~/Library avec l'état de ce Mac. Ajoutez plutôt les dossiers qu'il contient, par exemple Documents et Images.";
+"personal.error.library" = "Les dossiers de ~/Library sont des données d'apps : ajoutez-les dans « Données d’applications », où MacReplica exclut les caches et l'état de la machine.";
+"personal.total" = "Sélectionné : %1$@";
+"personal.notDownloaded.one" = "1 fichier n'est que dans iCloud (non téléchargé) et a été exclu. Téléchargez-le d'abord dans le Finder si vous le voulez dans la sauvegarde.";
+"personal.notDownloaded.other" = "%1$d fichiers ne sont que dans iCloud (non téléchargés) et ont été exclus. Téléchargez-les d'abord dans le Finder si vous les voulez dans la sauvegarde.";
+"backup.failed.notEnoughSpace" = "La sauvegarde a besoin d'environ %1$@, mais la destination n'a que %2$@ de libre. Choisissez un autre disque ou excluez certains de vos dossiers.";
+"backupIssue.notDownloaded" = "exclu (uniquement dans iCloud, non téléchargé)";

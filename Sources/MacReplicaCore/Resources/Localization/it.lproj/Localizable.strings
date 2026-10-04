@@ -1158,3 +1158,15 @@
 "report.column.page" = "Pagina";
 "report.column.folder" = "Cartella";
 "report.column.apps" = "App";
+"component.personalFolders" = "Le tue cartelle";
+"component.personalFolders.hint" = "Cartelle con i tuoi file aggiunte al backup, ciascuna a sé. I file già presenti con un contenuto diverso vengono mantenuti, a meno che tu non scelga diversamente.";
+"personal.section.title" = "Le tue cartelle";
+"personal.section.message" = "Facoltativo: aggiungi cartelle della tua cartella Inizio – documenti, immagini, progetti – ciascuna a sé e senza limiti di dimensione. Assicurati che il disco del backup abbia spazio libero sufficiente; MacReplica lo controlla prima di salvare. La cartella Inizio intera e ~/Library non vengono proposte: le impostazioni delle tue app si trovano sopra, in «Dati delle app».";
+"personal.add.message" = "Scegli una o più cartelle con i tuoi file da includere nel backup.";
+"personal.error.home" = "Non è possibile aggiungere l'intera cartella Inizio: contiene ~/Library con lo stato di questo Mac. Aggiungi invece le cartelle al suo interno, per esempio Documenti e Immagini.";
+"personal.error.library" = "Le cartelle in ~/Library sono dati delle app: aggiungile in «Dati delle app», dove MacReplica esclude cache e stato del computer.";
+"personal.total" = "Selezionati: %1$@";
+"personal.notDownloaded.one" = "1 file è solo su iCloud (non scaricato) ed è stato escluso. Scaricalo prima nel Finder se lo vuoi nel backup.";
+"personal.notDownloaded.other" = "%1$d file sono solo su iCloud (non scaricati) e sono stati esclusi. Scaricali prima nel Finder se li vuoi nel backup.";
+"backup.failed.notEnoughSpace" = "Il backup richiede circa %1$@, ma la destinazione ha solo %2$@ liberi. Scegli un altro disco o escludi alcune delle tue cartelle.";
+"backupIssue.notDownloaded" = "escluso (solo su iCloud, non scaricato)";

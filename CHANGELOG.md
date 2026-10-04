@@ -34,6 +34,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Guidance for Synology Drive, calibration software, BenQ Palette Master, XP-Pen, mail accounts and Office
   activation (what MacReplica cannot carry over and why).
 - Restore: steps that need Full Disk Access wait for it and continue after it is granted.
+- Your own folders: folders of the home folder (documents, pictures, projects) can be added to the backup,
+  each on its own and without a size limit, and are restored as their own group. The home folder as a whole
+  and `~/Library` are not offered; files that are only in iCloud are left out and listed.
+- The backup checks the free space of the destination before writing and stops with a clear message if
+  it does not fit.
+
+### Changed
+- Confidence levels from real-app checks: Krita, GIMP, Inkscape, Scribus, Cryptomator, DisplayCAL and Word's
+  AutoCorrect were confirmed in the apps themselves (*verified*); Apple Mail is *experimental* (its files
+  follow Apple's layout up to macOS 15, but Mail itself could not be checked).
+- Backup format version 3. MacReplica 1.0.1 refuses these backups instead of restoring them wrongly.
 
 ### Fixed
 - The administrator password is asked for once per restore instead of once per package (Homebrew's

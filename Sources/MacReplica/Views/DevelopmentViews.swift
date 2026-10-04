@@ -92,7 +92,7 @@ struct ApplicationDataSection: View {
 
     var body: some View {
         let l = model.l
-        let folders = model.inventory?.manifest.applicationData ?? []
+        let folders = (model.inventory?.manifest.applicationData ?? []).filter { !$0.isPersonal }
         let groups = Dictionary(grouping: folders) { $0.profile?.appName ?? l.t("appData.group.custom") }
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
@@ -126,6 +126,45 @@ struct ApplicationDataSection: View {
                 Text(l.p("appData.refused", refused.count))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+/// "Your own folders": folders of the user's own files, each on its own, without a size limit.
+struct PersonalFoldersSection: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        let folders = (model.inventory?.manifest.applicationData ?? []).filter(\.isPersonal)
+        let notDownloaded = (model.inventory?.manifest.backupIssues ?? []).filter { $0.reason == .notDownloaded }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(l.t("personal.section.title")).font(.headline)
+                Spacer()
+                if model.addingApplicationData { ProgressView().controlSize(.small) }
+                Button(l.t("appData.add.button")) { model.addPersonalFolder() }
+                    .disabled(model.addingApplicationData)
+                    .accessibilityIdentifier("personal.add")
+            }
+            Text(l.t("personal.section.message"))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if !folders.isEmpty {
+                Card {
+                    ForEach(folders) { folder in AppDataRow(folder: folder) }
+                    let total = folders.filter { !model.excludedApplicationData.contains($0.id) }.reduce(Int64(0)) { $0 + $1.totalSize }
+                    Text(l.t("personal.total", l.fileSize(total))).font(.caption).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("personal.total")
+                }
+            }
+            if !notDownloaded.isEmpty {
+                Text(l.p("personal.notDownloaded", notDownloaded.count))
+                    .font(.caption)
+                    .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

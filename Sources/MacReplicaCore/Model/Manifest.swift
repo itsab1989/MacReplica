@@ -494,7 +494,8 @@ public enum FileDomain: String, Codable, Sendable, CaseIterable {
 
 /// Something that was selected for the backup but could not be included.
 public struct BackupIssue: Codable, Equatable, Sendable {
-    public enum Reason: String, Codable, Sendable { case unreadable, refusedSensitive, tooLarge, changedDuringBackup }
+    /// `notDownloaded`: an iCloud file whose contents are not on the Mac (reading it would download it).
+    public enum Reason: String, Codable, Sendable { case unreadable, refusedSensitive, tooLarge, changedDuringBackup, notDownloaded }
     /// Display path (home written as `~`).
     public var path: String
     public var reason: Reason

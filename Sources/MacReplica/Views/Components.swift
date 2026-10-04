@@ -161,6 +161,7 @@ enum Symbols {
         case .fonts: return "textformat"
         case .colorProfiles: return "paintpalette"
         case .launchpad: return "square.grid.3x3"
+        case .personalFolders: return "folder"
         }
     }
 

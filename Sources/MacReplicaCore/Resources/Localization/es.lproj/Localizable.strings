@@ -1158,3 +1158,15 @@
 "report.column.page" = "Página";
 "report.column.folder" = "Carpeta";
 "report.column.apps" = "Apps";
+"component.personalFolders" = "Tus carpetas";
+"component.personalFolders.hint" = "Carpetas con tus propios archivos que añadiste a la copia, cada una por separado. Los archivos que ya existen con otro contenido se conservan salvo que elijas otra cosa.";
+"personal.section.title" = "Tus carpetas";
+"personal.section.message" = "Opcional: añade carpetas de tu carpeta de inicio (documentos, imágenes, proyectos), cada una por separado y sin límite de tamaño. Asegúrate de que el disco de la copia tenga espacio libre suficiente; MacReplica lo comprueba antes de guardar. No se ofrece la carpeta de inicio completa ni ~/Library: los ajustes de tus apps están arriba, en «Datos de apps».";
+"personal.add.message" = "Elige una o varias carpetas con tus propios archivos para incluirlas en la copia.";
+"personal.error.home" = "No se puede añadir la carpeta de inicio completa: contiene ~/Library con el estado de este Mac. Añade en su lugar las carpetas que contiene, por ejemplo Documentos e Imágenes.";
+"personal.error.library" = "Las carpetas de ~/Library son datos de apps: añádelas en «Datos de apps», donde MacReplica omite cachés y el estado del equipo.";
+"personal.total" = "Seleccionado: %1$@";
+"personal.notDownloaded.one" = "1 archivo solo está en iCloud (sin descargar) y se ha omitido. Descárgalo antes en el Finder si lo quieres en la copia.";
+"personal.notDownloaded.other" = "%1$d archivos solo están en iCloud (sin descargar) y se han omitido. Descárgalos antes en el Finder si los quieres en la copia.";
+"backup.failed.notEnoughSpace" = "La copia necesita unos %1$@, pero el destino solo tiene %2$@ libres. Elige otro disco u omite algunas de tus carpetas.";
+"backupIssue.notDownloaded" = "omitido (solo en iCloud, sin descargar)";

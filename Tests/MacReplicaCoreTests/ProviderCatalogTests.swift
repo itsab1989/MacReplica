@@ -7,6 +7,11 @@ import MacReplicaTestSupport
 struct ProviderCatalogTests {
     static let english = Localizer.loadTable(language: .english, resourcesFolder: LocalizationResources.folder)
 
+    /// Providers whose restore was confirmed inside the real application (see docs/VALIDATION_REPORT.md).
+    static let checkedInRealApp: Set<String> = ["adobe-photoshop-beta-settings", "davinci-resolve-luts", "davinci-resolve-preferences",
+                                                 "krita", "krita-settings", "gimp", "inkscape", "scribus", "scribus-settings",
+                                                 "cryptomator", "displaycal", "displaycal-settings", "microsoft-office"]
+
     @Test func everyProviderIsDocumentedLocalizedAndSafe() {
         let providers = AppDataCatalog.providers
         #expect(providers.count >= 15)
@@ -15,7 +20,12 @@ struct ProviderCatalogTests {
             #expect(!provider.bundleIdentifiers.isEmpty, "\(provider.id) has bundle identifiers")
             #expect(!provider.evidence.isEmpty && provider.evidence.allSatisfy { $0.url.hasPrefix("https://") }, "\(provider.id) cites sources")
             #expect(["2026-10-02", "2026-10-03", "2026-10-04"].contains(provider.researchedOn))
-            #expect(provider.status == .fixtureTested, "\(provider.id) is not claimed as verified with the real app")
+            // Only providers checked inside the real app (docs/VALIDATION_REPORT.md) say so, and only for those categories.
+            if provider.status == .verified {
+                #expect(Self.checkedInRealApp.contains(provider.id) && !provider.verifiedCategories.isEmpty, "\(provider.id) verified with evidence")
+            } else {
+                #expect(provider.status == .fixtureTested && provider.verifiedCategories.isEmpty, "\(provider.id) is not claimed as verified")
+            }
             #expect(PathSafety.isSafeRelativePath(provider.base), "\(provider.id) base")
             #expect(!provider.base.hasPrefix("Library/Caches") && !provider.base.hasPrefix("Library/Keychains"))
             for category in provider.categories {

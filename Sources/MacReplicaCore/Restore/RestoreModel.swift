@@ -13,6 +13,8 @@ public enum RestoreComponent: String, Codable, Sendable, CaseIterable, Identifia
     case packageManagers
     case developerSettings
     case applicationData
+    /// Folders of the user's own files chosen in "Your own folders".
+    case personalFolders
     case fonts
     case colorProfiles
     /// The Launchpad arrangement: pages, folders and the order of the apps (macOS 13–15).
