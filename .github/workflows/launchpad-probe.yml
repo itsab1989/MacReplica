@@ -84,7 +84,7 @@ jobs:
           chmod +x simulator; sw_vers
           defaults write com.apple.dock ResetLaunchPad -bool true; killall Dock; sleep 12
           defaults delete com.apple.dock ResetLaunchPad 2>/dev/null || true
-          ./simulator launchpad-apply from14/restart.json
+          ./simulator launchpad-apply from14/restart.json || echo APPLY_MISMATCH
           killall Dock; sleep 10; ./simulator launchpad-export restart15.json
           open -a Launchpad; sleep 4; screencapture -x launchpad15.png || true
       - uses: actions/upload-artifact@v7
@@ -93,4 +93,5 @@ jobs:
           name: launchpad-cross-version
           path: |
             *.json
+            from14/*.json
             launchpad15.png
