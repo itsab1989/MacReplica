@@ -1328,3 +1328,11 @@
 "appData.help.shapes" = "De egendefinerte formene dine.";
 "appData.help.swatches" = "Fargeprøvene dine.";
 "appData.help.toolPresets" = "Lagrede verktøyinnstillinger.";
+"homebrewSupport.system" = "macOS %1$@ på %2$@";
+"homebrewSupport.limited.title" = "Homebrew har begrenset støtte for %1$@";
+"homebrewSupport.limited.before" = "Homebrew oppfører dette systemet som Tier 3 (ikke støttet). Når du sletter denne Macen og setter opp samme macOS igjen, kan Homebrew installeres og fungerer som regel, men det finnes færre ferdige pakker: noen kommandolinjeverktøy bygges fra kildekode, som tar lengre tid, og noen kan mislykkes. Apper fra Homebrew påvirkes stort sett ikke. MacReplica rapporterer hver pakke som mislykkes, og fortsetter.";
+"homebrewSupport.limited.here" = "Homebrew oppfører dette systemet som Tier 3 (ikke støttet). Det kan installeres og fungerer som regel, men det finnes færre ferdige pakker: noen kommandolinjeverktøy bygges fra kildekode, som tar lengre tid, og noen kan mislykkes. Apper fra Homebrew påvirkes stort sett ikke. MacReplica rapporterer hver pakke som mislykkes, og fortsetter.";
+"homebrewSupport.intelEnd" = "Homebrew venter å slutte å støtte Intel-Macer fra %1$@ eller senere.";
+"homebrewSupport.unsupported.title" = "Homebrew støtter ikke %1$@";
+"homebrewSupport.unsupported.message" = "Homebrew kjører ikke lenger på denne macOS-versjonen, så MacReplica kan ikke installere Homebrew-pakker på nytt der. Installer appene fra produsentene, eller bruk en nyere macOS.";
+"homebrewSupport.asOf" = "(Homebrews støttenivåer per %1$@: %2$@)";

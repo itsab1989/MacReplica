@@ -277,4 +277,32 @@ struct HomebrewTests {
         let runner = ScriptedRunner { _ in CommandResult(exitCode: 0, stdout: "Homebrew 4.4.0", stderr: "") }
         #expect(await HomebrewClient(layout: layout, runner: runner).locate() == .broken(executable: first, reason: "not executable"))
     }
+
+    /// Homebrew's support tiers (docs.brew.sh/Support-Tiers): shown before the old Mac is erased and on the new Mac.
+    @Test func homebrewSupportIsExplainedBeforeErasing() throws {
+        #expect(HomebrewSupport.level(macOSVersion: "15.7", architecture: .arm64) == .full)
+        #expect(HomebrewSupport.level(macOSVersion: "27.0.1", architecture: .arm64) == .full)
+        #expect(HomebrewSupport.level(macOSVersion: "14.8.4", architecture: .arm64) == .limited, "Sonoma on Apple silicon is Tier 3")
+        #expect(HomebrewSupport.level(macOSVersion: "14.8.4", architecture: .x86_64) == .limited, "every Intel Mac is Tier 3")
+        #expect(HomebrewSupport.level(macOSVersion: "26.1", architecture: .x86_64) == .limited)
+        #expect(HomebrewSupport.level(macOSVersion: "11.0", architecture: .arm64) == .limited)
+        #expect(HomebrewSupport.level(macOSVersion: "10.15.7", architecture: .x86_64) == .unsupported)
+        #expect(HomebrewSupport.level(macOSVersion: "unknown", architecture: .arm64) == .full, "no warning without a known version")
+        let l = Localizer(language: .english)
+        #expect(l.homebrewSupportNotice(macOSVersion: "15.7", architecture: .arm64, beforeErasing: true) == nil)
+        let knut = try #require(l.homebrewSupportNotice(macOSVersion: "14.8.4", architecture: .x86_64, beforeErasing: true))
+        #expect(knut.title == "Homebrew support is limited on macOS 14.8.4 on Intel")
+        #expect(knut.message.contains("After erasing this Mac") && knut.message.contains("September 2027") && knut.message.contains("docs.brew.sh"))
+        #expect(knut.message.contains("as of October 4, 2026:"), "the date of Homebrew's table, without a time of day")
+        let silicon = try #require(l.homebrewSupportNotice(macOSVersion: "14.8.4", architecture: .arm64, beforeErasing: false))
+        #expect(!silicon.message.contains("Intel") && !silicon.message.contains("erasing"))
+        #expect(l.homebrewSupportNotice(macOSVersion: "10.15", architecture: .x86_64, beforeErasing: false)?.title == "Homebrew does not support macOS 10.15 on Intel")
+        // The backup's report and restore instructions keep it, only when Homebrew restores something.
+        var manifest = Manifest(macreplicaVersion: "1", createdAt: Date(), macosVersion: "14.8.4", architecture: .x86_64)
+        let builder = ReportBuilder(localizer: l)
+        #expect(!builder.inventoryReport(manifest).contains("Homebrew support is limited"))
+        manifest.brewFormulae = [BrewFormulaRecord(name: "wget", version: "1.24")]
+        #expect(builder.inventoryReport(manifest).contains("Homebrew support is limited"))
+        #expect(builder.restoreInstructions(manifest, folderName: "Backup").contains("Homebrew support is limited"))
+    }
 }

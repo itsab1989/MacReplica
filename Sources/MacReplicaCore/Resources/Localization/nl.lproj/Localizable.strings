@@ -1328,3 +1328,11 @@
 "appData.help.shapes" = "Je eigen vormen.";
 "appData.help.swatches" = "Je kleurstalen.";
 "appData.help.toolPresets" = "Bewaarde gereedschapsvoorinstellingen.";
+"homebrewSupport.system" = "macOS %1$@ op %2$@";
+"homebrewSupport.limited.title" = "Homebrew ondersteunt %1$@ maar beperkt";
+"homebrewSupport.limited.before" = "Homebrew rekent dit systeem tot Tier 3 (niet ondersteund). Als je deze Mac wist en dezelfde macOS opnieuw instelt, laat Homebrew zich installeren en werkt het meestal, maar er zijn minder kant-en-klare pakketten: sommige opdrachtregelprogramma's worden uit de broncode gebouwd, wat langer duurt, en sommige kunnen mislukken. Apps uit Homebrew merken er meestal weinig van. MacReplica meldt elk pakket dat mislukt en gaat door.";
+"homebrewSupport.limited.here" = "Homebrew rekent dit systeem tot Tier 3 (niet ondersteund). Het laat zich installeren en werkt meestal, maar er zijn minder kant-en-klare pakketten: sommige opdrachtregelprogramma's worden uit de broncode gebouwd, wat langer duurt, en sommige kunnen mislukken. Apps uit Homebrew merken er meestal weinig van. MacReplica meldt elk pakket dat mislukt en gaat door.";
+"homebrewSupport.intelEnd" = "Homebrew verwacht Intel-Macs vanaf %1$@ of later niet meer te ondersteunen.";
+"homebrewSupport.unsupported.title" = "Homebrew ondersteunt %1$@ niet";
+"homebrewSupport.unsupported.message" = "Homebrew draait niet meer op deze macOS-versie, dus MacReplica kan daar geen Homebrew-pakketten opnieuw installeren. Installeer die apps bij de makers of gebruik een nieuwere macOS.";
+"homebrewSupport.asOf" = "(ondersteuningsniveaus van Homebrew per %1$@: %2$@)";

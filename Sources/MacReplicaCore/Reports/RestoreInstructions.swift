@@ -24,6 +24,7 @@ extension ReportBuilder {
         body += card(counts.fonts, l.t("component.fonts"))
         body += card(counts.colorProfiles, l.t("component.colorProfiles"))
         body += "</div>"
+        body += homebrewSupportNote(manifest)
         if manifest.backupGaps.isEmpty {
             body += "<p class=\"ok\">\(HTML.escape(l.t("guide.complete")))</p>"
         } else {

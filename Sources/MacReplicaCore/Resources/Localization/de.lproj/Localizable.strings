@@ -1328,3 +1328,11 @@
 "appData.help.shapes" = "Deine eigenen Formen.";
 "appData.help.swatches" = "Deine Farbfelder.";
 "appData.help.toolPresets" = "Gespeicherte Werkzeugvorgaben.";
+"homebrewSupport.system" = "macOS %1$@ auf %2$@";
+"homebrewSupport.limited.title" = "Homebrew unterstützt %1$@ nur eingeschränkt";
+"homebrewSupport.limited.before" = "Homebrew führt dieses System als Tier 3 (nicht unterstützt). Wenn du diesen Mac löschst und dasselbe macOS neu einrichtest, lässt sich Homebrew installieren und funktioniert meist, aber es gibt weniger fertige Pakete: Manche Befehlszeilenwerkzeuge werden aus dem Quellcode gebaut, was länger dauert, und einige können scheitern. Apps aus Homebrew sind meist nicht betroffen. MacReplica meldet jedes Paket, das scheitert, und macht weiter.";
+"homebrewSupport.limited.here" = "Homebrew führt dieses System als Tier 3 (nicht unterstützt). Es lässt sich installieren und funktioniert meist, aber es gibt weniger fertige Pakete: Manche Befehlszeilenwerkzeuge werden aus dem Quellcode gebaut, was länger dauert, und einige können scheitern. Apps aus Homebrew sind meist nicht betroffen. MacReplica meldet jedes Paket, das scheitert, und macht weiter.";
+"homebrewSupport.intelEnd" = "Homebrew erwartet, Intel-Macs ab %1$@ oder später nicht mehr zu unterstützen.";
+"homebrewSupport.unsupported.title" = "Homebrew unterstützt %1$@ nicht";
+"homebrewSupport.unsupported.message" = "Homebrew läuft auf dieser macOS-Version nicht mehr, daher kann MacReplica dort keine Homebrew-Pakete neu installieren. Installiere diese Apps beim Hersteller oder verwende ein neueres macOS.";
+"homebrewSupport.asOf" = "(Homebrews Unterstützungsstufen, Stand %1$@: %2$@)";

@@ -1,5 +1,18 @@
 # MacReplica – validation report
 
+## Addendum 2026-10-04 (after 1.0.3): Homebrew support notice, disk-image retry
+
+- **Homebrew support tiers** (docs.brew.sh/Support-Tiers, as of 2026-10-04): Tier 1 = Apple silicon with macOS 15,
+  26, 27; Tier 3 = Apple silicon with macOS 11–14 and every Intel Mac; unsupported = macOS 10.15 and older; Intel
+  expected unsupported from September 2027. **Real app, simulated Mac** (macOS 14.8.4 on Intel, like Knut's): the
+  notice appears on the old Mac's selection screen before the backup (H1), is in the backup's `inventory.html` and
+  `RESTORE_INSTRUCTIONS.html`, appears in the new Mac's restore selection (H2), and the restore ran through (33
+  successful, 0 failed, 4 guided). Negative check: Apple silicon with macOS 15.1 shows no notice (H4). Automated:
+  tiers, texts, reports. Mutation: `HomebrewSupport.swift` 100 %. Evidence:
+  `~/Desktop/MacReplica-Staging/validation/round5-homebrew/`.
+- **Disk image after a busy retry** (PR #5): before each retry, attachments of the image a failed attempt may have
+  left are detached. 5 runs of the disk-image suites and full runs: no image left attached.
+
 ## Addendum 2026-10-04 (round 4): Knut's test on an Intel Mac, LibreOffice, location, selection, explanations
 
 | Request | Result | Evidence |
