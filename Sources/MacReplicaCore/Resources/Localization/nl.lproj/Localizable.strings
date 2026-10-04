@@ -1146,3 +1146,15 @@
 "guidedStep.finishAdditionalPackage" = "Rond ‘%1$@’ af in Installatie en kies daarna Opnieuw controleren. (MacReplica kan een licentie niet zelf controleren; open de app om ze te bevestigen.)";
 "note.additionalPackageOpened" = "‘%1$@’ is geïnstalleerd in Installatie; controleer de licentie in de app.";
 "note.additionalPackageNotInstalled" = "‘%1$@’ is niet geïnstalleerd (overgeslagen, of controlesom of ontwikkelaar kwamen niet overeen met de oude Mac).";
+"component.launchpad" = "Launchpad-indeling";
+"component.launchpad.hint" = "Pagina's, mappen met hun naam en de volgorde van je apps (macOS 13–15). Wordt als laatste geordend, als de apps geïnstalleerd zijn; apps die je niet herstelt, worden weggelaten.";
+"kind.launchpadLayout" = "Launchpad";
+"prediction.arrangeLaunchpad" = "Wordt geordend zoals op de oude Mac";
+"skip.launchpadNotAvailable" = "Launchpad bestaat niet in deze macOS (vervangen door de Apps-weergave) – de indeling blijft bewaard in het rapport van de back-up";
+"skip.launchpadWaitingForApps.one" = "Geordend met de tot nu toe geïnstalleerde apps – wordt opnieuw geordend als het herstel verdergaat en de resterende app geïnstalleerd is";
+"skip.launchpadWaitingForApps.other" = "Geordend met de tot nu toe geïnstalleerde apps – wordt opnieuw geordend als het herstel verdergaat en de resterende %1$d apps geïnstalleerd zijn";
+"inventory.warning.launchpadUnreadable" = "De Launchpad-indeling kon niet worden gelezen; al het andere wordt geback-upt.";
+"report.launchpad.intro" = "Vastgelegd op macOS %1$@. Op macOS 13–15 ordent MacReplica Launchpad zo; vanaf macOS 26 (zonder Launchpad) dient deze lijst als referentie.";
+"report.column.page" = "Pagina";
+"report.column.folder" = "Map";
+"report.column.apps" = "Apps";

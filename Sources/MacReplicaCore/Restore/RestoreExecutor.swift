@@ -51,6 +51,8 @@ public struct RestoreEnvironment: Sendable {
     public var adminPasswordValidator: AdminPasswordValidating = SudoPasswordValidator()
     /// Additional variables for the askpass helper (tests: `MACREPLICA_ASKPASS_NO_DIALOG`).
     public var askpassExtraEnvironment: [String: String] = [:]
+    /// How long the Launchpad step waits for the Dock to list apps installed by this restore.
+    public var launchpadSettleTimeout: TimeInterval = 60
 
     public init(layout: SystemLayout, runner: CommandRunning, privileged: PrivilegedExecuting, homebrewSource: HomebrewPackageSource,
                 localizer: Localizer, log: LogStore, targetArchitecture: CPUArchitecture = SystemInfo.currentArchitecture,
@@ -328,6 +330,8 @@ struct Inspector: Sendable {
             return .manualStep
         case .displayProfile:
             return predictDisplayProfile(item)
+        case .launchpadLayout:
+            return predictLaunchpad(item)
         }
     }
 }
@@ -551,6 +555,8 @@ public final class RestoreExecutor: Sendable {
                 return checkGuidedInstall(item, inspector: inspector)
             case .displayProfile:
                 return restoreDisplayProfile(item, inspector: inspector, onEvent: onEvent)
+            case .launchpadLayout:
+                return await restoreLaunchpad(item, inspector: inspector, plan: plan, session: session, onEvent: onEvent)
             }
         } catch is CancellationError {
             return failed(item, .cancelled)

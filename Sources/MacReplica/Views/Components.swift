@@ -160,6 +160,7 @@ enum Symbols {
         case .applicationData: return "folder"
         case .fonts: return "textformat"
         case .colorProfiles: return "paintpalette"
+        case .launchpad: return "square.grid.3x3"
         }
     }
 
@@ -180,6 +181,7 @@ enum Symbols {
         case .toolchainStep: return "hammer"
         case .manualApp: return "arrow.down.circle"
         case .displayProfile: return "display"
+        case .launchpadLayout: return "square.grid.3x3"
         }
     }
 

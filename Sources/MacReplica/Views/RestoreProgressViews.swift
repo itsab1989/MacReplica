@@ -246,7 +246,7 @@ struct RestoreSummaryView: View {
                     } else if failed.isEmpty {
                         NoticeView(style: .success, title: l.t("summary.allDone.title"), message: l.t("summary.allDone.message"))
                     }
-                    let waitingForApps = results.filter { $0.0.kind == .applicationData && $0.1.outcome.isOpen }
+                    let waitingForApps = results.filter { ($0.0.kind == .applicationData || $0.0.kind == .launchpadLayout) && $0.1.outcome.isOpen }
                     if !waitingForApps.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(l.t("summary.waitingForAppsHeading")).font(.headline)

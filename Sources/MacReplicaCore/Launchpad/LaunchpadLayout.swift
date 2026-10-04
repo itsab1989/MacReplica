@@ -4,15 +4,43 @@ import SQLite3
 /// The arrangement of Launchpad (macOS 13–15): pages with apps and folders, folders with their name and pages.
 /// Apps are recorded by bundle identifier only. macOS 26 replaced Launchpad with the Apps view, which has no
 /// user arrangement, so there the layout is only kept as a reference.
-public struct LaunchpadLayout: Codable, Equatable, Sendable {
-    public enum Entry: Codable, Equatable, Sendable {
+public struct LaunchpadLayout: Codable, Equatable, Hashable, Sendable {
+    /// Written as `{"app": "com.apple.Safari"}` or `{"folder": {"name": "Work", "pages": [["com.apple.mail"]]}}`.
+    public enum Entry: Codable, Equatable, Hashable, Sendable {
         case app(String)
         case folder(name: String, pages: [[String]])
+
+        private enum CodingKeys: String, CodingKey { case app, folder }
+        private struct Folder: Codable { var name: String, pages: [[String]] }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            if let app = try c.decodeIfPresent(String.self, forKey: .app) {
+                self = .app(app)
+            } else {
+                let folder = try c.decode(Folder.self, forKey: .folder)
+                self = .folder(name: folder.name, pages: folder.pages)
+            }
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            switch self {
+            case .app(let id): try c.encode(id, forKey: .app)
+            case .folder(let name, let pages): try c.encode(Folder(name: name, pages: pages), forKey: .folder)
+            }
+        }
     }
 
     public var pages: [[Entry]]
     /// macOS version the layout was recorded on.
     public var macOSVersion: String
+
+    // `macosVersion` survives the manifest's snake_case conversion (`macOSVersion` would come back as `macOsVersion`).
+    private enum CodingKeys: String, CodingKey {
+        case pages
+        case macOSVersion = "macosVersion"
+    }
 
     public init(pages: [[Entry]], macOSVersion: String) {
         self.pages = pages
@@ -25,6 +53,22 @@ public struct LaunchpadLayout: Codable, Equatable, Sendable {
             if case .folder(_, let pages) = entry { return count + pages.flatMap { $0 }.count }
             return count + 1
         }
+    }
+
+    /// The layout without these apps; folders and pages that become empty are left out.
+    public func removing(_ bundleIDs: Set<String>) -> LaunchpadLayout {
+        guard !bundleIDs.isEmpty else { return self }
+        let kept = pages.map { page in
+            page.compactMap { entry -> Entry? in
+                switch entry {
+                case .app(let id): return bundleIDs.contains(id) ? nil : entry
+                case .folder(let name, let folderPages):
+                    let remaining = folderPages.map { $0.filter { !bundleIDs.contains($0) } }.filter { !$0.isEmpty }
+                    return remaining.isEmpty ? nil : .folder(name: name, pages: remaining)
+                }
+            }
+        }.filter { !$0.isEmpty }
+        return LaunchpadLayout(pages: kept, macOSVersion: macOSVersion)
     }
 
     /// Launchpad exists up to macOS 15.
@@ -105,6 +149,9 @@ public struct LaunchpadStore: Sendable {
 
     static let pageCapacity = 35
 
+    /// Makes the Dock load a rebuilt database (`applyAndReloadDock`); the simulation records the signals instead.
+    public var signalDock: @Sendable (Int32) -> Void = LaunchpadStore.signalDock
+
     // MARK: Reading
 
     /// Reads a copy of the database (with its write-ahead log), so the Dock's file is never opened for writing.
@@ -155,7 +202,8 @@ public struct LaunchpadStore: Sendable {
     /// back when it quits normally, which would undo the change: it is paused while the database is written
     /// and then ended without saving (launchd starts it again at once, and it reads the new arrangement).
     @discardableResult
-    public func applyAndReloadDock(_ layout: LaunchpadLayout, signal: (Int32) -> Void = LaunchpadStore.signalDock) throws -> Int {
+    public func applyAndReloadDock(_ layout: LaunchpadLayout, signal: ((Int32) -> Void)? = nil) throws -> Int {
+        let signal = signal ?? signalDock
         signal(SIGSTOP)
         let placed: Int
         do {
@@ -337,5 +385,28 @@ public struct LaunchpadStore: Sendable {
             })
         }
         return result
+    }
+}
+
+extension SystemLayout {
+    /// The Dock's Launchpad database: in a simulation or test sandbox a file inside it (the Dock is never
+    /// signalled there), otherwise the current user's.
+    public var launchpadStore: LaunchpadStore? {
+        if let root = simulationRoot {
+            var store = LaunchpadStore(database: root.appendingPathComponent("state/launchpad/db/db"))
+            let log = root.appendingPathComponent("state/dock-signals")
+            store.signalDock = { signal in
+                let line = Data("\(signal)\n".utf8)
+                if let handle = try? FileHandle(forWritingTo: log) {
+                    handle.seekToEndOfFile()
+                    handle.write(line)
+                    try? handle.close()
+                } else {
+                    try? line.write(to: log)
+                }
+            }
+            return store
+        }
+        return LaunchpadStore.live()
     }
 }

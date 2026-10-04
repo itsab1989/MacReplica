@@ -1148,3 +1148,15 @@
 "guidedStep.finishAdditionalPackage" = "Complete “%1$@” in Installer, then choose Check Again. (MacReplica cannot check a licence itself; open the app to confirm it.)";
 "note.additionalPackageOpened" = "“%1$@” was installed in Installer; check the licence in the app.";
 "note.additionalPackageNotInstalled" = "“%1$@” was not installed (skipped, or it did not match the checksum or developer of the old Mac).";
+"component.launchpad" = "Launchpad layout";
+"component.launchpad.hint" = "Pages, folders with their names and the order of your apps (macOS 13–15). Arranged last, once the apps are installed; apps you do not restore are left out.";
+"kind.launchpadLayout" = "Launchpad";
+"prediction.arrangeLaunchpad" = "Will be arranged as on the old Mac";
+"skip.launchpadNotAvailable" = "Launchpad does not exist on this macOS (replaced by the Apps view) – the layout is kept in the backup's report";
+"skip.launchpadWaitingForApps.one" = "Arranged with the apps installed so far – arranged again when the restore continues and the remaining app is installed";
+"skip.launchpadWaitingForApps.other" = "Arranged with the apps installed so far – arranged again when the restore continues and the remaining %1$d apps are installed";
+"inventory.warning.launchpadUnreadable" = "The Launchpad layout could not be read; everything else is backed up.";
+"report.launchpad.intro" = "Recorded on macOS %1$@. On macOS 13–15 MacReplica arranges Launchpad like this; on macOS 26 and later (no Launchpad) this list is a reference.";
+"report.column.page" = "Page";
+"report.column.folder" = "Folder";
+"report.column.apps" = "Apps";

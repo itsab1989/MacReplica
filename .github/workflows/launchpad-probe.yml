@@ -46,9 +46,9 @@ jobs:
           DB="$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db"
           mkdir -p dbs/fresh && cp "$DB"/db* dbs/fresh/
           cat > recorded.json <<'JSON'
-          {"macOSVersion": "14", "pages": [
+          {"macosVersion": "14", "pages": [
             [{"folder": {"name": "MacReplica Test", "pages": [["com.apple.Safari", "com.apple.Notes", "com.apple.TextEdit"]]}},
-             {"app": {"_0": "com.apple.AppStore"}}, {"app": {"_0": "com.apple.mail"}}],
+             {"app": "com.apple.AppStore"}, {"app": "com.apple.mail"}],
             [{"folder": {"name": "Werkzeuge & Co", "pages": [["com.apple.calculator", "com.apple.Preview"]]}}]
           ]}
           JSON

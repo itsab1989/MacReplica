@@ -633,6 +633,9 @@ final class AppModel: ObservableObject {
             homebrewSource: services.homebrewSource, localizer: l, log: log, targetArchitecture: services.architecture,
             askpassPath: services.askpassPath)
         environment.credentialPassphrase = restorePassphrase
+        environment.macOSVersion = services.macOSVersion
+        // The simulated Dock never lists newly installed apps by itself.
+        if services.layout.isSimulation { environment.launchpadSettleTimeout = 2 }
         environment.adminPasswordValidator = services.adminPasswordValidator
         let texts = (title: l.t("adminPassword.title"), message: l.t("adminPassword.message"), wrong: l.t("adminPassword.wrong"),
                      ok: l.t("askpass.ok"), cancel: l.t("common.cancel"))

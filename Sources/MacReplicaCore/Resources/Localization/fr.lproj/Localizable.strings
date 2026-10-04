@@ -1146,3 +1146,15 @@
 "guidedStep.finishAdditionalPackage" = "Termine « %1$@ » dans Programme d’installation, puis choisis Vérifier à nouveau. (MacReplica ne peut pas vérifier une licence ; ouvre l’app pour la confirmer.)";
 "note.additionalPackageOpened" = "« %1$@ » a été installé dans Programme d’installation ; vérifie la licence dans l’app.";
 "note.additionalPackageNotInstalled" = "« %1$@ » n’a pas été installé (ignoré, ou la somme de contrôle ou le développeur ne correspondaient pas à l’ancien Mac).";
+"component.launchpad" = "Disposition du Launchpad";
+"component.launchpad.hint" = "Pages, dossiers avec leur nom et ordre de vos apps (macOS 13–15). Organisé en dernier, une fois les apps installées ; les apps que vous ne restaurez pas sont ignorées.";
+"kind.launchpadLayout" = "Launchpad";
+"prediction.arrangeLaunchpad" = "Sera organisé comme sur l'ancien Mac";
+"skip.launchpadNotAvailable" = "Le Launchpad n'existe pas dans ce macOS (remplacé par la vue Apps) – la disposition reste dans le rapport de la sauvegarde";
+"skip.launchpadWaitingForApps.one" = "Organisé avec les apps installées jusqu'ici – sera réorganisé quand la restauration reprendra et que l'app restante sera installée";
+"skip.launchpadWaitingForApps.other" = "Organisé avec les apps installées jusqu'ici – sera réorganisé quand la restauration reprendra et que les %1$d apps restantes seront installées";
+"inventory.warning.launchpadUnreadable" = "La disposition du Launchpad n'a pas pu être lue ; tout le reste est sauvegardé.";
+"report.launchpad.intro" = "Enregistré sous macOS %1$@. Sous macOS 13–15, MacReplica organise le Launchpad ainsi ; à partir de macOS 26 (sans Launchpad), cette liste sert de référence.";
+"report.column.page" = "Page";
+"report.column.folder" = "Dossier";
+"report.column.apps" = "Apps";

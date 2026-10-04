@@ -1146,3 +1146,15 @@
 "guidedStep.finishAdditionalPackage" = "Fullfør «%1$@» i Installasjonsprogram og velg deretter Sjekk på nytt. (MacReplica kan ikke kontrollere en lisens selv; åpne appen for å bekrefte den.)";
 "note.additionalPackageOpened" = "«%1$@» ble installert i Installasjonsprogram; kontroller lisensen i appen.";
 "note.additionalPackageNotInstalled" = "«%1$@» ble ikke installert (hoppet over, eller sjekksum eller utvikler stemte ikke med den gamle Macen).";
+"component.launchpad" = "Launchpad-oppsett";
+"component.launchpad.hint" = "Sider, mapper med navnene sine og rekkefølgen på appene dine (macOS 13–15). Ordnes til slutt, når appene er installert; apper du ikke gjenoppretter, utelates.";
+"kind.launchpadLayout" = "Launchpad";
+"prediction.arrangeLaunchpad" = "Ordnes som på den gamle Macen";
+"skip.launchpadNotAvailable" = "Launchpad finnes ikke i denne macOS-versjonen (erstattet av Apper-visningen) – oppsettet beholdes i sikkerhetskopiens rapport";
+"skip.launchpadWaitingForApps.one" = "Ordnet med appene som er installert så langt – ordnes på nytt når gjenopprettingen fortsetter og den gjenværende appen er installert";
+"skip.launchpadWaitingForApps.other" = "Ordnet med appene som er installert så langt – ordnes på nytt når gjenopprettingen fortsetter og de gjenværende %1$d appene er installert";
+"inventory.warning.launchpadUnreadable" = "Launchpad-oppsettet kunne ikke leses; alt annet sikkerhetskopieres.";
+"report.launchpad.intro" = "Registrert på macOS %1$@. På macOS 13–15 ordner MacReplica Launchpad slik; på macOS 26 og nyere (uten Launchpad) er listen en referanse.";
+"report.column.page" = "Side";
+"report.column.folder" = "Mappe";
+"report.column.apps" = "Apper";

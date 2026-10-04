@@ -115,3 +115,18 @@ extension SyntheticLaunchpad {
         return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int(statement, 0)) : -1
     }
 }
+
+extension SyntheticLaunchpad {
+    /// What the Dock does when an app is installed: a new entry on the last page.
+    public static func addApp(_ bundle: String, to url: URL) throws {
+        var db: OpaquePointer?
+        guard sqlite3_open(url.path, &db) == SQLITE_OK, let db else { throw CocoaError(.fileWriteUnknown) }
+        defer { sqlite3_close(db) }
+        let sql = """
+        INSERT INTO items (uuid, flags, type, parent_id, ordering)
+          VALUES ('\(UUID().uuidString)', 0, 4, (SELECT MAX(rowid) FROM items WHERE type=3 AND parent_id=1), 0);
+        INSERT INTO apps VALUES (last_insert_rowid(), '\(bundle)', '\(bundle)', NULL, NULL, 0, NULL);
+        """
+        guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw CocoaError(.fileWriteUnknown) }
+    }
+}

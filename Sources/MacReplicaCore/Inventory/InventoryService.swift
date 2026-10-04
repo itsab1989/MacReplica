@@ -26,6 +26,8 @@ public enum InventoryWarning: Equatable, Sendable {
     case masNeeded(unidentifiedApps: Int, homebrewAvailable: Bool)
     case masListFailed
     case catalogUnavailable
+    /// The Launchpad arrangement could not be read; the backup has everything else.
+    case launchpadUnreadable
 }
 
 public struct InventoryResult: Sendable {
@@ -105,7 +107,11 @@ public struct InventoryResult: Sendable {
     /// Leaves out applications the user deselected for the backup (by `AppRecord.id`).
     public mutating func excludeApplications(_ ids: Set<String>) {
         guard !ids.isEmpty else { return }
+        let removed = Set(manifest.applications.filter { ids.contains($0.id) }.compactMap(\.bundleIdentifier))
         manifest.applications.removeAll { ids.contains($0.id) }
+        // They leave the Launchpad layout too (unless another copy of the app stays in the backup).
+        let kept = Set(manifest.applications.compactMap(\.bundleIdentifier))
+        manifest.launchpadLayout = manifest.launchpadLayout?.removing(removed.subtracting(kept))
     }
 
     /// Adds a folder of application data chosen by the user (replacing an earlier scan of it).
@@ -325,6 +331,18 @@ public struct InventoryService: Sendable {
         manifest.hardwareKeys = keys
         manifest.displayProfiles = DisplayProfileScanner.assignments(displays: displayManager.displays(), profiles: profiles.map(\.record),
                                                                      layout: layout, keys: keys)
+        // The Launchpad arrangement (read from a copy of the Dock's database; macOS 13–15 only).
+        if LaunchpadLayout.isSupported(macOSVersion: macOSVersion), let store = layout.launchpadStore {
+            let work = FileManager.default.temporaryDirectory.appendingPathComponent("macreplica-launchpad-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: work) }
+            do {
+                let recorded = try store.read(macOSVersion: macOSVersion, work: work)
+                if recorded.appCount > 0 { manifest.launchpadLayout = recorded }
+            } catch LaunchpadError.databaseMissing {
+            } catch {
+                warnings.append(.launchpadUnreadable)
+            }
+        }
         manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)),
                                                     installedAppNames: Set(apps.map(\.name)))
         var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)

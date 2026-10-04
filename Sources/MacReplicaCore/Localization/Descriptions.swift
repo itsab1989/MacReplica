@@ -46,6 +46,7 @@ extension Localizer {
         case .credentials: return t("component.credentials")
         case .fonts: return t("component.fonts")
         case .colorProfiles: return t("component.colorProfiles")
+        case .launchpad: return t("component.launchpad")
         }
     }
 
@@ -63,6 +64,7 @@ extension Localizer {
         case .credentials: return t("component.credentials.hint")
         case .fonts: return t("component.fonts.hint")
         case .colorProfiles: return t("component.colorProfiles.hint")
+        case .launchpad: return t("component.launchpad.hint")
         }
     }
 
@@ -85,6 +87,7 @@ extension Localizer {
         case .toolchainStep: return t("kind.toolchainStep")
         case .manualApp: return t("kind.manualApp")
         case .displayProfile: return t("kind.displayProfile")
+        case .launchpadLayout: return t("kind.launchpadLayout")
         }
     }
 
@@ -128,6 +131,8 @@ extension Localizer {
         case .applicationNotInstalled(let name): return t("skip.applicationNotInstalled", name)
         case .applicationVersionOlder(let name, let installed, let backup): return t("skip.applicationVersionOlder", name, installed, backup)
         case .needsFullDiskAccess(let name): return t("skip.needsFullDiskAccess", name)
+        case .launchpadNotAvailable: return t("skip.launchpadNotAvailable")
+        case .launchpadWaitingForApps(let count): return p("skip.launchpadWaitingForApps", count)
         }
     }
 
@@ -304,6 +309,7 @@ extension Localizer {
             case .commandLineTools: return t("prediction.installCommandLineTools")
             case .homebrew: return t("prediction.installHomebrew")
             case .tap: return t("prediction.addTap")
+            case .launchpadLayout: return t("prediction.arrangeLaunchpad")
             default: return t("prediction.install", itemMethodText(kind))
             }
         case .willCopy: return t("prediction.copy")
@@ -352,6 +358,7 @@ extension Localizer {
         case .masNeeded(let count, _): return p("inventory.warning.masNeeded", count)
         case .masListFailed: return t("inventory.warning.masListFailed")
         case .catalogUnavailable: return t("inventory.warning.catalogUnavailable")
+        case .launchpadUnreadable: return t("inventory.warning.launchpadUnreadable")
         }
     }
 

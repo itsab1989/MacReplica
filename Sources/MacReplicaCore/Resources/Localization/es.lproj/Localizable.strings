@@ -1146,3 +1146,15 @@
 "guidedStep.finishAdditionalPackage" = "Completa «%1$@» en el Instalador y elige Volver a comprobar. (MacReplica no puede comprobar una licencia; abre la app para confirmarla.)";
 "note.additionalPackageOpened" = "«%1$@» se instaló en el Instalador; comprueba la licencia en la app.";
 "note.additionalPackageNotInstalled" = "«%1$@» no se instaló (omitido, o la suma de verificación o el desarrollador no coincidían con el Mac anterior).";
+"component.launchpad" = "Disposición de Launchpad";
+"component.launchpad.hint" = "Páginas, carpetas con sus nombres y el orden de tus apps (macOS 13–15). Se ordena al final, cuando las apps están instaladas; las apps que no restauras se omiten.";
+"kind.launchpadLayout" = "Launchpad";
+"prediction.arrangeLaunchpad" = "Se ordenará como en el Mac anterior";
+"skip.launchpadNotAvailable" = "Launchpad no existe en este macOS (sustituido por la vista Apps); la disposición se conserva en el informe de la copia";
+"skip.launchpadWaitingForApps.one" = "Ordenado con las apps instaladas hasta ahora; se volverá a ordenar cuando continúe la restauración y la app restante esté instalada";
+"skip.launchpadWaitingForApps.other" = "Ordenado con las apps instaladas hasta ahora; se volverá a ordenar cuando continúe la restauración y las %1$d apps restantes estén instaladas";
+"inventory.warning.launchpadUnreadable" = "No se pudo leer la disposición de Launchpad; todo lo demás se copia.";
+"report.launchpad.intro" = "Registrado en macOS %1$@. En macOS 13–15, MacReplica ordena Launchpad así; en macOS 26 y posteriores (sin Launchpad), esta lista sirve de referencia.";
+"report.column.page" = "Página";
+"report.column.folder" = "Carpeta";
+"report.column.apps" = "Apps";

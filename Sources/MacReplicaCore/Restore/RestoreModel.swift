@@ -15,6 +15,8 @@ public enum RestoreComponent: String, Codable, Sendable, CaseIterable, Identifia
     case applicationData
     case fonts
     case colorProfiles
+    /// The Launchpad arrangement: pages, folders and the order of the apps (macOS 13–15).
+    case launchpad
     /// Encrypted credentials; only restored when the user switches this on.
     case credentials
 
@@ -44,6 +46,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
     case manualApp
     /// A profile assigned to a display on the old Mac, assigned again here.
     case displayProfile
+    /// The Launchpad arrangement; the last step, once the apps are installed.
+    case launchpadLayout
 
     /// Rough relative duration, used to estimate the remaining time before real timings exist.
     var weight: Double {
@@ -61,6 +65,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .gitConfiguration, .credential: return 1
         case .toolchainStep: return 60
         case .manualApp, .displayProfile: return 1
+        case .launchpadLayout: return 15
         }
     }
 
@@ -76,7 +81,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .credential: return .permissions
         case .toolchainStep: return .developerTools
         case .manualApp: return .downloads
-        case .displayProfile: return .restore
+        case .displayProfile, .launchpadLayout: return .restore
         }
     }
 }
@@ -110,6 +115,8 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     /// For `displayProfile`: the assignment and the keys to recognise the display.
     public var displayAssignment: DisplayProfileAssignment?
     public var hardwareKeys: HardwareKeys?
+    /// For `launchpadLayout`: the arrangement recorded on the old Mac.
+    public var launchpadLayout: LaunchpadLayout?
 
     public init(id: String, kind: RestoreItemKind, title: String, identifier: String, originalVersion: String? = nil,
                 bundleIdentifier: String? = nil, appBundleNames: [String] = [], tapRemote: String? = nil, file: FileRecord? = nil,
@@ -134,6 +141,7 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     public static let commandLineToolsID = "prerequisite:command-line-tools"
     public static let homebrewID = "prerequisite:homebrew"
     public static let masToolID = "prerequisite:mas"
+    public static let launchpadID = "launchpad:layout"
 }
 
 /// What to do when a font or profile already exists with different content.
@@ -280,6 +288,12 @@ public enum SkipReason: Codable, Equatable, Sendable {
     case applicationVersionOlder(name: String, installed: String, backup: String)
     /// macOS protects the location (Mail, another developer's app data); MacReplica needs Full Disk Access.
     case needsFullDiskAccess(name: String)
+    /// Launchpad does not exist on this macOS (replaced by the Apps view in macOS 26); the layout stays in the
+    /// backup's report as a reference.
+    case launchpadNotAvailable
+    /// Launchpad was arranged with the apps installed so far; it is arranged again when the restore continues
+    /// and the remaining apps are installed.
+    case launchpadWaitingForApps(count: Int)
 }
 
 public enum ItemOutcome: Codable, Equatable, Sendable {
@@ -310,7 +324,7 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
         guard case .skipped(let reason) = self else { return false }
         switch reason {
         case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected,
-             .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess: return true
+             .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess, .launchpadWaitingForApps: return true
         default: return false
         }
     }
