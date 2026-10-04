@@ -375,6 +375,30 @@
         "LaunchpadRestoreTests"
       ],
       "area": "Launchpad layout"
+    },
+    {
+      "file": "Backup/BackupSelectionPreset.swift",
+      "tests": [
+        "LibreOfficeAndSelectionTests"
+      ],
+      "area": "Saved backup selection"
+    },
+    {
+      "file": "Homebrew/HomebrewClient.swift",
+      "tests": [
+        "HomebrewTests",
+        "InventoryTests"
+      ],
+      "area": "Homebrew detection"
+    },
+    {
+      "file": "Downloads/DiskImageCommands.swift",
+      "tests": [
+        "DownloadTests",
+        "OwnInstallerTests",
+        "GuidedInstallationTests"
+      ],
+      "area": "Disk images"
     }
   ],
   "exclusions": [
@@ -585,6 +609,11 @@
       "file": "Restore/LaunchpadRestore.swift",
       "pattern": "Date\\(\\) >= deadline",
       "reason": "Timing boundary of the settle wait (>= vs >) is not observable."
+    },
+    {
+      "file": "Homebrew/HomebrewClient.swift",
+      "pattern": "sorted \\{ \\$0\\.(name|token) < \\$1\\.(name|token) \\}",
+      "reason": "Package names and tokens are unique, so < and <= sort the same (equivalent mutant)."
     }
   ]
 }

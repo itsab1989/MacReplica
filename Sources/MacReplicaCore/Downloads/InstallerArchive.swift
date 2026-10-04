@@ -140,14 +140,13 @@ public struct InstallerArchiveInspector: Sendable {
     }
 
     private func describeDiskImage(_ file: URL, into archive: inout InstallerArchive, work: URL, depth: Int) async throws {
-        let info = try await runner.run(Command(executable: layout.hdiutil, arguments: ["imageinfo", "-plist", file.path], environment: environment, timeout: 120))
+        let info = try await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["imageinfo", "-plist", file.path], environment: environment, timeout: 120))
         guard info.succeeded else { throw InstallerInspectionError.unreadable }
         if DownloadInstaller.hasLicenseAgreement(imageInfo: info.stdout) { throw InstallerInspectionError.licenseAgreement }
         let mountRoot = work.appendingPathComponent("mount-\(depth)")
         try FileManager.default.createDirectory(at: mountRoot, withIntermediateDirectories: true)
-        let attach = try await runner.run(Command(executable: layout.hdiutil,
-                                                  arguments: ["attach", "-plist", "-nobrowse", "-readonly", "-noautoopen", "-mountrandom", mountRoot.path, file.path],
-                                                  environment: environment, timeout: 300))
+        let attach = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: layout.hdiutil, environment: environment,
+                                                                 arguments: ["attach", "-plist", "-nobrowse", "-readonly", "-noautoopen", "-mountrandom", mountRoot.path, file.path])
         guard attach.succeeded, let mountPoint = DownloadInstaller.mountPoint(fromAttachOutput: attach.stdout) else {
             throw InstallerInspectionError.unreadable
         }
@@ -162,9 +161,9 @@ public struct InstallerArchiveInspector: Sendable {
     }
 
     private func detach(_ mountPoint: URL) async {
-        let result = try? await runner.run(Command(executable: layout.hdiutil, arguments: ["detach", mountPoint.path], environment: environment, timeout: 120))
+        let result = try? await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["detach", mountPoint.path], environment: environment, timeout: 120))
         if result?.succeeded != true {
-            _ = try? await runner.run(Command(executable: layout.hdiutil, arguments: ["detach", "-force", mountPoint.path], environment: environment, timeout: 120))
+            _ = try? await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["detach", "-force", mountPoint.path], environment: environment, timeout: 120))
         }
     }
 

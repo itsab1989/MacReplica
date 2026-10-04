@@ -253,4 +253,28 @@ struct HomebrewTests {
         #expect(!inventory.manifest.brewFormulae.isEmpty && !inventory.manifest.brewCasks.isEmpty)
         #expect(!inventory.warnings.contains { if case .homebrewBroken = $0 { return true }; return false })
     }
+
+    @Test func versionListsTapTrustAndNameLimits() throws {
+        #expect(HomebrewClient.parseListVersions("node 20.1.0 22.4.0\nother 1.0") == "22.4.0", "the newest version of the first line")
+        #expect(HomebrewClient.parseListVersions("node") == nil && HomebrewClient.parseListVersions("") == nil)
+        #expect(HomebrewClient.parseListVersions("node 1.0") == "1.0")
+        #expect(HomebrewClient.requiresTapTrust("6.0.0") && HomebrewClient.requiresTapTrust("7.0.7"))
+        #expect(!HomebrewClient.requiresTapTrust("5.9.9") && !HomebrewClient.requiresTapTrust(">=4.3.0"))
+        #expect(HomebrewClient.requiresTapTrust("16.0"), "the major version is compared as a number")
+        try HomebrewClient.validatePackageName(String(repeating: "a", count: 200))
+        #expect(throws: HomebrewError.invalidPackageName(String(repeating: "a", count: 201))) {
+            try HomebrewClient.validatePackageName(String(repeating: "a", count: 201))
+        }
+    }
+
+    /// A `brew` that is a dangling link (Homebrew removed, link left behind) is reported, not ignored.
+    @Test func aDanglingBrewLinkIsReportedAsBroken() async throws {
+        let sandbox = try Sandbox("brew-dangling")
+        let layout = try Self.layout(sandbox)
+        let first = layout.brewExecutable(in: layout.homebrewPrefixes[0])
+        try FileManager.default.createDirectory(at: URL(fileURLWithPath: first).deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(atPath: first, withDestinationPath: sandbox.url.appendingPathComponent("gone/brew").path)
+        let runner = ScriptedRunner { _ in CommandResult(exitCode: 0, stdout: "Homebrew 4.4.0", stderr: "") }
+        #expect(await HomebrewClient(layout: layout, runner: runner).locate() == .broken(executable: first, reason: "not executable"))
+    }
 }

@@ -58,6 +58,10 @@ struct LibreOfficeAndSelectionTests {
                                            personalFolders: ["~/Documents/Novel"],
                                            ownInstallers: ["com.microsoft.Word": [.init(path: "/Volumes/USB/Office.pkg", include: true)]],
                                            destination: "/Volumes/Backup")
+        // Without saved choices: the same defaults as the selection screen.
+        let plain = BackupSelectionPreset()
+        #expect(plain.includePythonSettings && plain.includeGitSettings && !plain.includeGitEmail && plain.includeDisplayAssignments)
+        #expect(plain.format == BackupSelectionPreset.currentFormat && plain.destination == nil && plain.personalFolders.isEmpty)
         let url = sandbox.url.appendingPathComponent(BackupSelectionPreset.fileName)
         try preset.write(to: url)
         let read = try BackupSelectionPreset.read(from: url)

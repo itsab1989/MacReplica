@@ -361,13 +361,7 @@ struct DownloadInstallerTests {
         let source = try fixture.sandbox.folder("image")
         try SimulationBuilder.makeSyntheticApp(name: "Disk App", bundleID: "com.example.diskapp", version: "1.0", in: source)
         let dmg = fixture.root.appendingPathComponent("disk.dmg")
-        let create = Process()
-        create.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-        create.arguments = ["create", "-quiet", "-srcfolder", source.path, "-volname", "MacReplicaTest", "-format", "UDZO", dmg.path]
-        create.standardError = FileHandle.nullDevice
-        try create.run()
-        create.waitUntilExit()
-        try #require(create.terminationStatus == 0, "hdiutil create")
+        try OwnInstallerTests.createImage(source: source, name: "MacReplicaTest", at: dmg)
         let layout = toolchainLayout(fixture.sandbox)
         try FileManager.default.createDirectory(at: layout.applicationFolders[0], withIntermediateDirectories: true)
         let installer = fixture.installer(layout: layout)

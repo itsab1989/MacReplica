@@ -19,11 +19,27 @@ struct OwnInstallerTests {
     }
 
     /// A disk image with an app, like most vendor downloads.
+    /// Created through MacReplica's disk-image queue, so parallel tests do not compete for macOS's disk-image service.
+    static func createImage(source: URL, name: String, at dmg: URL) throws {
+        let semaphore = DispatchSemaphore(value: 0)
+        final class Box: @unchecked Sendable { var status: Int32 = -1 }
+        let box = Box()
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: ["/usr/bin/hdiutil"]), baseEnvironment: [:])
+        Task.detached {
+            let result = try? await DiskImageCommands.run(runner, Command(executable: "/usr/bin/hdiutil",
+                arguments: ["create", "-quiet", "-srcfolder", source.path, "-volname", name, "-format", "UDZO", dmg.path], environment: [:], timeout: 300))
+            box.status = result?.exitCode ?? -1
+            semaphore.signal()
+        }
+        semaphore.wait()
+        try #require(box.status == 0, "hdiutil create")
+    }
+
     static func diskImage(app: String, bundleID: String, version: String, in sandbox: Sandbox, name: String) throws -> URL {
         let source = try sandbox.folder("image-\(name)")
         try SimulationBuilder.makeSyntheticApp(name: app, bundleID: bundleID, version: version, in: source)
         let dmg = sandbox.url.appendingPathComponent("\(name).dmg")
-        try run("/usr/bin/hdiutil", ["create", "-quiet", "-srcfolder", source.path, "-volname", name, "-format", "UDZO", dmg.path])
+        try createImage(source: source, name: name, at: dmg)
         return dmg
     }
 

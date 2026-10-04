@@ -10,6 +10,16 @@
 | Save and load the selection, next to the backup | *Save Selection … / Load Selection …*; saved automatically next to the backup; offered at the next scan (*Use It*) | **real app, simulated Mac**: two choices changed, backup saved (selection file next to it), new scan → offered → applied → both choices back; *Load Selection …* likewise; automated (format, defaults for new items, newer format refused) |
 | Explain the options | Hover text for every kind of application data (104 kinds × 7 languages): what it is, contents with example names, origin, support level, notes | **real app**: hover texts read through accessibility (AXHelp) for LibreOffice settings and macros and Krita; automated (every kind explained in every language) |
 
+Complete on-screen run (real app, simulated Macs, accessibility actions only): backup with the location card, an own
+folder and LibreOffice's macros switched on → *Save Backup* (format 3, selection file next to it) → restore on the new
+Mac: 62 successful, 0 failed, 5 guided; all 10 LibreOffice files identical, settings filled in with the new home folder,
+scripts not restored (not selected), own folder back → apps installed, *Continue* → **67 successful, 0 failed**.
+Screenshots E1–E5 in `~/Desktop/MacReplica-Staging/validation/round4-gui/`.
+
+Mutation testing of the new code: `BackupSelectionPreset.swift` 100 % (8 of 8), `HomebrewClient.swift` 100 % (22 of 22;
+3 equivalent sort mutants excluded), after adding tests for the defaults, version lists, tap trust, name length and a
+dangling `brew` link.
+
 Found during the on-screen run and fixed: the *Use It* button could not be pressed through accessibility because
 its row carried an identifier that hid the button's own.
 
