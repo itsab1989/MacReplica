@@ -477,7 +477,7 @@ struct DownloadInstallerTests {
         let source = try fixture.sandbox.folder("image")
         try SimulationBuilder.makeSyntheticApp(name: "Disk App", bundleID: "com.example.diskapp", version: "1.0", in: source)
         let dmg = fixture.root.appendingPathComponent("disk.dmg")
-        try OwnInstallerTests.createImage(source: source, name: "MacReplicaTest", at: dmg)
+        try await OwnInstallerTests.createImage(source: source, name: "MacReplicaTest", at: dmg)
         let layout = toolchainLayout(fixture.sandbox)
         try FileManager.default.createDirectory(at: layout.applicationFolders[0], withIntermediateDirectories: true)
         let installer = fixture.installer(layout: layout)
