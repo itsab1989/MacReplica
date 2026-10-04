@@ -61,7 +61,7 @@ services on background tasks and turns their results into screens.
 
 ## Manifest
 
-`manifest.json` is versioned (`manifest_version`, currently 2; version 1 backups of MacReplica 1.0.0 are migrated on reading), uses stable snake_case keys and is
+`manifest.json` is versioned (`manifest_version`, currently 3; backups of MacReplica 1.0.0 (version 1) and 1.0.1 (version 2) are migrated on reading, and older versions refuse newer backups instead of restoring them wrongly), uses stable snake_case keys and is
 decoded leniently (missing sections become empty, unknown keys are ignored, newer major versions
 are refused with a clear message). It records the MacReplica version and build, macOS version and
 architecture of the old Mac, and for each item what is needed to restore it — never secrets.

@@ -13,7 +13,7 @@ saved after every step.
 | Homebrew not installed or broken | Inventory continues; warning shown; apps are still matched via the cask catalog where possible. |
 | Homebrew cask catalog unavailable (offline) | Cached copy used if recent; otherwise matching falls back to “install manually” and a warning is shown. |
 | `mas` missing or App Store list fails | App Store apps are still detected from their receipts; warning shown. |
-| A location is not readable (privacy protection) | Recorded as *No permission* with a button to the privacy settings; no Full Disk Access is requested. |
+| A location is not readable (privacy protection) | Recorded as *No permission* with a button to the privacy settings. Full Disk Access is only needed for Mail and Microsoft Office data; those restore steps wait for it and continue once it is granted. |
 | A selected file cannot be read or changes during the backup | Left out, listed in `backup_issues`, the backup is marked *partial*; refused secret files are listed separately and do not make a backup partial. |
 | Destination not writable / disk full | Backup fails with an explanation; the incomplete folder carries MacReplica's marker and can be removed safely. |
 | Font or profile unreadable on the old Mac | Still backed up as a file, without identity; on the new Mac it is shown as *Not compatible*. |

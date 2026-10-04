@@ -66,7 +66,10 @@ MacReplica is a native macOS app. You do not need the Terminal.
 | **Mac App Store** | Apps installed from the App Store | MacReplica opens each app's App Store page; you click *Get* and MacReplica checks the result |
 | **Developer tools** | Version managers, language versions, global tools and other package managers: pyenv, uv, pipx, Conda, nvm, fnm, Volta, npm/pnpm/Yarn, rbenv, RVM, gems, rustup, Cargo, Go, JDKs, SDKMAN, .NET, MacPorts, Nix, Pixi, mise, asdf | Managers from Homebrew, then versions, tools and environments — automatically where possible, as guided steps where not ([details](docs/DEVELOPER_ENVIRONMENTS.md)) |
 | **Python** | Environments, Python versions, packages, lock files and project settings | Environments are rebuilt with the same Python version (exactly from pyenv or uv when available) and packages; uv projects from `uv.lock` — not copied |
-| **App data** | Settings and presets of supported apps, plus folders you add | Copied back after checks; caches, databases and passwords are never included |
+| **App data** | Settings, presets, templates and resources of supported apps, each marked *Fully supported*, *Check in the app* or *Experimental* | Copied back after checks, into the right app version; caches, databases, licences and passwords are never included |
+| **Your own folders** *(optional)* | Folders of your home folder you add (documents, pictures, projects), each on its own, no size limit | Copied back to the same place; existing files are kept unless you choose otherwise |
+| **Launchpad** | Pages, folders with their names and the order of the apps (macOS 13–15) | Arranged last, once the apps are installed (macOS 13–15; a reference in the report on macOS 26 and later) |
+| **Your installers** *(optional)* | Installers you keep (`.pkg`, `.dmg`, `.zip`, e.g. Office LTSC with its activation package) — optionally copied into the backup | Used offline, only if checksum and developer still match |
 | **Fonts and ICC profiles** | Each file individually selectable, with its identity | Compared with what the new Mac already has before anything is copied |
 | **Git settings** | Name, aliases and preferences (email only if you choose) | Written to `~/.gitconfig` |
 | **Credentials** *(optional)* | Only if you opt in per provider — encrypted with your passphrase | Restored only with the passphrase |
@@ -244,17 +247,24 @@ result and continues with what depends on it. The full support matrix is in
 
 ### Application data
 
-MacReplica knows where 15 apps keep data you created — for example settings, keymaps, snippets,
-presets, styles, templates and LUTs — and copies only those folders:
+MacReplica knows where these apps keep data you created — for example settings, keymaps, snippets,
+presets, styles, templates, LUTs, calibrations and AutoCorrect entries — and copies only those files:
 
-Visual Studio Code · Cursor · Sublime Text · JetBrains IDEs · Xcode · BBEdit · iTerm2 ·
-Adobe Photoshop · Camera Raw / Lightroom Classic presets · Capture One · DaVinci Resolve · Blender ·
-After Effects · Keyboard Maestro · Alfred
+Visual Studio Code · Cursor · Sublime Text · JetBrains IDEs · Xcode · BBEdit · iTerm2 · Zed · Ghostty ·
+kitty · WezTerm · Alacritty · Karabiner-Elements · Hammerspoon · Adobe Photoshop (and beta) · Camera Raw /
+Lightroom Classic presets · Capture One · DaVinci Resolve · Blender · After Effects · Motion · Logic Pro ·
+Krita · GIMP · Inkscape · Scribus · Microsoft Word, Excel and PowerPoint · Apple Mail · Cryptomator ·
+DisplayCAL / ArgyllCMS · BenQ Palette Master Element · XP-Pen · Keyboard Maestro · Alfred
+
+Krita, GIMP, Inkscape, Scribus, Cryptomator, DisplayCAL, Word's AutoCorrect, the Photoshop beta's settings and
+Resolve's LUTs and presets were confirmed inside the real apps (*Fully supported*); the others are tested with
+data in the documented layout (*Check in the app*, or *Experimental* where sources are thin).
 
 Caches, databases, logs and credential stores are never included. Data that can contain secrets or
 may not work with another app version is offered but not pre-selected. Apps that rewrite their data
-on quit must be closed while restoring. You can add any other folder inside your home folder
-yourself; files that look like keys or passwords are left out. Sources and the verification status
+on quit must be closed while restoring. Plug-ins, scripts and add-ins are offered but never pre-selected.
+Paths of your home folder inside settings files are adjusted to the new Mac. You can add any other folder
+inside your home folder yourself; files that look like keys or passwords are left out. Sources and the verification status
 of each provider are documented in [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
 MacReplica also recognises tools and services that keep their login in the Keychain or tie it to the
@@ -367,12 +377,15 @@ More in [Troubleshooting](docs/TROUBLESHOOTING.md).
   sign-in; MacReplica tells you which apps and tools are affected.
 - **App data is limited to the supported apps and folders you add**, and data from one app version
   may not work in another. Data of a versioned app is restored into the matching version folder.
+  Apple Mail's signatures and rules are experimental: Mail itself could not be checked, and macOS 27 stores
+  them differently.
+- **Launchpad** exists only up to macOS 15; on macOS 26 and later the recorded layout is a reference.
 - **App Store apps are installed by you** from the page MacReplica opens (signed in with your Apple
   Account); `mas install` needs administrator rights since mas 7.
 - **Python environments are rebuilt, not copied.** Packages from local folders or private
   repositories, and package versions that no longer exist, need attention.
-- **Protected locations** (macOS system folders, other apps' sandboxes) are not read; MacReplica
-  does not request Full Disk Access.
+- **Protected locations** (macOS system folders, other apps' sandboxes) are not read. Mail and Microsoft
+  Office data need Full Disk Access for MacReplica; without it those items are listed as waiting.
 - **Architecture differences:** apps without a build for the new Mac's processor are skipped with an
   explanation; Apple silicon apps cannot run on Intel Macs.
 - **Some developer tools are guided steps**, not automatic: nvm, RVM and SDKMAN (shell functions),
@@ -387,8 +400,8 @@ More in [Troubleshooting](docs/TROUBLESHOOTING.md).
 - Releases are not signed with a Developer ID or notarized (see [Installation](#installation)).
 - macOS 13 has not been tested yet. The Intel version was tested on GitHub's hosted Intel runner and
   under Rosetta, not on an Intel Mac at home.
-- No application-data provider has been verified by restoring into a real installation yet; all are
-  tested with synthetic data that mirrors the documented layouts ([details](docs/PROVIDERS.md)).
+- Application data marked *Check in the app* or *Experimental* is tested with synthetic data that mirrors
+  the documented layouts, not inside the real app ([details](docs/PROVIDERS.md)).
 
 ## Building from source
 

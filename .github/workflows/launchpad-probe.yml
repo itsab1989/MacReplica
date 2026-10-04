@@ -2,12 +2,10 @@ name: Launchpad validation
 
 # Validates MacReplica's Launchpad layout restore on real macOS 14 and 15: Launchpad is reset to Apple's default
 # (as after a fresh installation), a recorded layout is rebuilt, the Dock restarts, and the layout is read back
-# and photographed. Runs only on demand and for changes of this file on the feature branch.
+# and photographed; a layout recorded on macOS 14 is rebuilt on macOS 15. Runs only on demand
+# (Actions › Launchpad validation › Run workflow), because it changes the runner's Dock.
 on:
   workflow_dispatch:
-  push:
-    branches: [feature/knut-round3]
-    paths: [.github/workflows/launchpad-probe.yml, Sources/MacReplicaCore/Launchpad/**, Sources/MacReplicaSimulator/main.swift]
 
 permissions:
   contents: read

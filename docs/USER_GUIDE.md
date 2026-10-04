@@ -27,13 +27,30 @@
      not want ([details](DEVELOPER_ENVIRONMENTS.md));
    - **Developer Settings** — Git settings (your email only if you tick it);
    - **Application Data** — detected app settings and presets, per app and kind (for example Photoshop and
-     the Photoshop beta separately, DaVinci Resolve LUTs, keyboard and layout presets); items that may not
-     work in another app version or may contain keys are not selected. Add more with **Add Folder …**;
+     the Photoshop beta separately, DaVinci Resolve LUTs, Krita resources, GIMP and Inkscape settings, Word
+     templates and AutoCorrect, Mail signatures and rules, the Cryptomator vault list, DisplayCAL calibrations);
+     items that may not work in another app version, may contain keys or contain code (plug-ins, scripts,
+     add-ins) are not selected. Each item shows how well it is supported: *Fully supported* (confirmed in the
+     real app), *Check in the app* or *Experimental*. Mail and Office need **Full Disk Access** for MacReplica
+     (System Settings › Privacy & Security). Add more with **Add Folder …**.
+     *Application data* means the settings, presets, templates and resources you created in an app — never
+     the whole `~/Library`, which also holds caches, licences, databases and the state of this particular Mac;
+   - **Your own folders** — optional: add folders of your home folder (documents, pictures, projects), each
+     on its own and without a size limit. Not the home folder as a whole or `~/Library`. Files that are only in
+     iCloud are left out and listed. MacReplica checks that the destination has enough free space;
+   - **Your installers (offline)** — installers you keep (for example Office LTSC with its activation package,
+     or a tablet driver, on an external drive): choose them for the app (**Use my installer …**) or add a
+     folder. Tick *In backup* to copy them into it (and *Contains my licence* for activation packages: they stay
+     private to your backup). On the new Mac they are used without internet,
+     only if checksum and developer still match;
    - **Credentials** — off unless you choose a provider and set a passphrase;
    - **Sign in again** — services that need a new login on the new Mac;
    - locations macOS did not let MacReplica read;
    - under **Show apps**, every app with a checkbox (untick apps you do not want in the backup) and a
-     badge for beta, nightly and other pre-release channels.
+     badge for beta, nightly and other pre-release channels. An app found in several places is listed once.
+   The **Launchpad** layout (macOS 13–15: pages, folders with their names, the order of the apps) is
+   recorded automatically. If App Store apps could not be identified, MacReplica says so and offers to install
+   the helper tool `mas`, which can look them up.
 3. Click **Save Backup …** and choose the destination folder. MacReplica creates a folder named
    `MacReplica-Backup-<date>-<time>`, verifies it and shows its size, location and contents.
 4. Copy that folder to the new Mac (or keep it on the external drive).
@@ -58,8 +75,15 @@
    Data that belongs to an app that is not installed yet (for example DaVinci Resolve's LUTs and presets)
    waits: install the app, then choose **Continue** — MacReplica restores it then. Resolve presets are never
    put into an older Resolve. Quit Photoshop and Resolve before restoring their settings.
-5. If administrator rights are needed (Homebrew, shared folders), MacReplica explains why and macOS
-   asks for your password once.
+5. If administrator rights are needed (Homebrew packages with installers, shared folders), MacReplica asks
+   for your password **once per restore** in its own window and checks it right away; it is kept only in
+   memory until the restore ends.
+   Steps that need **Full Disk Access** (Mail, Office) wait: allow MacReplica in System Settings › Privacy &
+   Security › Full Disk Access, then continue the restore.
+   **Launchpad** is arranged last, once the apps are installed: apps you did not restore are left out (their
+   folders keep the others), apps that were not in the layout follow on further pages. If apps of the restore
+   still wait for you, Launchpad is arranged with what is there and again when you continue. macOS 26 and
+   later have no Launchpad; the backup's report lists the layout for reference.
 6. Keep MacReplica open and the Mac awake. You can **Stop** at any time; the restore can continue later.
 7. The summary lists what worked, what failed (with what to do), what is **waiting for you**, and
    services to sign in to. **Retry Failed Items** runs only the failed steps again.
