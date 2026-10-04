@@ -21,7 +21,11 @@ struct HomebrewTests {
     @Test func parsesVersionLine() {
         #expect(HomebrewClient.parseVersion("Homebrew 4.4.0\nHomebrew/homebrew-core (git revision abc)") == "4.4.0")
         #expect(HomebrewClient.parseVersion("Warning: x\nHomebrew 4.3.1-12-gabc") == "4.3.1-12-gabc")
-        #expect(HomebrewClient.parseVersion("Homebrew >=4") == nil)
+        #expect(HomebrewClient.parseVersion("Homebrew >=4.6.0 (shallow or no git repository)") == "4.6.0",
+                "Homebrew without git (no Command Line Tools, or installed from the .pkg) still works")
+        #expect(HomebrewClient.parseVersion("Homebrew >=4") == "4")
+        #expect(HomebrewClient.parseVersion("Homebrew >=") == nil)
+        #expect(HomebrewClient.parseVersion("Homebrew unknown") == nil)
         #expect(HomebrewClient.parseVersion("") == nil)
     }
 
@@ -55,7 +59,8 @@ struct HomebrewTests {
         let second = layout.brewExecutable(in: layout.homebrewPrefixes[1])
         try Self.makeExecutable(URL(fileURLWithPath: first))
         let runner = ScriptedRunner { _ in CommandResult(exitCode: 1, stdout: "", stderr: "Error: broken") }
-        #expect(await HomebrewClient(layout: layout, runner: runner).locate() == .broken(executable: first, reason: "brew --version exited with 1"))
+        #expect(await HomebrewClient(layout: layout, runner: runner).locate() == .broken(executable: first, reason: "brew --version exited with 1: Error: broken"),
+                "the reason says what brew printed")
 
         try Self.makeExecutable(URL(fileURLWithPath: second))
         let mixed = ScriptedRunner { command in
@@ -235,5 +240,41 @@ struct HomebrewTests {
         await #expect(throws: HomebrewInstallError.notWorkingAfterInstall("brew not found after installation")) {
             _ = try await noop.install(reason: "test", log: LogStore(fileURL: nil, homeDirectory: simulation2.layout.homeDirectory))
         }
+    }
+
+    /// Knut's Intel Mac: Homebrew without git (no Command Line Tools, or installed from its .pkg) prints
+    /// "Homebrew >=4.6.0 (shallow or no git repository)". It works, so its packages must be recorded.
+    @Test func homebrewWithoutGitIsUsed() async throws {
+        let sandbox = try Sandbox("brew-without-git")
+        let (root, source) = try TestEnvironment.sourceMac(sandbox)
+        try root.setFlag("brew-version", true, content: ">=4.6.0 (shallow or no git repository)")
+        let inventory = try await TestEnvironment.inventory(source).run()
+        #expect(inventory.manifest.homebrew?.version == "4.6.0")
+        #expect(!inventory.manifest.brewFormulae.isEmpty && !inventory.manifest.brewCasks.isEmpty)
+        #expect(!inventory.warnings.contains { if case .homebrewBroken = $0 { return true }; return false })
+    }
+
+    @Test func versionListsTapTrustAndNameLimits() throws {
+        #expect(HomebrewClient.parseListVersions("node 20.1.0 22.4.0\nother 1.0") == "22.4.0", "the newest version of the first line")
+        #expect(HomebrewClient.parseListVersions("node") == nil && HomebrewClient.parseListVersions("") == nil)
+        #expect(HomebrewClient.parseListVersions("node 1.0") == "1.0")
+        #expect(HomebrewClient.requiresTapTrust("6.0.0") && HomebrewClient.requiresTapTrust("7.0.7"))
+        #expect(!HomebrewClient.requiresTapTrust("5.9.9") && !HomebrewClient.requiresTapTrust(">=4.3.0"))
+        #expect(HomebrewClient.requiresTapTrust("16.0"), "the major version is compared as a number")
+        try HomebrewClient.validatePackageName(String(repeating: "a", count: 200))
+        #expect(throws: HomebrewError.invalidPackageName(String(repeating: "a", count: 201))) {
+            try HomebrewClient.validatePackageName(String(repeating: "a", count: 201))
+        }
+    }
+
+    /// A `brew` that is a dangling link (Homebrew removed, link left behind) is reported, not ignored.
+    @Test func aDanglingBrewLinkIsReportedAsBroken() async throws {
+        let sandbox = try Sandbox("brew-dangling")
+        let layout = try Self.layout(sandbox)
+        let first = layout.brewExecutable(in: layout.homebrewPrefixes[0])
+        try FileManager.default.createDirectory(at: URL(fileURLWithPath: first).deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(atPath: first, withDestinationPath: sandbox.url.appendingPathComponent("gone/brew").path)
+        let runner = ScriptedRunner { _ in CommandResult(exitCode: 0, stdout: "Homebrew 4.4.0", stderr: "") }
+        #expect(await HomebrewClient(layout: layout, runner: runner).locate() == .broken(executable: first, reason: "not executable"))
     }
 }

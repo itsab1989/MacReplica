@@ -378,6 +378,40 @@ extension Localizer {
     public func accessAreaText(_ area: AccessArea) -> String { t("access.area.\(area.rawValue)") }
 
     /// "Adobe Photoshop – Actions" for a folder suggested by an application data profile.
+    /// The hover text of an application data item: what it is, what the backup holds (with example file names),
+    /// what the confidence badge means and any notes (code, versions, Full Disk Access, closing the app).
+    public func appDataHelp(_ folder: AppDataFolder) -> String {
+        var lines: [String] = []
+        if let profile = folder.profile {
+            let key = "appData.help.\(profile.category)"
+            lines.append(has(key) ? t(key) : t("appData.help.custom"))
+        } else {
+            lines.append(t("appData.help.custom"))
+        }
+        let examples = folder.files.prefix(3).map(\.fileName).joined(separator: ", ") + (folder.files.count > 3 ? ", …" : "")
+        if !folder.files.isEmpty {
+            lines.append(t("appData.help.contents", p("guide.appData.files", folder.files.count) + " · " + fileSize(folder.totalSize), examples))
+        }
+        lines.append(t("appData.help.location", folder.displayPath))
+        if let confidence = folder.profile?.effectiveConfidence {
+            switch confidence {
+            case .full: lines.append(t("confidence.help.full"))
+            case .checkInApp: lines.append(t("confidence.help.checkInApp"))
+            case .experimental: lines.append(t("confidence.help.experimental"))
+            case .notSupported: break
+            }
+        }
+        switch folder.profile?.classification {
+        case .compatibilitySensitive?: lines.append(t("appData.compatibilityNote"))
+        case .containsCode?: lines.append(t("appData.codeNote"))
+        case .mayContainSecrets?: lines.append(t("appData.secretsNote"))
+        default: break
+        }
+        if folder.profile?.requiresFullDiskAccess == true { lines.append(t("appData.fullDiskAccessNote")) }
+        if let profile = folder.profile, profile.mustBeClosed { lines.append(t("appData.mustBeClosed", profile.appName)) }
+        return lines.joined(separator: "\n")
+    }
+
     public func profileText(_ profile: AppDataProfileReference) -> String {
         t("appData.profileName", profile.appName, t("appData.category.\(profile.category)"))
     }

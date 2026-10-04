@@ -3,6 +3,7 @@
 //   ax-press <app name> <identifier>          press the element
 //   ax-press <app name> <identifier> --exists exit 0 if it exists
 //   ax-press <app name> --ids <prefix>       print identifiers starting with prefix (and their titles/values)
+//   ax-press <app name> <identifier> --help   print the element's hover text (AXHelp)
 import AppKit
 import ApplicationServices
 
@@ -44,4 +45,8 @@ _ = walk(root) { element in
 }
 guard let element = found else { exit(1) }
 if args.contains("--exists") { exit(0) }
+if args.contains("--help") {
+    print((attribute(element, kAXHelpAttribute) as? String) ?? "")
+    exit(0)
+}
 exit(AXUIElementPerformAction(element, kAXPressAction as CFString) == .success ? 0 : 3)

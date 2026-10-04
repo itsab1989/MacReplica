@@ -67,6 +67,8 @@ struct InventoryResultsView: View {
                         }
                     }
 
+                    BackupSetupCard()
+
                     ForEach(Array((model.inventory?.warnings ?? []).enumerated()), id: \.offset) { _, warning in
                         NoticeView(style: .warning, title: l.inventoryWarningText(warning))
                         if case .masNeeded(_, true) = warning {
@@ -136,8 +138,9 @@ struct InventoryResultsView: View {
         } buttons: {
             Button(l.t("common.cancel")) { model.goHome() }
                 .keyboardShortcut(.cancelAction)
-            Button(l.t("results.save")) { model.chooseBackupLocation() }
+            Button(l.t(model.destinationInfo == nil ? "results.save" : "results.saveHere")) { model.saveBackupToDestination() }
                 .keyboardShortcut(.defaultAction)
+                .help(l.t("results.save.help"))
                 .accessibilityIdentifier("results.save")
         }
     }
@@ -294,6 +297,73 @@ struct SavingBackupView: View {
             .padding(.top, 30)
         } buttons: {
             EmptyView()
+        }
+    }
+}
+
+/// Where the backup goes and the saved selection: chosen before anything is written.
+struct BackupSetupCard: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        let info = model.destinationInfo
+        let needed = model.estimatedBackupSize
+        Card {
+            HStack(alignment: .firstTextBaseline) {
+                Text(l.t("destination.heading")).font(.headline)
+                Spacer()
+                Button(l.t(info == nil ? "destination.choose" : "destination.change")) { model.chooseBackupDestination() }
+                    .help(l.t("destination.choose.help"))
+                    .accessibilityIdentifier("destination.choose")
+            }
+            if let info {
+                HStack(spacing: 6) {
+                    Image(systemName: info.isExternal ? "externaldrive" : "internaldrive").foregroundStyle(.secondary)
+                    Text(info.path).font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
+                        .accessibilityIdentifier("destination.path")
+                }
+                let space = info.available.map { l.t("destination.space", l.fileSize(needed), l.fileSize($0)) } ?? l.t("destination.spaceUnknown", l.fileSize(needed))
+                Text((info.volumeName.map { l.t("destination.volume", $0) + " · " } ?? "") + space)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("destination.space")
+                if let available = info.available, available < needed {
+                    Text(l.t("destination.notEnough")).font(.caption).foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("destination.notEnough")
+                }
+            } else {
+                Text(l.t("destination.none", l.fileSize(needed))).font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(l.t("destination.nothingYet")).font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Divider()
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(l.t("selection.heading")).font(.subheadline.weight(.semibold))
+                    Text(l.t("selection.message")).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Button(l.t("selection.load")) { model.loadSelection() }
+                    .help(l.t("selection.load.help"))
+                    .accessibilityIdentifier("selection.load")
+                Button(l.t("selection.save")) { model.saveSelection() }
+                    .help(l.t("selection.save.help"))
+                    .accessibilityIdentifier("selection.save")
+            }
+            if let found = model.savedSelectionFound {
+                HStack(alignment: .firstTextBaseline) {
+                    Image(systemName: "clock.arrow.circlepath").foregroundStyle(.blue)
+                    Text(l.t("selection.found", l.date(found.savedAt))).font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("selection.found")
+                    Spacer()
+                    Button(l.t("selection.apply")) { model.applySelection(found) }
+                        .accessibilityIdentifier("selection.apply")
+                }
+            }
         }
     }
 }

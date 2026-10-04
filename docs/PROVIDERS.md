@@ -79,6 +79,7 @@ retried).
 | Inkscape | `Library/Application Support/org.inkscape.Inkscape/config/inkscape/` `preferences.xml`, `keys/`, `templates/`, `palettes/`, `symbols/`, `filters/`; `extensions/` *contains code* | `extension-errors.log`, fonts/icons/themes caches | **Preferences, templates, palettes: verified** (Inkscape 1.4.4) |
 | Scribus | `Library/Application Support/Scribus/{palettes,scrapbook,dicts}`; `Library/Preferences/Scribus/prefs1xx.xml`, `scribus1xx.rc` (home path as placeholder) | `checkfonts*.xml`, scrapbook `tmp` | **Palettes and preferences: verified** (Scribus 1.6.6) |
 | Microsoft Office (Word, Excel, PowerPoint) | `Library/Group Containers/UBF8T346G9.Office/`: templates incl. `Normal.dotm`, `Microsoft Office ACL [<language>]` (AutoCorrect), `Custom Dictionary`; Word/Excel start-up folders *contain code*; ribbon customizations *experimental* — needs Full Disk Access | `MicrosoftRegistrationDB*`, licensing, `ComRPC32`, `FontCache`, lock files | **AutoCorrect: verified** in Word and Excel; templates: checksum-identical, check in the app |
+| LibreOffice | `Library/Application Support/LibreOffice/4/user/`: `registrymodifications.xcu` (settings; home path as placeholder), `template/`, `autocorr/`, `autotext/`, `wordbook/`, `config/soffice.cfg/` (menus, toolbars, shortcuts), palettes in `config/` (`*.soc` …), `gallery/`; `basic/`, `Scripts/` *contain code* | `backup/`, `temp/`, `crash/`, `extensions/`, `uno_packages/`, `store/`, `pack/`, `psprint/`, `database/`, `config/javasettings_*` | **Settings, templates, dictionaries, toolbars: verified** (LibreOffice 26.8, probe macro inside LibreOffice) |
 | Apple Mail | `Library/Mail/V<n>/MailData/`: `Signatures/`, rules, smart mailboxes, VIPs — needs Full Disk Access | mailboxes, `Envelope Index`, accounts and passwords | **Experimental**: Apple's layout up to macOS 15; Mail itself could not be checked (see the validation report) |
 | Cryptomator | `Library/Application Support/Cryptomator/settings.json` (the vault list; home path as placeholder); after the restore MacReplica reports which vaults it finds | vault contents, `key.p12`, passwords (Keychain), IPC socket, logs | **Vault list: verified** (Cryptomator 1.19.3) |
 | DisplayCAL / ArgyllCMS | `Library/Application Support/DisplayCAL/storage/` (calibrations, profiles, measurements), `Library/Preferences/DisplayCAL/DisplayCAL.ini` (home path as placeholder), `Library/Application Support/ArgyllCMS/` (instrument corrections) | `dl/` (downloads), lock files, logs | **Calibrations and settings: verified** (DisplayCAL 3.9.19, the maintainer's real calibrations) |
@@ -182,3 +183,11 @@ discontinued), DaVinci Resolve PowerGrades, render/project presets and project l
 - **Apple Mail:** on macOS 27 Mail no longer keeps signatures and rules in `MailData` (and scripted ones are not
   saved), and on GitHub's macOS 14/15 runners Mail has no account and does not answer for signatures or rules.
   The provider follows Apple's documented layout up to macOS 15 and is marked experimental.
+- **LibreOffice 26.8 (2026-10-04, round 4):** installed with Homebrew for the test; a Basic macro run inside
+  LibreOffice (added to the Basic library only while it ran) set the user name, added a word to the custom
+  dictionary, saved a template under My Templates and removed an entry from Writer's standard toolbar, then reported
+  them. Backup (12 files), files moved aside, LibreOffice started again (negative control: no name, no word, 66
+  toolbar entries, no template), restore with *Replace*, all 12 files identical, and LibreOffice reported exactly
+  the baseline. LibreOffice and every file it created were removed again. Source: The Document Foundation wiki
+  *LibreOffice user profile* ("most of the content of the user profile can be safely copied from a machine to
+  another").

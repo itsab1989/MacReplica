@@ -81,6 +81,11 @@ public final class Localizer: Sendable {
     public func hasTranslation(_ key: String) -> Bool { table[key] != nil }
 
     /// The translated string for `key`.
+    /// The key has a text in this language or in English.
+    public func has(_ key: String) -> Bool {
+        !(table[key] ?? "").isEmpty || !(fallback[key] ?? "").isEmpty
+    }
+
     public func t(_ key: String) -> String {
         if let value = table[key], !value.isEmpty { return value }
         if let value = fallback[key], !value.isEmpty { return value }

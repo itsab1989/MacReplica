@@ -345,6 +345,7 @@ struct RestoreItemRow: View {
                 }
                 .toggleStyle(.checkbox)
                 .disabled(locked || !restorable)
+                .help(item.applicationData.map { l.appDataHelp($0) } ?? (item.component.map { l.componentHint($0) } ?? ""))
                 .accessibilityIdentifier("item.\(item.id)")
                 Spacer(minLength: 8)
                 if let (text, color) = ItemStatus.label(item, model: model) {

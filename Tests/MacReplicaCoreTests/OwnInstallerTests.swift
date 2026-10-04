@@ -19,11 +19,20 @@ struct OwnInstallerTests {
     }
 
     /// A disk image with an app, like most vendor downloads.
-    static func diskImage(app: String, bundleID: String, version: String, in sandbox: Sandbox, name: String) throws -> URL {
+    /// Created through MacReplica's disk-image queue, so parallel tests do not compete for macOS's disk-image service.
+    /// Asynchronous: blocking a thread while waiting for the queue could starve Swift's thread pool on small CI machines.
+    static func createImage(source: URL, name: String, at dmg: URL) async throws {
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: ["/usr/bin/hdiutil"]), baseEnvironment: [:])
+        let result = try await DiskImageCommands.run(runner, Command(executable: "/usr/bin/hdiutil",
+            arguments: ["create", "-quiet", "-srcfolder", source.path, "-volname", name, "-format", "UDZO", dmg.path], environment: [:], timeout: 300))
+        try #require(result.exitCode == 0, "hdiutil create")
+    }
+
+    static func diskImage(app: String, bundleID: String, version: String, in sandbox: Sandbox, name: String) async throws -> URL {
         let source = try sandbox.folder("image-\(name)")
         try SimulationBuilder.makeSyntheticApp(name: app, bundleID: bundleID, version: version, in: source)
         let dmg = sandbox.url.appendingPathComponent("\(name).dmg")
-        try run("/usr/bin/hdiutil", ["create", "-quiet", "-srcfolder", source.path, "-volname", name, "-format", "UDZO", dmg.path])
+        try await createImage(source: source, name: name, at: dmg)
         return dmg
     }
 
@@ -37,7 +46,7 @@ struct OwnInstallerTests {
         let sandbox = try Sandbox("own-inspect")
         let (inspector, _) = Self.inspector(sandbox)
         let work = sandbox.url.appendingPathComponent("work")
-        let dmg = try Self.diskImage(app: "Pen Driver", bundleID: "com.example.pen", version: "4.0.14", in: sandbox, name: "PenDriver")
+        let dmg = try await Self.diskImage(app: "Pen Driver", bundleID: "com.example.pen", version: "4.0.14", in: sandbox, name: "PenDriver")
         let fromImage = try await inspector.inspect(dmg, workFolder: work)
         #expect(fromImage.kind == .dmg && fromImage.bundleIdentifier == "com.example.pen" && fromImage.version == "4.0.14")
         #expect(fromImage.sha256 == (try Hashing.sha256Hex(ofFile: dmg)) && fromImage.id == String(fromImage.sha256.prefix(16)))
@@ -82,7 +91,7 @@ struct OwnInstallerTests {
         var inventory = try await TestEnvironment.inventory(source).run()
         let (inspector, _) = Self.inspector(sandbox)
         let drive = try sandbox.folder("Volumes/Installers")
-        let dmg = try Self.diskImage(app: "Quill Writer", bundleID: "com.example.quillwriter", version: "7.0.2", in: sandbox, name: "Quill")
+        let dmg = try await Self.diskImage(app: "Quill Writer", bundleID: "com.example.quillwriter", version: "7.0.2", in: sandbox, name: "Quill")
         let kept = drive.appendingPathComponent("Quill-7.0.2.dmg")
         try FileManager.default.moveItem(at: dmg, to: kept)
         var archive = try await inspector.inspect(kept, workFolder: sandbox.url.appendingPathComponent("work"))
@@ -117,7 +126,7 @@ struct OwnInstallerTests {
         let layout = toolchainLayout(fixture.sandbox)
         let applications = layout.applicationFolders[0]
         try FileManager.default.createDirectory(at: applications, withIntermediateDirectories: true)
-        let dmg = try Self.diskImage(app: "Pen Tablet", bundleID: "com.example.pentablet", version: "4.0.14", in: fixture.sandbox, name: "Pen")
+        let dmg = try await Self.diskImage(app: "Pen Tablet", bundleID: "com.example.pentablet", version: "4.0.14", in: fixture.sandbox, name: "Pen")
         let payload = try fixture.sandbox.folder("payload")
         try Data("x".utf8).write(to: payload.appendingPathComponent("licence.txt"))
         let pkg = fixture.root.appendingPathComponent("Activation.pkg")

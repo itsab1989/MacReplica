@@ -286,6 +286,122 @@ struct DownloadQueueTests {
 
 @Suite("Download verification and installation")
 struct DownloadInstallerTests {
+    /// A scripted `hdiutil`: `attach` fails `attachFailures` times ("resource temporarily unavailable"), `detach`
+    /// fails `detachFailures` times; `info -plist` lists the image twice (another image and the one in question).
+    final class ScriptedDiskImages: @unchecked Sendable {
+        let lock = NSLock()
+        var attachFailures: Int
+        var detachFailures: Int
+        init(attachFailures: Int = 0, detachFailures: Int = 0) {
+            self.attachFailures = attachFailures
+            self.detachFailures = detachFailures
+        }
+        func answer(_ command: Command, image: String) -> CommandResult {
+            lock.withLock {
+                switch command.arguments.first {
+                case "attach":
+                    if attachFailures > 0 { attachFailures -= 1; return CommandResult(exitCode: 1, stdout: "", stderr: "attach failed - Resource temporarily unavailable") }
+                    return CommandResult(exitCode: 0, stdout: "<?xml version=\"1.0\"?><plist><dict><key>system-entities</key><array><dict><key>mount-point</key><string>/Volumes/A</string></dict></array></dict></plist>", stderr: "")
+                case "detach":
+                    if detachFailures > 0 { detachFailures -= 1; return CommandResult(exitCode: 16, stdout: "", stderr: "Resource busy") }
+                    return CommandResult(exitCode: 0, stdout: "", stderr: "")
+                case "info":
+                    let plist = """
+                    <?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>images</key><array>
+                    <dict><key>image-path</key><string>/tmp/other.dmg</string><key>system-entities</key><array><dict><key>dev-entry</key><string>/dev/disk7</string></dict></array></dict>
+                    <dict><key>image-path</key><string>\(image)</string><key>system-entities</key><array>
+                      <dict><key>dev-entry</key><string>/dev/disk9s1</string></dict><dict><key>dev-entry</key><string>/dev/disk9</string></dict></array></dict>
+                    </array></dict></plist>
+                    """
+                    return CommandResult(exitCode: 0, stdout: plist, stderr: "")
+                default:
+                    return CommandResult(exitCode: 0, stdout: "", stderr: "")
+                }
+            }
+        }
+    }
+
+    @Test func busyDiskImagesAreRetriedAndNeverLeftAttached() async throws {
+        let image = "/tmp/MacReplica-test-image.dmg"
+        let attach = ["attach", "-plist", "-readonly", image]
+        // Busy twice, then attached: three attempts, nothing detached.
+        let twice = ScriptedDiskImages(attachFailures: 2)
+        var runner = ScriptedRunner { twice.answer($0, image: image) }
+        let attached = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: "/usr/bin/hdiutil", environment: [:], pause: 1_000, arguments: attach)
+        #expect(attached.succeeded && runner.commands.map { $0.arguments.first } == ["attach", "attach", "attach"])
+        // Busy every time: five attempts, then only the attachments of this image are detached (by its whole-disk device).
+        let always = ScriptedDiskImages(attachFailures: 99)
+        runner = ScriptedRunner { always.answer($0, image: image) }
+        let failed = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: "/usr/bin/hdiutil", environment: [:], pause: 1_000, arguments: attach)
+        #expect(!failed.succeeded)
+        #expect(runner.commands.filter { $0.arguments.first == "attach" }.count == 5)
+        #expect(runner.commands.filter { $0.arguments.first == "detach" }.map(\.arguments) == [["detach", "/dev/disk9", "-force"]],
+                "only this image, never the other one")
+
+        // Detach: busy once → a second, normal detach; busy twice → the third attempt forces it.
+        let layout = toolchainLayout(try Sandbox("detach-retry"))
+        let once = ScriptedDiskImages(detachFailures: 1)
+        let onceRunner = ScriptedRunner { once.answer($0, image: image) }
+        var installer = DownloadInstaller(layout: layout, runner: onceRunner, macOSVersion: "15.0", architecture: .arm64)
+        installer.retryPause = 1_000
+        await installer.detach(URL(fileURLWithPath: "/Volumes/A"))
+        #expect(onceRunner.commands.map(\.arguments) == [["detach", "/Volumes/A"], ["detach", "/Volumes/A"]])
+        let stubborn = ScriptedDiskImages(detachFailures: 2)
+        let stubbornRunner = ScriptedRunner { stubborn.answer($0, image: image) }
+        installer.runner = stubbornRunner
+        await installer.detach(URL(fileURLWithPath: "/Volumes/A"))
+        #expect(stubbornRunner.commands.map(\.arguments) == [["detach", "/Volumes/A"], ["detach", "/Volumes/A"], ["detach", "-force", "/Volumes/A"]])
+        #expect(DownloadInstaller(layout: layout, runner: onceRunner, macOSVersion: "15.0", architecture: .arm64).rosettaInstalled, "Rosetta is assumed by default")
+    }
+
+    /// One `hdiutil` at a time, also when several tasks ask at once.
+    @Test func diskImageCommandsRunOneAtATime() async throws {
+        final class Counter: @unchecked Sendable {
+            let lock = NSLock(); var running = 0; var most = 0
+            func enter() { lock.withLock { running += 1; most = max(most, running) } }
+            func leave() { lock.withLock { running -= 1 } }
+        }
+        let counter = Counter()
+        let runner = ScriptedRunner { _ in
+            counter.enter(); Thread.sleep(forTimeInterval: 0.05); counter.leave()
+            return CommandResult(exitCode: 0, stdout: "", stderr: "")
+        }
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<6 {
+                group.addTask { _ = try? await DiskImageCommands.run(runner, Command(executable: "/usr/bin/hdiutil", arguments: ["info"], environment: [:], timeout: 10)) }
+            }
+        }
+        #expect(runner.commands.count == 6 && counter.most == 1)
+    }
+
+    @Test func fileSizeSignatureAndSearchDetails() throws {
+        let sandbox = try Sandbox("download-details")
+        let file = sandbox.url.appendingPathComponent("a.bin")
+        try Data("12345".utf8).write(to: file)
+        let layout = toolchainLayout(sandbox)
+        let installer = DownloadInstaller(layout: layout, runner: ScriptedRunner { _ in CommandResult(exitCode: 0, stdout: "", stderr: "") },
+                                          macOSVersion: "15.0", architecture: .arm64)
+        func offer(_ length: Int64?) -> DownloadOffer {
+            DownloadOffer(id: "o", itemID: "i", kind: .vendorFeed, url: "https://x", expectedLength: length, trust: .checksum)
+        }
+        try installer.verifyFile(file, offer: offer(5))
+        try installer.verifyFile(file, offer: offer(0))
+        #expect(throws: DownloadError.sizeMismatch(expected: 6, actual: 5)) { try installer.verifyFile(file, offer: offer(6)) }
+        let empty = sandbox.url.appendingPathComponent("empty.bin")
+        try Data().write(to: empty)
+        #expect(throws: DownloadError.sizeMismatch(expected: 0, actual: 0)) { try installer.verifyFile(empty, offer: offer(nil)) }
+        #expect(!DownloadInstaller.isValidEdDSASignature(String(repeating: "A", count: 88), publicKey: String(repeating: "A", count: 44),
+                                                         file: sandbox.url.appendingPathComponent("missing")))
+        #expect(DownloadInstaller.parsePackageSignature("Package \"x.pkg\":\n   Status: no signature").signed == false)
+        #expect(DownloadInstaller.mountPoint(fromAttachOutput: "<?xml version=\"1.0\"?><plist><dict><key>system-entities</key><array><dict><key>mount-point</key><string>/Volumes/First</string></dict><dict><key>mount-point</key><string>/Volumes/Second</string></dict></array></dict></plist>") == URL(fileURLWithPath: "/Volumes/First"))
+        // A file named like an app is not an app; folders without an extension are searched.
+        let folder = try sandbox.folder("image")
+        try Data().write(to: folder.appendingPathComponent("Fake.app.txt"))
+        try FileManager.default.createDirectory(at: folder.appendingPathComponent("Payload/Real.app"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: folder.appendingPathComponent("Other.bundle/Hidden.app"), withIntermediateDirectories: true)
+        #expect(DownloadInstaller.findApplication(in: folder)?.lastPathComponent == "Real.app")
+    }
+
     @Test func signedZipIsVerifiedUnpackedCheckedAndInstalledWithQuarantine() async throws {
         let fixture = try VendorFixture("install-zip")
         let published = try fixture.publishZip(appName: "Example Nightly", bundleID: "com.example.app.nightly", version: "3.0a1",
@@ -361,13 +477,7 @@ struct DownloadInstallerTests {
         let source = try fixture.sandbox.folder("image")
         try SimulationBuilder.makeSyntheticApp(name: "Disk App", bundleID: "com.example.diskapp", version: "1.0", in: source)
         let dmg = fixture.root.appendingPathComponent("disk.dmg")
-        let create = Process()
-        create.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-        create.arguments = ["create", "-quiet", "-srcfolder", source.path, "-volname", "MacReplicaTest", "-format", "UDZO", dmg.path]
-        create.standardError = FileHandle.nullDevice
-        try create.run()
-        create.waitUntilExit()
-        try #require(create.terminationStatus == 0, "hdiutil create")
+        try await OwnInstallerTests.createImage(source: source, name: "MacReplicaTest", at: dmg)
         let layout = toolchainLayout(fixture.sandbox)
         try FileManager.default.createDirectory(at: layout.applicationFolders[0], withIntermediateDirectories: true)
         let installer = fixture.installer(layout: layout)

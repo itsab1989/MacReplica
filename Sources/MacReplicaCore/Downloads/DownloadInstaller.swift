@@ -23,6 +23,8 @@ public struct DownloadInstaller: Sendable {
     public var macOSVersion: String
     public var architecture: CPUArchitecture
     public var rosettaInstalled: Bool
+    /// Pause between attempts when macOS reports a disk image as busy (shorter in tests).
+    public var retryPause: UInt64 = 1_000_000_000
 
     public init(layout: SystemLayout, runner: CommandRunning, macOSVersion: String, architecture: CPUArchitecture, rosettaInstalled: Bool = true) {
         self.layout = layout
@@ -100,7 +102,7 @@ public struct DownloadInstaller: Sendable {
 
     func prepareDiskImage(_ file: URL, offer: DownloadOffer, staging: URL) async throws -> PreparedDownload {
         let environment = layout.processEnvironment(homebrewPrefix: nil, askpass: nil)
-        let info = try await runner.run(Command(executable: layout.hdiutil, arguments: ["imageinfo", "-plist", file.path],
+        let info = try await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["imageinfo", "-plist", file.path],
                                                 environment: environment, timeout: 120))
         guard info.succeeded else { throw DownloadError.extractionFailed("hdiutil imageinfo failed") }
         if Self.hasLicenseAgreement(imageInfo: info.stdout) {
@@ -109,11 +111,10 @@ public struct DownloadInstaller: Sendable {
         }
         let mountRoot = staging.appendingPathComponent("mount")
         try FileManager.default.createDirectory(at: mountRoot, withIntermediateDirectories: true)
-        let attach = try await runner.run(Command(executable: layout.hdiutil,
-                                                  arguments: ["attach", "-plist", "-nobrowse", "-readonly", "-noautoopen", "-mountrandom", mountRoot.path, file.path],
-                                                  environment: environment, timeout: 300))
+        let attach = try await Self.attachWithRetry(runner: runner, hdiutil: layout.hdiutil, environment: environment, pause: retryPause,
+                                                    arguments: ["attach", "-plist", "-nobrowse", "-readonly", "-noautoopen", "-mountrandom", mountRoot.path, file.path])
         guard attach.succeeded, let mountPoint = Self.mountPoint(fromAttachOutput: attach.stdout) else {
-            throw DownloadError.extractionFailed("hdiutil attach failed")
+            throw DownloadError.extractionFailed("hdiutil attach failed: " + layout.redact(String(attach.stderr.prefix(200))))
         }
         do {
             if let app = Self.findApplication(in: mountPoint, depth: 1) {
@@ -143,9 +144,45 @@ public struct DownloadInstaller: Sendable {
         return .package(file, teamIdentifier: team)
     }
 
+    /// `hdiutil attach` can fail for a moment ("Resource temporarily unavailable") while another image is attached
+    /// or Spotlight reads one; it is tried again with growing pauses. A failed attempt can still leave the image
+    /// attached, so after the last failure every attachment of exactly this image is detached.
+    static func attachWithRetry(runner: CommandRunning, hdiutil: String, environment: [String: String], pause: UInt64 = 1_000_000_000,
+                                arguments: [String]) async throws -> CommandResult {
+        var result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
+        for attempt in 1...4 where !result.succeeded {
+            try await Task.sleep(nanoseconds: UInt64(attempt) * pause)
+            result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
+        }
+        if !result.succeeded, let image = arguments.last {
+            await detachAttachments(of: image, runner: runner, hdiutil: hdiutil, environment: environment)
+        }
+        return result
+    }
+
+    /// Detaches every attachment of the image at `path` (and only of it), as listed by `hdiutil info`.
+    static func detachAttachments(of path: String, runner: CommandRunning, hdiutil: String, environment: [String: String]) async {
+        guard let info = try? await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: ["info", "-plist"], environment: environment, timeout: 60)),
+              info.succeeded, let plist = try? PropertyListSerialization.propertyList(from: Data(info.stdout.utf8), format: nil) as? [String: Any],
+              let images = plist["images"] as? [[String: Any]] else { return }
+        let wanted = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
+        for image in images where (image["image-path"] as? String).map({ URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }) == wanted {
+            let devices = (image["system-entities"] as? [[String: Any]] ?? []).compactMap { $0["dev-entry"] as? String }
+            guard let device = devices.min(by: { $0.count < $1.count }) else { continue }
+            _ = try? await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: ["detach", device, "-force"], environment: environment, timeout: 120))
+        }
+    }
+
+    /// Detaches the disk image. Right after copying an app the image can still be busy for a moment, so a
+    /// failed detach is retried, the last time with `-force`; an image is never left mounted.
     public func detach(_ mountPoint: URL) async {
-        _ = try? await runner.run(Command(executable: layout.hdiutil, arguments: ["detach", mountPoint.path],
-                                          environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 120))
+        let environment = layout.processEnvironment(homebrewPrefix: nil, askpass: nil)
+        for attempt in 0..<3 {
+            let arguments = attempt == 2 ? ["detach", "-force", mountPoint.path] : ["detach", mountPoint.path]
+            let result = try? await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: arguments, environment: environment, timeout: 120))
+            if result?.succeeded == true { return }
+            try? await Task.sleep(nanoseconds: retryPause)
+        }
     }
 
     // MARK: Application checks

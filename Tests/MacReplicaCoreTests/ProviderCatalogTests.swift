@@ -10,7 +10,7 @@ struct ProviderCatalogTests {
     /// Providers whose restore was confirmed inside the real application (see docs/VALIDATION_REPORT.md).
     static let checkedInRealApp: Set<String> = ["adobe-photoshop-beta-settings", "davinci-resolve-luts", "davinci-resolve-preferences",
                                                  "krita", "krita-settings", "gimp", "inkscape", "scribus", "scribus-settings",
-                                                 "cryptomator", "displaycal", "displaycal-settings", "microsoft-office"]
+                                                 "cryptomator", "displaycal", "displaycal-settings", "microsoft-office", "libreoffice"]
 
     /// A category that takes a whole folder leaves out the sub-folders other categories of the same provider
     /// handle, so deselecting one of them (for example Krita's Python plug-ins) really leaves it out.

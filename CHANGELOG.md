@@ -7,6 +7,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-10-04
+
+### Added
+- LibreOffice: settings (Tools › Options, your name, paths with the home folder adjusted), templates, AutoCorrect,
+  AutoText, custom dictionaries, menus, toolbars and keyboard shortcuts, colour palettes and Gallery themes; Basic
+  macros and your scripts are offered but not selected automatically. Automatic document backups, temporary files,
+  crash data and extensions are never copied. Settings, templates, dictionaries and toolbars were confirmed inside
+  LibreOffice 26.8.
+- Backup location on the selection screen: where the backup goes (with the drive's name), its free space and how
+  large the backup will be, before anything is written; **Save Backup** saves there.
+- Save and load your selection: **Save Selection …** / **Load Selection …**, and the selection is saved next to the
+  backup automatically (`MacReplica Selection.json`). At the next backup MacReplica offers to use it. New apps and
+  data keep their usual setting; passphrases are never saved.
+- Explanations on every kind of application data (hover): what it is, what the backup contains with example file
+  names, where it comes from, what the support level means and any notes.
+
+### Fixed
+- Homebrew that cannot read its version from git (for example without the Command Line Tools, or installed by
+  another administrator) was reported as "does not respond" and its packages were not recorded. It is used now,
+  and the log names the reason whenever Homebrew is not used.
+- Disk images (downloads and your own installers) are attached and detached one at a time and retried when macOS
+  reports them as busy; an image is never left attached after a failed attempt.
+
 ## [1.0.2] - 2026-10-04
 
 ### Added
@@ -165,7 +188,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/itsab1989/MacReplica/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/itsab1989/MacReplica/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/itsab1989/MacReplica/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/itsab1989/MacReplica/releases/tag/v1.0.0

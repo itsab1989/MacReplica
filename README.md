@@ -172,7 +172,8 @@ update, download the new disk image and replace the app.
 2. Review the results (**What do you want to take with you?**): confirm Homebrew packages for apps
    MacReplica was not sure about, and choose fonts, colour profiles, Python environments and app
    data. Credentials are off unless you opt in.
-3. Click **Save Backup …** and pick a folder, ideally on an external drive or in a cloud folder.
+3. Under **Backup location**, choose a folder — ideally on an external drive or in a cloud folder — and check the
+   free space shown there; then click **Save Backup**. **Save Selection …** keeps your choices for the next backup.
    MacReplica copies the selected files, compares each copy with the original and shows where the
    backup is and how big it is.
 4. Copy the whole backup folder to the new Mac (external drive, network share, cloud folder or
@@ -253,10 +254,10 @@ presets, styles, templates, LUTs, calibrations and AutoCorrect entries — and c
 Visual Studio Code · Cursor · Sublime Text · JetBrains IDEs · Xcode · BBEdit · iTerm2 · Zed · Ghostty ·
 kitty · WezTerm · Alacritty · Karabiner-Elements · Hammerspoon · Adobe Photoshop (and beta) · Camera Raw /
 Lightroom Classic presets · Capture One · DaVinci Resolve · Blender · After Effects · Motion · Logic Pro ·
-Krita · GIMP · Inkscape · Scribus · Microsoft Word, Excel and PowerPoint · Apple Mail · Cryptomator ·
+Krita · GIMP · Inkscape · Scribus · LibreOffice · Microsoft Word, Excel and PowerPoint · Apple Mail · Cryptomator ·
 DisplayCAL / ArgyllCMS · BenQ Palette Master Element · XP-Pen · Keyboard Maestro · Alfred
 
-Krita, GIMP, Inkscape, Scribus, Cryptomator, DisplayCAL, Word's AutoCorrect, the Photoshop beta's settings and
+Krita, GIMP, Inkscape, Scribus, LibreOffice, Cryptomator, DisplayCAL, Word's AutoCorrect, the Photoshop beta's settings and
 Resolve's LUTs and presets were confirmed inside the real apps (*Fully supported*); the others are tested with
 data in the documented layout (*Check in the app*, or *Experimental* where sources are thin).
 

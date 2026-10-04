@@ -45,7 +45,7 @@ struct RestoreProgressState {
 @MainActor
 final class AppModel: ObservableObject {
     let services: AppServices
-    private let defaults: UserDefaults
+    let defaults: UserDefaults
 
     @Published var language: AppLanguage
     @Published private(set) var l: Localizer
@@ -84,6 +84,12 @@ final class AppModel: ObservableObject {
     @Published var excludedApplications = Set<String>()
     /// Profile assignments of displays (System Settings › Displays › Color profile) go into the backup.
     @Published var includeDisplayAssignments = true
+    /// Where the backup is saved (chosen on the selection screen before anything is written).
+    @Published var backupDestination: URL?
+    /// A selection saved next to the backups that the user has not applied yet.
+    @Published var savedSelectionFound: BackupSelectionPreset?
+    /// The user's choices among several possible Homebrew packages (app ID → token, "" for none of these).
+    @Published var matchChoices: [String: String] = [:]
     /// Guided installations after the automatic restore.
     @Published var guided = GuidedUIState()
     var guidedInstallation: GuidedInstallation?
@@ -269,6 +275,8 @@ final class AppModel: ObservableObject {
         excludedApplications = []
         includeDisplayAssignments = true
         preservedPythonEnvironments = []
+        savedSelectionFound = nil
+        matchChoices = [:]
         resetGuided()
         manifest = nil
         backupURL = nil
@@ -341,7 +349,10 @@ final class AppModel: ObservableObject {
                 self?.excludedApplicationData = Set(result.manifest.applicationData
                     .filter { $0.profile.map { !$0.classification.selectedByDefault } ?? false }.map(\.id))
                 self?.excludedBackupFiles = result.filesNotSelectedByDefault
+                self?.prepareBackupDestination()
                 self?.appLog.info("Inventory finished: \(result.manifest.applications.count) apps, \(result.manifest.python.environments.count) Python environments, \(result.warnings.count) warnings", component: .inventory)
+                // Each warning with its reason (redacted), so a log sent for help shows what went wrong.
+                for warning in result.warnings { self?.appLog.warning("Inventory warning: \(warning)", component: .inventory) }
                 self?.screen = .inventoryResults
             } catch is CancellationError {
                 return
@@ -356,6 +367,7 @@ final class AppModel: ObservableObject {
 
     /// Applies the user's choice for an app with several possible Homebrew packages.
     func decideMatch(appID: String, token: String?) {
+        matchChoices[appID] = token ?? ""
         guard var result = inventory, let index = result.manifest.applications.firstIndex(where: { $0.id == appID }) else { return }
         var app = result.manifest.applications[index]
         if let token, let candidate = app.candidates.first(where: { $0.token == token }) {
@@ -445,6 +457,11 @@ final class AppModel: ObservableObject {
             guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
             folders = panel.urls
         }
+        addPersonalFolders(folders)
+    }
+
+    func addPersonalFolders(_ folders: [URL]) {
+        guard !folders.isEmpty else { return }
         let scanner = AppDataScanner(layout: services.layout)
         addingApplicationData = true
         task = Task.detached { [weak self] in
@@ -479,6 +496,45 @@ final class AppModel: ObservableObject {
         inventory?.removeApplicationData(id: id)
     }
 
+    /// "Save Backup": saves to the chosen location, or asks for one first.
+    func saveBackupToDestination() {
+        if let destination = backupDestination, FileManager.default.fileExists(atPath: destination.path) {
+            saveBackup(into: destination)
+        } else {
+            chooseBackupLocation()
+        }
+    }
+
+    /// "Choose …" on the selection screen: only picks the folder; nothing is written.
+    func chooseBackupDestination() {
+        if let staged = stagingFolder(key: "lastBackupParent") {
+            setBackupDestination(staged)
+            return
+        }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = l.t("destination.choose.prompt")
+        panel.message = l.t("inventory.save.message")
+        panel.directoryURL = backupDestination ?? lastFolder(key: "lastBackupParent") ?? defaultBackupParent
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        setBackupDestination(folder)
+    }
+
+    func setBackupDestination(_ folder: URL) {
+        backupDestination = folder
+        defaults.set(folder.path, forKey: "lastBackupParent")
+        savedSelectionFound = BackupSelectionPreset.saved(in: folder)
+    }
+
+    /// After a scan: the last location again (if it is there, e.g. the drive is connected) and a selection saved there.
+    func prepareBackupDestination() {
+        backupDestination = lastFolder(key: "lastBackupParent")
+        savedSelectionFound = backupDestination.flatMap(BackupSelectionPreset.saved(in:))
+    }
+
     func chooseBackupLocation() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
@@ -494,6 +550,7 @@ final class AppModel: ObservableObject {
         }
         guard panel.runModal() == .OK, let parent = panel.url else { return }
         defaults.set(parent.path, forKey: "lastBackupParent")
+        backupDestination = parent
         saveBackup(into: parent)
     }
 
@@ -514,8 +571,9 @@ final class AppModel: ObservableObject {
         return URL(fileURLWithPath: path)
     }
 
-    func saveBackup(into parent: URL) {
-        guard var inventory else { return }
+    /// The inventory with the user's choices applied: exactly what the backup will contain.
+    func preparedInventory() -> InventoryResult? {
+        guard var inventory else { return nil }
         inventory.keepPythonEnvironments(selectedPythonEnvironments, includeSettings: includePythonSettings)
         applyDeveloperChoices(to: &inventory)
         inventory.keepToolchains(Set(inventory.manifest.toolchains.map(\.provider)).subtracting(excludedToolchains))
@@ -523,6 +581,13 @@ final class AppModel: ObservableObject {
         if !includeDisplayAssignments { inventory.manifest.displayProfiles = [] }
         for id in excludedApplicationData { inventory.removeApplicationData(id: id) }
         inventory.excludeFiles(excludedBackupFiles)
+        return inventory
+    }
+
+    func saveBackup(into parent: URL) {
+        guard let inventory = preparedInventory() else { return }
+        // The selection goes next to the backup, so the next backup can start from it.
+        try? currentSelectionPreset(destination: parent).write(to: parent.appendingPathComponent(BackupSelectionPreset.fileName))
         let credentials = selectedCredentialProviders.isEmpty ? nil
             : credentialPassphrase.map { CredentialExportRequest(providerIDs: selectedCredentialProviders.sorted(), passphrase: $0) }
         screen = .savingBackup
@@ -1096,7 +1161,7 @@ extension AppModel {
         panel.message = l.t("ownInstaller.choose.message")
         panel.prompt = l.t("ownInstaller.choose")
         guard panel.runModal() == .OK else { return }
-        inspectInstallers(panel.urls) { [weak self] found in
+        inspectOwnInstallers(panel.urls) { [weak self] found in
             guard let self else { return }
             self.ownInstallerFiles[appID, default: []] += found.map { OwnInstallerFile(archive: $0.0, url: $0.1, include: true) }
             self.applyOwnInstallers(appID)
@@ -1120,7 +1185,7 @@ extension AppModel {
                 if InstallerArchiveInspector.supportedExtensions.contains(url.pathExtension.lowercased()) { files.append(url) }
             }
         }
-        inspectInstallers(files) { [weak self] found in
+        inspectOwnInstallers(files) { [weak self] found in
             guard let self, let apps = self.inventory?.manifest.applications else { return }
             var unmatched = 0
             for (archive, url) in found {
@@ -1137,7 +1202,7 @@ extension AppModel {
         }
     }
 
-    private func inspectInstallers(_ urls: [URL], completion: @escaping @MainActor ([(InstallerArchive, URL)]) -> Void) {
+    func inspectOwnInstallers(_ urls: [URL], completion: @escaping @MainActor ([(InstallerArchive, URL)]) -> Void) {
         guard !urls.isEmpty else { return }
         inspectingInstallers = true
         let inspector = InstallerArchiveInspector(layout: services.layout, runner: services.runner)
