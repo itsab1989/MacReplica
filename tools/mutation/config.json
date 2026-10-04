@@ -394,7 +394,7 @@
     {
       "file": "Downloads/DiskImageCommands.swift",
       "tests": [
-        "DownloadTests",
+        "DownloadInstallerTests",
         "OwnInstallerTests",
         "GuidedInstallationTests"
       ],
