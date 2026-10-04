@@ -21,7 +21,11 @@ struct HomebrewTests {
     @Test func parsesVersionLine() {
         #expect(HomebrewClient.parseVersion("Homebrew 4.4.0\nHomebrew/homebrew-core (git revision abc)") == "4.4.0")
         #expect(HomebrewClient.parseVersion("Warning: x\nHomebrew 4.3.1-12-gabc") == "4.3.1-12-gabc")
-        #expect(HomebrewClient.parseVersion("Homebrew >=4") == nil)
+        #expect(HomebrewClient.parseVersion("Homebrew >=4.6.0 (shallow or no git repository)") == "4.6.0",
+                "Homebrew without git (no Command Line Tools, or installed from the .pkg) still works")
+        #expect(HomebrewClient.parseVersion("Homebrew >=4") == "4")
+        #expect(HomebrewClient.parseVersion("Homebrew >=") == nil)
+        #expect(HomebrewClient.parseVersion("Homebrew unknown") == nil)
         #expect(HomebrewClient.parseVersion("") == nil)
     }
 
@@ -55,7 +59,8 @@ struct HomebrewTests {
         let second = layout.brewExecutable(in: layout.homebrewPrefixes[1])
         try Self.makeExecutable(URL(fileURLWithPath: first))
         let runner = ScriptedRunner { _ in CommandResult(exitCode: 1, stdout: "", stderr: "Error: broken") }
-        #expect(await HomebrewClient(layout: layout, runner: runner).locate() == .broken(executable: first, reason: "brew --version exited with 1"))
+        #expect(await HomebrewClient(layout: layout, runner: runner).locate() == .broken(executable: first, reason: "brew --version exited with 1: Error: broken"),
+                "the reason says what brew printed")
 
         try Self.makeExecutable(URL(fileURLWithPath: second))
         let mixed = ScriptedRunner { command in
@@ -235,5 +240,17 @@ struct HomebrewTests {
         await #expect(throws: HomebrewInstallError.notWorkingAfterInstall("brew not found after installation")) {
             _ = try await noop.install(reason: "test", log: LogStore(fileURL: nil, homeDirectory: simulation2.layout.homeDirectory))
         }
+    }
+
+    /// Knut's Intel Mac: Homebrew without git (no Command Line Tools, or installed from its .pkg) prints
+    /// "Homebrew >=4.6.0 (shallow or no git repository)". It works, so its packages must be recorded.
+    @Test func homebrewWithoutGitIsUsed() async throws {
+        let sandbox = try Sandbox("brew-without-git")
+        let (root, source) = try TestEnvironment.sourceMac(sandbox)
+        try root.setFlag("brew-version", true, content: ">=4.6.0 (shallow or no git repository)")
+        let inventory = try await TestEnvironment.inventory(source).run()
+        #expect(inventory.manifest.homebrew?.version == "4.6.0")
+        #expect(!inventory.manifest.brewFormulae.isEmpty && !inventory.manifest.brewCasks.isEmpty)
+        #expect(!inventory.warnings.contains { if case .homebrewBroken = $0 { return true }; return false })
     }
 }

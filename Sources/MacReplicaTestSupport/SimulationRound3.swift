@@ -93,6 +93,27 @@ extension SimulationRoot {
         try put("\(support)/Cryptomator/settings.json", String(decoding: json, as: UTF8.self))
         try put("\(support)/Cryptomator/key.p12", "device key")
         try put("\(support)/Cryptomator/ipc.socket", "socket")
+        // LibreOffice: the user profile with settings (absolute home paths inside), templates, AutoCorrect, AutoText,
+        // dictionary, toolbars, palettes, gallery, macros and scripts; plus what is never copied.
+        let lo = "\(support)/LibreOffice/4/user"
+        try put("\(lo)/registrymodifications.xcu", "<oor:items><item oor:path=\"/org.openoffice.Office.Paths/Variables\"><prop oor:name=\"Work\"><value>file://\(homePath)/Documents</value></prop></item></oor:items>")
+        try put("\(lo)/template/Letter.ott", "template")
+        try put("\(lo)/autocorr/acor_de-DE.dat", "autocorrect")
+        try put("\(lo)/autotext/mytexts.bau", "autotext")
+        try put("\(lo)/wordbook/standard.dic", "OOoUserDict1\nlang: <none>\n---\nMacReplica\n")
+        try put("\(lo)/config/soffice.cfg/modules/swriter/toolbar/standardbar.xml", "<toolbar/>")
+        try put("\(lo)/config/brand.soc", "<palette/>")
+        try put("\(lo)/config/javasettings_macOS_aarch64.xml", "<java path=\"/Library/Java\"/>")
+        try put("\(lo)/gallery/sg100.thm", "gallery theme")
+        try put("\(lo)/basic/Standard/Module1.xba", "Sub Main\nEnd Sub")
+        try put("\(lo)/Scripts/python/tools.py", "def run(): pass")
+        try put("\(lo)/backup/Report_0.odt", "automatic backup copy of a document")
+        try put("\(lo)/temp/lu123.tmp", "temporary")
+        try put("\(lo)/crash/dump.ini", "crash")
+        try put("\(lo)/extensions/shared/registry.xml", "extension registration")
+        try put("\(lo)/uno_packages/cache/registry.xml", "extension cache")
+        try put("\(lo)/store/.templdir.cache", "cache")
+        try put("\(lo)/pack/registrymodifications.pack", "packed copy")
         // Configuration folders.
         try put("home/.config/karabiner/karabiner.json", "{\"profiles\":[]}")
         try put("home/.config/karabiner/automatic_backups/karabiner_20260101.json", "{}")

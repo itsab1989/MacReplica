@@ -218,6 +218,7 @@ struct AppDataRow: View {
                 }
             }
             .toggleStyle(.checkbox)
+            .help(l.appDataHelp(folder))
             .accessibilityIdentifier("appData.\(folder.profile.map { "\($0.provider).\($0.category)" } ?? folder.id)")
             Spacer()
             Text(l.t("appData.summary", l.p("guide.appData.files", folder.files.count), l.fileSize(folder.totalSize)))

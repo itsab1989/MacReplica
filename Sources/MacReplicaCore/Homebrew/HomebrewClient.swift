@@ -52,7 +52,11 @@ public struct HomebrewClient: Sendable {
                 if result.succeeded, let version = Self.parseVersion(result.stdout) {
                     return .ready(HomebrewInstallation(executable: executable, prefix: prefix, version: version))
                 }
-                let reason = result.timedOut ? "timed out" : "brew --version exited with \(result.exitCode)"
+                // The reason names what `brew` printed (redacted, short), so the log shows why it was not used.
+                let output = (result.stdout + "\n" + result.stderr).split(whereSeparator: \.isNewline)
+                    .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.prefix(3).joined(separator: " | ")
+                let printed = output.isEmpty ? "" : ": " + layout.redact(String(output.prefix(300)))
+                let reason = result.timedOut ? "timed out" : "brew --version exited with \(result.exitCode)\(printed)"
                 firstBroken = firstBroken ?? .broken(executable: executable, reason: reason)
             } catch {
                 firstBroken = firstBroken ?? .broken(executable: executable, reason: String(describing: error))
@@ -62,11 +66,16 @@ public struct HomebrewClient: Sendable {
     }
 
     /// Parses the first line of `brew --version`, e.g. "Homebrew 4.3.1-12-gabc" → "4.3.1-12-gabc".
+    /// Without git (no Command Line Tools, or Homebrew from its installer package) Homebrew prints
+    /// "Homebrew >=4.6.0 (shallow or no git repository)"; that is a working Homebrew too → "4.6.0".
     public static func parseVersion(_ output: String) -> String? {
         for line in output.split(whereSeparator: \.isNewline) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard trimmed.hasPrefix("Homebrew ") else { continue }
-            let version = trimmed.dropFirst("Homebrew ".count).trimmingCharacters(in: .whitespaces)
+            var version = trimmed.dropFirst("Homebrew ".count).trimmingCharacters(in: .whitespaces)
+            if version.hasPrefix(">=") {
+                version = String(version.dropFirst(2).prefix { !$0.isWhitespace })
+            }
             if let first = version.first, first.isNumber { return String(version) }
         }
         return nil
