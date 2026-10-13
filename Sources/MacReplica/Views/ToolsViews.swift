@@ -302,7 +302,7 @@ struct UpdatesToolCard: View {
             LabelWithHelp(label: l.t("tools.updates.stay.title"), help: l.t("tools.updates.stay.help"), id: "help.tools.updates.stay",
                           font: .subheadline.weight(.semibold))
             Text(l.t("tools.updates.stay.message")).font(.callout).fixedSize(horizontal: false, vertical: true)
-            Text(l.t("tools.updates.deferral.\(MajorUpgradeDeferral.forVersion(env).rawValue)"))
+            Text(l.t("tools.updates.deferral.\(MajorUpgradeDeferralSupport.forVersion(env).rawValue)"))
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("tools.updates.deferral")
             if let settings = status?.settings, status?.managed == false {

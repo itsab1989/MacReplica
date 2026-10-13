@@ -74,12 +74,20 @@ struct ToolsUpdatesTests {
         #expect(!offline.updateAvailable)
     }
 
-    @Test func deferralIsNeverOfferedAndExplainedPerVersion() {
-        #expect(MajorUpgradeDeferral.forVersion(ToolEnvironment(macOSVersion: "27.0.1", architecture: .arm64)) == .onlyDeviceManagement)
-        #expect(MajorUpgradeDeferral.forVersion(ToolEnvironment(macOSVersion: "26.7", architecture: .x86_64)) == .deprecatedProfileOnly)
-        #expect(MajorUpgradeDeferral.delaysSecurityUpdates(ToolEnvironment(macOSVersion: "15.7.5", architecture: .arm64)))
-        #expect(!MajorUpgradeDeferral.delaysSecurityUpdates(ToolEnvironment(macOSVersion: "15.7.4", architecture: .arm64)))
-        #expect(!MajorUpgradeDeferral.delaysSecurityUpdates(ToolEnvironment(macOSVersion: "14.8", architecture: .x86_64)))
+    @Test func deferralOnlyWhereSecurityUpdatesKeepFlowing() {
+        func support(_ v: String) -> MajorUpgradeDeferralSupport { .forVersion(ToolEnvironment(macOSVersion: v, architecture: .arm64)) }
+        #expect(support("27.0.1") == .removed)
+        #expect(support("26.7") == .availableDeprecated)
+        #expect(support("15.7.5") == .wouldDelaySecurityUpdates)
+        #expect(support("15.8.1") == .wouldDelaySecurityUpdates)
+        #expect(support("15.7.4") == .available)
+        #expect(support("13.0") == .available)
+        #expect(support("12.7") == .olderThanSupported)
+        #expect(support("26.7").canInstall && support("14.8").canInstall)
+        #expect(!support("27.0").canInstall && !support("15.8").canInstall)
+        #expect(support("27.0").capability == .unsupportedOnThisVersion)
+        #expect(support("26.1").capability == .experimental)
+        #expect(support("14.1").capability == .supportedWithRestrictions)
     }
 
     @Test func statusReadsFilesAndSeesManagement() throws {

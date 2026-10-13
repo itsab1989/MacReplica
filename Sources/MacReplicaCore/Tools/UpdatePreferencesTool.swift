@@ -149,24 +149,6 @@ public struct UpdatePreferencesStatus: Sendable, Equatable {
     }
 }
 
-/// What macOS lets a personal Mac do about major upgrades, per version.
-public enum MajorUpgradeDeferral: String, Sendable {
-    /// macOS 27 and later: only device management (supervised) can defer.
-    case onlyDeviceManagement
-    /// macOS 13–26: a hand-installed profile can delay a major upgrade by up to 90 days per release; deprecated in 26,
-    /// and from 15.7.5 it also delays security updates. MacReplica does not offer it.
-    case deprecatedProfileOnly
-
-    public static func forVersion(_ environment: ToolEnvironment) -> MajorUpgradeDeferral {
-        environment.majorVersion >= 27 ? .onlyDeviceManagement : .deprecatedProfileOnly
-    }
-
-    /// The 15.7.5+ / 26 change: one deferral for all updates, security included.
-    public static func delaysSecurityUpdates(_ environment: ToolEnvironment) -> Bool {
-        environment.majorVersion >= 26 || environment.isAtLeast("15.7.5")
-    }
-}
-
 public struct UpdatePreferencesInspector: Sendable {
     public var layout: SystemLayout
     public var runner: CommandRunning
