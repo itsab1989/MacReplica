@@ -792,12 +792,7 @@ struct CornerPluginView: View {
                 if let status = model.tools.plugin { CapabilityBadge(capability: status.capability) }
             }
             if let status = model.tools.plugin {
-                requirement(status.readiness != .untestedBuild, l.t("tools.plugin.req.build", status.build ?? "?"), id: "build")
-                requirement(status.sip == .disabled, l.t("tools.plugin.req.sip"), id: "sip")
-                requirement(status.bootArgumentSet == true, l.t("tools.plugin.req.bootArg"), id: "bootArg")
-                requirement(status.ammoniaInstalled, l.t("tools.plugin.req.ammonia"), id: "ammonia")
-                requirement(status.installed && status.current, l.t(status.installed && !status.current ? "tools.plugin.req.outdated" : "tools.plugin.req.installed"),
-                            id: "installed")
+                pluginRequirements(status)
                 if status.readiness != .ready, status.readiness != .untestedBuild {
                     Text(l.t("tools.plugin.steps")).font(.caption).fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
@@ -806,28 +801,7 @@ struct CornerPluginView: View {
                 if status.readiness == .untestedBuild {
                     Text(l.t("tools.plugin.untested")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
-                HStack {
-                    // SIP is off but Ammonia is not set up yet: offer the one-click setup (download + install).
-                    if status.sip == .disabled, !status.ammoniaInstalled {
-                        Button(l.t("tools.plugin.oneClick.button")) { confirmOneClick = true }
-                            .disabled(model.tools.pluginBusy)
-                            .accessibilityIdentifier("tools.plugin.oneClick")
-                    } else if status.readiness == .ready, !(status.installed && status.current) {
-                        Button(l.t(status.installed ? "tools.plugin.update" : "tools.plugin.install")) { confirmInstall = true }
-                            .disabled(model.tools.pluginBusy)
-                            .accessibilityIdentifier("tools.plugin.install")
-                    }
-                    // Anything MacReplica set up can be reversed in one step.
-                    if status.ammoniaInstalled || status.installed {
-                        Button(l.t("tools.plugin.undo.button")) { confirmUndo = true }
-                            .disabled(model.tools.pluginBusy)
-                            .accessibilityIdentifier("tools.plugin.undo")
-                    }
-                    if model.tools.pluginBusy { ProgressView().controlSize(.small) }
-                    Spacer()
-                    Button(l.t("tools.recheck")) { model.refreshPlugin() }.controlSize(.small)
-                        .accessibilityIdentifier("tools.plugin.recheck")
-                }
+                pluginActions(status)
             } else {
                 ProgressView().controlSize(.small)
             }
@@ -858,6 +832,43 @@ struct CornerPluginView: View {
             Button(l.t("common.cancel"), role: .cancel) {}
         } message: {
             Text(l.t("tools.plugin.undo.message"))
+        }
+    }
+
+    @ViewBuilder private func pluginRequirements(_ status: CornerPlugin.Status) -> some View {
+        let l = model.l
+        requirement(status.readiness != .untestedBuild, l.t("tools.plugin.req.build", status.build ?? "?"), id: "build")
+        requirement(status.debuggingAllowed == true, l.t("tools.plugin.req.sip"), id: "sip")
+        requirement(status.loaderInstalled, l.t("tools.plugin.req.loaderInstalled"), id: "loaderInstalled")
+        requirement(status.loaderEnabled, l.t("tools.plugin.req.loaderEnabled"), id: "loaderEnabled")
+        requirement(status.installed && status.current,
+                    l.t(status.installed && !status.current ? "tools.plugin.req.outdated" : "tools.plugin.req.installed"), id: "installed")
+    }
+
+    @ViewBuilder private func pluginActions(_ status: CornerPlugin.Status) -> some View {
+        let l = model.l
+        HStack {
+            // The loader is not installed yet but debugging is allowed: offer the one-click download + install.
+            if status.debuggingAllowed == true, !status.loaderInstalled {
+                Button(l.t("tools.plugin.oneClick.button")) { confirmOneClick = true }
+                    .disabled(model.tools.pluginBusy)
+                    .accessibilityIdentifier("tools.plugin.oneClick")
+            } else if status.readiness == .ready, !(status.installed && status.current) {
+                // The loader is installed and enabled: just place (or update) our plugin files.
+                Button(l.t(status.installed ? "tools.plugin.update" : "tools.plugin.install")) { confirmInstall = true }
+                    .disabled(model.tools.pluginBusy)
+                    .accessibilityIdentifier("tools.plugin.install")
+            }
+            // Anything MacReplica set up can be reversed in one step.
+            if status.loaderInstalled || status.installed {
+                Button(l.t("tools.plugin.undo.button")) { confirmUndo = true }
+                    .disabled(model.tools.pluginBusy)
+                    .accessibilityIdentifier("tools.plugin.undo")
+            }
+            if model.tools.pluginBusy { ProgressView().controlSize(.small) }
+            Spacer()
+            Button(l.t("tools.recheck")) { model.refreshPlugin() }.controlSize(.small)
+                .accessibilityIdentifier("tools.plugin.recheck")
         }
     }
 

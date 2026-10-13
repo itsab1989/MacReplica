@@ -109,7 +109,9 @@ public struct SimulationEnvironment: Sendable {
         // show states this Mac is not in (e.g. a managed Mac). Mixing both would show a state no Mac is in.
         let managed = root.appendingPathComponent("Library/Managed Preferences")
         if FileManager.default.fileExists(atPath: managed.path) { self.layout.managedPreferences = managed }
-        self.layout.ammoniaTweaks = root.appendingPathComponent("private/var/ammonia/core/tweaks")
+        self.layout.pluginTweaks = root.appendingPathComponent("opt/pluginplayground/tweaks")
+        self.layout.pluginLoaderBin = root.appendingPathComponent("opt/pluginplayground/bin")
+        self.layout.pluginLoaderDaemon = root.appendingPathComponent("Library/LaunchDaemons/com.pluginplayground.grant.plist")
         for name in ["spctl", "csrutil", "profiles", "softwareupdate", "nvram"] {
             let standIn = root.appendingPathComponent("tools/\(name)").path
             guard FileManager.default.isExecutableFile(atPath: standIn) else { continue }

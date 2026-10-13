@@ -43,9 +43,11 @@ public struct SystemLayout: Sendable, Equatable {
     public var softwareupdate: String = "/usr/sbin/softwareupdate"
     /// Read-only: `nvram boot-args` (whether the Ammonia tweak loader's boot argument is set).
     public var nvram: String = "/usr/sbin/nvram"
-    /// The tweak folder of the Ammonia loader (only used by the corner plugin; MacReplica writes there only with the
-    /// administrator password and only its own two files).
-    public var ammoniaTweaks: URL = URL(fileURLWithPath: "/private/var/ammonia/core/tweaks")
+    /// The Plugin Playground loader's paths (only used by the corner plugin; MacReplica writes to the tweaks folder
+    /// only with the administrator password and only its own two files).
+    public var pluginTweaks: URL = URL(fileURLWithPath: "/opt/pluginplayground/tweaks")
+    public var pluginLoaderBin: URL = URL(fileURLWithPath: "/opt/pluginplayground/bin")
+    public var pluginLoaderDaemon: URL = URL(fileURLWithPath: "/Library/LaunchDaemons/com.pluginplayground.grant.plist")
     /// Settings that configuration profiles enforce, readable by all users.
     public var managedPreferences: URL = URL(fileURLWithPath: "/Library/Managed Preferences")
     /// The PPD file of every print queue, readable by all users.

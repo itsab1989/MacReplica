@@ -12,13 +12,8 @@ public enum PrivilegedOperation: Equatable, Sendable {
     case installPackage(URL)
     /// Removes MacReplica's own corner plugin from the Ammonia tweak folder – nothing else (see `isRemovablePlugin`).
     case removePluginFile(URL)
-    /// Removes one of Ammonia's own items when uninstalling it – only the two fixed paths (see `isRemovableAmmoniaItem`).
+    /// Removes one of the tweak loader's own items when uninstalling it – only the fixed set (see `isRemovableLoaderItem`).
     case removeSystemItem(URL)
-    /// Clears the firmware `boot-args` variable (reversing Ammonia's `-arm64e_preview_abi`). Only ever run when the
-    /// current boot-args hold nothing else (checked by the caller).
-    case clearBootArguments
-    /// Re-enables library validation (reversing what Ammonia's installer disabled).
-    case enableLibraryValidation
 
     /// The executable and arguments for this operation. Only these five
     /// fixed system tools can ever be run with administrator rights.
@@ -33,9 +28,6 @@ public enum PrivilegedOperation: Equatable, Sendable {
         case .installPackage(let url): return ["/usr/sbin/installer", "-pkg", url.path, "-target", "/"]
         case .removePluginFile(let url): return ["/bin/rm", "-f", url.path]
         case .removeSystemItem(let url): return ["/bin/rm", "-rf", url.path]
-        case .clearBootArguments: return ["/usr/sbin/nvram", "-d", "boot-args"]
-        case .enableLibraryValidation:
-            return ["/usr/bin/defaults", "write", AmmoniaInstaller.libraryValidationPlist, "DisableLibraryValidation", "-bool", "false"]
         }
     }
 
@@ -43,25 +35,25 @@ public enum PrivilegedOperation: Equatable, Sendable {
         switch self {
         case .createFolder(let url), .installPackage(let url), .removePluginFile(let url), .removeSystemItem(let url): return [url]
         case .installFile(let source, let destination), .move(let source, let destination): return [source, destination]
-        case .clearBootArguments, .enableLibraryValidation: return []
         }
     }
 }
 
 extension PrivilegedOperation {
-    /// Only `MacReplicaCorners.dylib` and its `.blacklist` directly inside a folder ending in `ammonia/core/tweaks`.
+    /// Only MacReplica's own corner-plugin files (`MacReplicaCorners.dylib` and its `.options`) directly inside a
+    /// `pluginplayground/tweaks` folder.
     public static func isRemovablePlugin(_ url: URL) -> Bool {
         // The path as given: parent steps are refused outright (standardizing would hide them).
         guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
-        return url.deletingLastPathComponent().path.hasSuffix("/ammonia/core/tweaks")
+        return url.deletingLastPathComponent().path.hasSuffix("/pluginplayground/tweaks")
             && CornerPlugin.fileNames.contains(url.lastPathComponent)
     }
 
-    /// Only Ammonia's launch daemon plist and its install folder may be removed by `removeSystemItem`.
-    public static func isRemovableAmmoniaItem(_ url: URL) -> Bool {
+    /// Only Plugin Playground's own fixed items may be removed by `removeSystemItem` when uninstalling the loader.
+    public static func isRemovableLoaderItem(_ url: URL) -> Bool {
         guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
-        return url.standardizedFileURL == AmmoniaInstaller.daemonPlist.standardizedFileURL
-            || url.standardizedFileURL == AmmoniaInstaller.installRoot.standardizedFileURL
+        let allowed = [PluginLoader.daemonPlist, PluginLoader.app, PluginLoader.installRoot, PluginLoader.logs].map(\.standardizedFileURL)
+        return allowed.contains(url.standardizedFileURL)
     }
 }
 
@@ -124,7 +116,7 @@ public struct AppleScriptPrivilegedExecutor: PrivilegedExecuting {
             if case .removePluginFile(let url) = operation, !PrivilegedOperation.isRemovablePlugin(url) {
                 throw PrivilegedError.invalidPath(url.path)
             }
-            if case .removeSystemItem(let url) = operation, !PrivilegedOperation.isRemovableAmmoniaItem(url) {
+            if case .removeSystemItem(let url) = operation, !PrivilegedOperation.isRemovableLoaderItem(url) {
                 throw PrivilegedError.invalidPath(url.path)
             }
             let argv = operation.argv
@@ -183,11 +175,8 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
                 guard PrivilegedOperation.isRemovablePlugin(url) else { throw PrivilegedError.invalidPath(url.path) }
                 if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
             case .removeSystemItem(let url):
-                guard PrivilegedOperation.isRemovableAmmoniaItem(url) else { throw PrivilegedError.invalidPath(url.path) }
+                guard PrivilegedOperation.isRemovableLoaderItem(url) else { throw PrivilegedError.invalidPath(url.path) }
                 if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
-            case .clearBootArguments, .enableLibraryValidation:
-                // No file to touch in the simulation; recorded as done.
-                break
             }
         }
     }

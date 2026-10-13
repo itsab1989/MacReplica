@@ -536,6 +536,13 @@
         "ToolsCornerEdgeTests"
       ],
       "area": "Tools"
+    },
+    {
+      "file": "Tools/CornerPluginInstall.swift",
+      "tests": [
+        "PluginLoaderTests"
+      ],
+      "area": "Tools"
     }
   ],
   "exclusions": [

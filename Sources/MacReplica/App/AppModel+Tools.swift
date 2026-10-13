@@ -277,7 +277,7 @@ extension AppModel {
     /// install MacReplica's plugin – one administrator prompt. If the download or its checksum fails (for example the
     /// archived release was taken down), nothing is installed and the manual steps stay.
     func setUpCornerPluginOneClick() {
-        guard tools.plugin?.sip == .disabled else {
+        guard tools.plugin?.debuggingAllowed == true else {
             tools.pluginOutcome = ToolOutcome(verification: .notVerified, stateAfter: l.t("tools.plugin.oneClick.needsSIP"))
             return
         }
@@ -288,41 +288,39 @@ extension AppModel {
         tools.pluginBusy = true
         tools.pluginOutcome = nil
         Task {
-            let work = services.layout.caches.appendingPathComponent("AmmoniaDownload")
+            let work = services.layout.caches.appendingPathComponent("PluginLoaderDownload")
             let pkg: URL
             do {
-                pkg = try await AmmoniaInstaller.downloadVerifiedPackage(transport: services.downloadTransport, work: work)
+                pkg = try await PluginLoader.downloadVerifiedPackage(transport: services.downloadTransport, work: work)
             } catch {
                 tools.pluginBusy = false
                 let reason: String
-                if case AmmoniaInstaller.InstallError.checksumMismatch = error { reason = l.t("tools.plugin.oneClick.checksum") }
+                if case PluginLoader.InstallError.checksumMismatch = error { reason = l.t("tools.plugin.oneClick.checksum") }
                 else { reason = l.t("tools.plugin.oneClick.download") }
                 tools.pluginOutcome = ToolOutcome(verification: .failed, stateAfter: reason)
-                appLog.warning("Tools: Ammonia download failed: \(services.layout.redact(String(describing: error)))", component: .tools)
+                appLog.warning("Tools: loader download failed: \(services.layout.redact(String(describing: error)))", component: .tools)
                 return
             }
+            // Install the loader package and MacReplica's plugin in one administrator prompt. Enabling the loader
+            // itself is the user's step in Plugin Playground's own app, which MacReplica opens afterwards.
             await runPluginBatch([.installPackage(pkg)] + pluginOps, change: "windowCorners.oneClickSetUp", wantInstalled: true,
-                                 reason: l.t("tools.plugin.oneClick.reason"))
+                                 reason: l.t("tools.plugin.oneClick.reason"), extraNote: l.t("tools.plugin.oneClick.thenEnable"),
+                                 requireLoaderEnabled: false)
             try? FileManager.default.removeItem(at: work)
+            if tools.plugin?.loaderInstalled == true, services.simulationRoot == nil { NSWorkspace.shared.open(PluginLoader.app) }
         }
     }
 
-    /// One click to reverse everything MacReplica did: remove the plugin, uninstall Ammonia and – only when the boot
-    /// argument holds nothing but Ammonia's – clear it and re-enable library validation. The user restarts and turns
-    /// System Integrity Protection back on in recoveryOS afterwards (MacReplica never changes SIP).
+    /// One click to reverse everything MacReplica did: remove the plugin and uninstall the Plugin Playground loader.
+    /// Playground persists no boot argument or library-validation change, so nothing else has to be reset. The user
+    /// restarts and turns System Integrity Protection back on in recoveryOS afterwards (MacReplica never changes SIP).
     func undoCornerPluginOneClick() {
         tools.pluginBusy = true
         tools.pluginOutcome = nil
         Task {
-            var ops = CornerPlugin.removeOperations(layout: services.layout) + AmmoniaInstaller.uninstallOperations()
-            let nvram = try? await services.runner.run(Command(executable: services.layout.nvram, arguments: ["boot-args"],
-                                                               environment: ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C"], timeout: 15))
-            let bootArgs = AmmoniaInstaller.bootArgumentsValue(nvramOutput: nvram.map { $0.combinedOutput })
-            let clearedBootArgs = AmmoniaInstaller.bootArgumentsAreOnlyOurs(bootArgs)
-            if clearedBootArgs { ops += AmmoniaInstaller.bootArgumentCleanup() }
+            let ops = CornerPlugin.removeOperations(layout: services.layout) + PluginLoader.uninstallOperations()
             await runPluginBatch(ops, change: "windowCorners.oneClickUndo", wantInstalled: false,
-                                 reason: l.t("tools.plugin.undo.reason"),
-                                 extraNote: clearedBootArgs ? l.t("tools.plugin.undo.rebootSIP") : l.t("tools.plugin.undo.bootArgsManual"))
+                                 reason: l.t("tools.plugin.undo.reason"), extraNote: l.t("tools.plugin.undo.rebootSIP"))
         }
     }
 
@@ -339,7 +337,8 @@ extension AppModel {
 
     /// Runs a privileged batch (one administrator prompt), then re-reads the plugin status and records the outcome.
     /// `wantInstalled` decides what "done" means; `extraNote` is appended to the result (e.g. the reboot/SIP reminder).
-    private func runPluginBatch(_ operations: [PrivilegedOperation], change: String, wantInstalled: Bool, reason: String, extraNote: String? = nil) async {
+    private func runPluginBatch(_ operations: [PrivilegedOperation], change: String, wantInstalled: Bool, reason: String, extraNote: String? = nil,
+                                requireLoaderEnabled: Bool = true) async {
         tools.pluginBusy = true
         let wasInstalled = tools.plugin?.installed == true
         var failure: String?
@@ -356,7 +355,8 @@ extension AppModel {
         let status = await CornerPlugin.status(layout: services.layout, runner: services.runner, sip: sip, appBundle: appBundleURL, build: build)
         tools.plugin = status
         tools.pluginBusy = false
-        let verified = wantInstalled ? (status.installed && status.current) : !status.installed
+        let verified = wantInstalled ? (status.installed && status.current && (requireLoaderEnabled ? status.loaderEnabled : status.loaderInstalled))
+                                      : !status.installed
         let verification: ToolVerification = verified ? (wantInstalled ? .partiallyVerified : .verified) : .failed
         var text = failure.map { l.t("tools.plugin.failed", $0) }
             ?? l.t(verified ? (wantInstalled ? "tools.plugin.installed" : "tools.plugin.removed") : "tools.plugin.notConfirmed")

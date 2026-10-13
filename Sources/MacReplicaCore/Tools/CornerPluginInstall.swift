@@ -1,17 +1,18 @@
 import Foundation
 
-/// The one-click helper that sets up the Ammonia tweak loader for the corner plugin. The user still turns off System
-/// Integrity Protection in recoveryOS themselves (MacReplica never changes SIP); everything after that MacReplica can
-/// do for them, with a warning, the administrator password and a full undo.
+/// The one-click helper that sets up the Plugin Playground tweak loader for the corner plugin. The user still turns on
+/// partial System Integrity Protection (`csrutil enable --without debug`) in recoveryOS themselves — MacReplica never
+/// changes SIP — and enables the loader once in Plugin Playground's own app; everything else MacReplica can do for
+/// them, with a warning, the administrator password and a full undo.
 ///
-/// MacReplica's only privileged action to install is `installer -pkg` on a pinned, checksum-verified download of
-/// Ammonia, plus copying its own plugin. Ammonia's own installer sets the boot argument and disables library
-/// validation (its postinstall). Undo removes the plugin, uninstalls Ammonia the way its own uninstaller does, and –
-/// only when nothing else depends on them – clears the boot argument and re-enables library validation. SIP is the
-/// user's step again at the end.
-public enum AmmoniaInstaller {
-    /// A pinned Ammonia release. Downloaded over HTTPS, then checked against this exact SHA-256 before it is installed;
-    /// a mismatch stops the install. The `.pkg` is unsigned (it is a tweak loader), so the checksum is the only trust.
+/// MacReplica's only privileged install action is `installer -pkg` on a pinned, checksum-verified download of Plugin
+/// Playground, plus copying its own plugin into the loader's tweaks folder. Unlike the older Ammonia loader, Playground
+/// changes no boot argument and disables no library validation persistently (its `grant` daemon patches amfid only
+/// while injecting), so undo is just: remove the plugin, uninstall the loader, restart and turn SIP back on.
+public enum PluginLoader {
+    /// A pinned Plugin Playground release. Downloaded over HTTPS, then checked against this exact SHA-256 before it is
+    /// installed; a mismatch stops the install. The `.pkg` is unsigned (it is a tweak loader), so the checksum is the
+    /// only trust. Its project has no licence, so MacReplica only links to and downloads it – never forks or bundles it.
     public struct Release: Sendable, Equatable {
         public var version: String
         public var url: URL
@@ -27,29 +28,30 @@ public enum AmmoniaInstaller {
 
     /// Verified on 2026-10-14 (downloaded from the GitHub release and hashed locally; see docs/TOOLS.md).
     public static let release = Release(
-        version: "1.5",
-        url: URL(string: "https://github.com/CoreBedtime/ammonia/releases/download/1.5/ammonia.pkg")!,
-        sha256: "845d4482b2f474433267cefd97a13f1532113541837012da8481a4f198ff6884",
-        size: 14_110_824)
+        version: "1.1.0",
+        url: URL(string: "https://github.com/CoreBedtime/playground/releases/download/1.1.0/PluginPlayground-1.1.0.pkg")!,
+        sha256: "283c3b87e8861e158d726b3742e0bb42ea8d9677eaf9955eb541db88a7252b00",
+        size: 1_186_472)
 
-    public static let receiptIdentifier = "net.bedtime.ammonia"
-    public static let daemonLabel = "com.bedtime.ammonia"
-    public static let daemonPlist = URL(fileURLWithPath: "/Library/LaunchDaemons/com.bedtime.ammonia.plist")
-    public static let installRoot = URL(fileURLWithPath: "/private/var/ammonia")
-    public static let bootArgument = "-arm64e_preview_abi"
-    public static let libraryValidationPlist = "/Library/Preferences/com.apple.security.libraryvalidation.plist"
+    public static let receiptIdentifier = "com.pluginplayground.core"
+    public static let app = URL(fileURLWithPath: "/Applications/Plugin Playground.app")
+    public static let binFolder = URL(fileURLWithPath: "/opt/pluginplayground/bin")
+    public static let installRoot = URL(fileURLWithPath: "/opt/pluginplayground")
+    public static let tweaks = URL(fileURLWithPath: "/opt/pluginplayground/tweaks")
+    public static let daemonPlist = URL(fileURLWithPath: "/Library/LaunchDaemons/com.pluginplayground.grant.plist")
+    public static let logs = URL(fileURLWithPath: "/var/log/pluginplayground")
 
     public enum InstallError: Error, Equatable {
         case downloadFailed(String)
         case checksumMismatch(expected: String, got: String)
     }
 
-    /// Downloads the pinned Ammonia package into `work` and verifies its SHA-256. Returns the local file, ready to be
-    /// installed with `PrivilegedOperation.installPackage`. Never installs anything by itself.
+    /// Downloads the pinned Plugin Playground package into `work` and verifies its SHA-256. Returns the local file,
+    /// ready to be installed with `PrivilegedOperation.installPackage`. Never installs anything by itself.
     public static func downloadVerifiedPackage(_ release: Release = release, transport: DownloadTransport, work: URL,
                                                progress: @escaping @Sendable (Int64, Int64?) -> Void = { _, _ in }) async throws -> URL {
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
-        let destination = work.appendingPathComponent("ammonia-\(release.version).pkg")
+        let destination = work.appendingPathComponent("PluginPlayground-\(release.version).pkg")
         if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
         let file: URL
         do {
@@ -65,37 +67,11 @@ public enum AmmoniaInstaller {
         return file
     }
 
-    /// The privileged steps that uninstall Ammonia: remove its launch daemon and its folder. Each is tolerant of the
-    /// target already being gone (`rm -rf`). The daemon stops for good at the next restart, which the user does anyway
-    /// to clear the boot argument and re-enable System Integrity Protection. The boot argument and library validation
-    /// are handled separately (see `bootArgumentCleanup`) so they are only touched when safe.
+    /// The privileged steps that uninstall Plugin Playground: remove the app, its binaries and tweaks folder, and its
+    /// launch daemon. Each is tolerant of the target already being gone (`rm -rf`). The daemon stops for good at the
+    /// next restart, which the user does anyway to turn System Integrity Protection back on. No boot argument or
+    /// library-validation change has to be reversed – Playground makes none that persist.
     public static func uninstallOperations() -> [PrivilegedOperation] {
-        [.removeSystemItem(daemonPlist), .removeSystemItem(installRoot)]
-    }
-
-    /// Whether the current `boot-args` can be cleared without losing settings the user cares about: it holds only the
-    /// Ammonia boot argument (possibly repeated, as Ammonia's installer writes it). `nil` boot-args means none are set.
-    public static func bootArgumentsAreOnlyOurs(_ bootArgs: String?) -> Bool {
-        guard let bootArgs, !bootArgs.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
-        let tokens = bootArgs.split(whereSeparator: \.isWhitespace)
-        return !tokens.isEmpty && tokens.allSatisfy { $0 == bootArgument }
-    }
-
-    /// The boot argument from `nvram boot-args` output (`boot-args\t-arm64e_preview_abi …`), or nil if none is set.
-    public static func bootArgumentsValue(nvramOutput: String?) -> String? {
-        // `nvram boot-args` prints `boot-args\t<value>` on one line; its error message also contains the word
-        // "boot-args", so only a line that begins with it is read.
-        guard let output = nvramOutput else { return nil }
-        for line in output.split(whereSeparator: \.isNewline) where line.hasPrefix("boot-args") {
-            let value = line.dropFirst("boot-args".count).drop { $0 == "\t" || $0 == " " }
-            return value.isEmpty ? nil : String(value)
-        }
-        return nil
-    }
-
-    /// The extra privileged steps that fully reverse Ammonia's side effects, added to `uninstallOperations()` only
-    /// when `bootArgumentsAreOnlyOurs` is true. Otherwise MacReplica shows the commands and the user decides.
-    public static func bootArgumentCleanup() -> [PrivilegedOperation] {
-        [.clearBootArguments, .enableLibraryValidation]
+        [.removeSystemItem(daemonPlist), .removeSystemItem(app), .removeSystemItem(installRoot), .removeSystemItem(logs)]
     }
 }

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Plugin Playground targeting for MacReplicaCorners.dylib. Inject only into processes that link AppKit
+         (GUI apps), matching the plugin's own NSApplication gate, and never into these system UI processes. -->
+    <key>frameworkDependencies</key>
+    <array>
+        <string>AppKit</string>
+    </array>
+    <key>blacklistedApps</key>
+    <array>
+        <string>loginwindow</string>
+        <string>WindowManager</string>
+        <string>Dock</string>
+        <string>SystemUIServer</string>
+        <string>ControlCenter</string>
+        <string>NotificationCenter</string>
+        <string>Spotlight</string>
+        <string>Setup Assistant</string>
+        <string>SecurityAgent</string>
+    </array>
+</dict>
+</plist>

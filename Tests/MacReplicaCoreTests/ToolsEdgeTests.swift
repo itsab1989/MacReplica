@@ -147,22 +147,22 @@ struct ToolsCornerEdgeTests {
         let bundled = app.appendingPathComponent("Contents/Library/CornerPlugin")
         try FileManager.default.createDirectory(at: bundled, withIntermediateDirectories: true)
         try Data("dylib".utf8).write(to: bundled.appendingPathComponent(CornerPlugin.dylibName))
-        #expect(CornerPlugin.bundled(in: app) == nil, "without its blacklist the plugin is never offered")
+        #expect(CornerPlugin.bundled(in: app) == nil, "without its options file the plugin is never offered")
         var layout = SystemLayout.live()
-        layout.ammoniaTweaks = folder.appendingPathComponent("ammonia/core/tweaks")
-        try FileManager.default.createDirectory(at: layout.ammoniaTweaks, withIntermediateDirectories: true)
+        layout.pluginTweaks = folder.appendingPathComponent("pluginplayground/tweaks")
+        try FileManager.default.createDirectory(at: layout.pluginTweaks, withIntermediateDirectories: true)
         let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: []), baseEnvironment: [:])
         var status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
         #expect(!status.installed && !status.current)
-        try Data("dylib".utf8).write(to: layout.ammoniaTweaks.appendingPathComponent(CornerPlugin.dylibName))
+        try Data("dylib".utf8).write(to: layout.pluginTweaks.appendingPathComponent(CornerPlugin.dylibName))
         status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
-        #expect(!status.installed, "a plugin without its blacklist does not count as installed")
+        #expect(!status.installed, "a plugin without its options file does not count as installed")
         #expect(!status.current)
     }
 
     @Test func removalRefusesPathsWithParentSteps() {
-        #expect(!PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/etc/../private/var/ammonia/core/tweaks/MacReplicaCorners.dylib")))
-        #expect(PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/private/var/ammonia/core/tweaks/MacReplicaCorners.dylib")))
+        #expect(!PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/etc/../opt/pluginplayground/tweaks/MacReplicaCorners.dylib")))
+        #expect(PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/opt/pluginplayground/tweaks/MacReplicaCorners.dylib")))
     }
 
     @Test func locatorLooksAtMostOneFolderDownByName() throws {
