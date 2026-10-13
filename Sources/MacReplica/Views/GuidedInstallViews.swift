@@ -8,11 +8,14 @@ struct GuidedInstallView: View {
     var body: some View {
         let l = model.l
         let apps = model.openApps
-        let tools = model.openToolchainSteps
+        let steps = model.openToolchainSteps
+        let tools = steps.filter { $0.kind == .toolchainStep }
+        // Displays, printers and scanners are set up in System Settings, not with a Terminal command.
+        let devices = steps.filter { $0.kind != .toolchainStep }
         ScreenLayout(title: l.t("guided.title"), subtitle: l.t("guided.subtitle")) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if apps.isEmpty && tools.isEmpty {
+                    if apps.isEmpty && steps.isEmpty {
                         NoticeView(style: .success, title: l.t("guided.allDone.title"), message: l.t("guided.allDone.message"))
                     }
                     if !apps.isEmpty {
@@ -31,6 +34,17 @@ struct GuidedInstallView: View {
                             ForEach(apps) { item in
                                 GuidedAppRow(item: item)
                                 if item.id != apps.last?.id { Divider() }
+                            }
+                        }
+                    }
+                    if !devices.isEmpty {
+                        Text(l.p("guided.devices.heading", devices.count)).font(.headline)
+                        Text(l.t("guided.devices.message")).font(.callout).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Card {
+                            ForEach(devices) { item in
+                                GuidedToolchainRow(item: item)
+                                if item.id != devices.last?.id { Divider() }
                             }
                         }
                     }

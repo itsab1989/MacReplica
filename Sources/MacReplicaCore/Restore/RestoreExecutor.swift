@@ -380,7 +380,11 @@ public final class RestoreExecutor: Sendable {
             var prediction = await inspector.predict(item, brew: brew, taps: taps)
             if let dependency = item.dependsOn.first(where: { blocked.contains($0) }) {
                 if case .alreadyPresent = prediction {} else {
-                    prediction = .willSkip(.dependencyFailed(itemTitle: plan.item(id: dependency)?.title ?? dependency))
+                    // A package of a tap the user did not allow says so (allowing the tap fixes it).
+                    let blocker = plan.item(id: dependency)
+                    prediction = blocker?.kind == .tap && !selection.enabledTaps.contains(blocker!.identifier.lowercased())
+                        ? .willSkip(.tapNotEnabled(tap: blocker!.identifier))
+                        : .willSkip(.dependencyFailed(itemTitle: blocker?.title ?? dependency))
                 }
             }
             if case .willSkip = prediction { blocked.insert(item.id) }
@@ -455,6 +459,8 @@ public final class RestoreExecutor: Sendable {
                 } else if session.results[blocker]?.outcome.isOpen == true {
                     // The prerequisite waits for the user, so this step waits as well.
                     result = ItemResult(itemID: item.id, outcome: .skipped(.waitingForManualStep(itemTitle: title)))
+                } else if let tap = plan.item(id: blocker), tap.kind == .tap, !session.selection.enabledTaps.contains(tap.identifier.lowercased()) {
+                    result = ItemResult(itemID: item.id, outcome: .skipped(.tapNotEnabled(tap: tap.identifier)))
                 } else {
                     result = ItemResult(itemID: item.id, outcome: .skipped(.dependencyFailed(itemTitle: title)))
                 }

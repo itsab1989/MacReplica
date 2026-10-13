@@ -1648,3 +1648,6 @@
 "conflict.help" = "Keep this Mac's version: nothing is changed. Replace with backup: the backup's version is installed and the existing file is moved to ~/Library/Application Support/MacReplica/Replaced Files – it is not deleted. Keep both: the backup's file is installed next to it under a new name. Skip: this item is not restored. The suggestion for each item is the safe choice (for example the newer font version).";
 "restore.dryRun.help" = "Shows what each step would do on this Mac – install, copy, keep, skip or wait for you – without changing anything. Use it before the real restore; the list can be exported.";
 "selection.help" = "Saves which apps, data, folders, installers, settings and printers are switched on or off, and the backup location – no data and no passphrase. Next time MacReplica offers to use it; new apps and data that did not exist then keep their usual setting. A copy is saved next to every backup (MacReplica Selection.json).";
+"guided.devices.heading.one" = "%1$d step for displays, printers or scanners";
+"guided.devices.heading.other" = "%1$d steps for displays, printers and scanners";
+"guided.devices.message" = "These are set up in System Settings (and with the manufacturer's driver where needed). Do each one, then click Check Again – MacReplica checks the result.";
