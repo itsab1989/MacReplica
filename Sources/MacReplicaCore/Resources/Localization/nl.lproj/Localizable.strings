@@ -1472,3 +1472,10 @@
 "frontEnd.homebrew.missing" = "Een grafische interface voor Homebrew – maar Homebrew is op deze Mac niet gevonden of was niet bruikbaar, dus er zitten geen Homebrew-pakketten in de reservekopie. Deze app alleen installeert Homebrew niet.";
 "companions.includes" = "Hoort erbij: %1$@ (wordt mee geïnstalleerd)";
 "app.fromTap" = "Uit de tap %1$@ (een pakketbron buiten de eigen verzameling van Homebrew): sta hem op de nieuwe Mac toe in de selectie voor het herstel.";
+"version.installs" = "Installeert versie %1$@";
+"version.same" = "Installeert versie %1$@ – dezelfde versie als op de oude Mac";
+"version.newer" = "Installeert versie %1$@ – nieuwer dan de %2$@ die je had. Controleer of je bestanden, plug-ins en licentie ermee werken.";
+"version.older" = "Installeert versie %1$@ – ouder dan de %2$@ die je had. Bestanden die met de nieuwere versie zijn bewaard, openen mogelijk niet.";
+"guided.source.choose" = "Kies een bron …";
+"guided.source.help" = "Waar de app op deze Mac vandaan komt. Je eigen installatieprogramma geeft precies jouw versie, zonder internet. De updatefeed of download van de ontwikkelaar geeft de nieuwste versie van het gekozen kanaal (stabiel, bèta …), die mogelijk een nieuwere macOS nodig heeft of bestandsformaten verandert. MacReplica stelt de bron in hetzelfde kanaal als op de oude Mac voor; het wisselt nooit zelf van bèta naar stabiel of andersom. Homebrew installeert altijd de huidige versie van een pakket; oudere versies bewaart Homebrew niet. Een app die al geïnstalleerd is, wordt nooit vervangen of teruggezet naar een oudere versie.";
+"guided.source.noChannel" = "Er is geen bron gevonden voor het kanaal %1$@ dat je gebruikte. Kies zelf een bron als je van kanaal wilt wisselen – MacReplica wisselt het niet voor je.";

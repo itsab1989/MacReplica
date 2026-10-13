@@ -1472,3 +1472,10 @@
 "frontEnd.homebrew.missing" = "Et grafisk grensesnitt for Homebrew – men Homebrew ble ikke funnet eller kunne ikke brukes på denne Macen, så ingen Homebrew-pakker er i sikkerhetskopien. Denne appen alene installerer ikke Homebrew.";
 "companions.includes" = "Følger med: %1$@ (installeres sammen med den)";
 "app.fromTap" = "Fra tapen %1$@ (en pakkekilde utenfor Homebrews egen samling): tillat den i gjenopprettingsvalget på den nye Macen.";
+"version.installs" = "Installerer versjon %1$@";
+"version.same" = "Installerer versjon %1$@ – samme versjon som på den gamle Macen";
+"version.newer" = "Installerer versjon %1$@ – nyere enn %2$@ som du hadde. Kontroller at filene, tilleggene og lisensen din fungerer med den.";
+"version.older" = "Installerer versjon %1$@ – eldre enn %2$@ som du hadde. Filer lagret med den nyere versjonen kan kanskje ikke åpnes.";
+"guided.source.choose" = "Velg en kilde …";
+"guided.source.help" = "Hvor appen kommer fra på denne Macen. Ditt eget installasjonsprogram gir nøyaktig den versjonen du hadde, uten internett. Utviklerens oppdateringsfeed eller nedlasting gir nyeste versjon i valgt kanal (stabil, beta …), som kan kreve nyere macOS eller endre filformater. MacReplica foreslår kilden i samme kanal som på den gamle Macen; den bytter aldri selv fra beta til stabil eller omvendt. Homebrew installerer alltid gjeldende versjon av en pakke; eldre versjoner beholdes ikke av Homebrew. En app som allerede er installert, blir aldri erstattet eller nedgradert.";
+"guided.source.noChannel" = "Fant ingen kilde for kanalen %1$@ som du brukte. Velg en kilde selv hvis du vil bytte kanal – MacReplica bytter den ikke for deg.";

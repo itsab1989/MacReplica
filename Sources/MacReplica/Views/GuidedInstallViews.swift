@@ -110,18 +110,30 @@ struct GuidedAppRow: View {
                 HStack {
                     Text(l.t("guided.source")).font(.caption).foregroundStyle(.secondary)
                     Picker(l.t("guided.source"), selection: Binding(get: { chosen?.id ?? "" }, set: { model.chooseOffer($0, for: item.id) })) {
+                        if chosen == nil { Text(l.t("guided.source.choose")).tag("") }
                         ForEach(offers) { offer in Text(l.offerText(offer)).tag(offer.id) }
                     }
                     .labelsHidden()
                     .fixedSize()
                     .disabled(model.guided.running)
                     .accessibilityIdentifier("guided.source.\(item.id)")
+                    HelpButton(text: l.t("guided.source.help"), title: l.t("guided.source"), id: "help.guided.source.\(item.id)")
                 }
                 .padding(.leading, 22)
+                if chosen == nil, let channel = item.app?.channel {
+                    Text(l.t("guided.source.noChannel", l.channelText(channel))).font(.caption).foregroundStyle(.orange)
+                        .padding(.leading, 22).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("guided.noChannel.\(item.id)")
+                }
             } else if let chosen {
                 Text(l.offerText(chosen)).font(.caption).foregroundStyle(.secondary).padding(.leading, 22)
             } else if model.guided.searched {
                 Text(l.t("guided.noSource")).font(.caption).foregroundStyle(.secondary).padding(.leading, 22)
+            }
+            if let chosen, let versionText = l.installedVersionText(chosen, original: item.originalVersion) {
+                Text(versionText).font(.caption).padding(.leading, 22)
+                    .foregroundStyle(chosen.version.map { VersionComparison.compare($0, item.originalVersion ?? $0) == .orderedAscending } == true ? Color.orange : Color.secondary)
+                    .accessibilityIdentifier("guided.version.\(item.id)")
             }
             if let chosen {
                 Text(chosen.kind == .appStore ? l.t("offer.appStore.hint") : chosen.kind == .vendorWebsite ? l.t("offer.website.hint") : l.trustText(chosen.trust))

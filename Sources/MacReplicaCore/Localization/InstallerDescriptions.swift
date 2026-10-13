@@ -158,3 +158,17 @@ extension Localizer {
 
     public func companionsText(_ names: [String]) -> String { t("companions.includes", names.joined(separator: ", ")) }
 }
+
+/// Which version a source installs compared with the old Mac.
+extension Localizer {
+    /// "Installs 2.5 – newer than the 2.4 you had", "Installs 2.4 – the same version as before" …; nil if unknown.
+    public func installedVersionText(_ offer: DownloadOffer, original: String?) -> String? {
+        guard let version = offer.version, !version.isEmpty else { return nil }
+        guard let original, !original.isEmpty else { return t("version.installs", version) }
+        switch VersionComparison.compare(version, original) {
+        case .orderedSame: return t("version.same", version)
+        case .orderedDescending: return t("version.newer", version, original)
+        case .orderedAscending: return t("version.older", version, original)
+        }
+    }
+}

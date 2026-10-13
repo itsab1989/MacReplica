@@ -1472,3 +1472,10 @@
 "frontEnd.homebrew.missing" = "Eine grafische Oberfläche für Homebrew – Homebrew wurde auf diesem Mac aber nicht gefunden oder war nicht nutzbar, daher sind keine Homebrew-Pakete im Backup. Diese App allein installiert Homebrew nicht.";
 "companions.includes" = "Gehört dazu: %1$@ (wird mit installiert)";
 "app.fromTap" = "Aus dem Tap %1$@ (eine Paketquelle außerhalb von Homebrews eigener Sammlung): Erlaube ihn auf dem neuen Mac in der Auswahl für die Wiederherstellung.";
+"version.installs" = "Installiert Version %1$@";
+"version.same" = "Installiert Version %1$@ – dieselbe Version wie auf dem alten Mac";
+"version.newer" = "Installiert Version %1$@ – neuer als deine %2$@. Prüf, ob deine Dateien, Plug-ins und Lizenz damit funktionieren.";
+"version.older" = "Installiert Version %1$@ – älter als deine %2$@. Mit der neueren Version gespeicherte Dateien lassen sich womöglich nicht öffnen.";
+"guided.source.choose" = "Quelle wählen …";
+"guided.source.help" = "Woher die App auf diesem Mac kommt. Dein eigenes Installationsprogramm liefert genau deine Version, ohne Internet. Update-Feed oder Download des Entwicklers liefern die neueste Version des gewählten Kanals (stabil, Beta …), die womöglich ein neueres macOS braucht oder Dateiformate ändert. MacReplica schlägt die Quelle im selben Kanal wie auf dem alten Mac vor; es wechselt nie von sich aus von Beta zu stabil oder umgekehrt. Homebrew installiert immer die aktuelle Version eines Pakets; ältere Versionen hält Homebrew nicht vor. Eine bereits installierte App wird nie ersetzt oder durch eine ältere ersetzt.";
+"guided.source.noChannel" = "Für den Kanal %1$@, den du genutzt hast, wurde keine Quelle gefunden. Wähl selbst eine Quelle, wenn du den Kanal wechseln möchtest – MacReplica wechselt ihn nicht für dich.";

@@ -140,7 +140,9 @@ extension AppModel {
 
     func chosenOffer(for itemID: String) -> DownloadOffer? {
         let offers = guided.offers[itemID] ?? []
-        return offers.first { $0.id == selection.sourceChoices[itemID] } ?? offers.first(where: \.recommended) ?? offers.first
+        if let chosen = offers.first(where: { $0.id == selection.sourceChoices[itemID] }) { return chosen }
+        let channel = openApps.first { $0.id == itemID }?.app?.channel
+        return DownloadSourceFinder.defaultOffer(offers, originalChannel: channel)
     }
 
     func chooseOffer(_ offerID: String, for itemID: String) {
