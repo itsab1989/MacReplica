@@ -1843,7 +1843,6 @@
 "tools.updates.deferral.verified" = "macOS schiebt große Upgrades um %1$d Tage auf, und Apples Installer-Liste zeigt die neuere Version als aufgeschoben.";
 "tools.updates.deferral.partly" = "macOS meldet einen Aufschub um %1$d Tage. Ob er eine neuere Version zurückhält, zeigt sich erst, wenn Apple eine anbietet, die dieser Mac installieren kann.";
 "tools.updates.deferral.otherStillActive" = "Das Profil von MacReplica ist entfernt, aber ein anderes Profil schiebt Upgrades weiterhin auf.";
-"tools.restart.none" = "";
 "tools.restart.relaunchApps" = "Beende Apps und öffne sie erneut, um die Änderung zu sehen (oder melde dich ab und wieder an).";
 "tools.restart.logOut" = "Melde dich ab und wieder an, um abzuschließen.";
 "tools.restart.restart" = "Starte den Mac neu, um abzuschließen.";

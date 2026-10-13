@@ -1843,7 +1843,6 @@
 "tools.updates.deferral.verified" = "macOS rinvia gli upgrade principali di %1$d giorni e l’elenco degli installer di Apple mostra la versione più recente come rinviata.";
 "tools.updates.deferral.partly" = "macOS riporta un rinvio di %1$d giorni. Se trattiene una versione più recente si vedrà solo quando Apple ne offrirà una installabile su questo Mac.";
 "tools.updates.deferral.otherStillActive" = "Il profilo di MacReplica è stato rimosso, ma un altro profilo rinvia ancora gli upgrade.";
-"tools.restart.none" = "";
 "tools.restart.relaunchApps" = "Chiudi e riapri le app per vedere la modifica (o esci e accedi di nuovo).";
 "tools.restart.logOut" = "Esci e accedi di nuovo per completare.";
 "tools.restart.restart" = "Riavvia il Mac per completare.";

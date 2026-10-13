@@ -1845,7 +1845,6 @@
 "tools.updates.deferral.verified" = "macOS postpones major upgrades by %1$d days, and Apple's installer list shows the newer version as deferred.";
 "tools.updates.deferral.partly" = "macOS reports a postponement of %1$d days. Whether it holds back a newer version shows only once Apple offers one this Mac can install.";
 "tools.updates.deferral.otherStillActive" = "MacReplica's profile is gone, but another profile still postpones upgrades.";
-"tools.restart.none" = "";
 "tools.restart.relaunchApps" = "Quit and reopen apps to see the change (or log out and back in).";
 "tools.restart.logOut" = "Log out and back in to finish.";
 "tools.restart.restart" = "Restart the Mac to finish.";

@@ -71,12 +71,14 @@ struct ToolsGatekeeperTests {
 
     @Test func gatekeeperOffMasksTheVerdictOfEveryApp() {
         let report = GatekeeperInspector.report(app: URL(fileURLWithPath: "/Applications/IINA.app"),
-                                                quarantine: "0181;6acbc32e;Homebrew Cask;FEDB6031", verify: Self.ok(),
+                                                quarantine: "0181;6acbc32e;Homebrew\\x20Cask;FEDB6031", verify: Self.ok(),
                                                 details: "Authority=Developer ID Application: Hechen Li (67CQ77V27R)\nAuthority=Developer ID Certification Authority",
                                                 notarized: Self.ok(),
                                                 assess: "/Applications/IINA.app: accepted\nsource=Notarized Developer ID\noverride=security disabled\norigin=Developer ID Application: Hechen Li (67CQ77V27R)",
-                                                findings: [])
+                                                findings: ["Notary Ticket Missing (Fatal)"])
         #expect(report.appName == "IINA")
+        // Notarised according to Apple's online check: the missing stapled ticket is not a problem worth showing.
+        #expect(report.policyFindings.isEmpty)
         #expect(report.quarantined)
         #expect(report.quarantineAgent == "Homebrew Cask")
         #expect(report.signature == .valid)

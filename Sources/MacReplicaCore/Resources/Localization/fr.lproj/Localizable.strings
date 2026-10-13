@@ -1843,7 +1843,6 @@
 "tools.updates.deferral.verified" = "macOS reporte les mises à niveau majeures de %1$d jours, et la liste des programmes d’installation d’Apple indique la version plus récente comme reportée.";
 "tools.updates.deferral.partly" = "macOS indique un report de %1$d jours. S’il retient une version plus récente, on ne le verra que lorsqu’Apple en proposera une que ce Mac peut installer.";
 "tools.updates.deferral.otherStillActive" = "Le profil de MacReplica a disparu, mais un autre profil reporte toujours les mises à niveau.";
-"tools.restart.none" = "";
 "tools.restart.relaunchApps" = "Quitte et rouvre les apps pour voir le changement (ou ferme ta session et reconnecte-toi).";
 "tools.restart.logOut" = "Ferme ta session et reconnecte-toi pour terminer.";
 "tools.restart.restart" = "Redémarre le Mac pour terminer.";

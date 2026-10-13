@@ -1843,7 +1843,6 @@
 "tools.updates.deferral.verified" = "macOS aplaza las mejoras grandes %1$d días y la lista de instaladores de Apple muestra la versión más reciente como aplazada.";
 "tools.updates.deferral.partly" = "macOS indica un aplazamiento de %1$d días. Si retiene una versión más reciente solo se verá cuando Apple ofrezca una que este Mac pueda instalar.";
 "tools.updates.deferral.otherStillActive" = "El perfil de MacReplica ya no está, pero otro perfil sigue aplazando las mejoras.";
-"tools.restart.none" = "";
 "tools.restart.relaunchApps" = "Cierra y vuelve a abrir las apps para ver el cambio (o cierra sesión y vuelve a entrar).";
 "tools.restart.logOut" = "Cierra sesión y vuelve a entrar para terminar.";
 "tools.restart.restart" = "Reinicia el Mac para terminar.";

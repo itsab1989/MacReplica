@@ -1843,7 +1843,6 @@
 "tools.updates.deferral.verified" = "macOS stelt grote upgrades %1$d dagen uit, en de installerlijst van Apple toont de nieuwere versie als uitgesteld.";
 "tools.updates.deferral.partly" = "macOS meldt een uitstel van %1$d dagen. Of het een nieuwere versie tegenhoudt, blijkt pas als Apple er een aanbiedt die deze Mac kan installeren.";
 "tools.updates.deferral.otherStillActive" = "Het profiel van MacReplica is weg, maar een ander profiel stelt upgrades nog steeds uit.";
-"tools.restart.none" = "";
 "tools.restart.relaunchApps" = "Stop apps en open ze opnieuw om de wijziging te zien (of log uit en weer in).";
 "tools.restart.logOut" = "Log uit en weer in om af te ronden.";
 "tools.restart.restart" = "Herstart de Mac om af te ronden.";

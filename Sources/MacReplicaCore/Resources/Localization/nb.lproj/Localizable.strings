@@ -1843,7 +1843,6 @@
 "tools.updates.deferral.verified" = "macOS utsetter store oppgraderinger med %1$d dager, og Apples installasjonsliste viser den nyere versjonen som utsatt.";
 "tools.updates.deferral.partly" = "macOS rapporterer en utsettelse på %1$d dager. Om den holder tilbake en nyere versjon, vises først når Apple tilbyr en som denne Macen kan installere.";
 "tools.updates.deferral.otherStillActive" = "Profilen fra MacReplica er borte, men en annen profil utsetter fortsatt oppgraderinger.";
-"tools.restart.none" = "";
 "tools.restart.relaunchApps" = "Avslutt og åpne apper på nytt for å se endringen (eller logg ut og inn igjen).";
 "tools.restart.logOut" = "Logg ut og inn igjen for å fullføre.";
 "tools.restart.restart" = "Start Macen på nytt for å fullføre.";

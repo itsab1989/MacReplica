@@ -7,6 +7,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Tools** – a fourth option on the start screen with three tools for this Mac. Each tool shows what it finds,
+  asks before changing anything, checks the real result afterwards and keeps a short history (docs/TOOLS.md).
+  - **Gatekeeper and app security:** shows whether macOS checks apps and why not (for example a profile), checks a
+    single app (signature, notarisation, quarantine, Gatekeeper's verdict) and guides you through Apple's “Open
+    Anyway”. On request and after a warning, it prepares a profile that turns app checking off for the whole Mac,
+    and helps you remove exactly that profile again.
+  - **macOS updates:** shows the automatic-update switches and whether this macOS version still gets security
+    updates, and guides you to a setup that keeps this version current without upgrading. Where Apple still allows
+    it without device management (macOS 13–15.7.4 and 26), it can postpone major upgrades by up to 90 days with a
+    profile. On macOS 27 this is no longer possible, and the tool says so.
+  - **Window corners (experimental, macOS 26.4 and later):** less rounded app windows through an undocumented AppKit
+    setting, from 2 to 24 pt, with an exact way back. Quick Look, popovers and menus can't be changed and are
+    listed as such.
+
 ### Fixed
 - **A backup could be removed completely** when Word (or another Office app) was open: its temporary lock file
   `~$Normal.dotm` made the final check fail. Office lock files are skipped now, and a file whose name a backup

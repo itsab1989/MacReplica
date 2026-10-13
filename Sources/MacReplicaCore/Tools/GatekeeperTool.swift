@@ -234,15 +234,20 @@ public struct GatekeeperInspector: Sendable {
 
         let agent = quarantine.flatMap { value -> String? in
             let parts = value.split(separator: ";", omittingEmptySubsequences: false)
-            return parts.count > 2 && !parts[2].isEmpty ? String(parts[2]) : nil
+            // The agent name is stored with escaped spaces (`Homebrew\x20Cask`).
+            return parts.count > 2 && !parts[2].isEmpty ? String(parts[2]).replacingOccurrences(of: "\\x20", with: " ") : nil
         }
+        // `syspolicy_check` reports a missing *stapled* ticket as fatal even when Apple's online check confirms the
+        // notarisation; that finding is only shown when the app is not notarised.
+        let notarizedNow = notarized.map { $0.succeeded }
+        let shownFindings = notarizedNow == true ? findings.filter { !$0.hasPrefix("Notary Ticket Missing") } : findings
         let name = app.deletingPathExtension().lastPathComponent
         return AppSecurityReport(appName: name, path: app.path, quarantined: quarantine != nil, quarantineAgent: agent,
                                  signature: signature, signer: signer,
-                                 notarized: notarized.map { $0.succeeded },
+                                 notarized: notarizedNow,
                                  verdict: verdict, assessmentSource: source,
                                  approvedByUser: override != nil && override != "security disabled",
-                                 policyFindings: findings)
+                                 policyFindings: shownFindings)
     }
 
     /// `syspolicy_check distribution --json` exits 0 even with a fatal finding, so the JSON is read.
