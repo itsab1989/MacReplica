@@ -41,6 +41,11 @@ public struct SystemLayout: Sendable, Equatable {
     public var codesign: String = "/usr/bin/codesign"
     public var syspolicyCheck: String = "/usr/bin/syspolicy_check"
     public var softwareupdate: String = "/usr/sbin/softwareupdate"
+    /// Read-only: `nvram boot-args` (whether the Ammonia tweak loader's boot argument is set).
+    public var nvram: String = "/usr/sbin/nvram"
+    /// The tweak folder of the Ammonia loader (only used by the corner plugin; MacReplica writes there only with the
+    /// administrator password and only its own two files).
+    public var ammoniaTweaks: URL = URL(fileURLWithPath: "/private/var/ammonia/core/tweaks")
     /// Settings that configuration profiles enforce, readable by all users.
     public var managedPreferences: URL = URL(fileURLWithPath: "/Library/Managed Preferences")
     /// The PPD file of every print queue, readable by all users.
@@ -157,7 +162,7 @@ public struct SystemLayout: Sendable, Equatable {
     public var allowedExecutables: Set<String> {
         let pythons = homebrewPrefixes.flatMap { prefix in PythonVersion.supportedMinors.map { homebrewPython(minor: $0, prefix: prefix) } }
         return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto, lpstat, defaults, killall,
-                                                                  spctl, csrutil, profiles, codesign, syspolicyCheck, softwareupdate])
+                                                                  spctl, csrutil, profiles, codesign, syspolicyCheck, softwareupdate, nvram])
     }
 
     public func baseFolder(for kind: BackupFileKind, domain: FileDomain) -> URL {

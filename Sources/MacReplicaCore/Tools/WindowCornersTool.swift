@@ -107,37 +107,90 @@ public enum CornerSetting: Equatable, Sendable, Codable {
     }
 }
 
-/// The two keys together.
-public struct CornerState: Equatable, Sendable {
-    public var windows: CornerSetting
-    public var utilityPanels: CornerSetting
-    /// The raw stored values exactly as found (a value AppKit ignores, such as 0 or text, is kept for the revert).
-    public var rawWindows: String?
-    public var rawUtilityPanels: String?
+/// Everything the corner tool can change. Windows and utility panels use AppKit's own (undocumented) keys and need
+/// nothing else. Menus, popovers and Quick Look are only reachable with MacReplica's corner plugin, which runs only
+/// with System Integrity Protection off (see `CornerPlugin`); their keys are read by that plugin and do nothing
+/// without it. Classic menus are AppKit's own older menu style (no plugin needed).
+public enum CornerSurface: String, CaseIterable, Sendable, Codable {
+    case windows
+    case utilityPanels
+    case menus
+    case popovers
+    case quickLook
+    /// Toolbar groups (the glass “pills” in toolbars, e.g. view switchers).
+    case toolbars
+    /// Buttons in all apps (including Quick Look's): rounded rectangle instead of capsule (a shape, not a radius).
+    case buttons
 
-    public init(windows: CornerSetting, utilityPanels: CornerSetting, rawWindows: String? = nil, rawUtilityPanels: String? = nil) {
-        self.windows = windows
-        self.utilityPanels = utilityPanels
-        self.rawWindows = rawWindows
-        self.rawUtilityPanels = rawUtilityPanels
+    public var key: String {
+        switch self {
+        case .windows: return "NSConvolutionOverride1"
+        case .utilityPanels: return "NSConvolutionOverride2"
+        case .menus: return "MacReplicaMenuCornerRadius"
+        case .popovers: return "MacReplicaPopoverCornerRadius"
+        case .quickLook: return "MacReplicaQuickLookCornerRadius"
+        case .toolbars: return "MacReplicaToolbarCornerRadius"
+        case .buttons: return "MacReplicaRoundedButtons"
+        }
     }
 
-    /// `windows=7;panels=system` – plus the raw values so a revert writes back exactly what was there.
+    public var needsPlugin: Bool { self != .windows && self != .utilityPanels }
+    public var isRadius: Bool { self != .buttons }
+    public static let radiusSurfaces = allCases.filter(\.isRadius)
+}
+
+/// What the user wants: a radius per surface (`.system` = leave macOS's own), the button shape and the
+/// classic menu style.
+public struct CornerConfiguration: Equatable, Sendable {
+    public var radii: [CornerSurface: CornerSetting]
+    public var roundedButtons: Bool
+    public var classicMenus: Bool
+
+    public init(radii: [CornerSurface: CornerSetting] = [:], roundedButtons: Bool = false, classicMenus: Bool = false) {
+        self.radii = radii
+        self.roundedButtons = roundedButtons
+        self.classicMenus = classicMenus
+    }
+
+    public func radius(_ surface: CornerSurface) -> CornerSetting { radii[surface] ?? .system }
+
+    /// Nothing changed from macOS's own look.
+    public var isSystemDefault: Bool {
+        CornerSurface.radiusSurfaces.allSatisfy { radius($0) == .system } && !roundedButtons && !classicMenus
+    }
+
+    /// The same radius for every chosen surface (the default in the app, so everything looks alike).
+    public static func uniform(_ points: Int, surfaces: Set<CornerSurface>, classicMenus: Bool = false) -> CornerConfiguration {
+        var radii: [CornerSurface: CornerSetting] = [:]
+        for surface in CornerSurface.radiusSurfaces where surfaces.contains(surface) { radii[surface] = .radius(points) }
+        return CornerConfiguration(radii: radii, roundedButtons: surfaces.contains(.buttons), classicMenus: classicMenus)
+    }
+
+    /// Surfaces that only change with the plugin.
+    public var needsPlugin: Bool {
+        CornerSurface.allCases.contains { $0.needsPlugin && ($0 == .buttons ? roundedButtons : radius($0) != .system) }
+    }
+}
+
+/// The raw values of every key the tool manages, exactly as found – what a revert writes back (including “not set”).
+public struct CornerSnapshot: Equatable, Sendable {
+    public static let keys = CornerSurface.allCases.map(\.key) + [MenuAppearance.key]
+    public var values: [String: String]
+
+    public init(values: [String: String]) { self.values = values }
+
+    /// `NSConvolutionOverride1=int:7|NSGlassMenusEnabled=bool:0` (keys not listed were not set).
     public var historyText: String {
-        "windows=\(windows.historyText);panels=\(utilityPanels.historyText);rawWindows=\(rawWindows ?? "-");rawPanels=\(rawUtilityPanels ?? "-")"
+        Self.keys.compactMap { key in values[key].map { "\(key)=\($0)" } }.joined(separator: "|")
     }
 
     public init?(historyText: String) {
-        var parts: [String: String] = [:]
-        for part in historyText.split(separator: ";") {
-            guard let index = part.firstIndex(of: "=") else { return nil }
-            parts[String(part[..<index])] = String(part[part.index(after: index)...])
+        var values: [String: String] = [:]
+        for part in historyText.split(separator: "|") {
+            guard let index = part.firstIndex(of: "="), Self.keys.contains(String(part[..<index])) else { return nil }
+            values[String(part[..<index])] = String(part[part.index(after: index)...])
         }
-        guard let w = parts["windows"].flatMap(CornerSetting.init(historyText:)),
-              let p = parts["panels"].flatMap(CornerSetting.init(historyText:)) else { return nil }
-        self.init(windows: w, utilityPanels: p,
-                  rawWindows: parts["rawWindows"].flatMap { $0 == "-" ? nil : $0 },
-                  rawUtilityPanels: parts["rawPanels"].flatMap { $0 == "-" ? nil : $0 })
+        self.init(values: values)
     }
 }
 
@@ -162,6 +215,7 @@ public struct WindowCornersTool: Sendable {
 
     static func raw(_ value: Any?) -> String? {
         guard let value else { return nil }
+        if let number = value as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID() { return "bool:\(number.boolValue ? 1 : 0)" }
         if let number = value as? Int { return "int:\(number)" }
         if let number = value as? Double { return "real:\(number)" }
         if let text = value as? String { return "string:\(text)" }
@@ -169,39 +223,70 @@ public struct WindowCornersTool: Sendable {
     }
 
     static func value(fromRaw raw: String) -> Any? {
+        if raw.hasPrefix("bool:") { return raw.dropFirst(5) == "1" }
         if raw.hasPrefix("int:") { return Int(raw.dropFirst(4)) }
         if raw.hasPrefix("real:") { return Double(raw.dropFirst(5)) }
         if raw.hasPrefix("string:") { return String(raw.dropFirst(7)) }
         return nil
     }
 
-    public func state() -> CornerState {
-        let w = store.value(WindowCornerKey.windows)
-        let p = store.value(WindowCornerKey.utilityPanels)
-        return CornerState(windows: CornerSetting(stored: w), utilityPanels: CornerSetting(stored: p), rawWindows: Self.raw(w), rawUtilityPanels: Self.raw(p))
+    public func snapshot() -> CornerSnapshot {
+        var values: [String: String] = [:]
+        for key in CornerSnapshot.keys { if let raw = Self.raw(store.value(key)) { values[key] = raw } }
+        return CornerSnapshot(values: values)
     }
 
-    /// Writes the setting and reads it back. The visual effect shows only in apps started afterwards, so a correct
-    /// read-back is at most “partly checked”.
-    public func apply(windows: CornerSetting, utilityPanels: CornerSetting) throws -> (before: CornerState, after: CornerState, outcome: ToolVerification) {
+    public func state() -> CornerConfiguration {
+        var radii: [CornerSurface: CornerSetting] = [:]
+        for surface in CornerSurface.radiusSurfaces { radii[surface] = CornerSetting(stored: store.value(surface.key)) }
+        let buttons = store.value(CornerSurface.buttons.key)
+        return CornerConfiguration(radii: radii, roundedButtons: (buttons as? Bool) == true || (buttons as? Int).map { $0 != 0 } == true,
+                                   classicMenus: MenuAppearance(stored: store.value(MenuAppearance.key)) == .classic)
+    }
+
+    /// Writes the whole configuration and reads it back. The look changes only in apps opened afterwards (and the
+    /// plugin surfaces only where the plugin runs), so a correct read-back is at most “partly checked”.
+    public func apply(_ configuration: CornerConfiguration) throws -> (before: CornerSnapshot, after: CornerConfiguration, outcome: ToolVerification) {
         guard capability.allowsChange else { throw WindowCornersError.unsupported }
-        for setting in [windows, utilityPanels] {
-            if case .radius(let points) = setting, !CornerSetting.range.contains(points) { throw WindowCornersError.invalidRadius }
+        for surface in CornerSurface.radiusSurfaces {
+            if case .radius(let points) = configuration.radius(surface), !CornerSetting.range.contains(points) { throw WindowCornersError.invalidRadius }
         }
-        let before = state()
-        try store.set(WindowCornerKey.windows, windows.storedValue)
-        try store.set(WindowCornerKey.utilityPanels, utilityPanels.storedValue)
+        let before = snapshot()
+        for surface in CornerSurface.radiusSurfaces { try store.set(surface.key, configuration.radius(surface).storedValue) }
+        try store.set(CornerSurface.buttons.key, configuration.roundedButtons ? true : nil)
+        try store.set(MenuAppearance.key, configuration.classicMenus ? false : nil)
         let after = state()
-        let matches = after.windows == windows && after.utilityPanels == utilityPanels
-        return (before, after, matches ? .partiallyVerified : .failed)
+        return (before, after, after == normalized(configuration) ? .partiallyVerified : .failed)
     }
 
-    /// Writes back exactly what was there before (including “not set”), not a guessed default.
-    public func restore(_ previous: CornerState) throws -> (after: CornerState, outcome: ToolVerification) {
-        try store.set(WindowCornerKey.windows, previous.rawWindows.flatMap(Self.value(fromRaw:)) ?? previous.windows.storedValue)
-        try store.set(WindowCornerKey.utilityPanels, previous.rawUtilityPanels.flatMap(Self.value(fromRaw:)) ?? previous.utilityPanels.storedValue)
-        let after = state()
-        let matches = after.windows == previous.windows && after.utilityPanels == previous.utilityPanels
-        return (after, matches ? .partiallyVerified : .failed)
+    /// Writes back exactly what was there before, key by key (including “not set”), not a guessed default.
+    public func restore(_ previous: CornerSnapshot) throws -> (after: CornerSnapshot, outcome: ToolVerification) {
+        for key in CornerSnapshot.keys { try store.set(key, previous.values[key].flatMap(Self.value(fromRaw:))) }
+        let after = snapshot()
+        return (after, after == previous ? .partiallyVerified : .failed)
+    }
+
+    /// The configuration as `state()` reads it back (every radius surface present).
+    public func normalized(_ configuration: CornerConfiguration) -> CornerConfiguration {
+        var radii: [CornerSurface: CornerSetting] = [:]
+        for surface in CornerSurface.radiusSurfaces { radii[surface] = configuration.radius(surface) }
+        return CornerConfiguration(radii: radii, roundedButtons: configuration.roundedButtons, classicMenus: configuration.classicMenus)
+    }
+}
+
+/// Menus: `NSGlassMenusEnabled = NO` (private AppKit default) makes AppKit use its older, non-glass menu window with
+/// ≈6 pt corners instead of the ≈12 pt Liquid Glass menus (measured on macOS 27.0.1 in a test app: 11.9 → 6.8 pt).
+/// A fixed style, not a radius; it also changes the menu material. Needs no plugin.
+public enum MenuAppearance: String, Sendable, Equatable, Codable {
+    case glass
+    case classic
+
+    public static let key = "NSGlassMenusEnabled"
+
+    init(stored: Any?) {
+        if let flag = stored as? Bool { self = flag ? .glass : .classic }
+        else if let number = stored as? Int { self = number == 0 ? .classic : .glass }
+        else if let text = stored as? String, ["no", "false", "0"].contains(text.lowercased()) { self = .classic }
+        else { self = .glass }
     }
 }

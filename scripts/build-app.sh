@@ -43,6 +43,11 @@ cp Packaging/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 for lproj in Sources/MacReplicaCore/Resources/Localization/*.lproj; do
   cp -R "$lproj" "$APP/Contents/Resources/"
 done
+# Corner plugin for the Ammonia tweak loader (Tools › Window corners, advanced). Ammonia needs arm64 and arm64e.
+mkdir -p "$APP/Contents/Library/CornerPlugin"
+clang -arch arm64 -arch arm64e -dynamiclib -fobjc-arc -framework AppKit -O2 -Wall -Werror -mmacosx-version-min=13.0 \
+  -o "$APP/Contents/Library/CornerPlugin/MacReplicaCorners.dylib" Extras/CornerPlugin/MacReplicaCorners.m
+cp Extras/CornerPlugin/MacReplicaCorners.dylib.blacklist "$APP/Contents/Library/CornerPlugin/"
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" -e "s/__MINOS__/$MINOS/" Packaging/Info.plist > "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
@@ -54,6 +59,7 @@ else
   SIGN=(codesign --force --sign -)
 fi
 "${SIGN[@]}" "$APP/Contents/Helpers/MacReplicaAskpass"
+"${SIGN[@]}" "$APP/Contents/Library/CornerPlugin/MacReplicaCorners.dylib"
 "${SIGN[@]}" "$APP"
 codesign --verify --strict --verbose=1 "$APP"
 lipo -info "$APP/Contents/MacOS/MacReplica"

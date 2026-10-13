@@ -570,80 +570,275 @@ struct MajorUpgradeDeferralView: View {
 
 // MARK: Window corners
 
+/// Corner radius for app windows and – with the corner plugin – menus, popovers and Quick Look. One radius for all
+/// chosen surfaces by default (so everything looks alike), or a separate radius per surface; every surface can be
+/// left out entirely.
 struct WindowCornersToolCard: View {
     @EnvironmentObject var model: AppModel
-    @ViewState private var choice = 10
-    @ViewState private var includePanels = true
-    @ViewState private var confirm: CornerSetting?
+    @ViewState private var sameRadius = true
+    @ViewState private var shared = 10
+    @ViewState private var separate: [CornerSurface: Int] = [:]
+    @ViewState private var included: Set<CornerSurface> = [.windows, .utilityPanels]
+    @ViewState private var classicMenus = false
+    @ViewState private var advancedUnlocked = false
+    @ViewState private var confirmAdvanced = false
+    @ViewState private var confirm: CornerConfiguration?
+    @ViewState private var loaded = false
 
-    private func describe(_ setting: CornerSetting, l: Localizer) -> String {
-        switch setting {
-        case .system: return model.cornerTool.systemRadius.map { l.t("tools.corners.system.points", $0) } ?? l.t("tools.corners.system")
-        case .radius(let points): return l.t("tools.corners.points", points)
+    static let presets = [10, 7, 4]
+
+    private func radius(for surface: CornerSurface) -> Int { sameRadius ? shared : (separate[surface] ?? shared) }
+
+    private var configuration: CornerConfiguration {
+        var radii: [CornerSurface: CornerSetting] = [:]
+        for surface in CornerSurface.radiusSurfaces where included.contains(surface) { radii[surface] = .radius(radius(for: surface)) }
+        // Menus come either from the plugin (any radius) or as AppKit's classic style – not both.
+        return CornerConfiguration(radii: radii, roundedButtons: included.contains(.buttons),
+                                   classicMenus: classicMenus && !included.contains(.menus))
+    }
+
+    private func load(_ state: CornerConfiguration) {
+        guard !loaded else { return }
+        loaded = true
+        var chosen = Set<CornerSurface>()
+        var values: [CornerSurface: Int] = [:]
+        for surface in CornerSurface.radiusSurfaces {
+            if case .radius(let points) = state.radius(surface) { chosen.insert(surface); values[surface] = points }
         }
+        if state.roundedButtons { chosen.insert(.buttons) }
+        if !chosen.isEmpty {
+            included = chosen
+            separate = values
+            let distinct = Set(values.values)
+            sameRadius = distinct.count <= 1
+            shared = distinct.first ?? 10
+        }
+        classicMenus = state.classicMenus
+        advancedUnlocked = chosen.contains { $0.needsPlugin } || model.tools.plugin?.installed == true
     }
 
     var body: some View {
         let l = model.l
         let tool = model.cornerTool
-        let capability = tool.capability
         ToolCard(id: "corners", symbol: "square.on.square.dashed", title: l.t("tools.corners.title"), summary: l.t("tools.corners.summary"),
-                 help: l.t("tools.corners.help"), capability: capability) {
-            if !capability.allowsChange {
+                 help: l.t("tools.corners.help"), capability: tool.capability) {
+            if !tool.capability.allowsChange {
                 NoticeView(style: .info, title: l.t("tools.corners.unsupported.title", model.tools.environment.macOSVersion),
                            message: l.t("tools.corners.unsupported.message"))
                     .accessibilityIdentifier("tools.corners.unsupported")
             } else if let state = model.tools.corners {
-                ToolStateRow(symbol: "macwindow", color: .secondary, label: l.t("tools.corners.state.windows"),
-                             value: describe(state.windows, l: l), id: "tools.corners.state.windows")
-                ToolStateRow(symbol: "sidebar.squares.right", color: .secondary, label: l.t("tools.corners.state.panels"),
-                             value: describe(state.utilityPanels, l: l), id: "tools.corners.state.panels")
-                HStack(alignment: .firstTextBaseline) {
-                    Picker(l.t("tools.corners.choose"), selection: $choice) {
-                        Text(l.t("tools.corners.preset.10")).tag(10)
-                        Text(l.t("tools.corners.preset.7")).tag(7)
-                        Text(l.t("tools.corners.preset.4")).tag(4)
-                        ForEach(Array(CornerSetting.range).filter { ![10, 7, 4].contains($0) }, id: \.self) { Text(l.t("tools.corners.points", $0)).tag($0) }
-                    }
-                    .fixedSize()
-                    .accessibilityIdentifier("tools.corners.choose")
+                Toggle(l.t("tools.corners.same"), isOn: $sameRadius)
+                    .accessibilityIdentifier("tools.corners.same")
+                if sameRadius {
+                    RadiusPicker(label: l.t("tools.corners.choose"), value: $shared, id: "tools.corners.choose")
                 }
-                Toggle(l.t("tools.corners.includePanels"), isOn: $includePanels)
-                    .accessibilityIdentifier("tools.corners.includePanels")
+                Text(l.t("tools.corners.surfaces")).font(.subheadline.weight(.semibold))
+                surfaceRow(.windows, state: state)
+                surfaceRow(.utilityPanels, state: state)
+                HStack(spacing: 6) {
+                    Toggle(l.t("tools.menus.classic"), isOn: $classicMenus)
+                        .disabled(included.contains(.menus))
+                        .accessibilityIdentifier("tools.menus.classic")
+                    HelpButton(text: l.t("tools.menus.help"), title: l.t("tools.menus.title"), id: "help.tools.menus")
+                    Spacer()
+                    Text(l.t(state.classicMenus ? "tools.corners.now.classic" : "tools.corners.now.glass")).font(.caption).foregroundStyle(.secondary)
+                }
+                Divider()
+                if advancedUnlocked {
+                    Text(l.t("tools.plugin.surfaces")).font(.subheadline.weight(.semibold))
+                    surfaceRow(.menus, state: state)
+                    surfaceRow(.popovers, state: state)
+                    surfaceRow(.quickLook, state: state)
+                    surfaceRow(.toolbars, state: state)
+                    surfaceRow(.buttons, state: state)
+                    CornerPluginView()
+                } else {
+                    HStack(spacing: 6) {
+                        Button(l.t("tools.plugin.show")) { confirmAdvanced = true }
+                            .accessibilityIdentifier("tools.plugin.show")
+                        HelpButton(text: l.t("tools.plugin.help"), title: l.t("tools.quicklook.title"), id: "help.tools.plugin")
+                    }
+                }
+                Divider()
                 HStack {
-                    Button(l.t("tools.corners.apply")) { confirm = .radius(choice) }
+                    Button(l.t("tools.corners.apply")) { confirm = configuration }
+                        .disabled(configuration == tool.normalized(state) )
                         .accessibilityIdentifier("tools.corners.apply")
                     if model.revertibleCornerChange != nil {
                         Button(l.t("tools.corners.revert")) { model.revertCorners() }
                             .accessibilityIdentifier("tools.corners.revert")
                     }
                     Spacer()
-                    if state.windows != .system || state.utilityPanels != .system {
-                        Button(l.t("tools.corners.default")) { confirm = .system }
+                    if !state.isSystemDefault {
+                        Button(l.t("tools.corners.default")) { confirm = CornerConfiguration() }
                             .accessibilityIdentifier("tools.corners.default")
                     }
                 }
-                CornerScopeView()
                 if let outcome = model.tools.cornerOutcome { ToolOutcomeView(outcome: outcome, id: "tools.corners.outcome") }
+                CornerScopeView()
             }
             ToolLimitations(id: "corners", lines: [l.t("tools.corners.limit.undocumented"), l.t("tools.corners.limit.relaunch"),
                                                    l.t("tools.corners.limit.overlays"), l.t("tools.corners.limit.versions"),
                                                    l.t("tools.corners.limit.revert")])
         }
-        .alert(l.t("tools.corners.confirm.title"), isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } }), presenting: confirm) { setting in
+        .onAppear { if let state = model.tools.corners { load(state) } }
+        .onChange(of: model.tools.corners) { state in if let state { load(state) } }
+        .alert(l.t("tools.quicklook.warning.title"), isPresented: $confirmAdvanced) {
+            Button(l.t("tools.quicklook.warning.go"), role: .destructive) { advancedUnlocked = true }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.quicklook.warning.message"))
+        }
+        .alert(l.t("tools.corners.confirm.title"), isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } }), presenting: confirm) { chosen in
             Button(l.t("tools.corners.confirm.go")) {
-                if setting == .system {
-                    model.applyCorners(windows: .system, utilityPanels: .system, change: "windowCorners.default")
-                } else {
-                    model.applyCorners(windows: setting, utilityPanels: includePanels ? setting : (model.tools.corners?.utilityPanels ?? .system),
-                                       change: "windowCorners.apply")
-                }
+                model.applyCorners(chosen, change: chosen.isSystemDefault ? "windowCorners.default" : "windowCorners.apply")
             }
             Button(l.t("common.cancel"), role: .cancel) {}
-        } message: { setting in
-            Text((setting == .system ? l.t("tools.corners.confirm.default") : l.t("tools.corners.confirm.message", describe(setting, l: l)))
-                 + "\n\n" + l.t("tools.corners.confirm.common"))
+        } message: { chosen in
+            Text(summary(chosen, l: l))
         }
+    }
+
+    @ViewBuilder
+    private func surfaceRow(_ surface: CornerSurface, state: CornerConfiguration) -> some View {
+        let l = model.l
+        HStack(spacing: 8) {
+            Toggle(l.t("tools.corners.surface.\(surface.rawValue)"), isOn: Binding(
+                get: { included.contains(surface) },
+                set: { on in
+                    if on { included.insert(surface) } else { included.remove(surface) }
+                    if surface == .menus, on { classicMenus = false }
+                }))
+                .accessibilityIdentifier("tools.corners.include.\(surface.rawValue)")
+            Spacer(minLength: 8)
+            if surface.isRadius, !sameRadius, included.contains(surface) {
+                RadiusPicker(label: "", value: Binding(get: { separate[surface] ?? shared }, set: { separate[surface] = $0 }),
+                             id: "tools.corners.radius.\(surface.rawValue)")
+            }
+            Text(currentText(surface, state: state, l: l)).font(.caption).foregroundStyle(.secondary)
+                .accessibilityIdentifier("tools.corners.now.\(surface.rawValue)")
+        }
+    }
+
+    private func currentText(_ surface: CornerSurface, state: CornerConfiguration, l: Localizer) -> String {
+        if surface == .buttons { return l.t(state.roundedButtons ? "tools.corners.now.rounded" : "tools.corners.now.capsule") }
+        switch state.radius(surface) {
+        case .radius(let points): return l.t("tools.corners.now.points", points)
+        case .system:
+            if surface == .windows || surface == .utilityPanels, let system = model.cornerTool.systemRadius { return l.t("tools.corners.now.systemPoints", system) }
+            return l.t("tools.corners.now.system")
+        }
+    }
+
+    private func summary(_ chosen: CornerConfiguration, l: Localizer) -> String {
+        if chosen.isSystemDefault { return l.t("tools.corners.confirm.default") + "\n\n" + l.t("tools.corners.confirm.common") }
+        var lines: [String] = []
+        for surface in CornerSurface.radiusSurfaces {
+            if case .radius(let points) = chosen.radius(surface) {
+                lines.append(l.t("tools.corners.surface.\(surface.rawValue)") + ": " + l.t("tools.corners.points", points))
+            }
+        }
+        if chosen.roundedButtons { lines.append(l.t("tools.corners.surface.buttons")) }
+        if chosen.classicMenus { lines.append(l.t("tools.menus.classic")) }
+        var text = lines.joined(separator: "\n") + "\n\n" + l.t("tools.corners.confirm.common")
+        if chosen.needsPlugin, model.tools.plugin?.installed != true { text += "\n\n" + l.t("tools.plugin.needsPluginNote") }
+        return text
+    }
+}
+
+struct RadiusPicker: View {
+    @EnvironmentObject var model: AppModel
+    var label: String
+    @Binding var value: Int
+    var id: String
+
+    var body: some View {
+        let l = model.l
+        Picker(label, selection: $value) {
+            Text(l.t("tools.corners.preset.10")).tag(10)
+            Text(l.t("tools.corners.preset.7")).tag(7)
+            Text(l.t("tools.corners.preset.4")).tag(4)
+            ForEach(Array(CornerSetting.range).filter { !WindowCornersToolCard.presets.contains($0) }, id: \.self) {
+                Text(l.t("tools.corners.points", $0)).tag($0)
+            }
+        }
+        .fixedSize()
+        .accessibilityIdentifier(id)
+    }
+}
+
+/// Requirements, steps and install/remove of the corner plugin – all of it behind the warning the user confirmed.
+struct CornerPluginView: View {
+    @EnvironmentObject var model: AppModel
+    @ViewState private var confirmInstall = false
+    @ViewState private var confirmRemove = false
+
+    var body: some View {
+        let l = model.l
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Text(l.t("tools.plugin.title")).font(.subheadline.weight(.semibold))
+                HelpButton(text: l.t("tools.plugin.help"), title: l.t("tools.plugin.title"), id: "help.tools.plugin.panel")
+                Spacer()
+                if let status = model.tools.plugin { CapabilityBadge(capability: status.capability) }
+            }
+            if let status = model.tools.plugin {
+                requirement(status.readiness != .untestedBuild, l.t("tools.plugin.req.build", status.build ?? "?"), id: "build")
+                requirement(status.sip == .disabled, l.t("tools.plugin.req.sip"), id: "sip")
+                requirement(status.bootArgumentSet == true, l.t("tools.plugin.req.bootArg"), id: "bootArg")
+                requirement(status.ammoniaInstalled, l.t("tools.plugin.req.ammonia"), id: "ammonia")
+                requirement(status.installed && status.current, l.t(status.installed && !status.current ? "tools.plugin.req.outdated" : "tools.plugin.req.installed"),
+                            id: "installed")
+                if status.readiness != .ready, status.readiness != .untestedBuild {
+                    Text(l.t("tools.plugin.steps")).font(.caption).fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .accessibilityIdentifier("tools.plugin.steps")
+                }
+                if status.readiness == .untestedBuild {
+                    Text(l.t("tools.plugin.untested")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                HStack {
+                    if status.readiness == .ready, !(status.installed && status.current) {
+                        Button(l.t(status.installed ? "tools.plugin.update" : "tools.plugin.install")) { confirmInstall = true }
+                            .disabled(model.tools.pluginBusy)
+                            .accessibilityIdentifier("tools.plugin.install")
+                    }
+                    if status.installed {
+                        Button(l.t("tools.plugin.remove")) { confirmRemove = true }
+                            .disabled(model.tools.pluginBusy)
+                            .accessibilityIdentifier("tools.plugin.remove")
+                    }
+                    if model.tools.pluginBusy { ProgressView().controlSize(.small) }
+                    Spacer()
+                    Button(l.t("tools.recheck")) { model.refreshPlugin() }.controlSize(.small)
+                        .accessibilityIdentifier("tools.plugin.recheck")
+                }
+            } else {
+                ProgressView().controlSize(.small)
+            }
+            if let outcome = model.tools.pluginOutcome { ToolOutcomeView(outcome: outcome, id: "tools.plugin.outcome") }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.07)))
+        .alert(l.t("tools.plugin.confirm.title"), isPresented: $confirmInstall) {
+            Button(l.t("tools.plugin.confirm.go"), role: .destructive) { model.installPlugin() }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.plugin.confirm.message"))
+        }
+        .alert(l.t("tools.plugin.remove"), isPresented: $confirmRemove) {
+            Button(l.t("tools.plugin.remove.go")) { model.removePlugin() }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.plugin.remove.message"))
+        }
+    }
+
+    private func requirement(_ met: Bool, _ text: String, id: String) -> some View {
+        Label(text, systemImage: met ? "checkmark.circle.fill" : "circle")
+            .font(.caption)
+            .foregroundStyle(met ? Color.green : Color.secondary)
+            .accessibilityIdentifier("tools.plugin.req.\(id).\(met ? "met" : "open")")
     }
 }
 
@@ -656,13 +851,20 @@ struct CornerScopeView: View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(l.t("tools.corners.changes")).font(.caption.weight(.semibold))
-                ForEach(["windows", "documents", "sheets", "panels"], id: \.self) { key in
+                ForEach(["windows", "documents", "sheets", "panels", "classicMenus"], id: \.self) { key in
                     Label(l.t("tools.corners.scope.\(key)"), systemImage: "checkmark").font(.caption).foregroundStyle(.secondary)
                 }
             }
             VStack(alignment: .leading, spacing: 3) {
+                Text(l.t("tools.corners.pluginOnly")).font(.caption.weight(.semibold))
+                ForEach(["menus", "popovers", "quickLook", "toolbars", "buttons"], id: \.self) { key in
+                    Label(l.t("tools.corners.scope.plugin.\(key)"), systemImage: "puzzlepiece.extension").font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            VStack(alignment: .leading, spacing: 3) {
                 Text(l.t("tools.corners.unchanged")).font(.caption.weight(.semibold))
-                ForEach(["quickLook", "popovers", "menus", "overlays", "ownFrames"], id: \.self) { key in
+                ForEach(["quickLookInner", "overlays", "ownFrames"], id: \.self) { key in
                     Label(l.t("tools.corners.scope.\(key)"), systemImage: "xmark").font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

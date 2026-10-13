@@ -212,14 +212,15 @@ do {
         guard arguments.count > 2, arguments[1].contains("."), arguments[1] != "NSGlobalDomain" else { usage() }
         let tool = WindowCornersTool(store: LiveGlobalPreferenceStore(application: arguments[1]), environment: .current)
         let request = arguments[2]
-        if request.hasPrefix("restore:"), let previous = CornerState(historyText: String(request.dropFirst(8))) {
+        if request.hasPrefix("restore:"), let previous = CornerSnapshot(historyText: String(request.dropFirst(8))) {
             let result = try tool.restore(previous)
-            print("restored", result.after.historyText, result.outcome.rawValue)
+            print("restored", result.after.historyText.isEmpty ? "(nothing set)" : result.after.historyText, result.outcome.rawValue)
         } else {
-            let setting: CornerSetting = request == "system" ? .system : .radius(Int(request) ?? 0)
-            let result = try tool.apply(windows: setting, utilityPanels: setting)
-            print("before", result.before.historyText)
-            print("after", result.after.historyText, result.outcome.rawValue)
+            let configuration: CornerConfiguration = request == "system"
+                ? CornerConfiguration() : .uniform(Int(request) ?? 0, surfaces: [.windows, .utilityPanels])
+            let result = try tool.apply(configuration)
+            print("before", result.before.historyText.isEmpty ? "-" : result.before.historyText)
+            print("after", result.outcome.rawValue)
         }
     case "beta-feedback":
         try root.addBetaFeedbackApps()

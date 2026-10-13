@@ -10,6 +10,8 @@ public enum PrivilegedOperation: Equatable, Sendable {
     case move(source: URL, destination: URL)
     /// Installs a signed installer package.
     case installPackage(URL)
+    /// Removes MacReplica's own corner plugin from the Ammonia tweak folder – nothing else (see `isRemovablePlugin`).
+    case removePluginFile(URL)
 
     /// The executable and arguments for this operation. Only these five
     /// fixed system tools can ever be run with administrator rights.
@@ -22,14 +24,25 @@ public enum PrivilegedOperation: Equatable, Sendable {
             return ["/usr/bin/install", "-m", "0644", "-o", "root", "-g", "wheel", source.path, destination.path]
         case .move(let source, let destination): return ["/bin/mv", "-f", source.path, destination.path]
         case .installPackage(let url): return ["/usr/sbin/installer", "-pkg", url.path, "-target", "/"]
+        case .removePluginFile(let url): return ["/bin/rm", "-f", url.path]
         }
     }
 
     var paths: [URL] {
         switch self {
-        case .createFolder(let url), .installPackage(let url): return [url]
+        case .createFolder(let url), .installPackage(let url), .removePluginFile(let url): return [url]
         case .installFile(let source, let destination), .move(let source, let destination): return [source, destination]
         }
+    }
+}
+
+extension PrivilegedOperation {
+    /// Only `MacReplicaCorners.dylib` and its `.blacklist` directly inside a folder ending in `ammonia/core/tweaks`.
+    public static func isRemovablePlugin(_ url: URL) -> Bool {
+        let path = url.standardizedFileURL.path
+        guard !path.contains("/../") else { return false }
+        return url.deletingLastPathComponent().path.hasSuffix("/ammonia/core/tweaks")
+            && CornerPlugin.fileNames.contains(url.lastPathComponent)
     }
 }
 
@@ -89,6 +102,9 @@ public struct AppleScriptPrivilegedExecutor: PrivilegedExecuting {
             for url in operation.paths {
                 try validate(url)
             }
+            if case .removePluginFile(let url) = operation, !PrivilegedOperation.isRemovablePlugin(url) {
+                throw PrivilegedError.invalidPath(url.path)
+            }
             let argv = operation.argv
             arguments.append(String(argv.count))
             arguments.append(contentsOf: argv)
@@ -141,6 +157,9 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
             case .installPackage(let url):
                 guard let packageInstaller else { throw PrivilegedError.failed("no package installer") }
                 try packageInstaller(url)
+            case .removePluginFile(let url):
+                guard PrivilegedOperation.isRemovablePlugin(url) else { throw PrivilegedError.invalidPath(url.path) }
+                if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
             }
         }
     }

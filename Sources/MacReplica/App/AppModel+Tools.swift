@@ -33,8 +33,12 @@ struct ToolsState {
     var removedQuarantine: RemovedQuarantine?
     var quarantineOutcome: ToolOutcome?
 
-    var corners: CornerState?
+    var corners: CornerConfiguration?
     var cornerOutcome: ToolOutcome?
+    /// The corner plugin (menus, popovers, Quick Look): requirements and whether it is installed.
+    var plugin: CornerPlugin.Status?
+    var pluginOutcome: ToolOutcome?
+    var pluginBusy = false
 }
 
 struct RemovedQuarantine: Equatable {
@@ -197,23 +201,26 @@ extension AppModel {
 
     func refreshCorners() {
         tools.corners = cornerTool.state()
+        refreshPlugin()
     }
 
-    var revertibleCornerChange: CornerState? {
+    var revertibleCornerChange: CornerSnapshot? {
         guard let entry = toolHistory.lastRevertibleChange(tool: "windowCorners"), let text = entry.previousState else { return nil }
-        return CornerState(historyText: text)
+        return CornerSnapshot(historyText: text)
     }
 
-    func applyCorners(windows: CornerSetting, utilityPanels: CornerSetting, change: String) {
+    /// Writes the chosen corners for all surfaces at once; the history keeps the exact previous values of every key.
+    func applyCorners(_ configuration: CornerConfiguration, change: String) {
         do {
-            let result = try cornerTool.apply(windows: windows, utilityPanels: utilityPanels)
+            let result = try cornerTool.apply(configuration)
             tools.corners = result.after
             tools.cornerOutcome = ToolOutcome(verification: result.outcome,
                                               stateAfter: l.t(result.outcome == .failed ? "tools.corners.outcome.failed" : "tools.corners.outcome.written"),
                                               restart: .relaunchApps)
-            record(ToolHistoryEntry(tool: "windowCorners", change: change, previousState: result.before.historyText, resultingState: result.after.historyText,
+            let after = cornerTool.snapshot()
+            record(ToolHistoryEntry(tool: "windowCorners", change: change, previousState: result.before.historyText, resultingState: after.historyText,
                                     macOSVersion: tools.environment.macOSVersion, result: result.outcome == .failed ? .failed : .succeeded,
-                                    verification: result.outcome, revertAvailable: result.before != result.after))
+                                    verification: result.outcome, revertAvailable: result.before != after))
         } catch {
             tools.cornerOutcome = ToolOutcome(verification: .failed, stateAfter: l.t("tools.corners.outcome.failed"))
         }
@@ -222,17 +229,79 @@ extension AppModel {
     func revertCorners() {
         guard let previous = revertibleCornerChange else { return }
         do {
-            let before = cornerTool.state()
+            let before = cornerTool.snapshot()
             let result = try cornerTool.restore(previous)
-            tools.corners = result.after
+            tools.corners = cornerTool.state()
             tools.cornerOutcome = ToolOutcome(verification: result.outcome,
                                               stateAfter: l.t(result.outcome == .failed ? "tools.corners.outcome.failed" : "tools.corners.outcome.restored"),
                                               restart: .relaunchApps)
-            record(ToolHistoryEntry(tool: "windowCorners", change: "windowCorners.revert", previousState: before.historyText, resultingState: result.after.historyText,
-                                    macOSVersion: tools.environment.macOSVersion, result: result.outcome == .failed ? .failed : .succeeded,
-                                    verification: result.outcome, revertAvailable: false))
+            record(ToolHistoryEntry(tool: "windowCorners", change: "windowCorners.revert", previousState: before.historyText,
+                                    resultingState: result.after.historyText, macOSVersion: tools.environment.macOSVersion,
+                                    result: result.outcome == .failed ? .failed : .succeeded, verification: result.outcome, revertAvailable: false))
         } catch {
             tools.cornerOutcome = ToolOutcome(verification: .failed, stateAfter: l.t("tools.corners.outcome.failed"))
+        }
+    }
+
+    // MARK: Corner plugin (advanced)
+
+    var appBundleURL: URL { Bundle.main.bundleURL }
+
+    func refreshPlugin() {
+        Task {
+            let sip: GatekeeperStatus.SIP
+            if let known = tools.gatekeeper?.sip { sip = known } else { sip = await gatekeeperInspector.status().sip }
+            // A simulated Mac tells its own build (stand-in), so every requirement can be shown on screen.
+            var build = CornerPlugin.currentBuild()
+            if services.simulationRoot != nil, let simulated = defaults.string(forKey: "stagingMacOSBuild") { build = simulated }
+            tools.plugin = await CornerPlugin.status(layout: services.layout, runner: services.runner, sip: sip, appBundle: appBundleURL, build: build)
+        }
+    }
+
+    /// Installs exactly MacReplica's plugin and its blacklist into Ammonia's tweak folder (administrator password),
+    /// then checks that both files are there and are this version's.
+    func installPlugin() {
+        guard let operations = CornerPlugin.installOperations(layout: services.layout, appBundle: appBundleURL) else {
+            tools.pluginOutcome = ToolOutcome(verification: .failed, stateAfter: l.t("tools.plugin.missingInApp"))
+            return
+        }
+        runPluginOperations(operations, change: "windowCorners.pluginInstalled", wantInstalled: true)
+    }
+
+    func removePlugin() {
+        runPluginOperations(CornerPlugin.removeOperations(layout: services.layout), change: "windowCorners.pluginRemoved", wantInstalled: false)
+    }
+
+    private func runPluginOperations(_ operations: [PrivilegedOperation], change: String, wantInstalled: Bool) {
+        tools.pluginBusy = true
+        tools.pluginOutcome = nil
+        let wasInstalled = tools.plugin?.installed == true
+        Task {
+            var failure: String?
+            do {
+                try await services.privileged.run(operations, reason: l.t(wantInstalled ? "tools.plugin.reason.install" : "tools.plugin.reason.remove"))
+            } catch PrivilegedError.denied {
+                failure = l.t("tools.plugin.cancelled")
+            } catch {
+                failure = services.layout.redact(String(describing: error))
+            }
+            let sip = tools.plugin?.sip ?? .unknown
+            var build = CornerPlugin.currentBuild()
+            if services.simulationRoot != nil, let simulated = defaults.string(forKey: "stagingMacOSBuild") { build = simulated }
+            let status = await CornerPlugin.status(layout: services.layout, runner: services.runner, sip: sip, appBundle: appBundleURL, build: build)
+            tools.plugin = status
+            tools.pluginBusy = false
+            let verified = wantInstalled ? (status.installed && status.current) : !status.installed
+            let verification: ToolVerification = verified ? (wantInstalled ? .partiallyVerified : .verified) : .failed
+            tools.pluginOutcome = ToolOutcome(verification: verification,
+                                              stateAfter: failure.map { l.t("tools.plugin.failed", $0) }
+                                                ?? l.t(verified ? (wantInstalled ? "tools.plugin.installed" : "tools.plugin.removed") : "tools.plugin.notConfirmed"),
+                                              restart: verified && wantInstalled ? .relaunchApps : .none)
+            if failure == nil || status.installed != wasInstalled {
+                record(ToolHistoryEntry(tool: "cornerPlugin", change: change, previousState: "installed=\(wasInstalled ? 1 : 0)",
+                                        resultingState: "installed=\(status.installed ? 1 : 0)", macOSVersion: tools.environment.macOSVersion,
+                                        result: verified ? .succeeded : .failed, verification: verification, revertAvailable: false))
+            }
         }
     }
 
