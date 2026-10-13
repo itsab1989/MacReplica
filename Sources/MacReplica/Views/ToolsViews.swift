@@ -584,6 +584,7 @@ struct WindowCornersToolCard: View {
     @ViewState private var confirmAdvanced = false
     @ViewState private var confirm: CornerConfiguration?
     @ViewState private var loaded = false
+    @ViewState private var example: CornerSurface?
 
     static let presets = [10, 7, 4]
 
@@ -683,6 +684,7 @@ struct WindowCornersToolCard: View {
         }
         .onAppear { if let state = model.tools.corners { load(state) } }
         .onChange(of: model.tools.corners) { state in if let state { load(state) } }
+        .sheet(item: $example) { surface in CornerExampleSheet(surface: surface) }
         .alert(l.t("tools.quicklook.warning.title"), isPresented: $confirmAdvanced) {
             Button(l.t("tools.quicklook.warning.go"), role: .destructive) { advancedUnlocked = true }
             Button(l.t("common.cancel"), role: .cancel) {}
@@ -710,6 +712,11 @@ struct WindowCornersToolCard: View {
                     if surface == .menus, on { classicMenus = false }
                 }))
                 .accessibilityIdentifier("tools.corners.include.\(surface.rawValue)")
+            Button { example = surface } label: { Image(systemName: "eye").imageScale(.small) }
+                .buttonStyle(.borderless).foregroundStyle(.secondary)
+                .help(l.t("tools.corners.example.show"))
+                .accessibilityLabel(l.t("tools.corners.example.show"))
+                .accessibilityIdentifier("tools.corners.example.\(surface.rawValue)")
             Spacer(minLength: 8)
             if surface.isRadius, !sameRadius, included.contains(surface) {
                 RadiusPicker(label: "", value: Binding(get: { separate[surface] ?? shared }, set: { separate[surface] = $0 }),
@@ -839,6 +846,168 @@ struct CornerPluginView: View {
             .font(.caption)
             .foregroundStyle(met ? Color.green : Color.secondary)
             .accessibilityIdentifier("tools.plugin.req.\(id).\(met ? "met" : "open")")
+    }
+}
+
+/// A help overlay for one surface: the same element drawn twice so the user sees what the corner change does.
+/// Left is macOS's default shape, right the reduced one (for buttons: capsule vs. rounded rectangle). These are
+/// drawn mockups, not live macOS surfaces; the real look depends on the app.
+struct CornerExampleSheet: View {
+    @EnvironmentObject var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    var surface: CornerSurface
+
+    private var reduced: Int { surface == .menus ? 6 : (surface == .toolbars ? 7 : 6) }
+
+    var body: some View {
+        let l = model.l
+        VStack(alignment: .leading, spacing: 16) {
+            Text(l.t("tools.corners.surface.\(surface.rawValue)")).font(.title3.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .top, spacing: 24) {
+                exampleColumn(title: surface == .buttons ? l.t("tools.corners.example.capsule") : l.t("tools.corners.example.default"),
+                              radius: surface.exampleDefaultRadius ?? 0, roundedButton: false)
+                Image(systemName: "arrow.right").foregroundStyle(.secondary).padding(.top, 50)
+                exampleColumn(title: surface == .buttons ? l.t("tools.corners.example.rounded") : l.t("tools.corners.example.reduced", reduced),
+                              radius: reduced, roundedButton: true)
+            }
+            .frame(maxWidth: .infinity)
+            .accessibilityIdentifier("tools.corners.example.canvas")
+            Text(l.t("tools.corners.example.note.\(surface.rawValue)")).font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack { Spacer(); Button(l.t("common.done")) { dismiss() }.keyboardShortcut(.defaultAction)
+                .accessibilityIdentifier("tools.corners.example.done") }
+        }
+        .padding(22)
+        .frame(width: 460)
+    }
+
+    private func exampleColumn(title: String, radius: Int, roundedButton: Bool) -> some View {
+        VStack(spacing: 10) {
+            CornerExampleView(surface: surface, radius: CGFloat(radius), roundedButton: roundedButton)
+                .frame(width: 180, height: 110)
+            Text(title).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// One drawn mockup of a surface at a given corner radius. Representative, not pixel-exact.
+struct CornerExampleView: View {
+    var surface: CornerSurface
+    var radius: CGFloat
+    var roundedButton: Bool
+
+    private var fill: Color { Color(nsColor: .windowBackgroundColor) }
+    private var stroke: Color { Color.primary.opacity(0.15) }
+
+    private func shape(_ r: CGFloat) -> some InsettableShape { RoundedRectangle(cornerRadius: r, style: .continuous) }
+
+    var body: some View {
+        switch surface {
+        case .windows, .utilityPanels, .quickLook:
+            window
+        case .menus:
+            menu
+        case .popovers:
+            popover
+        case .toolbars:
+            toolbar
+        case .buttons:
+            button
+        }
+    }
+
+    private var titleDots: some View {
+        HStack(spacing: 5) {
+            ForEach([Color.red, .yellow, .green], id: \.self) { c in Circle().fill(c).frame(width: 8, height: 8) }
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+    }
+
+    private var window: some View {
+        shape(radius).fill(fill).overlay(shape(radius).strokeBorder(stroke))
+            .overlay(alignment: .top) {
+                VStack(spacing: 6) {
+                    titleDots.padding(.top, 8)
+                    if surface == .quickLook {
+                        // The inner preview keeps its own corners whatever the outer radius is (the real behaviour).
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.18))
+                            .padding(.horizontal, 10).padding(.top, 2)
+                            .overlay(Capsule().fill(Color.accentColor.opacity(0.5)).frame(width: 54, height: 12).padding(.bottom, 8), alignment: .bottom)
+                    } else {
+                        Divider().padding(.horizontal, 6)
+                        Spacer()
+                    }
+                }
+            }
+    }
+
+    private var menu: some View {
+        shape(radius).fill(fill).overlay(shape(radius).strokeBorder(stroke))
+            .overlay {
+                VStack(spacing: 4) {
+                    rowLine(highlight: false); rowLine(highlight: true); rowLine(highlight: false); rowLine(highlight: false)
+                }
+                .padding(10)
+            }
+    }
+
+    private func rowLine(highlight: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 3)
+            .fill(highlight ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.12))
+            .frame(height: 14)
+    }
+
+    private var popover: some View {
+        VStack(spacing: 0) {
+            Triangle().fill(fill).frame(width: 18, height: 9)
+                .overlay(Triangle().stroke(stroke, lineWidth: 1))
+            shape(radius).fill(fill).overlay(shape(radius).strokeBorder(stroke))
+                .overlay { VStack(spacing: 6) { rowLine(highlight: false); rowLine(highlight: false) }.padding(12) }
+        }
+    }
+
+    private var toolbar: some View {
+        VStack {
+            Capsule(style: .continuous).fill(.clear)
+            shape(radius).fill(fill).overlay(shape(radius).strokeBorder(stroke))
+                .overlay {
+                    HStack(spacing: 0) {
+                        Image(systemName: "square.grid.2x2").imageScale(.small)
+                        Divider().frame(height: 16).padding(.horizontal, 10)
+                        Image(systemName: "list.bullet").imageScale(.small)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .frame(height: 40)
+            Capsule(style: .continuous).fill(.clear)
+        }
+    }
+
+    private var button: some View {
+        Group {
+            if roundedButton {
+                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.accentColor.opacity(0.85))
+            } else {
+                Capsule(style: .continuous).fill(Color.accentColor.opacity(0.85))
+            }
+        }
+        .frame(width: 140, height: 34)
+        .overlay(Text("Open").font(.callout).foregroundStyle(.white))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        p.closeSubpath()
+        return p
     }
 }
 

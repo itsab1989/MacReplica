@@ -1964,3 +1964,15 @@
 "tools.corners.surface.buttons" = "Boutons dans toutes les apps : rectangle arrondi au lieu de capsule";
 "tools.corners.scope.plugin.toolbars" = "Groupes de barre d’outils";
 "tools.corners.scope.plugin.buttons" = "Boutons en capsule (aussi dans Coup d’œil)";
+"tools.corners.example.show" = "Montrer un exemple";
+"tools.corners.example.default" = "Par défaut de macOS";
+"tools.corners.example.reduced" = "Réduit (%1$d pt)";
+"tools.corners.example.capsule" = "Capsule (par défaut de macOS)";
+"tools.corners.example.rounded" = "Rectangle arrondi";
+"tools.corners.example.note.windows" = "Fenêtres d’app normales, y compris fenêtres de document, dialogues, feuilles et alertes. C’est la seule surface que le réglage des coins modifie sans le module.";
+"tools.corners.example.note.utilityPanels" = "Fenêtres auxiliaires plus petites comme les inspecteurs et palettes d’outils. Modifiées sans le module, avec leur propre valeur si tu désactives « Même rayon pour tout ».";
+"tools.corners.example.note.menus" = "Menus et menus contextuels. Sans le module tu peux seulement passer au style classique sans verre (environ 6 pt) ; avec le module, tout rayon fonctionne.";
+"tools.corners.example.note.popovers" = "Les bulles qui s’ouvrent sous les icônes de la barre des menus et certains boutons. Seul le module les modifie ; la petite flèche et l’ombre sont conservées.";
+"tools.corners.example.note.quickLook" = "La fenêtre qui s’ouvre quand tu appuies sur Espace sur un fichier. Le module modifie son cadre extérieur ; la zone d’image à l’intérieur garde ses propres coins (environ 15 pt).";
+"tools.corners.example.note.toolbars" = "Les « pilules » en verre qui regroupent des boutons de barre d’outils (par exemple le sélecteur de vue dans le Finder). Seul le module les modifie.";
+"tools.corners.example.note.buttons" = "Boutons en forme de capsule dans toutes les apps depuis macOS Tahoe (par exemple « Ouvrir avec … » dans Coup d’œil). Le module les dessine plutôt en rectangles arrondis — une forme, pas un rayon réglable.";

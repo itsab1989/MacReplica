@@ -1964,3 +1964,15 @@
 "tools.corners.surface.buttons" = "Knapper i alle apper: avrundet rektangel i stedet for kapsel";
 "tools.corners.scope.plugin.toolbars" = "Verktøylinjegrupper";
 "tools.corners.scope.plugin.buttons" = "Kapselknapper (også i Hurtigvisning)";
+"tools.corners.example.show" = "Vis et eksempel";
+"tools.corners.example.default" = "macOS-standard";
+"tools.corners.example.reduced" = "Redusert (%1$d pt)";
+"tools.corners.example.capsule" = "Kapsel (macOS-standard)";
+"tools.corners.example.rounded" = "Avrundet rektangel";
+"tools.corners.example.note.windows" = "Vanlige appvinduer, inkludert dokumentvinduer, dialoger, ark og varsler. Dette er den eneste flaten vindushjørne-innstillingen endrer uten pluginen.";
+"tools.corners.example.note.utilityPanels" = "Mindre hjelpevinduer som inspektører og verktøypaletter. Endres uten pluginen, med egen verdi hvis du slår av «Samme radius for alt».";
+"tools.corners.example.note.menus" = "Menyer og kontekstmenyer. Uten pluginen kan du bare bytte til klassisk stil uten glass (omtrent 6 pt); med pluginen fungerer enhver radius.";
+"tools.corners.example.note.popovers" = "Boblene som åpnes under menylinjeikoner og enkelte knapper. Bare pluginen endrer dem; den lille pilen og skyggen beholdes.";
+"tools.corners.example.note.quickLook" = "Vinduet som åpnes når du trykker mellomrom på en fil. Pluginen endrer den ytre rammen; bildeområdet inni beholder sine egne hjørner (omtrent 15 pt).";
+"tools.corners.example.note.toolbars" = "Glass-«pillene» som grupperer verktøylinjeknapper (for eksempel visningsbytteren i Finder). Bare pluginen endrer dem.";
+"tools.corners.example.note.buttons" = "Kapselformede knapper i alle apper siden macOS Tahoe (for eksempel «Åpne med …» i Hurtigvisning). Pluginen tegner dem i stedet som avrundede rektangler – en form, ikke en justerbar radius.";

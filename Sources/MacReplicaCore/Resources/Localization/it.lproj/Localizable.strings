@@ -1964,3 +1964,15 @@
 "tools.corners.surface.buttons" = "Pulsanti in tutte le app: rettangolo arrotondato invece di capsula";
 "tools.corners.scope.plugin.toolbars" = "Gruppi della barra strumenti";
 "tools.corners.scope.plugin.buttons" = "Pulsanti a capsula (anche in Quick Look)";
+"tools.corners.example.show" = "Mostra un esempio";
+"tools.corners.example.default" = "Predefinito di macOS";
+"tools.corners.example.reduced" = "Ridotto (%1$d pt)";
+"tools.corners.example.capsule" = "Capsula (predefinito di macOS)";
+"tools.corners.example.rounded" = "Rettangolo arrotondato";
+"tools.corners.example.note.windows" = "Finestre normali delle app, incluse finestre di documento, dialoghi, fogli e avvisi. È l’unica superficie che l’impostazione degli angoli cambia senza il plug-in.";
+"tools.corners.example.note.utilityPanels" = "Finestre di supporto più piccole come ispettori e palette di strumenti. Cambiate senza il plug-in, con un valore proprio se disattivi «Stesso raggio per tutto».";
+"tools.corners.example.note.menus" = "Menu e menu contestuali. Senza il plug-in puoi solo passare allo stile classico senza vetro (circa 6 pt); con il plug-in funziona qualsiasi raggio.";
+"tools.corners.example.note.popovers" = "Le bolle che si aprono sotto le icone della barra dei menu e alcuni pulsanti. Solo il plug-in le cambia; la piccola freccia e l’ombra vengono mantenute.";
+"tools.corners.example.note.quickLook" = "La finestra che si apre premendo Spazio su un file. Il plug-in cambia la cornice esterna; l’area immagine interna mantiene i propri angoli (circa 15 pt).";
+"tools.corners.example.note.toolbars" = "Le «pillole» di vetro che raggruppano i pulsanti della barra strumenti (per esempio il selettore di vista nel Finder). Solo il plug-in le cambia.";
+"tools.corners.example.note.buttons" = "Pulsanti a forma di capsula in tutte le app da macOS Tahoe (per esempio «Apri con …» in Quick Look). Il plug-in li disegna invece come rettangoli arrotondati — una forma, non un raggio regolabile.";

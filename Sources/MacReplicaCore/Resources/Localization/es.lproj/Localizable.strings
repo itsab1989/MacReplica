@@ -1964,3 +1964,15 @@
 "tools.corners.surface.buttons" = "Botones en todas las apps: rectángulo redondeado en vez de cápsula";
 "tools.corners.scope.plugin.toolbars" = "Grupos de la barra de herramientas";
 "tools.corners.scope.plugin.buttons" = "Botones de cápsula (también en Vista Rápida)";
+"tools.corners.example.show" = "Mostrar un ejemplo";
+"tools.corners.example.default" = "Predeterminado de macOS";
+"tools.corners.example.reduced" = "Reducido (%1$d pt)";
+"tools.corners.example.capsule" = "Cápsula (predeterminado de macOS)";
+"tools.corners.example.rounded" = "Rectángulo redondeado";
+"tools.corners.example.note.windows" = "Ventanas normales de apps, incluidas ventanas de documento, diálogos, hojas y alertas. Es la única superficie que el ajuste de esquinas cambia sin el complemento.";
+"tools.corners.example.note.utilityPanels" = "Ventanas auxiliares más pequeñas, como inspectores y paletas de herramientas. Se cambian sin el complemento, con su propio valor si desactivas «El mismo radio para todo».";
+"tools.corners.example.note.menus" = "Menús y menús contextuales. Sin el complemento solo puedes pasarlos al estilo clásico sin cristal (unos 6 pt); con el complemento vale cualquier radio.";
+"tools.corners.example.note.popovers" = "Las burbujas que se abren bajo los iconos de la barra de menús y algunos botones. Solo el complemento las cambia; se conservan la flecha y la sombra.";
+"tools.corners.example.note.quickLook" = "La ventana que se abre al pulsar Espacio sobre un archivo. El complemento cambia su marco exterior; el área de imagen interior mantiene sus propias esquinas (unos 15 pt).";
+"tools.corners.example.note.toolbars" = "Las «píldoras» de cristal que agrupan botones de la barra de herramientas (por ejemplo el selector de vista en el Finder). Solo el complemento las cambia.";
+"tools.corners.example.note.buttons" = "Botones con forma de cápsula en todas las apps desde macOS Tahoe (por ejemplo «Abrir con …» en Vista Rápida). El complemento los dibuja como rectángulos redondeados — una forma, no un radio ajustable.";

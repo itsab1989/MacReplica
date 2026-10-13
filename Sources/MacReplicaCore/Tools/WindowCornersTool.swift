@@ -111,7 +111,8 @@ public enum CornerSetting: Equatable, Sendable, Codable {
 /// nothing else. Menus, popovers and Quick Look are only reachable with MacReplica's corner plugin, which runs only
 /// with System Integrity Protection off (see `CornerPlugin`); their keys are read by that plugin and do nothing
 /// without it. Classic menus are AppKit's own older menu style (no plugin needed).
-public enum CornerSurface: String, CaseIterable, Sendable, Codable {
+public enum CornerSurface: String, CaseIterable, Sendable, Codable, Identifiable {
+    public var id: String { rawValue }
     case windows
     case utilityPanels
     case menus
@@ -135,6 +136,16 @@ public enum CornerSurface: String, CaseIterable, Sendable, Codable {
     }
 
     public var needsPlugin: Bool { self != .windows && self != .utilityPanels }
+    /// The radius macOS draws this surface with by default (points), for the example preview; nil for buttons (a shape).
+    public var exampleDefaultRadius: Int? {
+        switch self {
+        case .windows, .utilityPanels: return 16
+        case .menus: return 12
+        case .popovers, .quickLook: return 20
+        case .toolbars: return 18
+        case .buttons: return nil
+        }
+    }
     public var isRadius: Bool { self != .buttons }
     public static let radiusSurfaces = allCases.filter(\.isRadius)
 }

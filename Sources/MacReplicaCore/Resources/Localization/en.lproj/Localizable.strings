@@ -1966,3 +1966,15 @@
 "tools.corners.surface.buttons" = "Buttons in all apps: rounded rectangle instead of capsule";
 "tools.corners.scope.plugin.toolbars" = "Toolbar groups";
 "tools.corners.scope.plugin.buttons" = "Capsule buttons (also in Quick Look)";
+"tools.corners.example.show" = "Show an example";
+"tools.corners.example.default" = "macOS default";
+"tools.corners.example.reduced" = "Reduced (%1$d pt)";
+"tools.corners.example.capsule" = "Capsule (macOS default)";
+"tools.corners.example.rounded" = "Rounded rectangle";
+"tools.corners.example.note.windows" = "Normal app windows, including document windows, dialogs, sheets and alerts. This is the one surface the window-corner setting changes without the plugin.";
+"tools.corners.example.note.utilityPanels" = "Smaller helper windows such as inspectors and tool palettes. Changed without the plugin, with their own value if you turn off “Same radius for everything”.";
+"tools.corners.example.note.menus" = "Menus and context menus. Without the plugin you can only switch them to the classic non-glass style (about 6 pt); with the plugin any radius works.";
+"tools.corners.example.note.popovers" = "The bubbles that open under menu-bar icons and some buttons. Only the plugin changes them; the little arrow and shadow are kept.";
+"tools.corners.example.note.quickLook" = "The window that opens when you press Space on a file. The plugin changes its outer frame; the picture area inside keeps its own corners (about 15 pt).";
+"tools.corners.example.note.toolbars" = "The glass “pills” that group toolbar buttons (for example the view switcher in Finder). Only the plugin changes them.";
+"tools.corners.example.note.buttons" = "Capsule-shaped buttons in all apps since macOS Tahoe (for example “Open with …” in Quick Look). The plugin draws them as rounded rectangles instead — a shape, not an adjustable radius.";

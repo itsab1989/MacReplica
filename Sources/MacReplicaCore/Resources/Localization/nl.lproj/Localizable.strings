@@ -1964,3 +1964,15 @@
 "tools.corners.surface.buttons" = "Knoppen in alle apps: afgeronde rechthoek in plaats van capsule";
 "tools.corners.scope.plugin.toolbars" = "Knoppenbalkgroepen";
 "tools.corners.scope.plugin.buttons" = "Capsuleknoppen (ook in Snelle weergave)";
+"tools.corners.example.show" = "Toon een voorbeeld";
+"tools.corners.example.default" = "macOS-standaard";
+"tools.corners.example.reduced" = "Verkleind (%1$d pt)";
+"tools.corners.example.capsule" = "Capsule (macOS-standaard)";
+"tools.corners.example.rounded" = "Afgeronde rechthoek";
+"tools.corners.example.note.windows" = "Gewone appvensters, inclusief documentvensters, dialogen, sheets en meldingen. Dit is de enige vlakte die de vensterhoek-instelling zonder plug-in verandert.";
+"tools.corners.example.note.utilityPanels" = "Kleinere hulpvensters zoals infovensters en gereedschapspaletten. Worden zonder plug-in gewijzigd, met een eigen waarde als je ‘Dezelfde radius voor alles’ uitzet.";
+"tools.corners.example.note.menus" = "Menu’s en contextmenu’s. Zonder plug-in kun je ze alleen op de klassieke stijl zonder glas zetten (ongeveer 6 pt); met de plug-in werkt elke radius.";
+"tools.corners.example.note.popovers" = "De bubbels die onder menubalksymbolen en sommige knoppen opengaan. Alleen de plug-in verandert ze; het pijltje en de schaduw blijven behouden.";
+"tools.corners.example.note.quickLook" = "Het venster dat opent als je op Spatie drukt bij een bestand. De plug-in verandert het buitenkader; het beeldgebied erin houdt zijn eigen hoeken (ongeveer 15 pt).";
+"tools.corners.example.note.toolbars" = "De glazen ‘pillen’ die knoppenbalkknoppen groeperen (bijvoorbeeld de weergavekiezer in Finder). Alleen de plug-in verandert ze.";
+"tools.corners.example.note.buttons" = "Capsulevormige knoppen in alle apps sinds macOS Tahoe (bijvoorbeeld ‘Open met …’ in Snelle weergave). De plug-in tekent ze als afgeronde rechthoeken — een vorm, geen instelbare radius.";

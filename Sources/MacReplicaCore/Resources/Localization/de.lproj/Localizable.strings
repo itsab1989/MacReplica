@@ -1964,3 +1964,15 @@
 "tools.corners.surface.buttons" = "Tasten in allen Apps: abgerundetes Rechteck statt Kapsel";
 "tools.corners.scope.plugin.toolbars" = "Symbolleisten-Gruppen";
 "tools.corners.scope.plugin.buttons" = "Kapsel-Tasten (auch in Quick Look)";
+"tools.corners.example.show" = "Beispiel zeigen";
+"tools.corners.example.default" = "macOS-Standard";
+"tools.corners.example.reduced" = "Reduziert (%1$d pt)";
+"tools.corners.example.capsule" = "Kapsel (macOS-Standard)";
+"tools.corners.example.rounded" = "Abgerundetes Rechteck";
+"tools.corners.example.note.windows" = "Normale App-Fenster, auch Dokumentfenster, Dialoge, Sheets und Hinweise. Das ist die einzige Fläche, die die Fenstereck-Einstellung ohne Plugin ändert.";
+"tools.corners.example.note.utilityPanels" = "Kleinere Hilfsfenster wie Informationsfenster und Werkzeugpaletten. Ohne Plugin änderbar, mit eigenem Wert, wenn du „Gleicher Radius für alles“ ausschaltest.";
+"tools.corners.example.note.menus" = "Menüs und Kontextmenüs. Ohne Plugin kannst du sie nur auf den klassischen Stil ohne Glas umstellen (etwa 6 pt); mit Plugin ist jeder Radius möglich.";
+"tools.corners.example.note.popovers" = "Die Blasen, die unter Menüleistensymbolen und manchen Tasten aufgehen. Nur das Plugin ändert sie; der kleine Pfeil und der Schatten bleiben erhalten.";
+"tools.corners.example.note.quickLook" = "Das Fenster, das sich öffnet, wenn du bei einer Datei die Leertaste drückst. Das Plugin ändert den äußeren Rahmen; der Bildbereich darin behält seine eigenen Ecken (etwa 15 pt).";
+"tools.corners.example.note.toolbars" = "Die Glas-„Pillen“, die Symbolleisten-Tasten gruppieren (zum Beispiel der Ansichtswechsler im Finder). Nur das Plugin ändert sie.";
+"tools.corners.example.note.buttons" = "Kapselförmige Tasten in allen Apps seit macOS Tahoe (zum Beispiel „Öffnen mit …“ in Quick Look). Das Plugin zeichnet sie stattdessen als abgerundete Rechtecke – eine Form, kein einstellbarer Radius.";
