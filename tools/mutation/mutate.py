@@ -99,11 +99,16 @@ def generate_mutants(path):
     in_block_comment = False
     for number, line in enumerate(lines):
         stripped = line.strip()
-        if "/*" in stripped:
-            in_block_comment = True
         if in_block_comment:
             if "*/" in stripped:
                 in_block_comment = False
+            continue
+        # A block comment starts only in code: `/*` inside a string or a `//` comment (e.g. a path like
+        # `Devices/*.app` in a doc comment) is text and must not hide the rest of the file.
+        code_mask = strip_strings_and_comments(line)
+        opener = next((i for i in range(len(line) - 1) if line.startswith("/*", i) and code_mask[i]), None)
+        if opener is not None:
+            in_block_comment = "*/" not in line[opener + 2:]
             continue
         if (not stripped or stripped.startswith("//") or stripped.startswith("import ") or stripped.startswith("///")
                 or stripped.startswith("case ") and "=" in stripped and "\"" in stripped
