@@ -202,13 +202,19 @@ struct MatchDecisionRow: View {
                 get: { currentToken },
                 set: { model.decideMatch(appID: app.id, token: $0.isEmpty ? nil : $0) })) {
                 ForEach(app.candidates, id: \.token) { candidate in
-                    Text(l.t("match.candidate", candidate.name, candidate.token)).tag(candidate.token)
+                    Text(l.t("match.candidate", candidate.name, candidate.token) + (candidate.summary.map { " – " + $0 } ?? "")).tag(candidate.token)
                 }
                 Divider()
                 Text(l.t("match.none")).tag("")
             }
             .labelsHidden()
-            .frame(maxWidth: 300)
+            .frame(maxWidth: 360)
+            HelpButton(text: l.t(OfficeActivation.isOfficeApp(app) ? "match.office.help" : "match.help"), title: l.t("match.title"),
+                       id: "help.match.\(app.id)")
+        }
+        if OfficeActivation.isOfficeApp(app) {
+            Text(l.t("match.office.note")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("match.office.\(app.id)")
         }
         OwnInstallerControls(app: app)
         }
@@ -508,6 +514,10 @@ struct AppRelationNotes: View {
             if let note = app.homebrewNote {
                 Text(l.homebrewNoteText(note)).foregroundStyle(.orange)
                     .accessibilityIdentifier("app.homebrewNote.\(app.id)")
+            }
+            if OfficeActivation.isOfficeApp(app), let activation = manifest?.officeActivation {
+                Text(l.t("office.activation.\(activation.rawValue)")).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("app.office.\(app.id)")
             }
             if let frontEnd = PackageManagerFrontEnds.frontEnd(for: app), let manifest {
                 Text(l.frontEndText(frontEnd, manifest: manifest)).foregroundStyle(.secondary)

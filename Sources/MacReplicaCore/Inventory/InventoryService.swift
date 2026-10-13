@@ -333,6 +333,7 @@ public struct InventoryService: Sendable {
             developer: developer,
             toolchains: toolchains)
         manifest.macreplicaBuild = SystemInfo.buildNumber
+        if apps.contains(where: OfficeActivation.isOfficeApp) { manifest.officeActivation = OfficeActivation.detect(layout: layout) }
         // Display profile assignments (read-only); identifiers only as salted hashes.
         let displayManager = layout.displayColorManager
         let keys = HardwareKeys.make(platformIdentifier: displayManager.platformIdentifier())

@@ -64,10 +64,12 @@ public struct Matcher: Sendable {
             var score = Self.score(allSignals)
             if cask.deprecated { score -= 10 }
             guard score >= Self.minimumScore else { continue }
-            candidates.append(MatchCandidate(
+            var candidate = MatchCandidate(
                 kind: .cask, token: cask.token, name: cask.names.first ?? cask.token,
                 homepage: cask.homepage, score: score,
-                evidence: MatchEvidence.allCases.filter { allSignals.contains($0) }))
+                evidence: MatchEvidence.allCases.filter { allSignals.contains($0) })
+            candidate.summary = cask.desc
+            candidates.append(candidate)
         }
 
         if candidates.isEmpty {

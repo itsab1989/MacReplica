@@ -42,6 +42,9 @@ extension ReportBuilder {
         body += list([manifest.bootstrapApp == nil ? "guide.newMac.1" : "guide.newMac.1.fromBackup", "guide.newMac.2", "guide.newMac.3",
                       "guide.newMac.4", "guide.newMac.5", "guide.newMac.6", "guide.newMac.7", "guide.newMac.8"])
 
+        if let activation = manifest.officeActivation {
+            body += "<h2>Microsoft Office</h2><p>\(HTML.escape(l.t("office.activation.\(activation.rawValue)")))</p>"
+        }
         let manual = manifest.applications.filter { $0.restoreMethod.category == .manual || $0.restoreMethod.category == .officialDownload }
         if !manual.isEmpty {
             body += h2("report.manual.title")

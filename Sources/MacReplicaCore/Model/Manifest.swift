@@ -55,6 +55,8 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var launchpadLayout: LaunchpadLayout?
     /// The copy of MacReplica in the backup (1.0.5 and later), to start the restore on a new Mac without a download.
     public var bootstrapApp: BootstrapAppRecord?
+    /// How Microsoft Office was activated on the old Mac, as far as MacReplica can tell (no licence data is read or kept).
+    public var officeActivation: OfficeActivation?
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -107,7 +109,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
         case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
-        case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp
+        case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp, officeActivation
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -144,6 +146,33 @@ public struct Manifest: Codable, Equatable, Sendable {
         // A layout this version cannot read is left out rather than failing the manifest.
         launchpadLayout = try? c.decodeIfPresent(LaunchpadLayout.self, forKey: .launchpadLayout)
         bootstrapApp = try? c.decodeIfPresent(BootstrapAppRecord.self, forKey: .bootstrapApp)
+        officeActivation = try? c.decodeIfPresent(OfficeActivation.self, forKey: .officeActivation)
+    }
+}
+
+/// How Office for Mac is activated. Microsoft ships one installer for Microsoft 365, Office LTSC 2024/2021 and retail
+/// Office; the version number does not tell them apart. A volume licence (LTSC) is a file in `/Library/Preferences`
+/// that is bound to the Mac's startup disk; its presence is checked, never its contents.
+public enum OfficeActivation: String, Codable, Sendable {
+    /// `/Library/Preferences/com.microsoft.office.licensingV2.plist` exists: a volume licence (Office LTSC 2021/2024) or
+    /// another perpetual licence installed for the whole Mac. 2021 and 2024 cannot be told apart.
+    case volumeLicence
+    /// No such file: activated by signing in (Microsoft 365, or a retail licence linked to a Microsoft account), or not activated.
+    case signIn
+
+    public init(from decoder: Decoder) throws {
+        self = OfficeActivation(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .signIn
+    }
+
+    public static let bundleIdentifiers: Set<String> = ["com.microsoft.word", "com.microsoft.excel", "com.microsoft.powerpoint",
+                                                        "com.microsoft.outlook", "com.microsoft.onenote.mac"]
+
+    public static func isOfficeApp(_ app: AppRecord) -> Bool { app.bundleIdentifier.map { bundleIdentifiers.contains($0.lowercased()) } ?? false }
+
+    /// Only the existence of the licence file is checked.
+    public static func detect(layout: SystemLayout) -> OfficeActivation {
+        let file = layout.sharedLibrary.appendingPathComponent("Preferences/com.microsoft.office.licensingV2.plist")
+        return FileManager.default.fileExists(atPath: file.path) ? .volumeLicence : .signIn
     }
 }
 
@@ -292,6 +321,8 @@ public struct MatchCandidate: Codable, Equatable, Hashable, Sendable {
     public var homepage: String?
     public var score: Int
     public var evidence: [MatchEvidence]
+    /// Homebrew's one-line description of the package, e.g. “Office suite”.
+    public var summary: String?
 
     public init(kind: Kind, token: String, name: String, homepage: String?, score: Int, evidence: [MatchEvidence]) {
         self.kind = kind

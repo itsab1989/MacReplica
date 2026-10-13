@@ -8,6 +8,8 @@ public struct CaskInfo: Sendable, Equatable, Codable {
     public var bundleIdentifiers: [String]
     public var homepage: String?
     public var version: String?
+    /// Homebrew's one-line description.
+    public var desc: String?
     public var deprecated: Bool
     public var disabled: Bool
     public var disableReason: String?
@@ -21,7 +23,7 @@ public struct CaskInfo: Sendable, Equatable, Codable {
     public var minimumMacOS: String?
 
     public init(token: String, names: [String] = [], appArtifacts: [String] = [], bundleIdentifiers: [String] = [],
-                homepage: String? = nil, version: String? = nil, deprecated: Bool = false, disabled: Bool = false,
+                homepage: String? = nil, version: String? = nil, desc: String? = nil, deprecated: Bool = false, disabled: Bool = false,
                 disableReason: String? = nil, disableDate: String? = nil, requiredArchitectures: [CPUArchitecture] = [], download: CaskDownload? = nil,
                 downloadVariations: [String: CaskDownload] = [:], minimumMacOS: String? = nil) {
         self.download = download
@@ -33,6 +35,7 @@ public struct CaskInfo: Sendable, Equatable, Codable {
         self.bundleIdentifiers = bundleIdentifiers
         self.homepage = homepage
         self.version = version
+        self.desc = desc
         self.deprecated = deprecated
         self.disabled = disabled
         self.disableReason = disableReason
@@ -136,6 +139,7 @@ public struct CaskCatalog: Sendable {
                 bundleIdentifiers: bundleIdentifiers(from: item["artifacts"]),
                 homepage: item["homepage"] as? String,
                 version: item["version"] as? String,
+                desc: item["desc"] as? String,
                 deprecated: item["deprecated"] as? Bool ?? false,
                 disabled: item["disabled"] as? Bool ?? false,
                 disableReason: item["disable_reason"] as? String, disableDate: item["disable_date"] as? String,
