@@ -251,6 +251,7 @@ struct AppSecurityReportView: View {
             NoticeView(style: advice == .opensNormally ? .success : (advice == .damaged ? .error : (advice == .notChecked ? .info : .warning)),
                        title: l.t("tools.gatekeeper.advice.\(advice.rawValue).title"), message: l.t("tools.gatekeeper.advice.\(advice.rawValue).message"))
                 .accessibilityIdentifier("tools.gatekeeper.advice.\(advice.rawValue)")
+            QuarantineActionsView(report: report)
             if advice == .needsOpenAnyway || advice == .firstOpenAsks {
                 if model.tools.awaitingApproval == nil {
                     Button(l.t("tools.gatekeeper.openAnyway.start")) { model.startOpenAnyway() }
@@ -668,6 +669,45 @@ struct CornerScopeView: View {
             }
         }
         .accessibilityIdentifier("tools.corners.scope")
+    }
+}
+
+/// Open the chosen app now, or – at the user's own risk, after a warning – remove its quarantine mark (and put it back).
+struct QuarantineActionsView: View {
+    @EnvironmentObject var model: AppModel
+    var report: AppSecurityReport
+    @ViewState private var confirmRemove = false
+
+    var body: some View {
+        let l = model.l
+        let restorable = model.tools.removedQuarantine?.app.path == report.path
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                if report.advice != .damaged {
+                    Button(l.t("tools.gatekeeper.openNow")) { model.openInspectedApp() }
+                        .accessibilityIdentifier("tools.gatekeeper.openNow")
+                    if report.quarantined {
+                        Button(l.t("tools.gatekeeper.quarantine.remove")) { confirmRemove = true }
+                            .accessibilityIdentifier("tools.gatekeeper.quarantine.remove")
+                    }
+                }
+                if restorable, !report.quarantined {
+                    Button(l.t("tools.gatekeeper.quarantine.restore")) { model.restoreQuarantineOfInspectedApp() }
+                        .accessibilityIdentifier("tools.gatekeeper.quarantine.restore")
+                }
+                if report.quarantined || restorable {
+                    HelpButton(text: l.t("tools.gatekeeper.quarantine.help"), title: l.t("tools.gatekeeper.quarantine.remove"),
+                               id: "help.tools.gatekeeper.quarantine")
+                }
+            }
+            if let outcome = model.tools.quarantineOutcome { ToolOutcomeView(outcome: outcome, id: "tools.gatekeeper.quarantine.outcome") }
+        }
+        .alert(l.t("tools.gatekeeper.quarantine.confirm.title", report.appName), isPresented: $confirmRemove) {
+            Button(l.t("tools.gatekeeper.quarantine.confirm.go"), role: .destructive) { model.removeQuarantineFromInspectedApp() }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.gatekeeper.quarantine.confirm.message", report.appName))
+        }
     }
 }
 

@@ -285,3 +285,54 @@ public enum SecuritySettingsLinks {
     /// Apple: “Safely open apps on your Mac”.
     public static let appleSafelyOpenApps = "https://support.apple.com/en-us/102445"
 }
+
+/// Removing the quarantine mark from one app the user chose – at their explicit request, after a warning. This skips
+/// Gatekeeper's first-launch check (including Apple's malware check) for that app only; Gatekeeper stays on for
+/// everything else. The exact previous mark is returned so it can be put back. Never used for `/System`, never for an
+/// app whose signature is broken, never for more than the one bundle.
+public enum QuarantineEditor {
+    public static let attribute = "com.apple.quarantine"
+
+    public enum Failure: Error, Equatable {
+        case notAnApp
+        case systemLocation
+        case damaged
+        case notQuarantined
+        /// The bundle belongs to another user or root; MacReplica does not use administrator rights for this.
+        case notWritable(String)
+    }
+
+    public static func check(_ app: URL, report: AppSecurityReport?) throws {
+        guard app.pathExtension == "app" else { throw Failure.notAnApp }
+        let path = app.standardizedFileURL.path
+        if path.hasPrefix("/System/") || path.hasPrefix("/usr/") || path.hasPrefix("/Library/Apple/") { throw Failure.systemLocation }
+        if report?.signature == .invalid { throw Failure.damaged }
+    }
+
+    /// Removes the mark from the bundle and every item inside that carries it; returns the bundle's previous mark.
+    @discardableResult
+    public static func remove(from app: URL, report: AppSecurityReport?) throws -> String {
+        try check(app, report: report)
+        guard let previous = GatekeeperInspector.quarantine(of: app) else { throw Failure.notQuarantined }
+        var items = [app]
+        if let enumerator = FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil, options: []) {
+            for case let url as URL in enumerator { items.append(url) }
+        }
+        for url in items where getxattr(url.path, attribute, nil, 0, 0, XATTR_NOFOLLOW) > 0 {
+            if removexattr(url.path, attribute, XATTR_NOFOLLOW) != 0 {
+                // Undo what was done so far: the bundle keeps its mark if not everything could be changed.
+                if url != app { _ = setxattr(app.path, attribute, previous, previous.utf8.count, 0, XATTR_NOFOLLOW) }
+                throw Failure.notWritable(String(cString: strerror(errno)))
+            }
+        }
+        return previous
+    }
+
+    /// Puts the recorded mark back on the bundle (enough for Gatekeeper to check the app again at its next launch).
+    public static func restore(_ value: String, to app: URL) throws {
+        try check(app, report: nil)
+        guard setxattr(app.path, attribute, value, value.utf8.count, 0, XATTR_NOFOLLOW) == 0 else {
+            throw Failure.notWritable(String(cString: strerror(errno)))
+        }
+    }
+}

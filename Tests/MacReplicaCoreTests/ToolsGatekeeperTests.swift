@@ -141,4 +141,40 @@ struct ToolsGatekeeperTests {
         #expect(setxattr(file.path, "com.apple.quarantine", value, value.utf8.count, 0, 0) == 0)
         #expect(GatekeeperInspector.quarantine(of: file) == value)
     }
+
+    static func bundle(quarantine: String?) throws -> (URL, URL) {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let app = folder.appendingPathComponent("Tool.app")
+        let inner = app.appendingPathComponent("Contents/MacOS/Tool")
+        try FileManager.default.createDirectory(at: inner.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: inner)
+        if let quarantine {
+            for url in [app, inner] { #expect(setxattr(url.path, "com.apple.quarantine", quarantine, quarantine.utf8.count, 0, 0) == 0) }
+        }
+        return (folder, app)
+    }
+
+    @Test func quarantineIsRemovedFromTheWholeBundleAndPutBackExactly() throws {
+        let value = "0083;6acbc32e;Safari;ABC"
+        let (folder, app) = try Self.bundle(quarantine: value)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let previous = try QuarantineEditor.remove(from: app, report: nil)
+        #expect(previous == value)
+        #expect(GatekeeperInspector.quarantine(of: app) == nil)
+        #expect(GatekeeperInspector.quarantine(of: app.appendingPathComponent("Contents/MacOS/Tool")) == nil)
+        try QuarantineEditor.restore(previous, to: app)
+        #expect(GatekeeperInspector.quarantine(of: app) == value)
+        #expect(throws: QuarantineEditor.Failure.notQuarantined) { _ = try QuarantineEditor.remove(from: app.deletingLastPathComponent().appendingPathComponent("Other.app"), report: nil) }
+    }
+
+    @Test func quarantineRemovalRefusesWhatItMustNotTouch() throws {
+        let (folder, app) = try Self.bundle(quarantine: nil)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        #expect(throws: QuarantineEditor.Failure.notQuarantined) { _ = try QuarantineEditor.remove(from: app, report: nil) }
+        #expect(throws: QuarantineEditor.Failure.systemLocation) { _ = try QuarantineEditor.remove(from: URL(fileURLWithPath: "/System/Applications/Calculator.app"), report: nil) }
+        #expect(throws: QuarantineEditor.Failure.notAnApp) { _ = try QuarantineEditor.remove(from: folder, report: nil) }
+        let damaged = GatekeeperInspector.report(app: app, quarantine: "0083;1;Safari;U", verify: Self.fail(1), details: "Authority=Developer ID Application: A (T)",
+                                                 notarized: Self.fail(), assess: nil, findings: [])
+        #expect(throws: QuarantineEditor.Failure.damaged) { _ = try QuarantineEditor.remove(from: app, report: damaged) }
+    }
 }

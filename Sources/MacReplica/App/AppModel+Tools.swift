@@ -29,8 +29,17 @@ struct ToolsState {
     var gatekeeperOutcome: ToolOutcome?
     var deferralOutcome: ToolOutcome?
 
+    /// The quarantine mark MacReplica removed in this session (to put it back exactly).
+    var removedQuarantine: RemovedQuarantine?
+    var quarantineOutcome: ToolOutcome?
+
     var corners: CornerState?
     var cornerOutcome: ToolOutcome?
+}
+
+struct RemovedQuarantine: Equatable {
+    var app: URL
+    var value: String
 }
 
 struct PendingProfile: Equatable {
@@ -333,6 +342,8 @@ extension AppModel {
     func inspectApp(_ url: URL) {
         tools.inspectingApp = true
         tools.appReport = nil
+        tools.quarantineOutcome = nil
+        if tools.removedQuarantine?.app != url { tools.removedQuarantine = nil }
         Task {
             let report = await gatekeeperInspector.inspect(app: url)
             tools.appReport = report
@@ -375,6 +386,68 @@ extension AppModel {
             record(ToolHistoryEntry(tool: "gatekeeper", change: "gatekeeper.openAnyway", previousState: before.advice.rawValue,
                                     resultingState: after.advice.rawValue, macOSVersion: tools.environment.macOSVersion,
                                     result: verification == .failed ? .failed : .succeeded, verification: verification, revertAvailable: false))
+        }
+    }
+
+    /// Opens the chosen app now. If Gatekeeper blocks it, macOS shows its own warning (and “Open Anyway” becomes
+    /// available in Privacy & Security).
+    func openInspectedApp() {
+        guard let report = tools.appReport else { return }
+        NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: report.path), configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+        appLog.info("Tools: opened the inspected app on request", component: .tools)
+    }
+
+    /// Removes the quarantine mark from the one app the user chose (after the confirmation in the view) and checks
+    /// the app again.
+    func removeQuarantineFromInspectedApp() {
+        guard let report = tools.appReport else { return }
+        let url = URL(fileURLWithPath: report.path)
+        do {
+            let previous = try QuarantineEditor.remove(from: url, report: report)
+            tools.removedQuarantine = RemovedQuarantine(app: url, value: previous)
+            reinspectAfterQuarantineChange(url, change: "gatekeeper.quarantineRemoved", wantQuarantined: false)
+        } catch {
+            tools.quarantineOutcome = ToolOutcome(verification: .failed, stateAfter: quarantineFailureText(error))
+        }
+    }
+
+    func restoreQuarantineOfInspectedApp() {
+        guard let removed = tools.removedQuarantine else { return }
+        do {
+            try QuarantineEditor.restore(removed.value, to: removed.app)
+            tools.removedQuarantine = nil
+            reinspectAfterQuarantineChange(removed.app, change: "gatekeeper.quarantineRestored", wantQuarantined: true)
+        } catch {
+            tools.quarantineOutcome = ToolOutcome(verification: .failed, stateAfter: quarantineFailureText(error))
+        }
+    }
+
+    private func quarantineFailureText(_ error: Error) -> String {
+        switch error as? QuarantineEditor.Failure {
+        case .damaged: return l.t("tools.gatekeeper.quarantine.damaged")
+        case .systemLocation, .notAnApp: return l.t("tools.gatekeeper.quarantine.notAllowed")
+        case .notQuarantined: return l.t("tools.gatekeeper.quarantine.none")
+        case .notWritable(let reason): return l.t("tools.gatekeeper.quarantine.notWritable", reason)
+        case nil: return services.layout.redact(String(describing: error))
+        }
+    }
+
+    private func reinspectAfterQuarantineChange(_ url: URL, change: String, wantQuarantined: Bool) {
+        let before = tools.appReport
+        tools.inspectingApp = true
+        Task {
+            let after = await gatekeeperInspector.inspect(app: url)
+            tools.appReport = after
+            tools.inspectingApp = false
+            let verification: ToolVerification = after.quarantined == wantQuarantined ? .verified : .failed
+            tools.quarantineOutcome = ToolOutcome(verification: verification,
+                                                  stateAfter: l.t(wantQuarantined ? "tools.gatekeeper.quarantine.restored" : "tools.gatekeeper.quarantine.removed"))
+            // The history names no path: the app's name and the state are enough.
+            record(ToolHistoryEntry(tool: "gatekeeper", change: change,
+                                    previousState: "app=\(after.appName);quarantined=\(before?.quarantined == true ? 1 : 0)",
+                                    resultingState: "app=\(after.appName);quarantined=\(after.quarantined ? 1 : 0)",
+                                    macOSVersion: tools.environment.macOSVersion, result: verification == .verified ? .succeeded : .failed,
+                                    verification: verification, revertAvailable: false))
         }
     }
 
