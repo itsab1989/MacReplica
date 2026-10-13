@@ -1,734 +1,734 @@
 {
- "default_threshold": 80,
- "modules": [
-  {
-   "file": "Model/ManifestIO.swift",
-   "tests": [
-    "ManifestTests",
-    "VerificationTests"
-   ],
-   "area": "Manifest"
-  },
-  {
-   "file": "Matching/Matcher.swift",
-   "tests": [
-    "MatchingTests",
-    "HomebrewAvailabilityTests",
-    "OfficeEditionTests"
-   ],
-   "area": "Matching"
-  },
-  {
-   "file": "Restore/RestorePlanner.swift",
-   "tests": [
-    "RestorePlannerTests",
-    "EndToEndTests",
-    "TwoStageSelectionTests",
-    "SelectionPlannerTests",
-    "DeveloperEnvironmentTests",
-    "LaunchpadRestoreTests"
-   ],
-   "area": "Restore"
-  },
-  {
-   "file": "Restore/FileConflictAnalyzer.swift",
-   "tests": [
-    "FontConflictTests",
-    "ProfileConflictTests",
-    "FileDecisionRestoreTests",
-    "TwoStageSelectionTests",
-    "DestinationIndexTests",
-    "ExecutorPredictionTests"
-   ],
-   "area": "Font and ICC profile conflict decisions"
-  },
-  {
-   "file": "Restore/RestoreExecutor.swift",
-   "tests": [
-    "RestoreExecutionTests",
-    "DryRunTests",
-    "ResumeTests",
-    "FailureModeTests",
-    "SecurityTests",
-    "FileDecisionRestoreTests",
-    "TwoStageSelectionTests",
-    "FontConflictTests",
-    "ProfileConflictTests",
-    "ExecutorPredictionTests",
-    "EndToEndTests",
-    "ExecutorEdgeTests",
-    "RestorePlannerTests",
-    "AdminPasswordTests",
-    "LaunchpadRestoreTests"
-   ],
-   "area": "Restore, conflicts, dry run, verification",
-   "threshold": 75
-  },
-  {
-   "file": "Restore/SessionStore.swift",
-   "tests": [
-    "ResumeTests",
-    "CleanupTests",
-    "SessionAndPrivilegeEdgeTests",
-    "DeveloperEnvironmentTests",
-    "GuidedInstallationTests"
-   ],
-   "area": "Resume"
-  },
-  {
-   "file": "Backup/BackupVerifier.swift",
-   "tests": [
-    "VerificationTests",
-    "VerificationEdgeTests"
-   ],
-   "area": "Verification"
-  },
-  {
-   "file": "Support/SafeCleaner.swift",
-   "tests": [
-    "CleanupTests",
-    "SecurityTests",
-    "CleanupEdgeTests"
-   ],
-   "area": "Cleanup, path safety"
-  },
-  {
-   "file": "System/CommandRunner.swift",
-   "tests": [
-    "SecurityTests",
-    "CommandRunnerEdgeTests"
-   ],
-   "area": "Security",
-   "threshold": 70
-  },
-  {
-   "file": "Restore/PrivilegedExecutor.swift",
-   "tests": [
-    "SecurityTests",
-    "RestoreExecutionTests",
-    "SessionAndPrivilegeEdgeTests"
-   ],
-   "area": "Security"
-  },
-  {
-   "file": "Restore/ErrorClassifier.swift",
-   "tests": [
-    "ClassifierAndProgressTests",
-    "FailureModeTests"
-   ],
-   "area": "Failure handling"
-  },
-  {
-   "file": "Credentials/Credentials.swift",
-   "tests": [
-    "CredentialTests",
-    "FileCredentialProviderTests",
-    "CredentialEdgeTests"
-   ],
-   "area": "Security: credential encryption"
-  },
-  {
-   "file": "Inventory/DeveloperSettings.swift",
-   "tests": [
-    "ProviderTests",
-    "GitConfigSanitizerTests",
-    "ProviderCatalogTests"
-   ],
-   "area": "Security: Git configuration sanitizing"
-  },
-  {
-   "file": "Support/UpdateChecker.swift",
-   "tests": [
-    "VersionAndUpdateTests",
-    "VersionEdgeTests"
-   ],
-   "area": "Update detection"
-  },
-  {
-   "file": "Restore/PythonAndDataRestore.swift",
-   "tests": [
-    "PythonTests",
-    "ApplicationDataTests",
-    "ProviderTests",
-    "CredentialTests",
-    "PythonStrategyTests",
-    "RealPythonPreservationTests",
-    "PythonRestoreEdgeTests",
-    "PythonPreservationEdgeTests",
-    "DataRestoreEdgeTests",
-    "CreativeAppProviderTests",
-    "AppDataVersionTargetTests",
-    "WorkflowAppProviderTests"
-   ],
-   "area": "Python, application data and credential restore",
-   "threshold": 75
-  },
-  {
-   "file": "Providers/AppDataProviders.swift",
-   "tests": [
-    "ProviderCatalogTests",
-    "ProviderTests",
-    "CreativeAppProviderTests",
-    "AppDataVersionTargetTests",
-    "WorkflowAppProviderTests"
-   ],
-   "area": "Provider selection and discovery"
-  },
-  {
-   "file": "Inventory/AppDataScanner.swift",
-   "tests": [
-    "ApplicationDataTests",
-    "ProviderCatalogTests",
-    "AppDataScannerEdgeTests",
-    "CreativeAppProviderTests",
-    "AppDataVersionTargetTests",
-    "WorkflowAppProviderTests"
-   ],
-   "area": "Application data path handling and refusal rules"
-  },
-  {
-   "file": "Inventory/ICCProfile.swift",
-   "tests": [
-    "InventoryTests",
-    "ProfileConflictTests",
-    "ICCHeaderTests",
-    "ICCComputedIDBoundaryTests"
-   ],
-   "area": "ICC profile identity (header, computed Profile ID)",
-   "threshold": 75
-  },
-  {
-   "file": "Toolchains/ToolchainProvider.swift",
-   "tests": [
-    "ToolchainSecurityTests",
-    "ToolchainScannerTests",
-    "ToolchainDetailTests",
-    "ToolchainEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "Toolchain validation and command policy"
-  },
-  {
-   "file": "Toolchains/NodeToolchains.swift",
-   "tests": [
-    "ToolchainScannerTests",
-    "DeveloperEnvironmentTests",
-    "ToolchainDetailTests",
-    "ToolchainEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "Node.js environments"
-  },
-  {
-   "file": "Toolchains/PythonToolchains.swift",
-   "tests": [
-    "ToolchainScannerTests",
-    "SmallParserTests",
-    "DeveloperEnvironmentTests",
-    "ToolchainDetailTests",
-    "ToolchainEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "Python tools (pyenv, uv, pipx, Conda)"
-  },
-  {
-   "file": "Toolchains/LanguageToolchains.swift",
-   "tests": [
-    "ToolchainScannerTests",
-    "SmallParserTests",
-    "DeveloperEnvironmentTests",
-    "ToolchainDetailTests",
-    "ToolchainEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "Ruby, Rust, Go, Java, .NET"
-  },
-  {
-   "file": "Toolchains/PackageManagerToolchains.swift",
-   "tests": [
-    "ToolchainScannerTests",
-    "DeveloperEnvironmentTests",
-    "ToolchainDetailTests",
-    "ToolchainEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "Package managers (MacPorts, Nix, Pixi, mise, asdf)"
-  },
-  {
-   "file": "Support/MiniTOML.swift",
-   "tests": [
-    "SmallParserTests",
-    "ToolchainScannerTests",
-    "ToolchainEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "TOML reader"
-  },
-  {
-   "file": "Distribution/DistributionChannel.swift",
-   "tests": [
-    "ChannelTests",
-    "DeveloperEnvironmentTests",
-    "ToolchainEdgeTests"
-   ],
-   "area": "Distribution channels"
-  },
-  {
-   "file": "Downloads/DownloadSourceFinder.swift",
-   "tests": [
-    "DownloadSourceTests",
-    "DownloadEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "Download source selection"
-  },
-  {
-   "file": "Downloads/DownloadQueue.swift",
-   "tests": [
-    "DownloadQueueTests",
-    "GuidedInstallationTests",
-    "DownloadEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "Download queue"
-  },
-  {
-   "file": "Downloads/DownloadInstaller.swift",
-   "tests": [
-    "DownloadInstallerTests",
-    "GuidedInstallationTests",
-    "DownloadEdgeTests",
-    "MoreRecoveryEdgeTests"
-   ],
-   "area": "Download verification"
-  },
-  {
-   "file": "Downloads/GuidedInstallation.swift",
-   "tests": [
-    "GuidedInstallationTests",
-    "DownloadEdgeTests",
-    "MoreRecoveryEdgeTests",
-    "OwnInstallerTests"
-   ],
-   "area": "Manual installation, cancellation"
-  },
-  {
-   "file": "Restore/ToolchainRestore.swift",
-   "tests": [
-    "DeveloperEnvironmentTests",
-    "RestoreExecutionTests",
-    "FailureModeTests",
-    "RecoveryRestoreEdgeTests",
-    "MoreRecoveryEdgeTests",
-    "ExecutorEdgeTests"
-   ],
-   "area": "Environment recovery, resume"
-  },
-  {
-   "file": "ColorProfiles/DisplayProfiles.swift",
-   "tests": [
-    "DisplayProfileTests"
-   ],
-   "area": "Display profile assignments (ICC strategy)"
-  },
-  {
-   "file": "Restore/DisplayProfileRestore.swift",
-   "tests": [
-    "DisplayProfileTests"
-   ],
-   "area": "Display profile restore and verification"
-  },
-  {
-   "file": "Python/PythonPreservation.swift",
-   "tests": [
-    "PythonStrategyTests",
-    "RealPythonPreservationTests",
-    "PythonPreservationEdgeTests"
-   ],
-   "area": "Python strategy selection and verification"
-  },
-  {
-   "file": "System/AdminPasswordBroker.swift",
-   "tests": [
-    "AdminPasswordTests",
-    "FailureModeTests"
-   ],
-   "area": "Security: administrator password"
-  },
-  {
-   "file": "Downloads/InstallerArchive.swift",
-   "tests": [
-    "OwnInstallerTests",
-    "InstallerDescriptionTests"
-   ],
-   "area": "Own installers (offline)",
-   "threshold": 65
-  },
-  {
-   "file": "Launchpad/LaunchpadLayout.swift",
-   "tests": [
-    "LaunchpadTests",
-    "LaunchpadRestoreTests"
-   ],
-   "area": "Launchpad layout"
-  },
-  {
-   "file": "Restore/LaunchpadRestore.swift",
-   "tests": [
-    "LaunchpadRestoreTests"
-   ],
-   "area": "Launchpad layout"
-  },
-  {
-   "file": "Backup/BackupSelectionPreset.swift",
-   "tests": [
-    "LibreOfficeAndSelectionTests"
-   ],
-   "area": "Saved backup selection"
-  },
-  {
-   "file": "Homebrew/HomebrewClient.swift",
-   "tests": [
-    "HomebrewTests",
-    "InventoryTests",
-    "HomebrewAvailabilityTests"
-   ],
-   "area": "Homebrew detection"
-  },
-  {
-   "file": "Downloads/DiskImageCommands.swift",
-   "tests": [
-    "DownloadInstallerTests",
-    "OwnInstallerTests",
-    "GuidedInstallationTests"
-   ],
-   "area": "Disk images"
-  },
-  {
-   "file": "Homebrew/HomebrewSupport.swift",
-   "tests": [
-    "HomebrewTests"
-   ],
-   "area": "Homebrew support tiers"
-  },
-  {
-   "file": "Inventory/SensitiveFiles.swift",
-   "tests": [
-    "SensitiveFilesTests"
-   ],
-   "area": "Sensitive files"
-  },
-  {
-   "file": "Backup/BootstrapApp.swift",
-   "tests": [
-    "BootstrapAppTests"
-   ],
-   "area": "MacReplica in the backup"
-  },
-  {
-   "file": "Inventory/Printers.swift",
-   "tests": [
-    "PrinterTests",
-    "InstallerDescriptionTests"
-   ],
-   "area": "Printers"
-  },
-  {
-   "file": "Settings/SystemSettings.swift",
-   "tests": [
-    "SystemSettingsTests"
-   ],
-   "area": "macOS settings"
-  },
-  {
-   "file": "Reports/ReinstallGuide.swift",
-   "tests": [
-    "ReinstallGuideTests"
-   ],
-   "area": "Reinstall guide"
-  },
-  {
-   "file": "Matching/VendorTaps.swift",
-   "tests": [
-    "HomebrewAvailabilityTests"
-   ],
-   "area": "Vendor taps"
-  },
-  {
-   "file": "Inventory/ApplicationLocator.swift",
-   "tests": [
-    "HomebrewAvailabilityTests",
-    "OwnInstallerTests",
-    "PrinterTests"
-   ],
-   "area": "Installed apps"
-  },
-  {
-   "file": "Localization/InstallerDescriptions.swift",
-   "tests": [
-    "InstallerDescriptionTests",
-    "SensitiveFilesTests",
-    "VersionChoiceTests",
-    "OfficeEditionTests",
-    "HomebrewAvailabilityTests",
-    "ReinstallGuideTests"
-   ],
-   "area": "Descriptions"
-  },
-  {
-   "file": "Tools/ToolKit.swift",
-   "tests": [
-    "ToolsKitTests"
-   ],
-   "area": "Tools"
-  },
-  {
-   "file": "Tools/GatekeeperTool.swift",
-   "tests": [
-    "ToolsGatekeeperTests"
-   ],
-   "area": "Tools"
-  },
-  {
-   "file": "Tools/UpdatePreferencesTool.swift",
-   "tests": [
-    "ToolsUpdatesTests"
-   ],
-   "area": "Tools"
-  },
-  {
-   "file": "Tools/ConfigurationProfiles.swift",
-   "tests": [
-    "ToolsProfilesTests"
-   ],
-   "area": "Tools"
-  },
-  {
-   "file": "Tools/WindowCornersTool.swift",
-   "tests": [
-    "ToolsWindowCornersTests"
-   ],
-   "area": "Tools"
-  }
- ],
- "exclusions": [
-  {
-   "file": "System/CommandRunner.swift",
-   "pattern": "guard !data.isEmpty else",
-   "reason": "Empty reads are no-ops either way (equivalent mutant)."
-  },
-  {
-   "file": "Restore/RestoreExecutor.swift",
-   "pattern": "log\\.(info|warning|error)",
-   "reason": "Log-only lines."
-  },
-  {
-   "file": "Restore/RestoreExecutor.swift",
-   "pattern": "onEvent\\(\\.activity",
-   "reason": "Progress-only events; covered by eventsDescribeEveryStep for the main kinds."
-  },
-  {
-   "file": "Restore/PythonAndDataRestore.swift",
-   "pattern": "log\\.(info|warning|error)",
-   "reason": "Log-only lines."
-  },
-  {
-   "file": "Restore/PythonAndDataRestore.swift",
-   "pattern": "onEvent\\(\\.activity",
-   "reason": "Progress-only events."
-  },
-  {
-   "file": "Credentials/Credentials.swift",
-   "pattern": "minimumPassphraseLength = 12|defaultIterations = 600_000",
-   "reason": "Policy constants; boundaries are tested via the 'short' passphrase and iteration floor."
-  },
-  {
-   "file": "Downloads/DownloadQueue.swift",
-   "pattern": "log\\?*\\.(info|warning|error)",
-   "reason": "Log-only lines."
-  },
-  {
-   "file": "Downloads/GuidedInstallation.swift",
-   "pattern": "log\\?*\\.(info|warning|error)",
-   "reason": "Log-only lines."
-  },
-  {
-   "file": "Restore/ToolchainRestore.swift",
-   "pattern": "log\\?*\\.(info|warning|error)",
-   "reason": "Log-only lines."
-  },
-  {
-   "file": "Downloads/DownloadInstaller.swift",
-   "pattern": "log\\?*\\.(info|warning|error)",
-   "reason": "Log-only lines."
-  },
-  {
-   "file": "Downloads/DownloadSourceFinder.swift",
-   "pattern": "http.statusCode == 200|willPerformHTTPRedirection|task.originalRequest",
-   "reason": "URLSessionFetcher talks to real servers; tests use LocalFetcher."
-  },
-  {
-   "file": "Downloads/DownloadQueue.swift",
-   "pattern": "task.originalRequest|NSURLErrorCancelled|totalBytesExpectedToWrite|statusCode != 200",
-   "reason": "URLSessionDownloadTransport needs a real server; tests use LocalDownloadTransport."
-  },
-  {
-   "file": "Downloads/DownloadQueue.swift",
-   "pattern": "if offset == 0 \\|\\|",
-   "reason": "Test-only local transport."
-  },
-  {
-   "file": "Downloads/DownloadInstaller.swift",
-   "pattern": "withIntermediateDirectories: true",
-   "reason": "The parent folder always exists here (equivalent mutant)."
-  },
-  {
-   "file": "Toolchains/ToolchainProvider.swift",
-   "pattern": "data.count < 5_000_000",
-   "reason": "Size guard against huge metadata files; boundary not meaningful."
-  },
-  {
-   "file": "Downloads/DownloadSourceFinder.swift",
-   "pattern": "data.count <= maxBytes",
-   "reason": "Size guard; boundary not meaningful."
-  },
-  {
-   "file": "Downloads/GuidedInstallation.swift",
-   "pattern": "if await queue.state\\(item.id\\) == nil",
-   "reason": "Enqueueing again restarts an equivalent download (equivalent mutant)."
-  },
-  {
-   "file": "Downloads/DownloadSourceFinder.swift",
-   "pattern": "recommended: true\\)\\)",
-   "reason": "markRecommended sets App Store offers as recommended again (equivalent mutant)."
-  },
-  {
-   "file": "Downloads/DownloadQueue.swift",
-   "pattern": "delayPerChunk > 0",
-   "reason": "Test-only local transport."
-  },
-  {
-   "file": "Restore/DisplayProfileRestore.swift",
-   "pattern": "log\\.(info|warning|error)|onEvent\\(\\.activity",
-   "reason": "Log and progress only."
-  },
-  {
-   "file": "ColorProfiles/DisplayProfiles.swift",
-   "pattern": "isConnected: Bool = true",
-   "operator": "true → false",
-   "reason": "Parameter default only; every caller in the app passes isConnected explicitly (equivalent mutant)."
-  },
-  {
-   "file": "ColorProfiles/DisplayProfiles.swift",
-   "pattern": "profiles\\.first\\(where: \\{ \\$0\\.originalPath == path \\}\\)",
-   "operator": "first → last",
-   "reason": "A backup holds at most one profile record per original path, so first and last are the same record (equivalent mutant)."
-  },
-  {
-   "file": "Restore/DisplayProfileRestore.swift",
-   "pattern": "index\\.entries\\.first \\{ index\\.hash\\(of: \\$0\\) == sha \\}",
-   "operator": "first → last",
-   "reason": "Every identical copy of the backed-up profile is a correct profile to assign; which one is used when several exist is not specified."
-  },
-  {
-   "file": "Restore/DisplayProfileRestore.swift",
-   "pattern": "manager\\.displays\\(\\)\\.first \\{",
-   "operator": "first → last",
-   "reason": "ColorSync device IDs (and their salted keys) are unique, so at most one display matches (equivalent mutant)."
-  },
-  {
-   "file": "Python/PythonPreservation.swift",
-   "pattern": "referencesLocalPaths: Bool = false\\) \\{",
-   "operator": "false → true",
-   "reason": "Parameter default only; preserve() always passes the value (equivalent mutant)."
-  },
-  {
-   "file": "Python/PythonPreservation.swift",
-   "pattern": "architectures\\.sorted \\{ \\$0\\.rawValue < \\$1\\.rawValue \\}",
-   "operator": "< → <=",
-   "reason": "Sorts the elements of a set: there are no equal elements (equivalent mutant)."
-  },
-  {
-   "file": "Restore/PythonAndDataRestore.swift",
-   "pattern": "createDirectory\\(at: folder, withIntermediateDirectories: true, attributes",
-   "operator": "true → false",
-   "reason": "Every credential folder (~/.ssh, ~/.aws, ~/.kube, ~/.terraform.d) is directly in the home folder, which always exists (equivalent mutant)."
-  },
-  {
-   "file": "Restore/PythonAndDataRestore.swift",
-   "pattern": "if case \\.existingFileMovedAside = \\$0 \\{ return true \\}; return false",
-   "operator": "false → true",
-   "reason": "At this point the notes only ever hold the moved-aside note, so the fallback value is never used (equivalent mutant)."
-  },
-  {
-   "file": "Restore/PythonAndDataRestore.swift",
-   "pattern": "profile\\.bundleIdentifiers\\.first\\(where: environment\\.isApplicationRunning\\)",
-   "operator": "first → last",
-   "reason": "Any running identifier blocks the restore (tested); which one the detail names when several run at once is not specified."
-  },
-  {
-   "file": "Inventory/AppDataScanner.swift",
-   "pattern": "var isDirectory: ObjCBool = false",
-   "operator": "false → true",
-   "reason": "fileExists(atPath:isDirectory:) always sets the flag when the path exists, and a missing path fails the same guard (equivalent mutant)."
-  },
-  {
-   "file": "Inventory/AppDataScanner.swift",
-   "pattern": "files\\.sort \\{ \\$0\\.record\\.relativePath < \\$1\\.record\\.relativePath \\}",
-   "operator": "< → <=",
-   "reason": "Relative paths inside one folder are unique, so < and <= give the same order (equivalent mutant)."
-  },
-  {
-   "file": "Providers/AppDataProviders.swift",
-   "pattern": "providers\\.first \\{ \\$0\\.id == id \\}",
-   "operator": "first → last",
-   "reason": "Provider identifiers are unique (tested in ProviderCatalogTests), so the first and the last match are the same provider (equivalent mutant)."
-  },
-  {
-   "file": "Inventory/AppDataScanner.swift",
-   "pattern": "if values\\.isSymbolicLink == true \\{ continue \\}",
-   "operator": "remove continue",
-   "reason": "URL resource values describe the link itself, so a symbolic link is never a regular file and the next guard skips it too (equivalent mutant; the rule is tested in AppDataVersionTargetTests)."
-  },
-  {
-   "file": "Restore/LaunchpadRestore.swift",
-   "pattern": "log\\.info|onEvent\\(\\.activity",
-   "reason": "Log and progress lines."
-  },
-  {
-   "file": "System/AdminPasswordBroker.swift",
-   "pattern": "guard fd >= 0 else|if fd >= 0 \\{",
-   "reason": "Descriptor 0 is standard input; socket() never returns it (equivalent mutant)."
-  },
-  {
-   "file": "System/AdminPasswordBroker.swift",
-   "pattern": "if client < 0 \\{|^\\s*continue$|stopped = true|private var stopped = false",
-   "reason": "Only decides when the accept thread ends after stop(); not observable from outside (the socket is closed and removed either way)."
-  },
-  {
-   "file": "System/AdminPasswordBroker.swift",
-   "pattern": "guard count > 0 else",
-   "reason": "An empty read is answered with DENY to a closed connection either way (equivalent mutant)."
-  },
-  {
-   "file": "System/AdminPasswordBroker.swift",
-   "pattern": "guard path.count < MemoryLayout",
-   "reason": "The socket path comes from the system's temporary folder and is far shorter than the limit; the boundary cannot be reached in a test."
-  },
-  {
-   "file": "Restore/LaunchpadRestore.swift",
-   "pattern": "Date\\(\\) >= deadline",
-   "reason": "Timing boundary of the settle wait (>= vs >) is not observable."
-  },
-  {
-   "file": "Homebrew/HomebrewClient.swift",
-   "pattern": "sorted \\{ \\$0\\.(name|token) < \\$1\\.(name|token) \\}",
-   "reason": "Package names and tokens are unique, so < and <= sort the same (equivalent mutant)."
-  },
-  {
-   "file": "Downloads/DownloadInstaller.swift",
-   "pattern": "sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
-   "reason": "File names in one folder are unique, so < and <= sort the same (equivalent mutant)."
-  }
- ]
+  "default_threshold": 80,
+  "modules": [
+    {
+      "file": "Model/ManifestIO.swift",
+      "tests": [
+        "ManifestTests",
+        "VerificationTests"
+      ],
+      "area": "Manifest"
+    },
+    {
+      "file": "Matching/Matcher.swift",
+      "tests": [
+        "MatchingTests",
+        "HomebrewAvailabilityTests",
+        "OfficeEditionTests"
+      ],
+      "area": "Matching"
+    },
+    {
+      "file": "Restore/RestorePlanner.swift",
+      "tests": [
+        "RestorePlannerTests",
+        "EndToEndTests",
+        "TwoStageSelectionTests",
+        "SelectionPlannerTests",
+        "DeveloperEnvironmentTests",
+        "LaunchpadRestoreTests"
+      ],
+      "area": "Restore"
+    },
+    {
+      "file": "Restore/FileConflictAnalyzer.swift",
+      "tests": [
+        "FontConflictTests",
+        "ProfileConflictTests",
+        "FileDecisionRestoreTests",
+        "TwoStageSelectionTests",
+        "DestinationIndexTests",
+        "ExecutorPredictionTests"
+      ],
+      "area": "Font and ICC profile conflict decisions"
+    },
+    {
+      "file": "Restore/RestoreExecutor.swift",
+      "tests": [
+        "RestoreExecutionTests",
+        "DryRunTests",
+        "ResumeTests",
+        "FailureModeTests",
+        "SecurityTests",
+        "FileDecisionRestoreTests",
+        "TwoStageSelectionTests",
+        "FontConflictTests",
+        "ProfileConflictTests",
+        "ExecutorPredictionTests",
+        "EndToEndTests",
+        "ExecutorEdgeTests",
+        "RestorePlannerTests",
+        "AdminPasswordTests",
+        "LaunchpadRestoreTests"
+      ],
+      "area": "Restore, conflicts, dry run, verification",
+      "threshold": 75
+    },
+    {
+      "file": "Restore/SessionStore.swift",
+      "tests": [
+        "ResumeTests",
+        "CleanupTests",
+        "SessionAndPrivilegeEdgeTests",
+        "DeveloperEnvironmentTests",
+        "GuidedInstallationTests"
+      ],
+      "area": "Resume"
+    },
+    {
+      "file": "Backup/BackupVerifier.swift",
+      "tests": [
+        "VerificationTests",
+        "VerificationEdgeTests"
+      ],
+      "area": "Verification"
+    },
+    {
+      "file": "Support/SafeCleaner.swift",
+      "tests": [
+        "CleanupTests",
+        "SecurityTests",
+        "CleanupEdgeTests"
+      ],
+      "area": "Cleanup, path safety"
+    },
+    {
+      "file": "System/CommandRunner.swift",
+      "tests": [
+        "SecurityTests",
+        "CommandRunnerEdgeTests"
+      ],
+      "area": "Security",
+      "threshold": 70
+    },
+    {
+      "file": "Restore/PrivilegedExecutor.swift",
+      "tests": [
+        "SecurityTests",
+        "RestoreExecutionTests",
+        "SessionAndPrivilegeEdgeTests"
+      ],
+      "area": "Security"
+    },
+    {
+      "file": "Restore/ErrorClassifier.swift",
+      "tests": [
+        "ClassifierAndProgressTests",
+        "FailureModeTests"
+      ],
+      "area": "Failure handling"
+    },
+    {
+      "file": "Credentials/Credentials.swift",
+      "tests": [
+        "CredentialTests",
+        "FileCredentialProviderTests",
+        "CredentialEdgeTests"
+      ],
+      "area": "Security: credential encryption"
+    },
+    {
+      "file": "Inventory/DeveloperSettings.swift",
+      "tests": [
+        "ProviderTests",
+        "GitConfigSanitizerTests",
+        "ProviderCatalogTests"
+      ],
+      "area": "Security: Git configuration sanitizing"
+    },
+    {
+      "file": "Support/UpdateChecker.swift",
+      "tests": [
+        "VersionAndUpdateTests",
+        "VersionEdgeTests"
+      ],
+      "area": "Update detection"
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "tests": [
+        "PythonTests",
+        "ApplicationDataTests",
+        "ProviderTests",
+        "CredentialTests",
+        "PythonStrategyTests",
+        "RealPythonPreservationTests",
+        "PythonRestoreEdgeTests",
+        "PythonPreservationEdgeTests",
+        "DataRestoreEdgeTests",
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests",
+        "WorkflowAppProviderTests"
+      ],
+      "area": "Python, application data and credential restore",
+      "threshold": 75
+    },
+    {
+      "file": "Providers/AppDataProviders.swift",
+      "tests": [
+        "ProviderCatalogTests",
+        "ProviderTests",
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests",
+        "WorkflowAppProviderTests"
+      ],
+      "area": "Provider selection and discovery"
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "tests": [
+        "ApplicationDataTests",
+        "ProviderCatalogTests",
+        "AppDataScannerEdgeTests",
+        "CreativeAppProviderTests",
+        "AppDataVersionTargetTests",
+        "WorkflowAppProviderTests"
+      ],
+      "area": "Application data path handling and refusal rules"
+    },
+    {
+      "file": "Inventory/ICCProfile.swift",
+      "tests": [
+        "InventoryTests",
+        "ProfileConflictTests",
+        "ICCHeaderTests",
+        "ICCComputedIDBoundaryTests"
+      ],
+      "area": "ICC profile identity (header, computed Profile ID)",
+      "threshold": 75
+    },
+    {
+      "file": "Toolchains/ToolchainProvider.swift",
+      "tests": [
+        "ToolchainSecurityTests",
+        "ToolchainScannerTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Toolchain validation and command policy"
+    },
+    {
+      "file": "Toolchains/NodeToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Node.js environments"
+    },
+    {
+      "file": "Toolchains/PythonToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "SmallParserTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Python tools (pyenv, uv, pipx, Conda)"
+    },
+    {
+      "file": "Toolchains/LanguageToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "SmallParserTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Ruby, Rust, Go, Java, .NET"
+    },
+    {
+      "file": "Toolchains/PackageManagerToolchains.swift",
+      "tests": [
+        "ToolchainScannerTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainDetailTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Package managers (MacPorts, Nix, Pixi, mise, asdf)"
+    },
+    {
+      "file": "Support/MiniTOML.swift",
+      "tests": [
+        "SmallParserTests",
+        "ToolchainScannerTests",
+        "ToolchainEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "TOML reader"
+    },
+    {
+      "file": "Distribution/DistributionChannel.swift",
+      "tests": [
+        "ChannelTests",
+        "DeveloperEnvironmentTests",
+        "ToolchainEdgeTests"
+      ],
+      "area": "Distribution channels"
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "tests": [
+        "DownloadSourceTests",
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Download source selection"
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "tests": [
+        "DownloadQueueTests",
+        "GuidedInstallationTests",
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Download queue"
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "tests": [
+        "DownloadInstallerTests",
+        "GuidedInstallationTests",
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests"
+      ],
+      "area": "Download verification"
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "tests": [
+        "GuidedInstallationTests",
+        "DownloadEdgeTests",
+        "MoreRecoveryEdgeTests",
+        "OwnInstallerTests"
+      ],
+      "area": "Manual installation, cancellation"
+    },
+    {
+      "file": "Restore/ToolchainRestore.swift",
+      "tests": [
+        "DeveloperEnvironmentTests",
+        "RestoreExecutionTests",
+        "FailureModeTests",
+        "RecoveryRestoreEdgeTests",
+        "MoreRecoveryEdgeTests",
+        "ExecutorEdgeTests"
+      ],
+      "area": "Environment recovery, resume"
+    },
+    {
+      "file": "ColorProfiles/DisplayProfiles.swift",
+      "tests": [
+        "DisplayProfileTests"
+      ],
+      "area": "Display profile assignments (ICC strategy)"
+    },
+    {
+      "file": "Restore/DisplayProfileRestore.swift",
+      "tests": [
+        "DisplayProfileTests"
+      ],
+      "area": "Display profile restore and verification"
+    },
+    {
+      "file": "Python/PythonPreservation.swift",
+      "tests": [
+        "PythonStrategyTests",
+        "RealPythonPreservationTests",
+        "PythonPreservationEdgeTests"
+      ],
+      "area": "Python strategy selection and verification"
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "tests": [
+        "AdminPasswordTests",
+        "FailureModeTests"
+      ],
+      "area": "Security: administrator password"
+    },
+    {
+      "file": "Downloads/InstallerArchive.swift",
+      "tests": [
+        "OwnInstallerTests",
+        "InstallerDescriptionTests"
+      ],
+      "area": "Own installers (offline)",
+      "threshold": 65
+    },
+    {
+      "file": "Launchpad/LaunchpadLayout.swift",
+      "tests": [
+        "LaunchpadTests",
+        "LaunchpadRestoreTests"
+      ],
+      "area": "Launchpad layout"
+    },
+    {
+      "file": "Restore/LaunchpadRestore.swift",
+      "tests": [
+        "LaunchpadRestoreTests"
+      ],
+      "area": "Launchpad layout"
+    },
+    {
+      "file": "Backup/BackupSelectionPreset.swift",
+      "tests": [
+        "LibreOfficeAndSelectionTests"
+      ],
+      "area": "Saved backup selection"
+    },
+    {
+      "file": "Homebrew/HomebrewClient.swift",
+      "tests": [
+        "HomebrewTests",
+        "InventoryTests",
+        "HomebrewAvailabilityTests"
+      ],
+      "area": "Homebrew detection"
+    },
+    {
+      "file": "Downloads/DiskImageCommands.swift",
+      "tests": [
+        "DownloadInstallerTests",
+        "OwnInstallerTests",
+        "GuidedInstallationTests"
+      ],
+      "area": "Disk images"
+    },
+    {
+      "file": "Homebrew/HomebrewSupport.swift",
+      "tests": [
+        "HomebrewTests"
+      ],
+      "area": "Homebrew support tiers"
+    },
+    {
+      "file": "Inventory/SensitiveFiles.swift",
+      "tests": [
+        "SensitiveFilesTests"
+      ],
+      "area": "Sensitive files"
+    },
+    {
+      "file": "Backup/BootstrapApp.swift",
+      "tests": [
+        "BootstrapAppTests"
+      ],
+      "area": "MacReplica in the backup"
+    },
+    {
+      "file": "Inventory/Printers.swift",
+      "tests": [
+        "PrinterTests",
+        "InstallerDescriptionTests"
+      ],
+      "area": "Printers"
+    },
+    {
+      "file": "Settings/SystemSettings.swift",
+      "tests": [
+        "SystemSettingsTests"
+      ],
+      "area": "macOS settings"
+    },
+    {
+      "file": "Reports/ReinstallGuide.swift",
+      "tests": [
+        "ReinstallGuideTests"
+      ],
+      "area": "Reinstall guide"
+    },
+    {
+      "file": "Matching/VendorTaps.swift",
+      "tests": [
+        "HomebrewAvailabilityTests"
+      ],
+      "area": "Vendor taps"
+    },
+    {
+      "file": "Inventory/ApplicationLocator.swift",
+      "tests": [
+        "HomebrewAvailabilityTests",
+        "OwnInstallerTests",
+        "PrinterTests"
+      ],
+      "area": "Installed apps"
+    },
+    {
+      "file": "Localization/InstallerDescriptions.swift",
+      "tests": [
+        "InstallerDescriptionTests",
+        "SensitiveFilesTests",
+        "VersionChoiceTests",
+        "OfficeEditionTests",
+        "HomebrewAvailabilityTests",
+        "ReinstallGuideTests"
+      ],
+      "area": "Descriptions"
+    },
+    {
+      "file": "Tools/ToolKit.swift",
+      "tests": [
+        "ToolsKitTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/GatekeeperTool.swift",
+      "tests": [
+        "ToolsGatekeeperTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/UpdatePreferencesTool.swift",
+      "tests": [
+        "ToolsUpdatesTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/ConfigurationProfiles.swift",
+      "tests": [
+        "ToolsProfilesTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/WindowCornersTool.swift",
+      "tests": [
+        "ToolsWindowCornersTests"
+      ],
+      "area": "Tools"
+    }
+  ],
+  "exclusions": [
+    {
+      "file": "System/CommandRunner.swift",
+      "pattern": "guard !data.isEmpty else",
+      "reason": "Empty reads are no-ops either way (equivalent mutant)."
+    },
+    {
+      "file": "Restore/RestoreExecutor.swift",
+      "pattern": "log\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Restore/RestoreExecutor.swift",
+      "pattern": "onEvent\\(\\.activity",
+      "reason": "Progress-only events; covered by eventsDescribeEveryStep for the main kinds."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "log\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "onEvent\\(\\.activity",
+      "reason": "Progress-only events."
+    },
+    {
+      "file": "Credentials/Credentials.swift",
+      "pattern": "minimumPassphraseLength = 12|defaultIterations = 600_000",
+      "reason": "Policy constants; boundaries are tested via the 'short' passphrase and iteration floor."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Restore/ToolchainRestore.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "log\\?*\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "http.statusCode == 200|willPerformHTTPRedirection|task.originalRequest",
+      "reason": "URLSessionFetcher talks to real servers; tests use LocalFetcher."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "task.originalRequest|NSURLErrorCancelled|totalBytesExpectedToWrite|statusCode != 200",
+      "reason": "URLSessionDownloadTransport needs a real server; tests use LocalDownloadTransport."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "if offset == 0 \\|\\|",
+      "reason": "Test-only local transport."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "withIntermediateDirectories: true",
+      "reason": "The parent folder always exists here (equivalent mutant)."
+    },
+    {
+      "file": "Toolchains/ToolchainProvider.swift",
+      "pattern": "data.count < 5_000_000",
+      "reason": "Size guard against huge metadata files; boundary not meaningful."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "data.count <= maxBytes",
+      "reason": "Size guard; boundary not meaningful."
+    },
+    {
+      "file": "Downloads/GuidedInstallation.swift",
+      "pattern": "if await queue.state\\(item.id\\) == nil",
+      "reason": "Enqueueing again restarts an equivalent download (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadSourceFinder.swift",
+      "pattern": "recommended: true\\)\\)",
+      "reason": "markRecommended sets App Store offers as recommended again (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadQueue.swift",
+      "pattern": "delayPerChunk > 0",
+      "reason": "Test-only local transport."
+    },
+    {
+      "file": "Restore/DisplayProfileRestore.swift",
+      "pattern": "log\\.(info|warning|error)|onEvent\\(\\.activity",
+      "reason": "Log and progress only."
+    },
+    {
+      "file": "ColorProfiles/DisplayProfiles.swift",
+      "pattern": "isConnected: Bool = true",
+      "operator": "true → false",
+      "reason": "Parameter default only; every caller in the app passes isConnected explicitly (equivalent mutant)."
+    },
+    {
+      "file": "ColorProfiles/DisplayProfiles.swift",
+      "pattern": "profiles\\.first\\(where: \\{ \\$0\\.originalPath == path \\}\\)",
+      "operator": "first → last",
+      "reason": "A backup holds at most one profile record per original path, so first and last are the same record (equivalent mutant)."
+    },
+    {
+      "file": "Restore/DisplayProfileRestore.swift",
+      "pattern": "index\\.entries\\.first \\{ index\\.hash\\(of: \\$0\\) == sha \\}",
+      "operator": "first → last",
+      "reason": "Every identical copy of the backed-up profile is a correct profile to assign; which one is used when several exist is not specified."
+    },
+    {
+      "file": "Restore/DisplayProfileRestore.swift",
+      "pattern": "manager\\.displays\\(\\)\\.first \\{",
+      "operator": "first → last",
+      "reason": "ColorSync device IDs (and their salted keys) are unique, so at most one display matches (equivalent mutant)."
+    },
+    {
+      "file": "Python/PythonPreservation.swift",
+      "pattern": "referencesLocalPaths: Bool = false\\) \\{",
+      "operator": "false → true",
+      "reason": "Parameter default only; preserve() always passes the value (equivalent mutant)."
+    },
+    {
+      "file": "Python/PythonPreservation.swift",
+      "pattern": "architectures\\.sorted \\{ \\$0\\.rawValue < \\$1\\.rawValue \\}",
+      "operator": "< → <=",
+      "reason": "Sorts the elements of a set: there are no equal elements (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "createDirectory\\(at: folder, withIntermediateDirectories: true, attributes",
+      "operator": "true → false",
+      "reason": "Every credential folder (~/.ssh, ~/.aws, ~/.kube, ~/.terraform.d) is directly in the home folder, which always exists (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "if case \\.existingFileMovedAside = \\$0 \\{ return true \\}; return false",
+      "operator": "false → true",
+      "reason": "At this point the notes only ever hold the moved-aside note, so the fallback value is never used (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PythonAndDataRestore.swift",
+      "pattern": "profile\\.bundleIdentifiers\\.first\\(where: environment\\.isApplicationRunning\\)",
+      "operator": "first → last",
+      "reason": "Any running identifier blocks the restore (tested); which one the detail names when several run at once is not specified."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "var isDirectory: ObjCBool = false",
+      "operator": "false → true",
+      "reason": "fileExists(atPath:isDirectory:) always sets the flag when the path exists, and a missing path fails the same guard (equivalent mutant)."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "files\\.sort \\{ \\$0\\.record\\.relativePath < \\$1\\.record\\.relativePath \\}",
+      "operator": "< → <=",
+      "reason": "Relative paths inside one folder are unique, so < and <= give the same order (equivalent mutant)."
+    },
+    {
+      "file": "Providers/AppDataProviders.swift",
+      "pattern": "providers\\.first \\{ \\$0\\.id == id \\}",
+      "operator": "first → last",
+      "reason": "Provider identifiers are unique (tested in ProviderCatalogTests), so the first and the last match are the same provider (equivalent mutant)."
+    },
+    {
+      "file": "Inventory/AppDataScanner.swift",
+      "pattern": "if values\\.isSymbolicLink == true \\{ continue \\}",
+      "operator": "remove continue",
+      "reason": "URL resource values describe the link itself, so a symbolic link is never a regular file and the next guard skips it too (equivalent mutant; the rule is tested in AppDataVersionTargetTests)."
+    },
+    {
+      "file": "Restore/LaunchpadRestore.swift",
+      "pattern": "log\\.info|onEvent\\(\\.activity",
+      "reason": "Log and progress lines."
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "pattern": "guard fd >= 0 else|if fd >= 0 \\{",
+      "reason": "Descriptor 0 is standard input; socket() never returns it (equivalent mutant)."
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "pattern": "if client < 0 \\{|^\\s*continue$|stopped = true|private var stopped = false",
+      "reason": "Only decides when the accept thread ends after stop(); not observable from outside (the socket is closed and removed either way)."
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "pattern": "guard count > 0 else",
+      "reason": "An empty read is answered with DENY to a closed connection either way (equivalent mutant)."
+    },
+    {
+      "file": "System/AdminPasswordBroker.swift",
+      "pattern": "guard path.count < MemoryLayout",
+      "reason": "The socket path comes from the system's temporary folder and is far shorter than the limit; the boundary cannot be reached in a test."
+    },
+    {
+      "file": "Restore/LaunchpadRestore.swift",
+      "pattern": "Date\\(\\) >= deadline",
+      "reason": "Timing boundary of the settle wait (>= vs >) is not observable."
+    },
+    {
+      "file": "Homebrew/HomebrewClient.swift",
+      "pattern": "sorted \\{ \\$0\\.(name|token) < \\$1\\.(name|token) \\}",
+      "reason": "Package names and tokens are unique, so < and <= sort the same (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
+      "reason": "File names in one folder are unique, so < and <= sort the same (equivalent mutant)."
+    }
+  ]
 }
