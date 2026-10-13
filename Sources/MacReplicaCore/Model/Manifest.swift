@@ -53,6 +53,8 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var displayProfiles: [DisplayProfileAssignment]
     /// The Launchpad arrangement (macOS 13–15): pages, folders with their names, and the order of the apps.
     public var launchpadLayout: LaunchpadLayout?
+    /// The copy of MacReplica in the backup (1.0.5 and later), to start the restore on a new Mac without a download.
+    public var bootstrapApp: BootstrapAppRecord?
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -105,7 +107,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
         case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
-        case hardwareKeys, displayProfiles, launchpadLayout
+        case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -141,6 +143,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         displayProfiles = try c.decodeIfPresent(LenientList<DisplayProfileAssignment>.self, forKey: .displayProfiles)?.elements ?? []
         // A layout this version cannot read is left out rather than failing the manifest.
         launchpadLayout = try? c.decodeIfPresent(LaunchpadLayout.self, forKey: .launchpadLayout)
+        bootstrapApp = try? c.decodeIfPresent(BootstrapAppRecord.self, forKey: .bootstrapApp)
     }
 }
 

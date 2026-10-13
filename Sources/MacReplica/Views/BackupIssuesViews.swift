@@ -5,11 +5,14 @@ import SwiftUI
 struct CompletenessNotice: View {
     @EnvironmentObject var model: AppModel
     var manifest: Manifest
+    /// On the new Mac the advice is about the old Mac, if the user still has it.
+    var onNewMac = false
 
     var body: some View {
         let l = model.l
         let style: NoticeView.Style = manifest.completeness == .complete ? .success : (manifest.completeness == .partial ? .warning : .info)
-        NoticeView(style: style, title: l.completenessTitle(manifest), message: l.completenessMessage(manifest))
+        let message = onNewMac && manifest.completeness != .complete ? l.t("completeness.restore.message") : l.completenessMessage(manifest)
+        NoticeView(style: style, title: l.completenessTitle(manifest), message: message)
             .accessibilityIdentifier("completeness.\(manifest.completeness.rawValue)")
     }
 }

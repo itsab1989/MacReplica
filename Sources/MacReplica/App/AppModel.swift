@@ -617,7 +617,9 @@ final class AppModel: ObservableObject {
             }
             defer { if !preserved.isEmpty { try? SafeCleaner(homeDirectory: layout.homeDirectory).removeOwnedFolder(work, kind: .temporary) } }
             do {
-                let outcome = try writer.write(inventory, into: parent, log: log, credentials: credentials) { progress in
+                // The running MacReplica goes into the backup, so the new Mac needs no download to start the restore.
+                let selfCopy = Bundle.main.bundleURL.pathExtension == "app" ? Bundle.main.bundleURL : nil
+                let outcome = try writer.write(inventory, into: parent, log: log, credentials: credentials, selfCopy: selfCopy) { progress in
                     Task { @MainActor in model.backupProgress = progress.fraction }
                 }
                 await MainActor.run { [weak self] in

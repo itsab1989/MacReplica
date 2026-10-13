@@ -20,7 +20,7 @@ struct RestoreSelectionView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if let manifest = model.manifest {
-                        CompletenessNotice(manifest: manifest)
+                        CompletenessNotice(manifest: manifest, onNewMac: true)
                         if manifest.completeness != .complete || !manifest.sensitiveFilesIncludedOnRequest.isEmpty {
                             DisclosureGroup(l.t("notInBackup.show")) {
                                 NotInBackupView(manifest: manifest, editable: false, onThisMac: false).padding(.top, 6)

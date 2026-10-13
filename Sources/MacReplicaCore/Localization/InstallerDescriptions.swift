@@ -118,3 +118,17 @@ extension Localizer {
         }
     }
 }
+
+/// Texts about the copy of MacReplica in a backup.
+extension Localizer {
+    /// "MacReplica 1.0.5 is in this backup (Apple silicon and Intel)."
+    public func bootstrapSummary(_ app: BootstrapAppRecord) -> String {
+        let processors = architecturesText(app.architectures) ?? t("architecture.unknown")
+        return t("bootstrap.summary", app.version, processors) + (app.isUniversal ? "" : " " + t("bootstrap.notUniversal", processors))
+    }
+
+    /// The first lines of the backup's README.txt.
+    public func bootstrapReadme(_ app: BootstrapAppRecord) -> String {
+        bootstrapSummary(app) + "\n" + t("bootstrap.readme", app.path, MacReplicaLinks.releases.absoluteString)
+    }
+}

@@ -37,6 +37,8 @@ public enum SystemInfo {
 /// The project's public links. Each exists exactly once; every screen uses these constants.
 public enum MacReplicaLinks {
     public static let repository = URL(string: "https://github.com/itsab1989/MacReplica")!
+    /// Official downloads (GitHub releases of the repository).
+    public static let releases = URL(string: "https://github.com/itsab1989/MacReplica/releases")!
     /// The developer's verified Ko-fi page (also used by the author's other project, ChromIQ).
     public static let kofi = URL(string: "https://ko-fi.com/itsab1989")!
 }

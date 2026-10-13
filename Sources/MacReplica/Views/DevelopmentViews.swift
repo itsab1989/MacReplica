@@ -250,6 +250,13 @@ struct BackupSavedView: View {
                     if let outcome {
                         NoticeView(style: .success, title: l.t("saved.verified"), message: l.t("saved.message"))
                         CompletenessNotice(manifest: outcome.manifest)
+                        if let app = outcome.manifest.bootstrapApp {
+                            NoticeView(style: app.isUniversal ? .info : .warning, title: l.bootstrapSummary(app), message: l.t("bootstrap.saved.message"))
+                                .accessibilityIdentifier("saved.bootstrap")
+                        } else {
+                            NoticeView(style: .warning, title: l.t("bootstrap.missing"), message: l.t("bootstrap.missing.message", MacReplicaLinks.releases.absoluteString))
+                                .accessibilityIdentifier("saved.bootstrap")
+                        }
                         if outcome.manifest.completeness != .complete || !outcome.manifest.sensitiveFilesIncludedOnRequest.isEmpty {
                             Card {
                                 NotInBackupView(manifest: outcome.manifest, editable: false, onThisMac: true)

@@ -112,9 +112,9 @@ public struct BackupWriter: Sendable {
     /// and recorded as backup issues (a partial backup). Anything that would make
     /// the backup unusable removes the incomplete folder again and throws.
     /// The files plus a margin for the manifest, checksums and reports.
-    static func estimatedSize(of inventory: InventoryResult) -> Int64 {
+    static func estimatedSize(of inventory: InventoryResult, selfCopy: URL? = nil) -> Int64 {
         let files = (inventory.fonts + inventory.colorProfiles + inventory.extraFiles).reduce(Int64(0)) { $0 + $1.record.size }
-        return files + files / 100 + 50_000_000
+        return files + files / 100 + 50_000_000 + (selfCopy.map(BootstrapApp.size(of:)) ?? 0)
     }
 
     /// Free space of the volume (nil if it cannot be read, e.g. some network shares; then the copy itself reports a full disk).
@@ -125,12 +125,13 @@ public struct BackupWriter: Sendable {
     }
 
     public func write(_ inventory: InventoryResult, into parent: URL, log: LogStore, credentials: CredentialExportRequest? = nil,
+                      selfCopy: URL? = nil,
                       progress: @Sendable (BackupProgress) -> Void = { _ in }) throws -> BackupOutcome {
         guard FileManager.default.isWritableFile(atPath: parent.path) else {
             throw BackupError.destinationNotWritable(layout.displayPath(parent))
         }
         // Checked before anything is written: own folders have no size limit.
-        let needed = Self.estimatedSize(of: inventory)
+        let needed = Self.estimatedSize(of: inventory, selfCopy: selfCopy)
         if let available = Self.availableSpace(at: parent), needed > available {
             throw BackupError.notEnoughSpace(needed: needed, available: available)
         }
@@ -191,7 +192,20 @@ public struct BackupWriter: Sendable {
                 }
             }
 
-            // 4. Manifest, reports, instructions
+            // 4. A copy of MacReplica itself, to start the restore on the new Mac without a download. A problem with it
+            //    is logged and shown; it never stops the backup of the user's data.
+            if let selfCopy {
+                do {
+                    manifest.bootstrapApp = try BootstrapApp.copy(selfCopy, into: root)
+                    if let app = manifest.bootstrapApp {
+                        log.info("MacReplica \(app.version) copied into the backup (\(app.architectures.map(\.rawValue).joined(separator: ", ")))", component: .backup)
+                    }
+                } catch {
+                    log.warning("MacReplica could not be copied into the backup: \(error)", component: .backup)
+                }
+            }
+
+            // 5. Manifest, reports, instructions
             try ManifestIO.write(manifest, to: root)
             log.info("Wrote manifest version \(manifest.manifestVersion)", component: .backup)
             let builder = ReportBuilder(localizer: localizer)
@@ -199,7 +213,9 @@ public struct BackupWriter: Sendable {
             try writeText(builder.manualInstallationsReport(manifest), to: root.appendingPathComponent("reports/manual_installations.html"))
             try writeText(builder.restoreInstructions(manifest, folderName: root.lastPathComponent),
                           to: root.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html"))
-            try writeText(localizer.t("backup.readme", root.lastPathComponent), to: root.appendingPathComponent("README.txt"))
+            var readme = localizer.t("backup.readme", root.lastPathComponent)
+            if let app = manifest.bootstrapApp { readme = localizer.bootstrapReadme(app) + "\n\n" + readme }
+            try writeText(readme, to: root.appendingPathComponent("README.txt"))
 
             // 4. Checksums over everything, then verify the finished backup.
             progress(BackupProgress(fraction: 0.9, currentFile: nil))

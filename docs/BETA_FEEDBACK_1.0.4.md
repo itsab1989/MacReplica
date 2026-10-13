@@ -70,3 +70,16 @@ file remembering `~/Sync/Passwords.kdbx`, VueScan `.ini` files.
   the included database listed separately; reports list the same.
 - Restore: 64 succeeded, 0 failed; `Family.kdbx` byte-identical, the key file not restored, `Talk.key` restored,
   VueScan `vuescan.ini` and `Film negatives.ini` restored (not the log), KeePassXC settings restored.
+
+### V4 – MacReplica in the backup (bootstrap, item 4) — **Verified** (universal build, simulated Macs) / **Partially verified** for Intel
+- Universal build (arm64 + x86_64, ad-hoc signed like the released 1.0.4, which is not notarized). Backup screen:
+  “MacReplica 1.0.4 is in this backup (runs on Apple silicon and Intel)”. Backup folder: `MacReplica.app` at the top,
+  `README.txt` starts with the start-here steps (drag to Applications, Open Anyway if macOS cannot verify the developer,
+  official download link), `codesign --verify --strict` passes on the copy, every file of it is in `SHA256SUMS`.
+- The copy was started from inside the backup folder against a fresh simulated Mac: home screen shown. Started again
+  with `arch -x86_64`: `vmmap` reports “Code Type: X86-64 (translated)”, home screen shown – the Intel slice runs
+  (under Rosetta on Apple silicon; a real Intel Mac was not available here).
+- Tests: `BootstrapAppTests` (copy, manifest record, README, instructions, verification; a damaged app or no app
+  bundle never stops the backup).
+- Not removed or changed: the copy keeps the original file attributes, including a quarantine flag – Gatekeeper
+  checks it on the new Mac like any other app.

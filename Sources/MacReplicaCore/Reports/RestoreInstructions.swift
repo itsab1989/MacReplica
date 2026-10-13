@@ -36,8 +36,11 @@ extension ReportBuilder {
         body += "<p>\(HTML.escape(l.t("guide.transfer.check")))</p>"
 
         body += h2("guide.newMac.title")
-        body += list(["guide.newMac.1", "guide.newMac.2", "guide.newMac.3", "guide.newMac.4", "guide.newMac.5", "guide.newMac.6",
-                      "guide.newMac.7", "guide.newMac.8"])
+        if let app = manifest.bootstrapApp {
+            body += "<p class=\"ok\">\(HTML.escape(l.bootstrapSummary(app)))</p>"
+        }
+        body += list([manifest.bootstrapApp == nil ? "guide.newMac.1" : "guide.newMac.1.fromBackup", "guide.newMac.2", "guide.newMac.3",
+                      "guide.newMac.4", "guide.newMac.5", "guide.newMac.6", "guide.newMac.7", "guide.newMac.8"])
 
         let manual = manifest.applications.filter { $0.restoreMethod.category == .manual || $0.restoreMethod.category == .officialDownload }
         if !manual.isEmpty {
