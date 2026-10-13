@@ -254,7 +254,7 @@ struct BackupSavedView: View {
                             Card {
                                 NotInBackupView(manifest: outcome.manifest, editable: false, onThisMac: true)
                             }
-                            .accessibilityIdentifier("saved.notInBackup")
+                            .accessibilityElement(children: .contain).accessibilityIdentifier("saved.notInBackup")
                         }
                         Card {
                             Text(l.t("saved.location")).font(.caption).foregroundStyle(.secondary)

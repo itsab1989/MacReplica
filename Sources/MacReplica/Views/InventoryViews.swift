@@ -85,7 +85,7 @@ struct InventoryResultsView: View {
                             LabelWithHelp(label: l.p("notInBackup.title", manifest.backupIssues.count), help: l.t("notInBackup.help"),
                                           id: "help.notInBackup", font: .headline)
                         }
-                        .accessibilityIdentifier("results.notInBackup")
+                        .accessibilityElement(children: .contain).accessibilityIdentifier("results.notInBackup")
                     }
 
                     ForEach(Array((model.inventory?.warnings ?? []).enumerated()), id: \.offset) { _, warning in

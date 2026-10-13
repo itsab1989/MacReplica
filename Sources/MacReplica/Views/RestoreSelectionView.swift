@@ -25,7 +25,7 @@ struct RestoreSelectionView: View {
                             DisclosureGroup(l.t("notInBackup.show")) {
                                 NotInBackupView(manifest: manifest, editable: false, onThisMac: false).padding(.top, 6)
                             }
-                            .accessibilityIdentifier("restore.notInBackup")
+                            .accessibilityElement(children: .contain).accessibilityIdentifier("restore.notInBackup")
                         }
                     }
                     warnings
