@@ -27,9 +27,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
     - Less rounded app windows and utility panels (2–24 pt) and classic menus, through undocumented AppKit
       settings, with an exact way back.
     - One radius for everything by default, or one per surface, and every surface can be left out.
-    - Advanced, behind warnings: a corner plugin for the Ammonia tweak loader that also changes menus, popovers,
-      the Quick Look window, toolbar groups and capsule buttons in all apps. It needs System Integrity Protection
-      off, which only you can do, and does nothing on untested macOS builds.
+    - An example preview (the eye next to each surface) shows the element at the default vs. the reduced corner.
+    - Advanced, behind warnings: a corner plugin loaded by Plugin Playground (a maintained open-source tweak loader)
+      that also changes menus, popovers, the Quick Look window, toolbar groups and capsule buttons in all apps. It
+      needs System Integrity Protection only partly off (debugging allowed), which only you can set; MacReplica offers
+      a one-click download-and-install and a one-click undo, and does nothing on untested macOS builds.
 
 ### Fixed
 - **A backup could be removed completely** when Word (or another Office app) was open: its temporary lock file

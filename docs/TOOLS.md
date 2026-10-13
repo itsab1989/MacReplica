@@ -155,29 +155,47 @@ What MacReplica does (experimental, 26.4+ only; elsewhere the card says it isn't
 ### The corner plugin (advanced, at the user's own risk)
 
 `Extras/CornerPlugin/MacReplicaCorners.m` is built into the app as `Contents/Library/CornerPlugin/MacReplicaCorners.dylib`
-(arm64 and arm64e), next to `MacReplicaCorners.dylib.blacklist`. It is loaded by the Ammonia tweak loader
-(github.com/CoreBedtime/ammonia), which needs:
-- System Integrity Protection off (recoveryOS: `csrutil disable`);
-- the boot argument `-arm64e_preview_abi`;
-- the loader itself installed.
+(arm64 and arm64e), next to `MacReplicaCorners.dylib.options`. It is loaded by **Plugin Playground**, the maintained
+tweak loader (github.com/CoreBedtime/playground; its predecessor Ammonia is archived and unlicensed). Playground needs:
+- System Integrity Protection only **partly** off — debugging allowed (`csrutil enable --without debug`), not a full
+  `csrutil disable`;
+- the loader installed (`PluginPlayground-1.1.0.pkg`, pinned by SHA-256 below) and enabled once in its own app, where
+  the user turns on injection and “Disable arm64e (PAC)”. Enabling creates the `com.pluginplayground.grant` launch
+  daemon; it needs no boot argument and persists no library-validation change (the `grant` daemon patches amfid only
+  while injecting).
 
-MacReplica never changes System Integrity Protection or boot arguments. It shows the steps to enable and to undo
-everything, detects each requirement (`csrutil status`, `nvram boot-args`, the tweak folder), and installs or removes
-exactly its two files in `/var/ammonia/core/tweaks/`. This uses the administrator password and fixed `install`/`rm`
-commands; `rm` is refused for any other path.
+MacReplica never changes System Integrity Protection. The one-click setup downloads the pinned loader, verifies its
+checksum, installs it and the plugin (`installer -pkg` + `install`, one administrator prompt) and opens Plugin
+Playground so the user enables it; it falls back to the manual steps if the download or checksum fails. It detects each
+requirement (`csrutil status`, `/opt/pluginplayground/bin`, the grant daemon plist, the plugin files) and installs or
+removes exactly its two files in `/opt/pluginplayground/tweaks/`. Undo removes the plugin and uninstalls the loader
+(its app, `/opt/pluginplayground`, the grant daemon plist and logs) with fixed `rm -rf` commands on an allow-list;
+`rm` is refused for any other path. No `nvram` or library-validation command is ever run. The loader's project is
+unlicensed, so MacReplica only links to and downloads the official release — it never forks, mirrors or bundles it;
+the pinned reference and the plugin's own interface are documented here so the feature survives the loader changing.
+
+Pinned loader: `PluginPlayground-1.1.0.pkg`, 1,186,472 bytes, SHA-256
+`283c3b87e8861e158d726b3742e0bb42ea8d9677eaf9955eb541db88a7252b00`,
+https://github.com/CoreBedtime/playground/releases/download/1.1.0/PluginPlayground-1.1.0.pkg.
+
+Plugin interface (loader-agnostic): a dylib with a constructor (no special export) placed in the loader's tweaks
+folder, injected via `DYLD_INSERT_LIBRARIES`. It reads the global defaults `MacReplicaMenuCornerRadius`,
+`MacReplicaPopoverCornerRadius`, `MacReplicaQuickLookCornerRadius`, `MacReplicaToolbarCornerRadius` (2–24 pt) and
+`MacReplicaRoundedButtons`. Its `MacReplicaCorners.dylib.options` plist (Playground's required sidecar) injects only
+into AppKit processes and blacklists the system UI (`loginwindow`, `WindowManager`, `Dock`, `SystemUIServer`,
+`ControlCenter`, `NotificationCenter`, `Spotlight`, `Setup Assistant`, `SecurityAgent`).
 
 Safety design of the plugin:
 - It does nothing on macOS builds other than the tested ones. Currently that is only 26A434 = 27.0.1, and a test keeps
   the list in Swift and in the plugin identical.
-- It never loads into system processes: the blacklist excludes `/usr`, `/System/Library/(Private)Frameworks`, the
-  login window and similar.
-- It only hooks what was chosen.
+- It only hooks what was chosen and never loads into the system UI processes above (`frameworkDependencies = AppKit`
+  plus the blacklist).
 - It checks every class and method before replacing it, and adds overrides only on the exact class.
 - It catches exceptions around every change.
 
-Costs while System Integrity Protection is off: Apple Pay and iPhone/iPad apps do not work, and security is weaker. A
-crash in a loaded plugin would affect apps. Recovery is always possible by removing the plugin (in MacReplica, or in
-recoveryOS Terminal) and turning System Integrity Protection back on, which also stops all loading.
+Costs while debugging is allowed and the loader is enabled: the Mac's security is weaker and a crash in a loaded plugin
+would affect apps. Recovery is always possible by removing the plugin and uninstalling the loader (in MacReplica, or by
+hand) and turning System Integrity Protection fully back on, which also stops all loading.
 
 Measured in the test app with the real plugin (menu / popover / Quick Look):
 
@@ -190,7 +208,7 @@ Measured in the test app with the real plugin (menu / popover / Quick Look):
 Further results:
 - Toolbar group 18 → 7 pt; the large capsule button and Quick Look's “Open with …” became rounded rectangles.
 - A build of the plugin whose tested list does not contain this Mac's build changed nothing.
-- Untested on Apple's own apps (Finder, Safari): that would need System Integrity Protection off on the test Mac.
+- Untested on Apple's own apps (Finder, Safari): that would need the loader enabled with partial SIP on the test Mac.
 
 | | 13–15 | 26.0–26.3 | 26.4+ | 27 |
 |---|---|---|---|---|
@@ -220,8 +238,8 @@ Further results:
 | Classic menus key | Verified (test app) | 11.9 → 6.8 pt in a test app; not tested system-wide (would change the user's settings) |
 | Corner tool UI: shared/separate radius, each surface on/off, apply, exact revert | Simulated | Sandbox preference file on a simulated 27 Mac |
 | Corner plugin: menus, popovers, Quick Look, toolbar groups, buttons | Verified (test app) | Real plugin injected into a throwaway app: measured radii above; inert on an untested build |
-| Corner plugin: install / remove, requirements | Simulated | Stand-ins for `csrutil`/`nvram` and a sandbox tweak folder; installed file identical to the bundled one |
-| Corner plugin in Finder, Safari, other apps | Not verified | Needs System Integrity Protection off on the test Mac |
+| Corner plugin: download, install / remove, requirements | Simulated + verified download | Real pinned loader download + checksum verified; install/remove/uninstall via stand-in `csrutil` and a sandbox loader folder; graceful fallback when the download fails, confirmed on screen |
+| Corner plugin in Finder, Safari, other apps | Not verified | Needs Plugin Playground enabled with partial SIP on the test Mac |
 | Quick Look picture area | Unsupported | Drawn by QuickLookUIService (≈15 pt) |
 | Corners on 26.4–26.x | Not verified | Reported by TinkerTool; no 26.4 Mac available |
 | Gatekeeper: open app, remove/restore quarantine of one app | Verified | Throwaway app on screen: mark removed, put back byte for byte, app opened (translocated while quarantined) |

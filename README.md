@@ -205,8 +205,9 @@ finds, asks before changing anything and checks the real result afterwards ([det
   keeps the current version up to date, and – where Apple still allows it – postponing major upgrades by up to
   90 days (not possible on macOS 27).
 - **Window corners** (experimental, macOS 26.4 and later): less rounded app windows and panels, classic menus – one
-  radius for everything or one per surface. Menus, popovers, Quick Look, toolbar groups and capsule buttons only with
-  an optional plugin that needs System Integrity Protection off (behind warnings; MacReplica never turns it off).
+  radius for everything or one per surface, with an example preview of each. Menus, popovers, Quick Look, toolbar
+  groups and capsule buttons only through an optional plugin loaded by Plugin Playground, which needs partial SIP
+  (debugging allowed; behind warnings, with a one-click setup and undo; MacReplica never changes SIP itself).
 
 The backup folder also contains `restore/RESTORE_INSTRUCTIONS.html` — a readable guide with the
 same steps, including commands for restoring by hand. Step-by-step instructions and the backup
