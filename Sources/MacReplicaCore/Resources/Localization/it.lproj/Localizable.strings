@@ -1660,7 +1660,7 @@
 "tools.capability.supported" = "Supportato";
 "tools.capability.supportedWithRestrictions" = "Con limitazioni";
 "tools.capability.experimental" = "Sperimentale";
-"tools.capability.requiresUserAction" = "Passo tuo in Impostazioni di Sistema";
+"tools.capability.requiresUserAction" = "Richiede un tuo passo";
 "tools.capability.requiresAdministrator" = "Richiede password amministratore";
 "tools.capability.managedExternally" = "Gestito dalla tua organizzazione";
 "tools.capability.unsupportedOnThisVersion" = "Non disponibile su questo macOS";
@@ -1932,8 +1932,8 @@
 "tools.quicklook.sipOn" = "Non possibile finché la protezione dell’integrità del sistema è attiva (qui lo è).";
 "tools.quicklook.sipOther" = "Possibile solo con la protezione dell’integrità del sistema disattivata e un caricatore di tweak – vedi i dettagli.";
 "tools.quicklook.show" = "Cosa servirebbe?…";
-"tools.quicklook.warning.title" = "Modificare Quick Look e i popover indebolisce il Mac";
-"tools.quicklook.warning.message" = "Nessuna impostazione li modifica. L’unico modo è codice iniettato in ogni app, che richiede di disattivare la protezione dell’integrità del sistema in recoveryOS. Questo disattiva Apple Pay e le app per iPhone e iPad su questo Mac, ne indebolisce la sicurezza, e un aggiornamento di macOS può far bloccare le app all’avvio. MacReplica non lo fa; lo spiega soltanto.";
+"tools.quicklook.warning.title" = "Modificare menu, popover e Quick Look indebolisce il Mac";
+"tools.quicklook.warning.message" = "Nessuna impostazione li modifica. L’unico modo è un plug-in caricato in ogni app, che richiede di disattivare la protezione dell’integrità del sistema in recoveryOS – puoi farlo solo tu, MacReplica non lo fa mai. Finché è disattivata, Apple Pay e le app per iPhone e iPad non funzionano su questo Mac e la sua sicurezza è più debole. Il plug-in di MacReplica non fa nulla sulle versioni di macOS non provate e non si carica mai nei processi di sistema, ma un plug-in in ogni app può comunque far chiudere le app. Continua solo se lo accetti.";
 "tools.quicklook.warning.go" = "Mostra i dettagli";
 "tools.quicklook.details.1" = "Cosa serve: protezione dell’integrità del sistema disattivata (in recoveryOS: csrutil disable), l’argomento di avvio -arm64e_preview_abi e un caricatore di tweak come Ammonia che carica un plug-in in ogni app.";
 "tools.quicklook.details.2" = "Il plug-in cambierebbe la forma in vetro del pannello Quick Look e dei popover. È stato dimostrato in un’app di prova (qualsiasi raggio, misurato), non su un intero sistema. I tweak esistenti come macos-corner-fix cambiano solo le finestre normali.";

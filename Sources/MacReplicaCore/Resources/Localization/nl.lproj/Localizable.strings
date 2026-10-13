@@ -1660,7 +1660,7 @@
 "tools.capability.supported" = "Ondersteund";
 "tools.capability.supportedWithRestrictions" = "Met beperkingen";
 "tools.capability.experimental" = "Experimenteel";
-"tools.capability.requiresUserAction" = "Jouw stap in Systeeminstellingen";
+"tools.capability.requiresUserAction" = "Vraagt een stap van jou";
 "tools.capability.requiresAdministrator" = "Beheerderswachtwoord nodig";
 "tools.capability.managedExternally" = "Beheerd door je organisatie";
 "tools.capability.unsupportedOnThisVersion" = "Niet beschikbaar op deze macOS";
@@ -1932,8 +1932,8 @@
 "tools.quicklook.sipOn" = "Niet mogelijk zolang systeemintegriteitsbescherming aan staat (hier staat die aan).";
 "tools.quicklook.sipOther" = "Alleen mogelijk met systeemintegriteitsbescherming uit en een tweak-lader – zie de details.";
 "tools.quicklook.show" = "Wat zou ervoor nodig zijn?…";
-"tools.quicklook.warning.title" = "Snelle weergave en popovers wijzigen verzwakt je Mac";
-"tools.quicklook.warning.message" = "Geen enkele instelling verandert ze. De enige manier is code die in elke app wordt geïnjecteerd, en daarvoor moet systeemintegriteitsbescherming in recoveryOS worden uitgezet. Dat schakelt Apple Pay en iPhone- en iPad-apps op deze Mac uit, verzwakt de beveiliging, en een macOS-update kan apps bij het starten laten vastlopen. MacReplica doet dit niet; het legt het alleen uit.";
+"tools.quicklook.warning.title" = "Menu’s, popovers en Snelle weergave wijzigen verzwakt je Mac";
+"tools.quicklook.warning.message" = "Geen enkele instelling verandert ze. De enige manier is een plug-in die in elke app wordt geladen, en daarvoor moet systeemintegriteitsbescherming in recoveryOS worden uitgezet – dat kun alleen jij, MacReplica doet het nooit. Zolang die uit staat, werken Apple Pay en iPhone- en iPad-apps niet op deze Mac en is de beveiliging zwakker. De plug-in van MacReplica doet niets op niet-geteste macOS-versies en laadt nooit in systeemprocessen, maar een plug-in in elke app kan apps toch laten vastlopen. Ga alleen door als je dat accepteert.";
 "tools.quicklook.warning.go" = "Details tonen";
 "tools.quicklook.details.1" = "Wat nodig is: systeemintegriteitsbescherming uit (in recoveryOS: csrutil disable), het opstartargument -arm64e_preview_abi en een tweak-lader zoals Ammonia die een plug-in in elke app laadt.";
 "tools.quicklook.details.2" = "De plug-in zou de glasvorm van het Snelle weergave-paneel en van popovers veranderen. Dit is aangetoond in een test-app (elke radius, gemeten), niet op een heel systeem. Bestaande tweaks zoals macos-corner-fix veranderen alleen gewone vensters.";

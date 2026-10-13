@@ -1660,7 +1660,7 @@
 "tools.capability.supported" = "Unterstützt";
 "tools.capability.supportedWithRestrictions" = "Mit Einschränkungen";
 "tools.capability.experimental" = "Experimentell";
-"tools.capability.requiresUserAction" = "Dein Schritt in den Systemeinstellungen";
+"tools.capability.requiresUserAction" = "Braucht deinen Schritt";
 "tools.capability.requiresAdministrator" = "Braucht Administratorpasswort";
 "tools.capability.managedExternally" = "Von deiner Organisation verwaltet";
 "tools.capability.unsupportedOnThisVersion" = "Auf diesem macOS nicht verfügbar";
@@ -1932,8 +1932,8 @@
 "tools.quicklook.sipOn" = "Nicht möglich, solange der Systemintegritätsschutz an ist (hier ist er an).";
 "tools.quicklook.sipOther" = "Nur mit ausgeschaltetem Systemintegritätsschutz und einem Tweak-Loader möglich – siehe Details.";
 "tools.quicklook.show" = "Was wäre dafür nötig? …";
-"tools.quicklook.warning.title" = "Quick Look und Popover zu ändern schwächt deinen Mac";
-"tools.quicklook.warning.message" = "Keine Einstellung ändert sie. Der einzige Weg ist Code, der in jede App eingeschleust wird, und dafür muss der Systemintegritätsschutz in recoveryOS ausgeschaltet werden. Das deaktiviert Apple Pay sowie iPhone- und iPad-Apps auf diesem Mac, schwächt seine Sicherheit, und ein macOS-Update kann Apps beim Start abstürzen lassen. MacReplica tut das nicht; es erklärt es nur.";
+"tools.quicklook.warning.title" = "Menüs, Popover und Quick Look zu ändern schwächt deinen Mac";
+"tools.quicklook.warning.message" = "Keine Einstellung ändert sie. Der einzige Weg ist ein Plugin, das in jede App geladen wird, und dafür muss der Systemintegritätsschutz in recoveryOS ausgeschaltet werden – das kannst nur du, MacReplica tut es nie. Solange er aus ist, funktionieren Apple Pay sowie iPhone- und iPad-Apps auf diesem Mac nicht, und seine Sicherheit ist schwächer. Das Plugin von MacReplica tut nichts auf nicht getesteten macOS-Versionen und lädt nie in Systemprozesse, trotzdem kann ein Plugin in jeder App Apps abstürzen lassen. Fahre nur fort, wenn du das in Kauf nimmst.";
 "tools.quicklook.warning.go" = "Details anzeigen";
 "tools.quicklook.details.1" = "Was nötig ist: Systemintegritätsschutz aus (in recoveryOS: csrutil disable), das Boot-Argument -arm64e_preview_abi und ein Tweak-Loader wie Ammonia, der ein Plugin in jede App lädt.";
 "tools.quicklook.details.2" = "Das Plugin würde die Glasform des Quick-Look-Fensters und der Popover ändern. Das wurde in einer Test-App nachgewiesen (jeder Radius, gemessen), nicht an einem ganzen System. Bestehende Tweaks wie macos-corner-fix ändern nur normale Fenster.";

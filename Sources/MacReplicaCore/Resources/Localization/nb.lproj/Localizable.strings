@@ -1660,7 +1660,7 @@
 "tools.capability.supported" = "Støttet";
 "tools.capability.supportedWithRestrictions" = "Støttet med begrensninger";
 "tools.capability.experimental" = "Eksperimentell";
-"tools.capability.requiresUserAction" = "Ditt steg i Systeminnstillinger";
+"tools.capability.requiresUserAction" = "Krever et steg fra deg";
 "tools.capability.requiresAdministrator" = "Krever administratorpassord";
 "tools.capability.managedExternally" = "Administreres av organisasjonen din";
 "tools.capability.unsupportedOnThisVersion" = "Ikke tilgjengelig på denne macOS";
@@ -1932,8 +1932,8 @@
 "tools.quicklook.sipOn" = "Ikke mulig mens systemintegritetsbeskyttelse er på (den er på her).";
 "tools.quicklook.sipOther" = "Bare mulig med systemintegritetsbeskyttelse av og et tweak-lasteprogram – se detaljene.";
 "tools.quicklook.show" = "Hva skulle til? …";
-"tools.quicklook.warning.title" = "Å endre Hurtigvisning og popovere svekker Macen";
-"tools.quicklook.warning.message" = "Ingen innstilling endrer dem. Den eneste måten er kode som injiseres i alle apper, og det krever at systemintegritetsbeskyttelse slås av i recoveryOS. Det deaktiverer Apple Pay og iPhone- og iPad-apper på denne Macen, svekker sikkerheten, og en macOS-oppdatering kan få apper til å krasje ved oppstart. MacReplica gjør ikke dette; det forklarer det bare.";
+"tools.quicklook.warning.title" = "Å endre menyer, popovere og Hurtigvisning svekker Macen";
+"tools.quicklook.warning.message" = "Ingen innstilling endrer dem. Den eneste måten er en plugin som lastes inn i hver app, og det krever at systemintegritetsbeskyttelse slås av i recoveryOS – det kan bare du gjøre, MacReplica gjør det aldri. Mens den er av, virker ikke Apple Pay og iPhone- og iPad-apper på denne Macen, og sikkerheten er svakere. Pluginen fra MacReplica gjør ingenting på utestede macOS-versjoner og lastes aldri inn i systemprosesser, men en plugin i hver app kan likevel få apper til å krasje. Fortsett bare hvis du godtar det.";
 "tools.quicklook.warning.go" = "Vis detaljene";
 "tools.quicklook.details.1" = "Hva som trengs: systemintegritetsbeskyttelse av (i recoveryOS: csrutil disable), oppstartsargumentet -arm64e_preview_abi og et tweak-lasteprogram som Ammonia som laster et tillegg inn i alle apper.";
 "tools.quicklook.details.2" = "Tillegget ville endre glassformen til Hurtigvisning-panelet og popovere. Dette er vist i en testapp (enhver radius, målt), ikke på et helt system. Eksisterende tweaks som macos-corner-fix endrer bare vanlige vinduer.";

@@ -1662,7 +1662,7 @@
 "tools.capability.supported" = "Supported";
 "tools.capability.supportedWithRestrictions" = "Supported with limits";
 "tools.capability.experimental" = "Experimental";
-"tools.capability.requiresUserAction" = "Your step in System Settings";
+"tools.capability.requiresUserAction" = "Needs your step";
 "tools.capability.requiresAdministrator" = "Needs administrator password";
 "tools.capability.managedExternally" = "Managed by your organisation";
 "tools.capability.unsupportedOnThisVersion" = "Not available on this macOS";
@@ -1934,8 +1934,8 @@
 "tools.quicklook.sipOn" = "Not possible while System Integrity Protection is on (it is on here).";
 "tools.quicklook.sipOther" = "Only possible with System Integrity Protection off and a tweak loader – see the details.";
 "tools.quicklook.show" = "What would it take?…";
-"tools.quicklook.warning.title" = "Changing Quick Look and popovers weakens your Mac";
-"tools.quicklook.warning.message" = "No setting changes them. The only way is code injected into every app, which needs System Integrity Protection turned off in recoveryOS. That disables Apple Pay and iPhone and iPad apps on this Mac, weakens its security, and a macOS update can make apps crash at launch. MacReplica does not do this; it only explains it.";
+"tools.quicklook.warning.title" = "Changing menus, popovers and Quick Look weakens your Mac";
+"tools.quicklook.warning.message" = "No setting changes them. The only way is a plugin loaded into every app, which needs System Integrity Protection turned off in recoveryOS – only you can do that, and MacReplica never does. While it is off, Apple Pay and iPhone and iPad apps do not work on this Mac and its security is weaker. MacReplica's plugin does nothing on untested macOS versions and never loads into system processes, but a plugin in every app can still make apps crash. Continue only if you accept that.";
 "tools.quicklook.warning.go" = "Show the details";
 "tools.quicklook.details.1" = "What it takes: System Integrity Protection off (in recoveryOS: csrutil disable), the boot argument -arm64e_preview_abi, and a tweak loader such as Ammonia that loads a plugin into every app.";
 "tools.quicklook.details.2" = "The plugin would change the glass shape of the Quick Look panel and of popovers. This was proven in a test app (any radius, measured), not on a whole system. Existing tweaks such as macos-corner-fix change only normal windows.";

@@ -1660,7 +1660,7 @@
 "tools.capability.supported" = "Compatible";
 "tools.capability.supportedWithRestrictions" = "Con limitaciones";
 "tools.capability.experimental" = "Experimental";
-"tools.capability.requiresUserAction" = "Paso tuyo en Ajustes del Sistema";
+"tools.capability.requiresUserAction" = "Requiere un paso tuyo";
 "tools.capability.requiresAdministrator" = "Requiere contraseña de administrador";
 "tools.capability.managedExternally" = "Gestionado por tu organización";
 "tools.capability.unsupportedOnThisVersion" = "No disponible en este macOS";
@@ -1932,8 +1932,8 @@
 "tools.quicklook.sipOn" = "No es posible mientras la protección de la integridad del sistema esté activada (aquí lo está).";
 "tools.quicklook.sipOther" = "Solo es posible con la protección de la integridad del sistema desactivada y un cargador de ajustes; consulta los detalles.";
 "tools.quicklook.show" = "¿Qué haría falta?…";
-"tools.quicklook.warning.title" = "Cambiar Vista Rápida y los popovers debilita tu Mac";
-"tools.quicklook.warning.message" = "Ningún ajuste los cambia. La única forma es inyectar código en cada app, lo que requiere desactivar la protección de la integridad del sistema en recoveryOS. Eso desactiva Apple Pay y las apps de iPhone y iPad en este Mac, debilita su seguridad, y una actualización de macOS puede hacer que las apps fallen al abrirse. MacReplica no lo hace; solo lo explica.";
+"tools.quicklook.warning.title" = "Cambiar menús, popovers y Vista Rápida debilita tu Mac";
+"tools.quicklook.warning.message" = "Ningún ajuste los cambia. La única forma es un complemento cargado en cada app, lo que requiere desactivar la protección de la integridad del sistema en recoveryOS; solo tú puedes hacerlo y MacReplica nunca lo hace. Mientras esté desactivada, Apple Pay y las apps de iPhone y iPad no funcionan en este Mac y su seguridad es menor. El complemento de MacReplica no hace nada en versiones de macOS no probadas y nunca se carga en procesos del sistema, pero un complemento en cada app aún puede hacer que las apps fallen. Continúa solo si lo aceptas.";
 "tools.quicklook.warning.go" = "Mostrar los detalles";
 "tools.quicklook.details.1" = "Lo que hace falta: la protección de la integridad del sistema desactivada (en recoveryOS: csrutil disable), el argumento de arranque -arm64e_preview_abi y un cargador de ajustes como Ammonia que cargue un complemento en cada app.";
 "tools.quicklook.details.2" = "El complemento cambiaría la forma de cristal del panel de Vista Rápida y de los popovers. Se demostró en una app de prueba (cualquier radio, medido), no en un sistema completo. Los ajustes existentes como macos-corner-fix solo cambian las ventanas normales.";

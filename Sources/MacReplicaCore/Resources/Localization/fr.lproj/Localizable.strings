@@ -1660,7 +1660,7 @@
 "tools.capability.supported" = "Pris en charge";
 "tools.capability.supportedWithRestrictions" = "Avec des limites";
 "tools.capability.experimental" = "Expérimental";
-"tools.capability.requiresUserAction" = "Étape à faire dans Réglages Système";
+"tools.capability.requiresUserAction" = "Requiert une étape de ta part";
 "tools.capability.requiresAdministrator" = "Mot de passe administrateur requis";
 "tools.capability.managedExternally" = "Géré par ton organisation";
 "tools.capability.unsupportedOnThisVersion" = "Indisponible sur ce macOS";
@@ -1932,8 +1932,8 @@
 "tools.quicklook.sipOn" = "Impossible tant que la protection de l’intégrité du système est activée (elle l’est ici).";
 "tools.quicklook.sipOther" = "Possible seulement avec la protection de l’intégrité du système désactivée et un chargeur de tweaks – voir les détails.";
 "tools.quicklook.show" = "Que faudrait-il ?…";
-"tools.quicklook.warning.title" = "Modifier Coup d’œil et les popovers affaiblit ton Mac";
-"tools.quicklook.warning.message" = "Aucun réglage ne les modifie. La seule voie est du code injecté dans chaque app, ce qui exige de désactiver la protection de l’intégrité du système dans recoveryOS. Cela désactive Apple Pay et les apps iPhone et iPad sur ce Mac, affaiblit sa sécurité, et une mise à jour de macOS peut faire planter les apps au lancement. MacReplica ne le fait pas ; il l’explique seulement.";
+"tools.quicklook.warning.title" = "Modifier menus, popovers et Coup d’œil affaiblit ton Mac";
+"tools.quicklook.warning.message" = "Aucun réglage ne les modifie. La seule voie est un module chargé dans chaque app, ce qui exige de désactiver la protection de l’intégrité du système dans recoveryOS – toi seul peux le faire, MacReplica ne le fait jamais. Tant qu’elle est désactivée, Apple Pay et les apps iPhone et iPad ne fonctionnent pas sur ce Mac et sa sécurité est plus faible. Le module de MacReplica ne fait rien sur les versions de macOS non testées et ne se charge jamais dans les processus système, mais un module dans chaque app peut quand même faire planter des apps. Ne continue que si tu l’acceptes.";
 "tools.quicklook.warning.go" = "Afficher les détails";
 "tools.quicklook.details.1" = "Ce qu’il faut : la protection de l’intégrité du système désactivée (dans recoveryOS : csrutil disable), l’argument de démarrage -arm64e_preview_abi et un chargeur de tweaks comme Ammonia qui charge un module dans chaque app.";
 "tools.quicklook.details.2" = "Le module modifierait la forme en verre du panneau Coup d’œil et des popovers. Cela a été démontré dans une app de test (tout rayon, mesuré), pas sur un système entier. Les tweaks existants comme macos-corner-fix ne modifient que les fenêtres normales.";
