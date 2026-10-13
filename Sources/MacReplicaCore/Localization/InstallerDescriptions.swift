@@ -179,3 +179,30 @@ extension Localizer {
         has("guidance.name.\(record.id)") ? t("guidance.name.\(record.id)") : record.currentName
     }
 }
+
+/// Printers and scanner drivers: what was found on the old Mac and what to do on the new one.
+extension Localizer {
+    public func printerSummary(_ printer: PrinterRecord) -> String {
+        var parts = [printer.model ?? printer.queue]
+        if let connection = printer.connection { parts.append(t("printer.connection.\(has("printer.connection.\(connection)") ? connection : "other")")) }
+        parts.append(t("printer.driver.\(printer.driver.rawValue)", printer.manufacturer ?? "–"))
+        return parts.joined(separator: " · ")
+    }
+
+    /// The guided step on the new Mac.
+    public func printerInstruction(_ item: RestoreItem) -> String? {
+        if let scanner = item.scannerDriver {
+            return t("printer.scanner.instruction", scanner.name, scanner.version ?? "–")
+        }
+        guard let printer = item.printer else { return nil }
+        let name = printer.model ?? printer.queue
+        var text: String
+        switch printer.driver {
+        case .driverless: text = t("printer.instruction.driverless", name)
+        case .vendor: text = t("printer.instruction.vendor", printer.manufacturer ?? "–", name, printer.vendorDriverFolders.joined(separator: ", "))
+        case .builtIn, .unknown: text = t("printer.instruction.other", name)
+        }
+        if let uri = printer.deviceURI { text += " " + t("printer.instruction.uri", uri) }
+        return text + " " + t("printer.instruction.notTested")
+    }
+}

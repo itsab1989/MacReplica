@@ -32,6 +32,7 @@ extension AppModel {
             },
             destination: (destination ?? backupDestination).map { layout.displayPath($0) })
         preset.includedOnRequest = includedOnRequest.isEmpty ? nil : includedOnRequest.sorted()
+        preset.includePrinters = includePrinters
         return preset
     }
 
@@ -56,6 +57,7 @@ extension AppModel {
         includeGitSettings = preset.includeGitSettings
         includeGitEmail = preset.includeGitEmail
         includeDisplayAssignments = preset.includeDisplayAssignments
+        includePrinters = preset.includePrinters ?? true
         let providers = Set(CredentialProviders.all.map(\.id))
         selectedCredentialProviders = Set(preset.credentialProviders).intersection(providers)
         for (appID, token) in preset.matchChoices where manifest.applications.contains(where: { $0.id == appID }) {

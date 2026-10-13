@@ -53,6 +53,8 @@ public struct BackupSelectionPreset: Codable, Equatable, Sendable {
     public var destination: String?
     /// Files left out as sensitive that the user included explicitly (home folder written as `~`). Added in 1.0.5.
     public var includedOnRequest: [String]?
+    /// Printers and scanner drivers are included (nil in selections of 1.0.4: yes).
+    public var includePrinters: Bool?
 
     public init(savedAt: Date = Date(), macreplicaVersion: String = SystemInfo.appVersion, applications: [String: Bool] = [:],
                 files: [String: Bool] = [:], applicationData: [String: Bool] = [:], toolchains: [String: Bool] = [:],
@@ -79,6 +81,7 @@ public struct BackupSelectionPreset: Codable, Equatable, Sendable {
         self.ownInstallers = ownInstallers
         self.destination = destination
         self.includedOnRequest = nil
+        self.includePrinters = nil
     }
 
     /// Turns a choice map into the set of excluded IDs for the items that exist now: a saved choice wins,

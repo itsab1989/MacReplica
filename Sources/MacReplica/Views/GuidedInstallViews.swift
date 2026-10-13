@@ -222,7 +222,14 @@ struct GuidedToolchainRow: View {
                     Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            if item.kind == .displayProfile, let instruction {
+            if item.kind == .printer, let instruction {
+                Text(instruction).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("guided.printer.\(item.id)")
+                Button(l.t("printer.openSettings")) { model.openPrinterSettings() }
+                    .controlSize(.small)
+                    .accessibilityIdentifier("guided.printerSettings.\(item.id)")
+            } else if item.kind == .displayProfile, let instruction {
                 Text(instruction).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else if let instruction, instruction.hasPrefix("https://") {
                 Button(instruction) { model.openWebPage(instruction) }.buttonStyle(.link).font(.caption)

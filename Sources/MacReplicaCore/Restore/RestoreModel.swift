@@ -19,6 +19,8 @@ public enum RestoreComponent: String, Codable, Sendable, CaseIterable, Identifia
     case colorProfiles
     /// The Launchpad arrangement: pages, folders and the order of the apps (macOS 13–15).
     case launchpad
+    /// Printers and scanner drivers: set up again with the user's help, then checked.
+    case printers
     /// Encrypted credentials; only restored when the user switches this on.
     case credentials
 
@@ -50,6 +52,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
     case displayProfile
     /// The Launchpad arrangement; the last step, once the apps are installed.
     case launchpadLayout
+    /// A printer or scanner driver the user sets up (MacReplica checks it afterwards).
+    case printer
 
     /// Rough relative duration, used to estimate the remaining time before real timings exist.
     var weight: Double {
@@ -66,7 +70,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .applicationData: return 5
         case .gitConfiguration, .credential: return 1
         case .toolchainStep: return 60
-        case .manualApp, .displayProfile: return 1
+        case .manualApp, .displayProfile, .printer: return 1
         case .launchpadLayout: return 15
         }
     }
@@ -83,7 +87,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .credential: return .permissions
         case .toolchainStep: return .developerTools
         case .manualApp: return .downloads
-        case .displayProfile, .launchpadLayout: return .restore
+        case .displayProfile, .launchpadLayout, .printer: return .restore
         }
     }
 }
@@ -119,6 +123,8 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     public var hardwareKeys: HardwareKeys?
     /// For `launchpadLayout`: the arrangement recorded on the old Mac.
     public var launchpadLayout: LaunchpadLayout?
+    public var printer: PrinterRecord?
+    public var scannerDriver: ScannerDriverRecord?
 
     public init(id: String, kind: RestoreItemKind, title: String, identifier: String, originalVersion: String? = nil,
                 bundleIdentifier: String? = nil, appBundleNames: [String] = [], tapRemote: String? = nil, file: FileRecord? = nil,

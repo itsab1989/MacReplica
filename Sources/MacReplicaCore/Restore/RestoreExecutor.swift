@@ -313,7 +313,22 @@ struct Inspector: Sendable {
             return predictDisplayProfile(item)
         case .launchpadLayout:
             return predictLaunchpad(item)
+        case .printer:
+            return printerIsSetUp(item) ? .alreadyPresent(version: nil) : .manualStep
         }
+    }
+
+    /// A printer is set up when a queue of the same name exists (its PPD in `/etc/cups/ppd`); a scanner driver when its
+    /// app is in `/Library/Image Capture/Devices`. Whether the device prints or scans can only be checked with it connected.
+    func printerIsSetUp(_ item: RestoreItem) -> Bool {
+        if let printer = item.printer {
+            return PrinterScanner.isSafeQueueName(printer.queue)
+                && FileManager.default.fileExists(atPath: layout.cupsPPDFolder.appendingPathComponent("\(printer.queue).ppd").path)
+        }
+        if let scanner = item.scannerDriver, PathSafety.isSafeRelativePath(scanner.name), !scanner.name.contains("/") {
+            return FileManager.default.fileExists(atPath: layout.sharedLibrary.appendingPathComponent("Image Capture/Devices/\(scanner.name).app").path)
+        }
+        return false
     }
 }
 
@@ -538,6 +553,10 @@ public final class RestoreExecutor: Sendable {
                 return restoreDisplayProfile(item, inspector: inspector, onEvent: onEvent)
             case .launchpadLayout:
                 return await restoreLaunchpad(item, inspector: inspector, plan: plan, session: session, onEvent: onEvent)
+            case .printer:
+                // Never set up automatically (drivers, administrator rights, a connected device): the user adds it; this
+                // step checks it again whenever the restore continues.
+                return ItemResult(itemID: item.id, outcome: inspector.printerIsSetUp(item) ? .alreadyPresent : .skipped(.manualStepRequired))
             }
         } catch is CancellationError {
             return failed(item, .cancelled)

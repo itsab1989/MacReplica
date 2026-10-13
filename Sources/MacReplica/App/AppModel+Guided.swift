@@ -65,7 +65,7 @@ extension AppModel {
     var openApps: [RestoreItem] { openItems.filter { $0.kind == .manualApp || $0.kind == .appStoreApp } }
 
     /// Developer tool steps the user performs (commands MacReplica cannot run).
-    var openToolchainSteps: [RestoreItem] { openItems.filter { $0.kind == .toolchainStep || $0.kind == .displayProfile } }
+    var openToolchainSteps: [RestoreItem] { openItems.filter { $0.kind == .toolchainStep || $0.kind == .displayProfile || $0.kind == .printer } }
 
     func resetGuided() {
         guidedTask?.cancel()
@@ -234,11 +234,19 @@ extension AppModel {
 
     /// The instruction for a guided developer-tool step, or the website for installing its manager.
     func instruction(for item: RestoreItem) -> String? {
+        if item.kind == .printer { return l.printerInstruction(item) }
         if let assignment = item.displayAssignment {
             let profile = assignment.profileDescription ?? assignment.macOSProfile ?? ""
             return l.t("guided.display.instruction", assignment.displayName ?? item.title, profile)
         }
         guard let action = item.toolchain else { return nil }
         return ToolchainCatalog.provider(action.provider).manualInstruction(for: action)
+    }
+}
+
+extension AppModel {
+    /// System Settings › Printers & Scanners, where the user adds a printer (never done by MacReplica).
+    func openPrinterSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension") { NSWorkspace.shared.open(url) }
     }
 }

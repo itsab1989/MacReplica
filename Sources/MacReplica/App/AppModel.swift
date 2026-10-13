@@ -88,6 +88,8 @@ final class AppModel: ObservableObject {
     @Published var excludedApplications = Set<String>()
     /// Profile assignments of displays (System Settings › Displays › Color profile) go into the backup.
     @Published var includeDisplayAssignments = true
+    /// Printers and scanner drivers (queue names, connections, drivers, PPD files) go into the backup.
+    @Published var includePrinters = true
     /// Where the backup is saved (chosen on the selection screen before anything is written).
     @Published var backupDestination: URL?
     /// A selection saved next to the backups that the user has not applied yet.
@@ -278,6 +280,7 @@ final class AppModel: ObservableObject {
         excludedToolchains = []
         excludedApplications = []
         includeDisplayAssignments = true
+        includePrinters = true
         preservedPythonEnvironments = []
         savedSelectionFound = nil
         matchChoices = [:]
@@ -589,6 +592,7 @@ final class AppModel: ObservableObject {
         inventory.keepToolchains(Set(inventory.manifest.toolchains.map(\.provider)).subtracting(excludedToolchains))
         inventory.excludeApplications(excludedApplications)
         if !includeDisplayAssignments { inventory.manifest.displayProfiles = [] }
+        if !includePrinters { inventory.excludePrinters() }
         for id in excludedApplicationData { inventory.removeApplicationData(id: id) }
         inventory.excludeFiles(excludedBackupFiles)
         return inventory

@@ -45,5 +45,32 @@ extension SimulationRoot {
                       "artifacts": [["pkg": ["DisplayCAL-3.8.9.3.pkg"]], ["zap": [["trash": ["~/Library/Preferences/DisplayCAL"]]]]],
                       "deprecated": false, "disabled": true, "disable_date": "2026-09-01", "disable_reason": "fails_gatekeeper_check"])
         try JSONSerialization.data(withJSONObject: casks, options: [.prettyPrinted, .sortedKeys]).write(to: catalog)
+        try addPrinters()
+    }
+
+    /// An older laser printer with the manufacturer's driver, an AirPrint printer, and a scanner driver.
+    public func addPrinters() throws {
+        let ppd = url.appendingPathComponent("etc/cups/ppd")
+        try FileManager.default.createDirectory(at: ppd, withIntermediateDirectories: true)
+        try SimulationBuilder.write("""
+        *PPD-Adobe: "4.3"
+        *Manufacturer: "Brother"
+        *NickName: "Brother HL-5250DN BR-Script3"
+        *cupsFilter: "application/vnd.cups-postscript 0 /Library/Printers/Brother/Filter/brother_lpdwrapper"
+        *APPrinterIconPath: "/Library/Printers/Brother/Icons/HL5250.icns"
+        """, to: ppd.appendingPathComponent("Office_Laser.ppd"), executable: false)
+        try SimulationBuilder.write("""
+        *PPD-Adobe: "4.3"
+        *Manufacturer: "HP"
+        *NickName: "HP Color LaserJet MFP M283fdw-AirPrint"
+        *APAirPrint: True
+        *cupsFilter2: "image/urf image/urf 0 -"
+        """, to: ppd.appendingPathComponent("HP_Color_LaserJet_MFP.ppd"), executable: false)
+        try SimulationBuilder.write("lpd://192.168.1.20/queue", to: state.appendingPathComponent("printers/Office_Laser"), executable: false)
+        try SimulationBuilder.write("dnssd://HP%20Color%20LaserJet%20MFP%20M283fdw._ipps._tcp.local./?uuid=00000000-0000-1000-8000-0000000000aa",
+                                    to: state.appendingPathComponent("printers/HP_Color_LaserJet_MFP"), executable: false)
+        let devices = url.appendingPathComponent("Library/Image Capture/Devices")
+        try FileManager.default.createDirectory(at: devices, withIntermediateDirectories: true)
+        _ = try SimulationBuilder.makeSyntheticApp(name: "EPSON Scanner", bundleID: "com.epson.scanner.ICA", version: "5.9.0", in: devices)
     }
 }

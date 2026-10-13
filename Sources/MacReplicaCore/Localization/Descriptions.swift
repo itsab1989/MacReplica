@@ -48,6 +48,7 @@ extension Localizer {
         case .colorProfiles: return t("component.colorProfiles")
         case .launchpad: return t("component.launchpad")
         case .personalFolders: return t("component.personalFolders")
+        case .printers: return t("component.printers")
         }
     }
 
@@ -67,6 +68,7 @@ extension Localizer {
         case .colorProfiles: return t("component.colorProfiles.hint")
         case .launchpad: return t("component.launchpad.hint")
         case .personalFolders: return t("component.personalFolders.hint")
+        case .printers: return t("component.printers.hint")
         }
     }
 
@@ -90,6 +92,7 @@ extension Localizer {
         case .manualApp: return t("kind.manualApp")
         case .displayProfile: return t("kind.displayProfile")
         case .launchpadLayout: return t("kind.launchpadLayout")
+        case .printer: return t("kind.printer")
         }
     }
 

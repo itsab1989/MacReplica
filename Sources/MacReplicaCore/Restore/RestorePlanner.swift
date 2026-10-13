@@ -304,6 +304,21 @@ public struct RestorePlanner: Sendable {
             }
         }
 
+        if components.contains(.printers) {
+            for printer in manifest.printers {
+                var item = RestoreItem(id: "printer:\(printer.queue)", kind: .printer, title: printer.model ?? printer.queue, identifier: printer.queue,
+                                       component: .printers)
+                item.printer = printer
+                displaySteps.append(item)
+            }
+            for scanner in manifest.scannerDrivers {
+                var item = RestoreItem(id: "scanner:\(scanner.id)", kind: .printer, title: scanner.name, identifier: scanner.id,
+                                       originalVersion: scanner.version, component: .printers)
+                item.scannerDriver = scanner
+                displaySteps.append(item)
+            }
+        }
+
         let excluded = selection.excludedItemIDs
         formulae.removeAll { excluded.contains($0.id) }
         casks.removeAll { excluded.contains($0.id) }

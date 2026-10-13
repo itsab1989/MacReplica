@@ -178,6 +178,19 @@ enum FakeTools {
     exit 1
     """#
 
+    /// `lpstat -v`: one line per simulated print queue (`state/printers/<queue>` holds the device URI).
+    static let lpstat = #"""
+    #!/bin/bash
+    set -u
+    . "${MACREPLICA_SIMULATION_ROOT:?}/tools/lib.sh"
+    log_call "lpstat $*"
+    for f in "$S"/printers/*; do
+      [ -e "$f" ] || continue
+      echo "device for $(basename "$f"): $(cat "$f")"
+    done
+    exit 0
+    """#
+
     static let brew = #"""
     #!/bin/bash
     set -u

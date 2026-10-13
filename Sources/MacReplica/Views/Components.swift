@@ -162,6 +162,7 @@ enum Symbols {
         case .colorProfiles: return "paintpalette"
         case .launchpad: return "square.grid.3x3"
         case .personalFolders: return "folder"
+        case .printers: return "printer"
         }
     }
 
@@ -183,6 +184,7 @@ enum Symbols {
         case .manualApp: return "arrow.down.circle"
         case .displayProfile: return "display"
         case .launchpadLayout: return "square.grid.3x3"
+        case .printer: return "printer"
         }
     }
 

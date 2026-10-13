@@ -28,6 +28,10 @@ public struct SystemLayout: Sendable, Equatable {
     /// Disk image and archive tools used to unpack verified downloads (read-only mounts, no installation).
     public var hdiutil: String = "/usr/bin/hdiutil"
     public var ditto: String = "/usr/bin/ditto"
+    /// Lists print queues (read-only; no administrator rights needed).
+    public var lpstat: String = "/usr/bin/lpstat"
+    /// The PPD file of every print queue, readable by all users.
+    public var cupsPPDFolder: URL = URL(fileURLWithPath: "/etc/cups/ppd")
     /// Files that only exist when the Command Line Tools are fully installed.
     public var commandLineToolsMarkers: [String]
     public var rosettaMarker: String
@@ -139,7 +143,7 @@ public struct SystemLayout: Sendable, Equatable {
     /// listed one by one (no patterns), and only Homebrew's own.
     public var allowedExecutables: Set<String> {
         let pythons = homebrewPrefixes.flatMap { prefix in PythonVersion.supportedMinors.map { homebrewPython(minor: $0, prefix: prefix) } }
-        return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto])
+        return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto, lpstat])
     }
 
     public func baseFolder(for kind: BackupFileKind, domain: FileDomain) -> URL {

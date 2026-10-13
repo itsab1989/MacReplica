@@ -143,6 +143,7 @@ struct InventoryResultsView: View {
                     DeveloperSettingsSection()
                     ApplicationDataSection()
                     PersonalFoldersSection()
+                    PrintersSection()
                     CredentialsSection()
                     LocationsSection()
 

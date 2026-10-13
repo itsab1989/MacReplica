@@ -99,6 +99,14 @@ public struct InventoryResult: Sendable {
         }
     }
 
+    /// Leaves out printers and scanner drivers (their PPD files included).
+    public mutating func excludePrinters() {
+        let ppds = Set(manifest.printers.compactMap(\.ppd?.backupPath))
+        extraFiles.removeAll { ppds.contains($0.record.backupPath) }
+        manifest.printers = []
+        manifest.scannerDrivers = []
+    }
+
     /// Keeps only the chosen package and version managers (by provider).
     public mutating func keepToolchains(_ providers: Set<ToolchainProviderID>) {
         manifest.toolchains.removeAll { !providers.contains($0.provider) }
@@ -354,9 +362,14 @@ public struct InventoryService: Sendable {
                 warnings.append(.launchpadUnreadable)
             }
         }
+        // Printers and scanners (read-only: lpstat and the PPD files).
+        let printing = await PrinterScanner(layout: layout, runner: runner).scan()
+        manifest.printers = printing.printers
+        manifest.scannerDrivers = printing.scanners
         manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)),
                                                     installedAppNames: Set(apps.map(\.name)))
-        var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)
+        var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles + printing.ppdFiles,
+                                     warnings: warnings)
         // Known user-created data of supported apps (presets, styles, LUTs …) is suggested automatically.
         for var detected in detectedData {
             if detected.profile.notForOlderApp {

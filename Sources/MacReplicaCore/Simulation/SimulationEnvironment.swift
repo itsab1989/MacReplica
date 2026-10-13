@@ -101,6 +101,8 @@ public struct SimulationEnvironment: Sendable {
             macOSFontAssets: root.appendingPathComponent("System/Library/AssetsV2"),
             isSimulation: true)
         self.layout.simulationRoot = root
+        self.layout.lpstat = root.appendingPathComponent("tools/lpstat").path
+        self.layout.cupsPPDFolder = root.appendingPathComponent("etc/cups/ppd")
     }
 
     /// Reads `--simulation-root <folder>` from the launch arguments.

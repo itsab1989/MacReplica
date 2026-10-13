@@ -87,6 +87,42 @@ struct PythonSection: View {
 }
 
 /// Application settings and customizations: detected app data (per item) and folders the user added.
+/// Printers and scanner drivers: recorded so they can be set up again on the new Mac (with the user, never automatically).
+struct PrintersSection: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        let manifest = model.inventory?.manifest
+        let printers = manifest?.printers ?? []
+        let scanners = manifest?.scannerDrivers ?? []
+        if !printers.isEmpty || !scanners.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    LabelWithHelp(label: l.t("printer.section.title"), help: l.t("printer.section.help"), id: "help.printers", font: .headline)
+                    Spacer()
+                    Toggle(l.t("printer.section.include"), isOn: $model.includePrinters)
+                        .toggleStyle(.checkbox)
+                        .accessibilityIdentifier("printers.include")
+                }
+                Card {
+                    ForEach(printers) { printer in
+                        Label(l.printerSummary(printer), systemImage: "printer")
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("printer.\(printer.queue)")
+                    }
+                    ForEach(scanners) { scanner in
+                        Label(l.t("printer.scanner.summary", scanner.name, scanner.version ?? "–"), systemImage: "scanner")
+                            .accessibilityIdentifier("scanner.\(scanner.name)")
+                    }
+                    Text(l.t("printer.section.message")).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+}
+
 struct ApplicationDataSection: View {
     @EnvironmentObject var model: AppModel
 
