@@ -167,10 +167,18 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
   on macOS 15.7.5 and later 15.x it would also hold back security updates, and macOS 27 no longer supports it.
 
 **Window corners** (experimental, macOS 26.4 and later)
-- Choose a radius (10 pt like macOS 15, 7, 4, or any value from 2 to 24 pt) and **Apply …**, then quit and reopen
-  apps. **Restore previous** returns exactly to the earlier setting; **Restore macOS default appearance …** removes it.
-- Changes app windows, document windows, dialogs, sheets and alerts (and utility panels, if chosen). Quick Look,
-  menu-bar popovers, menus, Control Center and notifications keep their own corners.
+- By default one radius (10 pt like macOS 15, 7, 4, or any value from 2 to 24 pt) applies to everything you tick. Turn
+  off **Same radius for everything** to give each surface its own radius; untick a surface to leave it as macOS draws
+  it. **Apply …**, then quit and reopen apps.
+- Without anything else: app windows (with sheets and alerts), utility panels and **classic menus** (the older style
+  without glass, ≈6 pt).
+- **Menus, popovers and Quick Look … (advanced)** shows, after a warning, the surfaces that need the corner plugin:
+  menus with any radius, popovers, the Quick Look window, toolbar groups and capsule buttons in all apps. The plugin
+  runs only with System Integrity Protection off – only you can turn it off, in recoveryOS – and the Ammonia tweak
+  loader. The panel lists each requirement, the exact steps (and how to undo them) and installs or removes the plugin
+  with your administrator password. On macOS versions it was not tested on, the plugin does nothing.
+- **Restore previous** returns every setting exactly to how it was; **Restore macOS default appearance …** removes
+  them all. The picture area inside Quick Look keeps its own corners in any case.
 
 ## The backup folder
 

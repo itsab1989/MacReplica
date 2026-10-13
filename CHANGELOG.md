@@ -10,17 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 - **Tools** – a fourth option on the start screen with three tools for this Mac. Each tool shows what it finds,
   asks before changing anything, checks the real result afterwards and keeps a short history (docs/TOOLS.md).
-  - **Gatekeeper and app security:** shows whether macOS checks apps and why not (for example a profile), checks a
-    single app (signature, notarisation, quarantine, Gatekeeper's verdict) and guides you through Apple's “Open
-    Anyway”. On request and after a warning, it prepares a profile that turns app checking off for the whole Mac,
-    and helps you remove exactly that profile again.
-  - **macOS updates:** shows the automatic-update switches and whether this macOS version still gets security
-    updates, and guides you to a setup that keeps this version current without upgrading. Where Apple still allows
-    it without device management (macOS 13–15.7.4 and 26), it can postpone major upgrades by up to 90 days with a
-    profile. On macOS 27 this is no longer possible, and the tool says so.
-  - **Window corners (experimental, macOS 26.4 and later):** less rounded app windows through an undocumented AppKit
-    setting, from 2 to 24 pt, with an exact way back. Quick Look, popovers and menus can't be changed and are
-    listed as such.
+  - **Gatekeeper and app security:**
+    - Shows whether macOS checks apps and why not (for example a profile).
+    - Checks a single app: signature, notarisation, quarantine and Gatekeeper's verdict. It guides you through
+      Apple's “Open Anyway”, or opens the app or removes its quarantine mark at your request (with a way back).
+    - On request and after a warning, it prepares a profile that turns app checking off for the whole Mac, and
+      helps you remove exactly that profile again.
+  - **macOS updates:**
+    - Shows the automatic-update switches and whether this macOS version still gets security updates.
+    - Guides you to a setup that keeps this version current without upgrading.
+    - Where Apple still allows it without device management (macOS 13–15.7.4 and 26), it can postpone major
+      upgrades by up to 90 days with a profile. On macOS 27 this is no longer possible, and the tool says so.
+  - **Window corners (experimental, macOS 26.4 and later):**
+    - Less rounded app windows and utility panels (2–24 pt) and classic menus, through undocumented AppKit
+      settings, with an exact way back.
+    - One radius for everything by default, or one per surface, and every surface can be left out.
+    - Advanced, behind warnings: a corner plugin for the Ammonia tweak loader that also changes menus, popovers,
+      the Quick Look window, toolbar groups and capsule buttons in all apps. It needs System Integrity Protection
+      off, which only you can do, and does nothing on untested macOS builds.
 
 ### Fixed
 - **A backup could be removed completely** when Word (or another Office app) was open: its temporary lock file

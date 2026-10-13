@@ -113,38 +113,93 @@ What MacReplica does:
 
 ## C. Window corners
 
-Findings (all measured on 27.0.1 with a throwaway test app, using launch arguments so nothing was stored; images in the
-validation folder):
-- `NSConvolutionOverride1` is a private AppKit default, in AppKit's own strings next to `NSConvolutionOverride2`. Its
-  value is the corner radius in points of titled windows (`NSThemeFrame`). It is read in each app's process at launch.
-  The default on 27 is 16 pt.
+Findings (all measured on 27.0.1 in throwaway test apps; values passed as launch arguments or into the test app's own
+preference domain, so nothing on the Mac was changed; images in the validation folder):
+- **`NSConvolutionOverride1`**: a private AppKit default, in AppKit's own strings. Its value is the corner radius in
+  points of titled windows (`NSThemeFrame`), read in each app's process at launch. The default on 27 is 16 pt.
 
   Measured: 4 → ≈5 pt, 7 → ≈7 pt, 10 → ≈10 pt, 20 → ≈20 pt, 26 → ≈26 pt.
-- `NSConvolutionOverride2` does the same for utility panels and inspectors, which `…1` does not change.
-- Reported to work from 26.4 (TinkerTool 11.7). Earlier versions ignore it. macOS 15 and older use about 10 pt anyway.
-- Does not affect Quick Look (≈20.5 pt), popovers and menu-bar extras (≈20 pt), menus and context menus (≈11.5 pt),
-  Control Center or notifications. These draw their own frames, so their radius was unchanged with `…1` at 4 and 7.
-- Other candidates had no effect or don't exist: `QLUseCGRoundedCorners` (both values tested), `NSCornerRadius`,
-  `NSSolariumEnabled`, `com.apple.SwiftUI.DisableSolarium`, `UIDesignRequiresCompatibility` (only for a developer's own
-  app), `NSWindowCornerRadius`, and Reduce Transparency. The only way to change overlays is code injection with SIP off
-  (e.g. m4rkw/macos-corner-fix), which is not acceptable.
+- **`NSConvolutionOverride2`**: the same for utility panels and inspectors.
+- **`NSGlassMenusEnabled = NO`**: AppKit falls back to its older menu window without glass, with ≈6 pt corners instead of
+  11.9 pt. This is a fixed style, not a radius, and the menu material changes too. It applies to context and pop-up menus
+  and the menus of menu-bar items in AppKit apps.
+- **Versions**: reported to work from 26.4 (TinkerTool 11.7). Earlier versions ignore it, and macOS 15 and older use about
+  10 pt anyway.
+- **No setting affects** popovers (≈20 pt), the Quick Look panel (≈20.5 pt), toolbar groups (capsules, radius = half the
+  height) or capsule buttons (`NSButton.borderShape` automatic/capsule). These draw their own shapes.
+
+  Tested without effect: `QLUseCGRoundedCorners`, `NSCornerRadius*`, `NSMenuUseGlassWindowStyle`,
+  `NSPopoverUseSolariumGlassShadow`, `NSPopoverFrameCanEmbedContentInGlass`, `NSControlSolariumMetrics`,
+  `NSControlFauxSolariumMetrics`, `NSButtonMayNeedLegacyAutomaticBezelStyleBehavior`, `NSSolariumEnabled`,
+  `com.apple.SwiftUI.DisableSolarium`, and Reduce Transparency.
+- **All of these surfaces are drawn inside each app's own process**, so code loaded into the app can change them:
+  - Menus: `NSPopupMenuWindow` → glass `cornerRadius` and `_setCornerRadius:`.
+  - Popovers and the Quick Look frame: `-[NSPopoverFrame _copyFrameMaskPathInRect:]`.
+  - Toolbar groups: the glass view in `NSToolbarPlatterView` after layout.
+  - Buttons: `borderShape` set to rounded rectangle.
+- **The rounded picture area inside Quick Look** (≈15 pt) comes as an image from the protected `QuickLookUIService` and
+  cannot be made smaller.
 
 What MacReplica does (experimental, 26.4+ only; elsewhere the card says it isn't available and shows no controls):
-- Presets of 10, 7 or 4 pt, or any value from 2 to 24 pt, optionally for utility panels too.
-- It writes through CFPreferences into the user's global domain, the same as `defaults write -g`, with no administrator
-  password, and reads the value back.
-- The result is “partly checked”: the value is confirmed, but the look shows only in apps opened afterwards.
-- “Restore previous” writes back exactly what was there before, including “not set” and odd values AppKit ignores.
-  “Restore macOS default appearance” removes both keys.
-- The card shows what changes and what does not.
+- **Without anything else:**
+  - one radius (2–24 pt) for app windows and for utility panels;
+  - classic menus as a separate switch;
+  - written to the user's global preferences through CFPreferences, the same as `defaults write -g`.
+- **With the corner plugin** (behind a warning): its own radius for menus, popovers, the Quick Look window and toolbar
+  groups, plus capsule buttons drawn as rounded rectangles in all apps.
+- **Radius per surface:** one radius for everything by default, or a separate radius per surface. Every surface can be
+  left out.
+- **One step for all keys:** one confirmation, one history entry with a snapshot of every key's exact previous value.
+  “Restore previous” writes all of them back exactly; “Restore macOS default appearance” removes them all.
+
+### The corner plugin (advanced, at the user's own risk)
+
+`Extras/CornerPlugin/MacReplicaCorners.m` is built into the app as `Contents/Library/CornerPlugin/MacReplicaCorners.dylib`
+(arm64 and arm64e), next to `MacReplicaCorners.dylib.blacklist`. It is loaded by the Ammonia tweak loader
+(github.com/CoreBedtime/ammonia), which needs:
+- System Integrity Protection off (recoveryOS: `csrutil disable`);
+- the boot argument `-arm64e_preview_abi`;
+- the loader itself installed.
+
+MacReplica never changes System Integrity Protection or boot arguments. It shows the steps to enable and to undo
+everything, detects each requirement (`csrutil status`, `nvram boot-args`, the tweak folder), and installs or removes
+exactly its two files in `/var/ammonia/core/tweaks/`. This uses the administrator password and fixed `install`/`rm`
+commands; `rm` is refused for any other path.
+
+Safety design of the plugin:
+- It does nothing on macOS builds other than the tested ones. Currently that is only 26A434 = 27.0.1, and a test keeps
+  the list in Swift and in the plugin identical.
+- It never loads into system processes: the blacklist excludes `/usr`, `/System/Library/(Private)Frameworks`, the
+  login window and similar.
+- It only hooks what was chosen.
+- It checks every class and method before replacing it, and adds overrides only on the exact class.
+- It catches exceptions around every change.
+
+Costs while System Integrity Protection is off: Apple Pay and iPhone/iPad apps do not work, and security is weaker. A
+crash in a loaded plugin would affect apps. Recovery is always possible by removing the plugin (in MacReplica, or in
+recoveryOS Terminal) and turning System Integrity Protection back on, which also stops all loading.
+
+Measured in the test app with the real plugin (menu / popover / Quick Look):
+
+| Setting | Menu | Popover | Quick Look |
+|---|---|---|---|
+| Plugin without settings | 11.9 pt | 20.5 pt | 20.5 pt (unchanged) |
+| Shared radius 6 | ≈6.8 pt | ≈6.8 pt | ≈6.8 pt |
+| Separate radii 4 / 10 / 16 | ≈5.1 pt | ≈10.2 pt | ≈17.1 pt |
+
+Further results:
+- Toolbar group 18 → 7 pt; the large capsule button and Quick Look's “Open with …” became rounded rectangles.
+- A build of the plugin whose tested list does not contain this Mac's build changed nothing.
+- Untested on Apple's own apps (Finder, Safari): that would need System Integrity Protection off on the test Mac.
 
 | | 13–15 | 26.0–26.3 | 26.4+ | 27 |
 |---|---|---|---|---|
-| Available in MacReplica | no (not needed) | no (key ignored) | experimental (reported, not tested here) | experimental, **verified visually** |
+| Windows / panels (no plugin) | no (not needed) | no (key ignored) | experimental (reported, not tested here) | experimental, **verified visually** |
+| Classic menus (no plugin) | – | not tested | not tested | **verified in test app** |
+| Plugin surfaces | – | – | plugin inactive (untested builds) | **verified in test app** (26A434) |
 | Relaunch needed | – | – | apps | apps |
-| Survives reboot | – | – | yes (user preference) | yes |
-| Survives macOS update | – | – | not guaranteed | not guaranteed |
-| Revert | – | – | exact previous value | exact previous value |
+| Survives macOS update | – | – | not guaranteed | not guaranteed; the plugin switches itself off |
+| Revert | – | – | exact previous values | exact previous values |
 
 ## Verification (2026-10-13)
 
@@ -162,8 +217,14 @@ What MacReplica does (experimental, 26.4+ only; elsewhere the card says it isn't
 | Deferral on 27 | Unsupported | Apple removed the key; the card says so and shows no button |
 | Corner setting: write → read back → visual → exact revert | Verified | MacReplica's write path into a test app's own domain via cfprefsd; real window 7 px → 13 px corner run (≈5 pt → ≈7 pt) |
 | Corner tool in the app UI | Simulated | Sandbox preference file on a simulated 27 Mac (apply 10/10, revert to “not set”) |
-| Quick Look, popovers, menus | Unsupported | Measured unchanged; no key exists |
+| Classic menus key | Verified (test app) | 11.9 → 6.8 pt in a test app; not tested system-wide (would change the user's settings) |
+| Corner tool UI: shared/separate radius, each surface on/off, apply, exact revert | Simulated | Sandbox preference file on a simulated 27 Mac |
+| Corner plugin: menus, popovers, Quick Look, toolbar groups, buttons | Verified (test app) | Real plugin injected into a throwaway app: measured radii above; inert on an untested build |
+| Corner plugin: install / remove, requirements | Simulated | Stand-ins for `csrutil`/`nvram` and a sandbox tweak folder; installed file identical to the bundled one |
+| Corner plugin in Finder, Safari, other apps | Not verified | Needs System Integrity Protection off on the test Mac |
+| Quick Look picture area | Unsupported | Drawn by QuickLookUIService (≈15 pt) |
 | Corners on 26.4–26.x | Not verified | Reported by TinkerTool; no 26.4 Mac available |
+| Gatekeeper: open app, remove/restore quarantine of one app | Verified | Throwaway app on screen: mark removed, put back byte for byte, app opened (translocated while quarantined) |
 
 Nothing in these tests changed the test Mac's Gatekeeper, update or appearance settings. The global corner value (7, set
 by the user before) was read but never written.

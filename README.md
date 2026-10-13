@@ -204,8 +204,9 @@ finds, asks before changing anything and checks the real result afterwards ([det
 - **macOS updates:** your update switches, whether your macOS version still gets security updates, a setup that
   keeps the current version up to date, and – where Apple still allows it – postponing major upgrades by up to
   90 days (not possible on macOS 27).
-- **Window corners** (experimental, macOS 26.4 and later): less rounded app windows. Quick Look, popovers and
-  menus are not affected.
+- **Window corners** (experimental, macOS 26.4 and later): less rounded app windows and panels, classic menus – one
+  radius for everything or one per surface. Menus, popovers, Quick Look, toolbar groups and capsule buttons only with
+  an optional plugin that needs System Integrity Protection off (behind warnings; MacReplica never turns it off).
 
 The backup folder also contains `restore/RESTORE_INSTRUCTIONS.html` — a readable guide with the
 same steps, including commands for restoring by hand. Step-by-step instructions and the backup
