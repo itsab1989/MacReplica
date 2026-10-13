@@ -12,6 +12,13 @@ public enum PrivilegedOperation: Equatable, Sendable {
     case installPackage(URL)
     /// Removes MacReplica's own corner plugin from the Ammonia tweak folder – nothing else (see `isRemovablePlugin`).
     case removePluginFile(URL)
+    /// Removes one of Ammonia's own items when uninstalling it – only the two fixed paths (see `isRemovableAmmoniaItem`).
+    case removeSystemItem(URL)
+    /// Clears the firmware `boot-args` variable (reversing Ammonia's `-arm64e_preview_abi`). Only ever run when the
+    /// current boot-args hold nothing else (checked by the caller).
+    case clearBootArguments
+    /// Re-enables library validation (reversing what Ammonia's installer disabled).
+    case enableLibraryValidation
 
     /// The executable and arguments for this operation. Only these five
     /// fixed system tools can ever be run with administrator rights.
@@ -25,13 +32,18 @@ public enum PrivilegedOperation: Equatable, Sendable {
         case .move(let source, let destination): return ["/bin/mv", "-f", source.path, destination.path]
         case .installPackage(let url): return ["/usr/sbin/installer", "-pkg", url.path, "-target", "/"]
         case .removePluginFile(let url): return ["/bin/rm", "-f", url.path]
+        case .removeSystemItem(let url): return ["/bin/rm", "-rf", url.path]
+        case .clearBootArguments: return ["/usr/sbin/nvram", "-d", "boot-args"]
+        case .enableLibraryValidation:
+            return ["/usr/bin/defaults", "write", AmmoniaInstaller.libraryValidationPlist, "DisableLibraryValidation", "-bool", "false"]
         }
     }
 
     var paths: [URL] {
         switch self {
-        case .createFolder(let url), .installPackage(let url), .removePluginFile(let url): return [url]
+        case .createFolder(let url), .installPackage(let url), .removePluginFile(let url), .removeSystemItem(let url): return [url]
         case .installFile(let source, let destination), .move(let source, let destination): return [source, destination]
+        case .clearBootArguments, .enableLibraryValidation: return []
         }
     }
 }
@@ -43,6 +55,13 @@ extension PrivilegedOperation {
         guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
         return url.deletingLastPathComponent().path.hasSuffix("/ammonia/core/tweaks")
             && CornerPlugin.fileNames.contains(url.lastPathComponent)
+    }
+
+    /// Only Ammonia's launch daemon plist and its install folder may be removed by `removeSystemItem`.
+    public static func isRemovableAmmoniaItem(_ url: URL) -> Bool {
+        guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
+        return url.standardizedFileURL == AmmoniaInstaller.daemonPlist.standardizedFileURL
+            || url.standardizedFileURL == AmmoniaInstaller.installRoot.standardizedFileURL
     }
 }
 
@@ -105,6 +124,9 @@ public struct AppleScriptPrivilegedExecutor: PrivilegedExecuting {
             if case .removePluginFile(let url) = operation, !PrivilegedOperation.isRemovablePlugin(url) {
                 throw PrivilegedError.invalidPath(url.path)
             }
+            if case .removeSystemItem(let url) = operation, !PrivilegedOperation.isRemovableAmmoniaItem(url) {
+                throw PrivilegedError.invalidPath(url.path)
+            }
             let argv = operation.argv
             arguments.append(String(argv.count))
             arguments.append(contentsOf: argv)
@@ -160,6 +182,12 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
             case .removePluginFile(let url):
                 guard PrivilegedOperation.isRemovablePlugin(url) else { throw PrivilegedError.invalidPath(url.path) }
                 if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+            case .removeSystemItem(let url):
+                guard PrivilegedOperation.isRemovableAmmoniaItem(url) else { throw PrivilegedError.invalidPath(url.path) }
+                if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+            case .clearBootArguments, .enableLibraryValidation:
+                // No file to touch in the simulation; recorded as done.
+                break
             }
         }
     }
