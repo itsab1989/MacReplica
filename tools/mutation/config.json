@@ -436,7 +436,8 @@
       "file": "Inventory/Printers.swift",
       "tests": [
         "PrinterTests",
-        "InstallerDescriptionTests"
+        "InstallerDescriptionTests",
+        "PrinterEdgeTests"
       ],
       "area": "Printers"
     },
@@ -875,6 +876,18 @@
       "pattern": "set i to i \\+ wordCount \\+ 1",
       "operator": "+ 1 → - 1",
       "reason": "AppleScript text inside a string literal, run only with a real administrator prompt; the argument layout it reads is tested in PrivilegedExecutorTests."
+    },
+    {
+      "file": "Inventory/Printers.swift",
+      "pattern": "apps\\.sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
+      "operator": "< → <=",
+      "reason": "Names in one folder are unique, so < and <= sort them identically (equivalent mutant)."
+    },
+    {
+      "file": "Tools/WindowCornersTool.swift",
+      "pattern": "roundedButtons: \\(buttons as\\? Bool\\) == true \\|\\| \\(buttons as\\? Int\\)",
+      "operator": "|| → &&",
+      "reason": "A stored true and a stored 1 are the same property-list number, read alike as Bool and as Int (equivalent mutant)."
     }
   ]
 }

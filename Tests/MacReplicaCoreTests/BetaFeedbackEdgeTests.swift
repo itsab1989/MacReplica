@@ -128,3 +128,35 @@ struct ApplicationLocatorTests {
         #expect(ApplicationLocator.version(of: first.appendingPathComponent("Missing.app")) == nil)
     }
 }
+
+@Suite("Printers: edge cases")
+struct PrinterEdgeTests {
+    @Test func credentialsAreRemovedFromDeviceAddresses() {
+        #expect(PrinterScanner.withoutCredentials("ipp://anna:secret@192.168.1.20/ipp/print") == "ipp://192.168.1.20/ipp/print")
+        #expect(PrinterScanner.withoutCredentials("smb://anna@server/Office") == "smb://server/Office", "a user name alone is removed too")
+        #expect(PrinterScanner.withoutCredentials("smb://:secret@server/Office") == "smb://server/Office", "a password alone is removed too")
+        #expect(PrinterScanner.withoutCredentials("ipp://192.168.1.20/ipp/print") == "ipp://192.168.1.20/ipp/print")
+    }
+
+    @Test func eachAirPrintMarkerMakesTheDriverBuiltIn() {
+        for marker in ["*APAirPrint: True", "*cupsIPPSupplies: True", "*% Generated for IPP Everywhere"] {
+            #expect(PrinterScanner.parsePPD("*NickName: \"Printer\"\n\(marker)").driver == .driverless, "\(marker)")
+        }
+        #expect(PrinterScanner.parsePPD("*NickName: \"Printer\"").driver == .builtIn)
+    }
+
+    @Test func onlyPPDFilesBecomePrinters() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("*NickName: \"Office\"".utf8).write(to: folder.appendingPathComponent("Office.ppd"))
+        try Data("notes".utf8).write(to: folder.appendingPathComponent("Notes.txt"))
+        var layout = SystemLayout.live()
+        layout.cupsPPDFolder = folder
+        layout.lpstat = "/nonexistent/lpstat"
+        let scanner = PrinterScanner(layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: []), baseEnvironment: [:]))
+        let (printers, files, _) = await scanner.scan()
+        #expect(printers.map(\.queue) == ["Office"])
+        #expect(files.count == 1)
+    }
+}
