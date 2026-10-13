@@ -380,6 +380,9 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case name, version, buildVersion, bundleIdentifier, path, vendor, architectures
         case minimumSystemVersion, source, restoreMethod, candidates, homepage, channel, channelEvidence, updateFeed, teamIdentifier
+        // Written since 1.0.5: before, these were left out of manifest.json, so installers copied into a backup
+        // were not offered on the new Mac.
+        case otherCopies, ownInstallers
     }
 
     public init(from decoder: Decoder) throws {
@@ -400,6 +403,8 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
         channelEvidence = try c.decodeIfPresent(ChannelEvidence.self, forKey: .channelEvidence)
         updateFeed = try c.decodeIfPresent(UpdateFeed.self, forKey: .updateFeed)
         teamIdentifier = try c.decodeIfPresent(String.self, forKey: .teamIdentifier)
+        otherCopies = try? c.decodeIfPresent([OtherCopy].self, forKey: .otherCopies)
+        ownInstallers = try? c.decodeIfPresent([InstallerArchive].self, forKey: .ownInstallers)
     }
 
     /// True when MacReplica found possible Homebrew packages but none was certain enough

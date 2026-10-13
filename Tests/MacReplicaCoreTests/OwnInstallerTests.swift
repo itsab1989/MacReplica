@@ -107,8 +107,11 @@ struct OwnInstallerTests {
         #expect(verification.isIntact, "the installer is part of the checksummed backup")
         _ = root
 
+        // The new Mac reads manifest.json from disk (not the in-memory manifest): the installer must be recorded there.
+        let read = try ManifestIO.read(from: outcome.url)
+        #expect(read.applications.first { $0.id == app.id }?.ownInstallers == outcome.manifest.applications.first { $0.id == app.id }?.ownInstallers)
         // The new Mac, without the drive: the copy in the backup is used.
-        let restoredApp = try #require(outcome.manifest.applications.first { $0.id == app.id })
+        let restoredApp = try #require(read.applications.first { $0.id == app.id })
         let layout = toolchainLayout(sandbox)
         try FileManager.default.removeItem(at: drive)
         let offer = try #require(OwnInstallerSource.offer(for: restoredApp, itemID: "manual:quill", backupRoot: outcome.url, layout: layout))
