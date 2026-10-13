@@ -55,8 +55,8 @@ struct EndToEndTests {
         let report = BackupVerifier(layout: try TestEnvironment.sourceMac(Sandbox("unused")).1.layout).verify(backupAt: backup)
         #expect(report.isIntact)
         // 16 fonts/profiles + 2 Python project files + 14 files from application data providers
-        // + 2 requirements files, 2 reports, the restore instructions and README.
-        #expect(report.checkedFiles == 38)
+        // + 2 requirements files, 2 reports, the restore instructions, the reinstall guide and README.
+        #expect(report.checkedFiles == 39)
         #expect(FileManager.default.fileExists(atPath: backup.appendingPathComponent("reports/inventory.html").path))
         #expect(FileManager.default.fileExists(atPath: backup.appendingPathComponent("reports/manual_installations.html").path))
 

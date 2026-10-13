@@ -179,6 +179,7 @@ struct ResumeBanner: View {
                 Button(l.t("resume.continue")) { model.resumeUnfinished() }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier("resume.continue")
+                HelpButton(text: l.t("resume.help"), title: l.t("resume.title"), id: "help.resume")
             }
         }
     }

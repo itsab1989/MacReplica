@@ -66,6 +66,7 @@ struct RestoreSelectionView: View {
             Button(l.t("common.back")) { model.goHome() }
                 .keyboardShortcut(.cancelAction)
             Spacer()
+            HelpButton(text: l.t("restore.dryRun.help"), title: l.t("restore.select.dryRun"), id: "help.dryRun")
             Button(l.t("restore.select.dryRun")) { model.startDryRun() }
                 .accessibilityIdentifier("restore.dryRun")
             Button(l.t("restore.select.start")) { model.requestRestoreStart() }
@@ -675,7 +676,10 @@ struct ConflictSheet: View {
         let l = model.l
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(l.p("conflict.title", conflicts.count)).font(.title3.weight(.semibold))
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(l.p("conflict.title", conflicts.count)).font(.title3.weight(.semibold))
+                    HelpButton(text: l.t("conflict.help"), title: l.p("conflict.title", conflicts.count), id: "help.conflict")
+                }
                 Text(l.t("conflict.message")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             .padding(16)

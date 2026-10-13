@@ -467,7 +467,7 @@ struct BackupSetupCard: View {
             Divider()
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(l.t("selection.heading")).font(.subheadline.weight(.semibold))
+                    LabelWithHelp(label: l.t("selection.heading"), help: l.t("selection.help"), id: "help.selection", font: .subheadline.weight(.semibold))
                     Text(l.t("selection.message")).font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

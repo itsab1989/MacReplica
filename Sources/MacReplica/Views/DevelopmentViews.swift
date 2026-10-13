@@ -60,7 +60,7 @@ struct PythonSection: View {
                                     if on { model.preservedPythonEnvironments.insert(environment.id) } else { model.preservedPythonEnvironments.remove(environment.id) }
                                 })) {
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(l.t("python.keepCopy"))
+                                    LabelWithHelp(label: l.t("python.keepCopy"), help: l.t("python.keepCopy.help"), id: "help.python.keepCopy.\(environment.id)")
                                     Text(l.t("python.keepCopy.hint")).font(.caption).foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
@@ -300,6 +300,9 @@ struct AppDataRow: View {
             .toggleStyle(.checkbox)
             .help(l.appDataHelp(folder))
             .accessibilityIdentifier("appData.\(folder.profile.map { "\($0.provider).\($0.category)" } ?? folder.id)")
+            // Visible help: hover tooltips alone were not found (beta feedback 1.0.4).
+            HelpButton(text: l.appDataHelp(folder), title: folder.name,
+                       id: "help.appData.\(folder.profile.map { "\($0.provider).\($0.category)" } ?? folder.id)")
             Spacer()
             Text(l.t("appData.summary", l.p("guide.appData.files", folder.files.count), l.fileSize(folder.totalSize)))
                 .font(.callout).foregroundStyle(.secondary)
@@ -456,8 +459,11 @@ struct CredentialsSection: View {
         let guidance = model.inventory?.manifest.guidance ?? []
         DisclosureGroup(isExpanded: $expanded) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(l.t("credentials.section.message"))
-                    .font(.callout).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(l.t("credentials.section.message"))
+                        .font(.callout).foregroundStyle(.secondary)
+                    HelpButton(text: l.t("credentials.help"), title: l.t("component.credentials"), id: "help.credentials")
+                }
                     .fixedSize(horizontal: false, vertical: true)
                 if detected.isEmpty {
                     Text(l.t("credentials.none")).foregroundStyle(.secondary)
