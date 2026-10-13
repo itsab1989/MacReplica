@@ -17,6 +17,7 @@ struct ToolsView: View {
                     Text(l.t("tools.intro")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     GatekeeperToolCard()
                     UpdatesToolCard()
+                    WindowCornersToolCard()
                     if !model.tools.history.isEmpty { ToolHistoryView() }
                 }
                 .padding(.horizontal, 28)
@@ -145,6 +146,7 @@ struct GatekeeperToolCard: View {
             } else if let status {
                 GatekeeperStatusView(status: status)
             }
+            if let status { GatekeeperSystemWideView(status: status) }
             Divider()
             AppInspectionView()
             ToolLimitations(id: "gatekeeper", lines: [l.t("tools.gatekeeper.limit.global"), l.t("tools.gatekeeper.limit.quarantine"),
@@ -272,7 +274,6 @@ struct UpdatesToolCard: View {
     var body: some View {
         let l = model.l
         let status = model.tools.updates
-        let env = model.tools.environment
         ToolCard(id: "updates", symbol: "arrow.triangle.2.circlepath", title: l.t("tools.updates.title"), summary: l.t("tools.updates.summary"),
                  help: l.t("tools.updates.help"), capability: status?.capability) {
             if let settings = status?.settings {
@@ -302,9 +303,6 @@ struct UpdatesToolCard: View {
             LabelWithHelp(label: l.t("tools.updates.stay.title"), help: l.t("tools.updates.stay.help"), id: "help.tools.updates.stay",
                           font: .subheadline.weight(.semibold))
             Text(l.t("tools.updates.stay.message")).font(.callout).fixedSize(horizontal: false, vertical: true)
-            Text(l.t("tools.updates.deferral.\(MajorUpgradeDeferralSupport.forVersion(env).rawValue)"))
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("tools.updates.deferral")
             if let settings = status?.settings, status?.managed == false {
                 if let pending = model.tools.pendingUpdateChange {
                     PendingUpdateView(pending: pending, current: settings)
@@ -336,6 +334,8 @@ struct UpdatesToolCard: View {
                            title: l.t("tools.verification.title.\(outcome.verification.rawValue)"), message: outcome.stateAfter)
                     .accessibilityIdentifier("tools.updates.outcome.\(outcome.verification.rawValue)")
             }
+            Divider()
+            MajorUpgradeDeferralView()
             ToolLimitations(id: "updates", lines: [l.t("tools.updates.limit.noWrite"), l.t("tools.updates.limit.badge"),
                                                    l.t("tools.updates.limit.updateAll"), l.t("tools.updates.limit.bsi"),
                                                    l.t("tools.updates.limit.endOfSupport")])
@@ -418,6 +418,251 @@ struct SupportStatusView: View {
                 HelpButton(text: l.t("tools.updates.support.help"), title: l.t("tools.updates.support.check"), id: "help.tools.updates.support")
             }
         }
+    }
+}
+
+// MARK: Profiles
+
+/// Turning Gatekeeper off for the whole Mac with MacReplica's own profile, and back on – always through
+/// Device Management, where only the user can install or remove profiles.
+struct GatekeeperSystemWideView: View {
+    @EnvironmentObject var model: AppModel
+    var status: GatekeeperStatus
+    @ViewState private var confirmOff = false
+    @ViewState private var confirmOn = false
+
+    var body: some View {
+        let l = model.l
+        let ours = model.isInstalled(.gatekeeperOff)
+        VStack(alignment: .leading, spacing: 6) {
+            if let pending = model.tools.pendingProfile, pending.profile == .gatekeeperOff {
+                PendingProfileView(pending: pending)
+            } else if ours {
+                Button(l.t("tools.gatekeeper.profileOff.button")) { confirmOn = true }
+                    .accessibilityIdentifier("tools.gatekeeper.profileOff")
+            } else if status.summary == .normal, model.tools.installedProfiles != nil {
+                HStack(spacing: 6) {
+                    Button(l.t("tools.gatekeeper.profileOn.button")) { confirmOff = true }
+                        .accessibilityIdentifier("tools.gatekeeper.profileOn")
+                    HelpButton(text: l.t("tools.gatekeeper.profileOn.help"), title: l.t("tools.gatekeeper.profileOn.button"), id: "help.tools.gatekeeper.profileOn")
+                }
+            }
+            if let outcome = model.tools.gatekeeperOutcome { ToolOutcomeView(outcome: outcome, id: "tools.gatekeeper.outcome") }
+        }
+        .alert(l.t("tools.gatekeeper.profileOn.confirm.title"), isPresented: $confirmOff) {
+            Button(l.t("tools.gatekeeper.profileOn.confirm.go"), role: .destructive) { model.prepareProfile(.gatekeeperOff) }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.gatekeeper.profileOn.confirm.message"))
+        }
+        .alert(l.t("tools.gatekeeper.profileOff.confirm.title"), isPresented: $confirmOn) {
+            Button(l.t("tools.gatekeeper.openDeviceManagement")) { model.beginProfileRemoval(.gatekeeperOff) }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.gatekeeper.profileOff.confirm.message"))
+        }
+    }
+}
+
+/// The user's steps in Device Management, then “check again”.
+struct PendingProfileView: View {
+    @EnvironmentObject var model: AppModel
+    var pending: PendingProfile
+
+    var body: some View {
+        let l = model.l
+        VStack(alignment: .leading, spacing: 6) {
+            Text(l.t("tools.profile.steps.\(pending.action.rawValue)")).font(.callout).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("tools.profile.steps.\(pending.action.rawValue)")
+            HStack {
+                Button(l.t("tools.gatekeeper.openDeviceManagement")) { model.openDeviceManagementSettings() }
+                Button(l.t("tools.profile.check")) { model.finishPendingProfile() }
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("tools.profile.check")
+                Spacer()
+                Button(l.t("common.cancel")) { model.cancelPendingProfile() }
+                    .accessibilityIdentifier("tools.profile.cancel")
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.08)))
+    }
+}
+
+struct ToolOutcomeView: View {
+    @EnvironmentObject var model: AppModel
+    var outcome: ToolOutcome
+    var id: String
+
+    var body: some View {
+        let l = model.l
+        let style: NoticeView.Style = outcome.verification == .verified ? .success : (outcome.verification == .failed ? .warning : .info)
+        NoticeView(style: style, title: l.t("tools.verification.title.\(outcome.verification.rawValue)"),
+                   message: outcome.stateAfter + (outcome.restart == .none ? "" : "\n" + l.t("tools.restart.\(outcome.restart.rawValue)")))
+            .accessibilityIdentifier("\(id).\(outcome.verification.rawValue)")
+    }
+}
+
+/// Deferring the next major macOS version with MacReplica's own profile, where that keeps security updates flowing.
+struct MajorUpgradeDeferralView: View {
+    @EnvironmentObject var model: AppModel
+    @ViewState private var days = 90
+    @ViewState private var confirm = false
+    @ViewState private var confirmRemove = false
+
+    var body: some View {
+        let l = model.l
+        let support = MajorUpgradeDeferralSupport.forVersion(model.tools.environment)
+        let ours = model.isInstalled(.deferMajorUpgrades(days: 1))
+        let active = ManagedProfileEffect.majorUpgradeDeferralDays(managedPreferences: model.services.layout.managedPreferences)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(l.t("tools.updates.deferral.title")).font(.subheadline.weight(.semibold))
+                HelpButton(text: l.t("tools.updates.deferral.help"), title: l.t("tools.updates.deferral.title"), id: "help.tools.updates.deferral")
+                Spacer()
+                CapabilityBadge(capability: support.capability)
+            }
+            Text(l.t("tools.updates.deferral.\(support.rawValue)"))
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("tools.updates.deferral")
+            if let active {
+                ToolStateRow(symbol: "calendar.badge.clock", color: .orange, label: l.t("tools.updates.deferral.active"),
+                             value: l.p("tools.updates.deferral.days", active), id: "tools.updates.deferral.active")
+            }
+            if let pending = model.tools.pendingProfile, pending.profile != .gatekeeperOff {
+                PendingProfileView(pending: pending)
+            } else if ours {
+                Button(l.t("tools.updates.deferral.remove")) { confirmRemove = true }
+                    .accessibilityIdentifier("tools.updates.deferral.remove")
+            } else if support.canInstall, model.tools.updates?.managed == false, active == nil {
+                HStack {
+                    Picker(l.t("tools.updates.deferral.period"), selection: $days) {
+                        ForEach([30, 60, 90], id: \.self) { Text(l.p("tools.updates.deferral.days", $0)).tag($0) }
+                    }
+                    .fixedSize()
+                    .accessibilityIdentifier("tools.updates.deferral.period")
+                    Button(l.t("tools.updates.deferral.install")) { confirm = true }
+                        .accessibilityIdentifier("tools.updates.deferral.install")
+                }
+            }
+            if let outcome = model.tools.deferralOutcome { ToolOutcomeView(outcome: outcome, id: "tools.updates.deferral.outcome") }
+        }
+        .alert(l.t("tools.updates.deferral.confirm.title"), isPresented: $confirm) {
+            Button(l.t("tools.updates.deferral.confirm.go")) { model.prepareProfile(.deferMajorUpgrades(days: days)) }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.updates.deferral.confirm.message", days))
+        }
+        .alert(l.t("tools.updates.deferral.remove"), isPresented: $confirmRemove) {
+            Button(l.t("tools.gatekeeper.openDeviceManagement")) { model.beginProfileRemoval(.deferMajorUpgrades(days: 1)) }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.updates.deferral.remove.message"))
+        }
+    }
+}
+
+// MARK: Window corners
+
+struct WindowCornersToolCard: View {
+    @EnvironmentObject var model: AppModel
+    @ViewState private var choice = 10
+    @ViewState private var includePanels = true
+    @ViewState private var confirm: CornerSetting?
+
+    private func describe(_ setting: CornerSetting, l: Localizer) -> String {
+        switch setting {
+        case .system: return model.cornerTool.systemRadius.map { l.t("tools.corners.system.points", $0) } ?? l.t("tools.corners.system")
+        case .radius(let points): return l.t("tools.corners.points", points)
+        }
+    }
+
+    var body: some View {
+        let l = model.l
+        let tool = model.cornerTool
+        let capability = tool.capability
+        ToolCard(id: "corners", symbol: "square.on.square.dashed", title: l.t("tools.corners.title"), summary: l.t("tools.corners.summary"),
+                 help: l.t("tools.corners.help"), capability: capability) {
+            if !capability.allowsChange {
+                NoticeView(style: .info, title: l.t("tools.corners.unsupported.title", model.tools.environment.macOSVersion),
+                           message: l.t("tools.corners.unsupported.message"))
+                    .accessibilityIdentifier("tools.corners.unsupported")
+            } else if let state = model.tools.corners {
+                ToolStateRow(symbol: "macwindow", color: .secondary, label: l.t("tools.corners.state.windows"),
+                             value: describe(state.windows, l: l), id: "tools.corners.state.windows")
+                ToolStateRow(symbol: "sidebar.squares.right", color: .secondary, label: l.t("tools.corners.state.panels"),
+                             value: describe(state.utilityPanels, l: l), id: "tools.corners.state.panels")
+                HStack(alignment: .firstTextBaseline) {
+                    Picker(l.t("tools.corners.choose"), selection: $choice) {
+                        Text(l.t("tools.corners.preset.10")).tag(10)
+                        Text(l.t("tools.corners.preset.7")).tag(7)
+                        Text(l.t("tools.corners.preset.4")).tag(4)
+                        ForEach(Array(CornerSetting.range).filter { ![10, 7, 4].contains($0) }, id: \.self) { Text(l.t("tools.corners.points", $0)).tag($0) }
+                    }
+                    .fixedSize()
+                    .accessibilityIdentifier("tools.corners.choose")
+                }
+                Toggle(l.t("tools.corners.includePanels"), isOn: $includePanels)
+                    .accessibilityIdentifier("tools.corners.includePanels")
+                HStack {
+                    Button(l.t("tools.corners.apply")) { confirm = .radius(choice) }
+                        .accessibilityIdentifier("tools.corners.apply")
+                    if model.revertibleCornerChange != nil {
+                        Button(l.t("tools.corners.revert")) { model.revertCorners() }
+                            .accessibilityIdentifier("tools.corners.revert")
+                    }
+                    Spacer()
+                    if state.windows != .system || state.utilityPanels != .system {
+                        Button(l.t("tools.corners.default")) { confirm = .system }
+                            .accessibilityIdentifier("tools.corners.default")
+                    }
+                }
+                CornerScopeView()
+                if let outcome = model.tools.cornerOutcome { ToolOutcomeView(outcome: outcome, id: "tools.corners.outcome") }
+            }
+            ToolLimitations(id: "corners", lines: [l.t("tools.corners.limit.undocumented"), l.t("tools.corners.limit.relaunch"),
+                                                   l.t("tools.corners.limit.overlays"), l.t("tools.corners.limit.versions"),
+                                                   l.t("tools.corners.limit.revert")])
+        }
+        .alert(l.t("tools.corners.confirm.title"), isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } }), presenting: confirm) { setting in
+            Button(l.t("tools.corners.confirm.go")) {
+                if setting == .system {
+                    model.applyCorners(windows: .system, utilityPanels: .system, change: "windowCorners.default")
+                } else {
+                    model.applyCorners(windows: setting, utilityPanels: includePanels ? setting : (model.tools.corners?.utilityPanels ?? .system),
+                                       change: "windowCorners.apply")
+                }
+            }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: { setting in
+            Text((setting == .system ? l.t("tools.corners.confirm.default") : l.t("tools.corners.confirm.message", describe(setting, l: l)))
+                 + "\n\n" + l.t("tools.corners.confirm.common"))
+        }
+    }
+}
+
+/// What the setting changes and what it does not – shown, not hidden in a tooltip.
+struct CornerScopeView: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(l.t("tools.corners.changes")).font(.caption.weight(.semibold))
+                ForEach(["windows", "documents", "sheets", "panels"], id: \.self) { key in
+                    Label(l.t("tools.corners.scope.\(key)"), systemImage: "checkmark").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(l.t("tools.corners.unchanged")).font(.caption.weight(.semibold))
+                ForEach(["quickLook", "popovers", "menus", "overlays", "ownFrames"], id: \.self) { key in
+                    Label(l.t("tools.corners.scope.\(key)"), systemImage: "xmark").font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .accessibilityIdentifier("tools.corners.scope")
     }
 }
 

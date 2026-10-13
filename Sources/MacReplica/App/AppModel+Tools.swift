@@ -21,6 +21,24 @@ struct ToolsState {
     var pendingUpdateChange: PendingUpdateChange?
     /// The last checked result of an update change.
     var updateOutcome: ToolOutcome?
+
+    /// Identifiers of the profiles installed for the whole Mac (`profiles -C`); nil if they could not be read.
+    var installedProfiles: Set<String>?
+    /// A profile MacReplica prepared, waiting for the user to install or remove it in Device Management.
+    var pendingProfile: PendingProfile?
+    var gatekeeperOutcome: ToolOutcome?
+    var deferralOutcome: ToolOutcome?
+
+    var corners: CornerState?
+    var cornerOutcome: ToolOutcome?
+}
+
+struct PendingProfile: Equatable {
+    enum Action: String { case install, remove }
+    var profile: ManagedProfile
+    var action: Action
+    /// Machine-readable state before, for the history.
+    var before: String
 }
 
 /// The user changes the Software Update switches in System Settings (macOS asks for the administrator password
@@ -44,6 +62,169 @@ extension AppModel {
         screen = .tools
         refreshGatekeeper()
         refreshUpdates()
+        refreshCorners()
+    }
+
+    // MARK: Profiles (Gatekeeper off, major-upgrade deferral)
+
+    var profilesFolder: URL { services.layout.applicationSupport.appendingPathComponent("Profiles") }
+
+    func refreshProfiles() async {
+        tools.installedProfiles = await InstalledProfiles.read(layout: services.layout, runner: services.runner)
+    }
+
+    func isInstalled(_ profile: ManagedProfile) -> Bool { tools.installedProfiles?.contains(profile.identifier) == true }
+
+    /// Writes the profile and hands it to macOS; the user installs it in Device Management.
+    func prepareProfile(_ profile: ManagedProfile) {
+        let name: String
+        let description: String
+        switch profile {
+        case .gatekeeperOff:
+            name = l.t("tools.profile.gatekeeper.name")
+            description = l.t("tools.profile.gatekeeper.description")
+        case .deferMajorUpgrades(let days):
+            name = l.t("tools.profile.deferral.name")
+            description = l.t("tools.profile.deferral.description", days)
+        }
+        do {
+            let file = try profile.write(to: profilesFolder, displayName: name, description: description)
+            tools.pendingProfile = PendingProfile(profile: profile, action: .install, before: profileStateText(profile))
+            if profile == .gatekeeperOff { tools.gatekeeperOutcome = nil } else { tools.deferralOutcome = nil }
+            appLog.info("Tools: prepared profile \(profile.identifier)", component: .tools)
+            // Opening the file makes macOS list it in Device Management (it is not installed yet).
+            if services.simulationRoot == nil { NSWorkspace.shared.open(file) }
+            openDeviceManagementSettings()
+        } catch {
+            notice = ProblemInfo(title: l.t("tools.profile.failed"), message: services.layout.redact(String(describing: error)), detail: nil)
+        }
+    }
+
+    /// The user removes MacReplica's own profile in Device Management.
+    func beginProfileRemoval(_ profile: ManagedProfile) {
+        tools.pendingProfile = PendingProfile(profile: profile, action: .remove, before: profileStateText(profile))
+        openDeviceManagementSettings()
+    }
+
+    private func profileStateText(_ profile: ManagedProfile) -> String {
+        let installed = isInstalled(profile) ? 1 : 0
+        switch profile {
+        case .gatekeeperOff: return "profile=\(installed);" + (tools.gatekeeper?.historyText ?? "assessments=unknown")
+        case .deferMajorUpgrades:
+            return "profile=\(installed);deferralDays=\(ManagedProfileEffect.majorUpgradeDeferralDays(managedPreferences: services.layout.managedPreferences).map(String.init) ?? "none")"
+        }
+    }
+
+    func cancelPendingProfile() { tools.pendingProfile = nil }
+
+    /// Reads the real state again and records what actually happened.
+    func finishPendingProfile() {
+        guard let pending = tools.pendingProfile else { return }
+        Task {
+            await refreshProfiles()
+            let present = isInstalled(pending.profile)
+            let wanted = pending.action == .install
+            var verification: ToolVerification
+            var text: String
+            switch pending.profile {
+            case .gatekeeperOff:
+                let status = await gatekeeperInspector.status()
+                tools.gatekeeper = status
+                if present != wanted {
+                    verification = .failed
+                    text = l.t(wanted ? "tools.profile.notInstalled" : "tools.profile.stillInstalled")
+                } else if wanted {
+                    verification = status.assessments == .disabled ? .verified : .failed
+                    text = l.t(status.assessments == .disabled ? "tools.gatekeeper.profileOn.verified" : "tools.gatekeeper.profileOn.noEffect")
+                } else {
+                    verification = status.assessments == .enabled ? .verified : .partiallyVerified
+                    text = l.t(status.assessments == .enabled ? "tools.gatekeeper.profileOff.verified" : "tools.gatekeeper.profileOff.stillOff")
+                }
+                tools.gatekeeperOutcome = ToolOutcome(verification: verification, stateAfter: text)
+            case .deferMajorUpgrades(let days):
+                let active = ManagedProfileEffect.majorUpgradeDeferralDays(managedPreferences: services.layout.managedPreferences)
+                if present != wanted {
+                    verification = .failed
+                    text = l.t(wanted ? "tools.profile.notInstalled" : "tools.profile.stillInstalled")
+                } else if wanted {
+                    // The setting is in place; whether macOS holds back a newer version shows only if one exists.
+                    let installers = (try? await services.runner.run(Command(executable: services.layout.softwareupdate, arguments: ["--list-full-installers"],
+                                                                             environment: ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C"], timeout: 120)))?.stdout ?? ""
+                    let deferred = ManagedProfileEffect.newerMajorDeferred(installersOutput: installers, installedMajor: tools.environment.majorVersion)
+                    if active != days { verification = .failed; text = l.t("tools.updates.deferral.noEffect") }
+                    else if deferred == true { verification = .verified; text = l.t("tools.updates.deferral.verified", days) }
+                    else { verification = .partiallyVerified; text = l.t("tools.updates.deferral.partly", days) }
+                } else {
+                    verification = active == nil ? .verified : .partiallyVerified
+                    text = l.t(active == nil ? "tools.updates.deferral.removed" : "tools.updates.deferral.otherStillActive")
+                }
+                tools.deferralOutcome = ToolOutcome(verification: verification, stateAfter: text)
+            }
+            let change = "\(pending.profile == .gatekeeperOff ? "gatekeeper" : "updates.deferral").\(pending.action == .install ? "profileInstalled" : "profileRemoved")"
+            // Recorded when something happened: verified, or the profile came or went (even with an unexpected effect).
+            let wasPresent = pending.before.hasPrefix("profile=1")
+            if verification != .failed || present != wasPresent {
+                record(ToolHistoryEntry(tool: pending.profile == .gatekeeperOff ? "gatekeeper" : "updates", change: change, previousState: pending.before,
+                                        resultingState: profileStateText(pending.profile), macOSVersion: tools.environment.macOSVersion,
+                                        result: verification == .failed ? .failed : (verification == .verified ? .succeeded : .partial),
+                                        verification: verification, revertAvailable: false))
+            }
+            if verification != .failed { tools.pendingProfile = nil }
+        }
+    }
+
+    // MARK: Window corners
+
+    var cornerTool: WindowCornersTool {
+        // A simulated Mac keeps the setting in its own sandbox: trying the tool there never changes this Mac.
+        let store: GlobalPreferenceStore
+        if let root = services.simulationRoot {
+            store = FileGlobalPreferenceStore(file: root.appendingPathComponent("home/Library/Preferences/.GlobalPreferences.plist"))
+        } else {
+            store = LiveGlobalPreferenceStore()
+        }
+        return WindowCornersTool(store: store, environment: tools.environment)
+    }
+
+    func refreshCorners() {
+        tools.corners = cornerTool.state()
+    }
+
+    var revertibleCornerChange: CornerState? {
+        guard let entry = toolHistory.lastRevertibleChange(tool: "windowCorners"), let text = entry.previousState else { return nil }
+        return CornerState(historyText: text)
+    }
+
+    func applyCorners(windows: CornerSetting, utilityPanels: CornerSetting, change: String) {
+        do {
+            let result = try cornerTool.apply(windows: windows, utilityPanels: utilityPanels)
+            tools.corners = result.after
+            tools.cornerOutcome = ToolOutcome(verification: result.outcome,
+                                              stateAfter: l.t(result.outcome == .failed ? "tools.corners.outcome.failed" : "tools.corners.outcome.written"),
+                                              restart: .relaunchApps)
+            record(ToolHistoryEntry(tool: "windowCorners", change: change, previousState: result.before.historyText, resultingState: result.after.historyText,
+                                    macOSVersion: tools.environment.macOSVersion, result: result.outcome == .failed ? .failed : .succeeded,
+                                    verification: result.outcome, revertAvailable: result.before != result.after))
+        } catch {
+            tools.cornerOutcome = ToolOutcome(verification: .failed, stateAfter: l.t("tools.corners.outcome.failed"))
+        }
+    }
+
+    func revertCorners() {
+        guard let previous = revertibleCornerChange else { return }
+        do {
+            let before = cornerTool.state()
+            let result = try cornerTool.restore(previous)
+            tools.corners = result.after
+            tools.cornerOutcome = ToolOutcome(verification: result.outcome,
+                                              stateAfter: l.t(result.outcome == .failed ? "tools.corners.outcome.failed" : "tools.corners.outcome.restored"),
+                                              restart: .relaunchApps)
+            record(ToolHistoryEntry(tool: "windowCorners", change: "windowCorners.revert", previousState: before.historyText, resultingState: result.after.historyText,
+                                    macOSVersion: tools.environment.macOSVersion, result: result.outcome == .failed ? .failed : .succeeded,
+                                    verification: result.outcome, revertAvailable: false))
+        } catch {
+            tools.cornerOutcome = ToolOutcome(verification: .failed, stateAfter: l.t("tools.corners.outcome.failed"))
+        }
     }
 
     // MARK: Update preferences
@@ -125,6 +306,7 @@ extension AppModel {
         Task {
             let status = await gatekeeperInspector.status()
             tools.gatekeeper = status
+            await refreshProfiles()
             tools.checkingGatekeeper = false
             appLog.info("Tools: Gatekeeper \(status.historyText), SIP \(status.sip.rawValue), enrollment \(status.enrollment.rawValue)", component: .tools)
         }
