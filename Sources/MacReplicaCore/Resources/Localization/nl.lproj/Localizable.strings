@@ -1799,3 +1799,4 @@
 "tools.updates.limit.updateAll" = "‘Werk alles bij’, de lijst onder ‘Meer info…’ en knoppen in meldingen kunnen de nieuwe hoofdversie bevatten. Installeer losse updates als je wilt blijven.";
 "tools.updates.limit.bsi" = "Vanaf macOS 26.1 hebben beveiligingsverbeteringen op de achtergrond een eigen schakelaar in Privacy en beveiliging; MacReplica kan die niet lezen. Laat hem aan.";
 "tools.updates.limit.endOfSupport" = "Lang op een oude versie blijven betekent minder en latere beveiligingsoplossingen. Apple publiceert geen einddata; kijk af en toe op deze kaart.";
+"tools.updates.confirm.securityOff" = "Let op: de vorige instellingen installeren beveiligingsupdates niet automatisch. Overweeg ze aan te laten.";

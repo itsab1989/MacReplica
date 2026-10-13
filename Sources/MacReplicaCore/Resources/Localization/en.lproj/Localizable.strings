@@ -1801,3 +1801,4 @@
 "tools.updates.limit.updateAll" = "“Update all”, the list under “More info…” and buttons in notifications can include the new major version. Install single updates if you want to stay.";
 "tools.updates.limit.bsi" = "From macOS 26.1, Background Security Improvements have their own switch in Privacy & Security; MacReplica cannot read it. Leave it on.";
 "tools.updates.limit.endOfSupport" = "Staying on an old version for a long time means fewer and later security fixes. Apple publishes no end dates; check this card from time to time.";
+"tools.updates.confirm.securityOff" = "Warning: the previous settings install no security updates automatically. Consider keeping them on.";

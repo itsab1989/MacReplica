@@ -1799,3 +1799,4 @@
 "tools.updates.limit.updateAll" = "«Oppdater alle», listen under «Mer info …» og knapper i varslinger kan inkludere den nye hovedversjonen. Installer enkeltoppdateringer hvis du vil bli.";
 "tools.updates.limit.bsi" = "Fra macOS 26.1 har bakgrunnssikkerhetsforbedringer en egen bryter i Personvern og sikkerhet; MacReplica kan ikke lese den. La den være på.";
 "tools.updates.limit.endOfSupport" = "Å bli lenge på en gammel versjon betyr færre og senere sikkerhetsrettelser. Apple publiserer ingen sluttdatoer; sjekk dette kortet av og til.";
+"tools.updates.confirm.securityOff" = "Advarsel: de tidligere innstillingene installerer ikke sikkerhetsoppdateringer automatisk. Vurder å la dem være på.";

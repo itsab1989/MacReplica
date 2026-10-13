@@ -50,7 +50,9 @@ extension AppModel {
 
     var updateInspector: UpdatePreferencesInspector {
         var folder: URL? = nil
-        if let root = services.simulationRoot { folder = root.appendingPathComponent("Library/Preferences") }
+        // A simulated Mac may bring its own Software Update settings; otherwise this Mac's are shown (read-only).
+        if let root = services.simulationRoot?.appendingPathComponent("Library/Preferences"),
+           FileManager.default.fileExists(atPath: root.appendingPathComponent("com.apple.SoftwareUpdate.plist").path) { folder = root }
         return UpdatePreferencesInspector(layout: services.layout, runner: services.runner, preferencesFolder: folder)
     }
 

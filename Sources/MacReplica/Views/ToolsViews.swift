@@ -345,7 +345,9 @@ struct UpdatesToolCard: View {
             Button(l.t("tools.updates.confirm.go")) { model.beginUpdateChange(change.change, target: change.target) }
             Button(l.t("common.cancel"), role: .cancel) {}
         } message: { change in
-            Text(UpdateChangeText.steps(change, l: l) + "\n\n" + l.t("tools.updates.confirm.message"))
+            // Going back to a state without security updates is allowed, but never without saying so.
+            Text(UpdateChangeText.steps(change, l: l) + "\n\n" + l.t("tools.updates.confirm.message")
+                 + (change.target.securityUpdatesOff ? "\n\n" + l.t("tools.updates.confirm.securityOff") : ""))
         }
     }
 }

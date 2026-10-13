@@ -1799,3 +1799,4 @@
 "tools.updates.limit.updateAll" = "«Aggiorna tutto», l’elenco in «Altre informazioni…» e i pulsanti nelle notifiche possono includere la nuova versione principale. Installa singoli aggiornamenti se vuoi restare.";
 "tools.updates.limit.bsi" = "Da macOS 26.1 i miglioramenti di sicurezza in background hanno un interruttore proprio in Privacy e sicurezza; MacReplica non può leggerlo. Lascialo attivo.";
 "tools.updates.limit.endOfSupport" = "Restare a lungo su una versione vecchia significa meno correzioni di sicurezza e più tardive. Apple non pubblica date di fine; controlla questa scheda ogni tanto.";
+"tools.updates.confirm.securityOff" = "Attenzione: le impostazioni precedenti non installano automaticamente gli aggiornamenti di sicurezza. Valuta di lasciarli attivi.";

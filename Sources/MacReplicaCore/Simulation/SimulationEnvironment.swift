@@ -105,9 +105,10 @@ public struct SimulationEnvironment: Sendable {
         self.layout.cupsPPDFolder = root.appendingPathComponent("etc/cups/ppd")
         self.layout.defaults = root.appendingPathComponent("tools/defaults").path
         self.layout.killall = root.appendingPathComponent("tools/killall").path
-        // Tools section: profiles are read from the sandbox; the read-only status tools are the real ones unless the
-        // simulated Mac brings stand-ins (to show states this Mac is not in, e.g. a managed Mac).
-        self.layout.managedPreferences = root.appendingPathComponent("Library/Managed Preferences")
+        // Tools section: the real (read-only) status tools and profiles, unless the simulated Mac brings stand-ins to
+        // show states this Mac is not in (e.g. a managed Mac). Mixing both would show a state no Mac is in.
+        let managed = root.appendingPathComponent("Library/Managed Preferences")
+        if FileManager.default.fileExists(atPath: managed.path) { self.layout.managedPreferences = managed }
         for name in ["spctl", "csrutil", "profiles", "softwareupdate"] {
             let standIn = root.appendingPathComponent("tools/\(name)").path
             guard FileManager.default.isExecutableFile(atPath: standIn) else { continue }

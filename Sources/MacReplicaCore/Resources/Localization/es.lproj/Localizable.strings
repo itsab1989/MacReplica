@@ -1799,3 +1799,4 @@
 "tools.updates.limit.updateAll" = "«Actualizar todo», la lista de «Más información…» y los botones de las notificaciones pueden incluir la nueva versión principal. Instala actualizaciones sueltas si quieres quedarte.";
 "tools.updates.limit.bsi" = "Desde macOS 26.1, las mejoras de seguridad en segundo plano tienen su propio interruptor en Privacidad y seguridad; MacReplica no puede leerlo. Déjalo activado.";
 "tools.updates.limit.endOfSupport" = "Quedarse mucho tiempo en una versión antigua significa menos correcciones de seguridad y más tardías. Apple no publica fechas de fin; revisa esta tarjeta de vez en cuando.";
+"tools.updates.confirm.securityOff" = "Atención: los ajustes anteriores no instalan actualizaciones de seguridad automáticamente. Plantéate dejarlas activadas.";
