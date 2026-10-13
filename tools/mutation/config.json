@@ -888,6 +888,12 @@
       "pattern": "roundedButtons: \\(buttons as\\? Bool\\) == true \\|\\| \\(buttons as\\? Int\\)",
       "operator": "|| → &&",
       "reason": "A stored true and a stored 1 are the same property-list number, read alike as Bool and as Int (equivalent mutant)."
+    },
+    {
+      "file": "Inventory/Printers.swift",
+      "pattern": "components\\.user != nil \\|\\| components\\.password != nil",
+      "operator": "!= → ==",
+      "reason": "URLComponents reports `:password@` with an empty (not missing) user, so a password never appears without a user: equivalent mutant (credentials removal is tested)."
     }
   ]
 }
