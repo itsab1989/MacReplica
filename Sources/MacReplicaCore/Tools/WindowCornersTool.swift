@@ -23,16 +23,22 @@ public protocol GlobalPreferenceStore: Sendable {
 }
 
 /// The real store: CFPreferences through cfprefsd, current user, any host – what `defaults write -g` writes.
+/// `application` is the global domain in the app; validation passes a test app's own domain instead, so the real
+/// write path can be checked on screen without changing the user's global setting.
 public struct LiveGlobalPreferenceStore: GlobalPreferenceStore {
-    public init() {}
+    public var application: String?
+
+    public init(application: String? = nil) { self.application = application }
+
+    private var domain: CFString { application.map { $0 as CFString } ?? kCFPreferencesAnyApplication }
 
     public func value(_ key: String) -> Any? {
-        CFPreferencesCopyValue(key as CFString, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        CFPreferencesCopyValue(key as CFString, domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
     }
 
     public func set(_ key: String, _ value: Any?) throws {
-        CFPreferencesSetValue(key as CFString, value as CFPropertyList?, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
-        guard CFPreferencesSynchronize(kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) else {
+        CFPreferencesSetValue(key as CFString, value as CFPropertyList?, domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        guard CFPreferencesSynchronize(domain, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) else {
             throw WindowCornersError.writeFailed
         }
     }

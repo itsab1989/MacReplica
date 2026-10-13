@@ -206,6 +206,21 @@ do {
     case "workflow":
         try root.addWorkflowAppData()
         print("Added Krita, GIMP, Inkscape, Scribus, Office, Mail, Cryptomator, DisplayCAL and other app data")
+    case "corner-store":
+        // Validation only: MacReplica's real corner write path into a test app's own domain (never the global one).
+        // corner-store <domain> <points|system|restore:<history text>>
+        guard arguments.count > 2, arguments[1].contains("."), arguments[1] != "NSGlobalDomain" else { usage() }
+        let tool = WindowCornersTool(store: LiveGlobalPreferenceStore(application: arguments[1]), environment: .current)
+        let request = arguments[2]
+        if request.hasPrefix("restore:"), let previous = CornerState(historyText: String(request.dropFirst(8))) {
+            let result = try tool.restore(previous)
+            print("restored", result.after.historyText, result.outcome.rawValue)
+        } else {
+            let setting: CornerSetting = request == "system" ? .system : .radius(Int(request) ?? 0)
+            let result = try tool.apply(windows: setting, utilityPanels: setting)
+            print("before", result.before.historyText)
+            print("after", result.after.historyText, result.outcome.rawValue)
+        }
     case "beta-feedback":
         try root.addBetaFeedbackApps()
         print("Added Cakebrew (cask removed), the DisplayCAL suite (cask disabled), ChromIQ (vendor tap) and Tap Tool (tapped tap)")
