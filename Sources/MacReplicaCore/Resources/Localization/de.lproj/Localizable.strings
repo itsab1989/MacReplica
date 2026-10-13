@@ -1976,3 +1976,17 @@
 "tools.corners.example.note.quickLook" = "Das Fenster, das sich öffnet, wenn du bei einer Datei die Leertaste drückst. Das Plugin ändert den äußeren Rahmen; der Bildbereich darin behält seine eigenen Ecken (etwa 15 pt).";
 "tools.corners.example.note.toolbars" = "Die Glas-„Pillen“, die Symbolleisten-Tasten gruppieren (zum Beispiel der Ansichtswechsler im Finder). Nur das Plugin ändert sie.";
 "tools.corners.example.note.buttons" = "Kapselförmige Tasten in allen Apps seit macOS Tahoe (zum Beispiel „Öffnen mit …“ in Quick Look). Das Plugin zeichnet sie stattdessen als abgerundete Rechtecke – eine Form, kein einstellbarer Radius.";
+"tools.plugin.oneClick.button" = "Automatisch einrichten …";
+"tools.plugin.oneClick.confirm.title" = "Eck-Plugin automatisch einrichten?";
+"tools.plugin.oneClick.confirm.go" = "Laden und installieren";
+"tools.plugin.oneClick.confirm.message" = "Der Systemintegritätsschutz ist bereits aus. MacReplica lädt den Tweak-Loader Ammonia aus seiner offiziellen Veröffentlichung (eine feste Version, vor der Installation gegen eine bekannte Prüfsumme geprüft), installiert ihn mit deinem Administratorpasswort und installiert sein eigenes Plugin. Ammonias Installer setzt außerdem das Boot-Argument und schaltet die Library-Validierung aus — das schwächt die Sicherheit deines Macs und bleibt so, bis du es hier rückgängig machst und den Systemintegritätsschutz wieder einschaltest. Starte danach neu. Stimmt der Download oder die Prüfsumme nicht, wird nichts installiert.";
+"tools.plugin.oneClick.reason" = "MacReplica möchte den Tweak-Loader Ammonia und sein Eck-Plugin installieren.";
+"tools.plugin.oneClick.needsSIP" = "Schalte zuerst den Systemintegritätsschutz aus (die Schritte stehen oben); MacReplica kann und wird das nicht für dich tun.";
+"tools.plugin.oneClick.download" = "Der Ammonia-Loader ließ sich nicht laden. Sein Projekt ist archiviert und wurde möglicherweise entfernt. Installiere ihn selbst anhand der Schritte oben oder versuche es später erneut.";
+"tools.plugin.oneClick.checksum" = "Der geladene Ammonia-Loader stimmte nicht mit der erwarteten Prüfsumme überein, daher hat MacReplica ihn nicht installiert. Installiere ihn stattdessen selbst anhand der Schritte oben.";
+"tools.plugin.undo.button" = "Einrichtung rückgängig machen …";
+"tools.plugin.undo.go" = "Entfernen und zurücksetzen";
+"tools.plugin.undo.message" = "MacReplica entfernt sein Plugin, deinstalliert den Ammonia-Loader und — wenn das Boot-Argument nichts anderes enthält — löscht es und schaltet die Library-Validierung wieder ein, mit deinem Administratorpasswort. Starte danach neu und schalte den Systemintegritätsschutz in recoveryOS wieder ein (csrutil enable); MacReplica ändert das nie selbst.";
+"tools.plugin.undo.reason" = "MacReplica möchte sein Plugin entfernen und den Tweak-Loader Ammonia deinstallieren.";
+"tools.plugin.undo.rebootSIP" = "Starte jetzt neu und schalte den Systemintegritätsschutz in recoveryOS wieder ein (csrutil enable).";
+"tools.plugin.undo.bootArgsManual" = "Das Boot-Argument wurde unverändert gelassen, weil es auch andere Werte enthält. Zum Löschen führe bei Bedarf selbst „sudo nvram -d boot-args“ aus. Starte dann neu und schalte den Systemintegritätsschutz in recoveryOS wieder ein.";

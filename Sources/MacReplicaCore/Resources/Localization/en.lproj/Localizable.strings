@@ -1978,3 +1978,17 @@
 "tools.corners.example.note.quickLook" = "The window that opens when you press Space on a file. The plugin changes its outer frame; the picture area inside keeps its own corners (about 15 pt).";
 "tools.corners.example.note.toolbars" = "The glass “pills” that group toolbar buttons (for example the view switcher in Finder). Only the plugin changes them.";
 "tools.corners.example.note.buttons" = "Capsule-shaped buttons in all apps since macOS Tahoe (for example “Open with …” in Quick Look). The plugin draws them as rounded rectangles instead — a shape, not an adjustable radius.";
+"tools.plugin.oneClick.button" = "Set up automatically…";
+"tools.plugin.oneClick.confirm.title" = "Set up the corner plugin automatically?";
+"tools.plugin.oneClick.confirm.go" = "Download and install";
+"tools.plugin.oneClick.confirm.message" = "System Integrity Protection is already off. MacReplica downloads the Ammonia tweak loader from its official release (a fixed version, checked against a known checksum before installing), installs it with your administrator password, and installs its own plugin. Ammonia's installer also sets the boot argument and disables library validation — this weakens your Mac's security, and it stays off until you undo it here and turn System Integrity Protection back on. Restart afterwards. If the download or checksum does not match, nothing is installed.";
+"tools.plugin.oneClick.reason" = "MacReplica wants to install the Ammonia tweak loader and its corner plugin.";
+"tools.plugin.oneClick.needsSIP" = "Turn System Integrity Protection off first (the steps are above); MacReplica cannot and will not do that for you.";
+"tools.plugin.oneClick.download" = "The Ammonia loader could not be downloaded. Its project is archived and may have been taken down. Install it yourself from the steps above, or try again later.";
+"tools.plugin.oneClick.checksum" = "The downloaded Ammonia loader did not match the expected checksum, so MacReplica did not install it. Install it yourself from the steps above instead.";
+"tools.plugin.undo.button" = "Undo setup…";
+"tools.plugin.undo.go" = "Remove and reverse";
+"tools.plugin.undo.message" = "MacReplica removes its plugin, uninstalls the Ammonia loader and — when the boot argument holds nothing else — clears it and re-enables library validation, with your administrator password. Afterwards, restart and turn System Integrity Protection back on in recoveryOS (csrutil enable); MacReplica never changes that itself.";
+"tools.plugin.undo.reason" = "MacReplica wants to remove its plugin and uninstall the Ammonia tweak loader.";
+"tools.plugin.undo.rebootSIP" = "Now restart and turn System Integrity Protection back on in recoveryOS (csrutil enable).";
+"tools.plugin.undo.bootArgsManual" = "The boot argument was left as it is because it holds other values too. To clear it, run “sudo nvram -d boot-args” yourself if you want. Then restart and turn System Integrity Protection back on in recoveryOS.";

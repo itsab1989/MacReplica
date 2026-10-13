@@ -1976,3 +1976,17 @@
 "tools.corners.example.note.quickLook" = "Vinduet som åpnes når du trykker mellomrom på en fil. Pluginen endrer den ytre rammen; bildeområdet inni beholder sine egne hjørner (omtrent 15 pt).";
 "tools.corners.example.note.toolbars" = "Glass-«pillene» som grupperer verktøylinjeknapper (for eksempel visningsbytteren i Finder). Bare pluginen endrer dem.";
 "tools.corners.example.note.buttons" = "Kapselformede knapper i alle apper siden macOS Tahoe (for eksempel «Åpne med …» i Hurtigvisning). Pluginen tegner dem i stedet som avrundede rektangler – en form, ikke en justerbar radius.";
+"tools.plugin.oneClick.button" = "Sett opp automatisk …";
+"tools.plugin.oneClick.confirm.title" = "Sette opp hjørne-pluginen automatisk?";
+"tools.plugin.oneClick.confirm.go" = "Last ned og installer";
+"tools.plugin.oneClick.confirm.message" = "Systemintegritetsbeskyttelse er allerede av. MacReplica laster ned tweak-lasteprogrammet Ammonia fra den offisielle utgivelsen (en fast versjon, kontrollert mot en kjent sjekksum før installering), installerer det med administratorpassordet, og installerer sitt eget plugin. Ammonias installerer setter også oppstartsargumentet og slår av biblioteksvalidering — dette svekker sikkerheten på Macen, og det forblir av til du angrer det her og slår på systemintegritetsbeskyttelse igjen. Start på nytt etterpå. Hvis nedlastingen eller sjekksummen ikke stemmer, installeres ingenting.";
+"tools.plugin.oneClick.reason" = "MacReplica vil installere tweak-lasteprogrammet Ammonia og hjørne-pluginen.";
+"tools.plugin.oneClick.needsSIP" = "Slå av systemintegritetsbeskyttelse først (trinnene står ovenfor); MacReplica kan og vil ikke gjøre det for deg.";
+"tools.plugin.oneClick.download" = "Ammonia-lasteprogrammet kunne ikke lastes ned. Prosjektet er arkivert og kan ha blitt fjernet. Installer det selv fra trinnene ovenfor, eller prøv igjen senere.";
+"tools.plugin.oneClick.checksum" = "Det nedlastede Ammonia-lasteprogrammet stemte ikke med forventet sjekksum, så MacReplica installerte det ikke. Installer det heller selv fra trinnene ovenfor.";
+"tools.plugin.undo.button" = "Angre oppsettet …";
+"tools.plugin.undo.go" = "Fjern og tilbakestill";
+"tools.plugin.undo.message" = "MacReplica fjerner pluginen sin, avinstallerer Ammonia-lasteprogrammet og — når oppstartsargumentet ikke inneholder noe annet — fjerner det og slår på biblioteksvalidering igjen, med administratorpassordet. Start deretter på nytt og slå på systemintegritetsbeskyttelse igjen i recoveryOS (csrutil enable); MacReplica endrer aldri det selv.";
+"tools.plugin.undo.reason" = "MacReplica vil fjerne pluginen sin og avinstallere tweak-lasteprogrammet Ammonia.";
+"tools.plugin.undo.rebootSIP" = "Start nå på nytt og slå på systemintegritetsbeskyttelse igjen i recoveryOS (csrutil enable).";
+"tools.plugin.undo.bootArgsManual" = "Oppstartsargumentet ble latt urørt fordi det også inneholder andre verdier. For å fjerne det kan du selv kjøre «sudo nvram -d boot-args». Start deretter på nytt og slå på systemintegritetsbeskyttelse igjen i recoveryOS.";

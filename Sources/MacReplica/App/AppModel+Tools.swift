@@ -272,36 +272,100 @@ extension AppModel {
         runPluginOperations(CornerPlugin.removeOperations(layout: services.layout), change: "windowCorners.pluginRemoved", wantInstalled: false)
     }
 
+    /// One click, after the user turned System Integrity Protection off themselves: download and verify the pinned
+    /// Ammonia package, install it (its own installer sets the boot argument and disables library validation) and
+    /// install MacReplica's plugin – one administrator prompt. If the download or its checksum fails (for example the
+    /// archived release was taken down), nothing is installed and the manual steps stay.
+    func setUpCornerPluginOneClick() {
+        guard tools.plugin?.sip == .disabled else {
+            tools.pluginOutcome = ToolOutcome(verification: .notVerified, stateAfter: l.t("tools.plugin.oneClick.needsSIP"))
+            return
+        }
+        guard let pluginOps = CornerPlugin.installOperations(layout: services.layout, appBundle: appBundleURL) else {
+            tools.pluginOutcome = ToolOutcome(verification: .failed, stateAfter: l.t("tools.plugin.missingInApp"))
+            return
+        }
+        tools.pluginBusy = true
+        tools.pluginOutcome = nil
+        Task {
+            let work = services.layout.caches.appendingPathComponent("AmmoniaDownload")
+            let pkg: URL
+            do {
+                pkg = try await AmmoniaInstaller.downloadVerifiedPackage(transport: services.downloadTransport, work: work)
+            } catch {
+                tools.pluginBusy = false
+                let reason: String
+                if case AmmoniaInstaller.InstallError.checksumMismatch = error { reason = l.t("tools.plugin.oneClick.checksum") }
+                else { reason = l.t("tools.plugin.oneClick.download") }
+                tools.pluginOutcome = ToolOutcome(verification: .failed, stateAfter: reason)
+                appLog.warning("Tools: Ammonia download failed: \(services.layout.redact(String(describing: error)))", component: .tools)
+                return
+            }
+            await runPluginBatch([.installPackage(pkg)] + pluginOps, change: "windowCorners.oneClickSetUp", wantInstalled: true,
+                                 reason: l.t("tools.plugin.oneClick.reason"))
+            try? FileManager.default.removeItem(at: work)
+        }
+    }
+
+    /// One click to reverse everything MacReplica did: remove the plugin, uninstall Ammonia and – only when the boot
+    /// argument holds nothing but Ammonia's – clear it and re-enable library validation. The user restarts and turns
+    /// System Integrity Protection back on in recoveryOS afterwards (MacReplica never changes SIP).
+    func undoCornerPluginOneClick() {
+        tools.pluginBusy = true
+        tools.pluginOutcome = nil
+        Task {
+            var ops = CornerPlugin.removeOperations(layout: services.layout) + AmmoniaInstaller.uninstallOperations()
+            let nvram = try? await services.runner.run(Command(executable: services.layout.nvram, arguments: ["boot-args"],
+                                                               environment: ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C"], timeout: 15))
+            let bootArgs = AmmoniaInstaller.bootArgumentsValue(nvramOutput: nvram.map { $0.combinedOutput })
+            let clearedBootArgs = AmmoniaInstaller.bootArgumentsAreOnlyOurs(bootArgs)
+            if clearedBootArgs { ops += AmmoniaInstaller.bootArgumentCleanup() }
+            await runPluginBatch(ops, change: "windowCorners.oneClickUndo", wantInstalled: false,
+                                 reason: l.t("tools.plugin.undo.reason"),
+                                 extraNote: clearedBootArgs ? l.t("tools.plugin.undo.rebootSIP") : l.t("tools.plugin.undo.bootArgsManual"))
+        }
+    }
+
+
+
     private func runPluginOperations(_ operations: [PrivilegedOperation], change: String, wantInstalled: Bool) {
         tools.pluginBusy = true
         tools.pluginOutcome = nil
-        let wasInstalled = tools.plugin?.installed == true
         Task {
-            var failure: String?
-            do {
-                try await services.privileged.run(operations, reason: l.t(wantInstalled ? "tools.plugin.reason.install" : "tools.plugin.reason.remove"))
-            } catch PrivilegedError.denied {
-                failure = l.t("tools.plugin.cancelled")
-            } catch {
-                failure = services.layout.redact(String(describing: error))
-            }
-            let sip = tools.plugin?.sip ?? .unknown
-            var build = CornerPlugin.currentBuild()
-            if services.simulationRoot != nil, let simulated = defaults.string(forKey: "stagingMacOSBuild") { build = simulated }
-            let status = await CornerPlugin.status(layout: services.layout, runner: services.runner, sip: sip, appBundle: appBundleURL, build: build)
-            tools.plugin = status
-            tools.pluginBusy = false
-            let verified = wantInstalled ? (status.installed && status.current) : !status.installed
-            let verification: ToolVerification = verified ? (wantInstalled ? .partiallyVerified : .verified) : .failed
-            tools.pluginOutcome = ToolOutcome(verification: verification,
-                                              stateAfter: failure.map { l.t("tools.plugin.failed", $0) }
-                                                ?? l.t(verified ? (wantInstalled ? "tools.plugin.installed" : "tools.plugin.removed") : "tools.plugin.notConfirmed"),
-                                              restart: verified && wantInstalled ? .relaunchApps : .none)
-            if failure == nil || status.installed != wasInstalled {
-                record(ToolHistoryEntry(tool: "cornerPlugin", change: change, previousState: "installed=\(wasInstalled ? 1 : 0)",
-                                        resultingState: "installed=\(status.installed ? 1 : 0)", macOSVersion: tools.environment.macOSVersion,
-                                        result: verified ? .succeeded : .failed, verification: verification, revertAvailable: false))
-            }
+            await runPluginBatch(operations, change: change, wantInstalled: wantInstalled,
+                                 reason: l.t(wantInstalled ? "tools.plugin.reason.install" : "tools.plugin.reason.remove"))
+        }
+    }
+
+    /// Runs a privileged batch (one administrator prompt), then re-reads the plugin status and records the outcome.
+    /// `wantInstalled` decides what "done" means; `extraNote` is appended to the result (e.g. the reboot/SIP reminder).
+    private func runPluginBatch(_ operations: [PrivilegedOperation], change: String, wantInstalled: Bool, reason: String, extraNote: String? = nil) async {
+        tools.pluginBusy = true
+        let wasInstalled = tools.plugin?.installed == true
+        var failure: String?
+        do {
+            try await services.privileged.run(operations, reason: reason)
+        } catch PrivilegedError.denied {
+            failure = l.t("tools.plugin.cancelled")
+        } catch {
+            failure = services.layout.redact(String(describing: error))
+        }
+        let sip = tools.plugin?.sip ?? .unknown
+        var build = CornerPlugin.currentBuild()
+        if services.simulationRoot != nil, let simulated = defaults.string(forKey: "stagingMacOSBuild") { build = simulated }
+        let status = await CornerPlugin.status(layout: services.layout, runner: services.runner, sip: sip, appBundle: appBundleURL, build: build)
+        tools.plugin = status
+        tools.pluginBusy = false
+        let verified = wantInstalled ? (status.installed && status.current) : !status.installed
+        let verification: ToolVerification = verified ? (wantInstalled ? .partiallyVerified : .verified) : .failed
+        var text = failure.map { l.t("tools.plugin.failed", $0) }
+            ?? l.t(verified ? (wantInstalled ? "tools.plugin.installed" : "tools.plugin.removed") : "tools.plugin.notConfirmed")
+        if failure == nil, verified, let extraNote { text += "\n" + extraNote }
+        tools.pluginOutcome = ToolOutcome(verification: verification, stateAfter: text, restart: verified && wantInstalled ? .relaunchApps : .none)
+        if failure == nil || status.installed != wasInstalled {
+            record(ToolHistoryEntry(tool: "cornerPlugin", change: change, previousState: "installed=\(wasInstalled ? 1 : 0)",
+                                    resultingState: "installed=\(status.installed ? 1 : 0)", macOSVersion: tools.environment.macOSVersion,
+                                    result: verified ? .succeeded : .failed, verification: verification, revertAvailable: false))
         }
     }
 

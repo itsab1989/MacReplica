@@ -1976,3 +1976,17 @@
 "tools.corners.example.note.quickLook" = "Het venster dat opent als je op Spatie drukt bij een bestand. De plug-in verandert het buitenkader; het beeldgebied erin houdt zijn eigen hoeken (ongeveer 15 pt).";
 "tools.corners.example.note.toolbars" = "De glazen ‘pillen’ die knoppenbalkknoppen groeperen (bijvoorbeeld de weergavekiezer in Finder). Alleen de plug-in verandert ze.";
 "tools.corners.example.note.buttons" = "Capsulevormige knoppen in alle apps sinds macOS Tahoe (bijvoorbeeld ‘Open met …’ in Snelle weergave). De plug-in tekent ze als afgeronde rechthoeken — een vorm, geen instelbare radius.";
+"tools.plugin.oneClick.button" = "Automatisch instellen…";
+"tools.plugin.oneClick.confirm.title" = "Hoek-plug-in automatisch instellen?";
+"tools.plugin.oneClick.confirm.go" = "Downloaden en installeren";
+"tools.plugin.oneClick.confirm.message" = "Systeemintegriteitsbescherming staat al uit. MacReplica downloadt de tweak-lader Ammonia uit de officiële release (een vaste versie, vóór het installeren gecontroleerd met een bekende checksum), installeert hem met je beheerderswachtwoord en installeert zijn eigen plug-in. Het installatieprogramma van Ammonia stelt ook het opstartargument in en schakelt bibliotheekvalidatie uit — dit verzwakt de beveiliging van je Mac en blijft zo tot je het hier ongedaan maakt en systeemintegriteitsbescherming weer aanzet. Herstart daarna. Als de download of checksum niet klopt, wordt er niets geïnstalleerd.";
+"tools.plugin.oneClick.reason" = "MacReplica wil de tweak-lader Ammonia en zijn hoek-plug-in installeren.";
+"tools.plugin.oneClick.needsSIP" = "Zet eerst systeemintegriteitsbescherming uit (de stappen staan hierboven); MacReplica kan en zal dat niet voor je doen.";
+"tools.plugin.oneClick.download" = "De Ammonia-lader kon niet worden gedownload. Het project is gearchiveerd en is mogelijk verwijderd. Installeer hem zelf met de stappen hierboven, of probeer het later opnieuw.";
+"tools.plugin.oneClick.checksum" = "De gedownloade Ammonia-lader kwam niet overeen met de verwachte checksum, dus MacReplica heeft hem niet geïnstalleerd. Installeer hem zelf met de stappen hierboven.";
+"tools.plugin.undo.button" = "Instellen ongedaan maken…";
+"tools.plugin.undo.go" = "Verwijderen en terugdraaien";
+"tools.plugin.undo.message" = "MacReplica verwijdert zijn plug-in, verwijdert de Ammonia-lader en — als het opstartargument niets anders bevat — wist het en schakelt bibliotheekvalidatie weer in, met je beheerderswachtwoord. Herstart daarna en zet systeemintegriteitsbescherming weer aan in recoveryOS (csrutil enable); MacReplica verandert dat nooit zelf.";
+"tools.plugin.undo.reason" = "MacReplica wil zijn plug-in verwijderen en de tweak-lader Ammonia verwijderen.";
+"tools.plugin.undo.rebootSIP" = "Herstart nu en zet systeemintegriteitsbescherming weer aan in recoveryOS (csrutil enable).";
+"tools.plugin.undo.bootArgsManual" = "Het opstartargument is ongewijzigd gelaten omdat het ook andere waarden bevat. Om het te wissen kun je zelf ‘sudo nvram -d boot-args’ uitvoeren. Herstart daarna en zet systeemintegriteitsbescherming weer aan in recoveryOS.";

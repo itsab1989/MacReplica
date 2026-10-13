@@ -1976,3 +1976,17 @@
 "tools.corners.example.note.quickLook" = "La ventana que se abre al pulsar Espacio sobre un archivo. El complemento cambia su marco exterior; el área de imagen interior mantiene sus propias esquinas (unos 15 pt).";
 "tools.corners.example.note.toolbars" = "Las «píldoras» de cristal que agrupan botones de la barra de herramientas (por ejemplo el selector de vista en el Finder). Solo el complemento las cambia.";
 "tools.corners.example.note.buttons" = "Botones con forma de cápsula en todas las apps desde macOS Tahoe (por ejemplo «Abrir con …» en Vista Rápida). El complemento los dibuja como rectángulos redondeados — una forma, no un radio ajustable.";
+"tools.plugin.oneClick.button" = "Configurar automáticamente…";
+"tools.plugin.oneClick.confirm.title" = "¿Configurar el complemento de esquinas automáticamente?";
+"tools.plugin.oneClick.confirm.go" = "Descargar e instalar";
+"tools.plugin.oneClick.confirm.message" = "La protección de la integridad del sistema ya está desactivada. MacReplica descarga el cargador de ajustes Ammonia de su versión oficial (una versión fija, comprobada contra una suma de verificación conocida antes de instalar), lo instala con tu contraseña de administrador e instala su propio complemento. El instalador de Ammonia también establece el argumento de arranque y desactiva la validación de bibliotecas — esto debilita la seguridad de tu Mac y permanece así hasta que lo deshagas aquí y vuelvas a activar la protección de la integridad del sistema. Reinicia después. Si la descarga o la suma de verificación no coinciden, no se instala nada.";
+"tools.plugin.oneClick.reason" = "MacReplica quiere instalar el cargador de ajustes Ammonia y su complemento de esquinas.";
+"tools.plugin.oneClick.needsSIP" = "Primero desactiva la protección de la integridad del sistema (los pasos están arriba); MacReplica no puede ni va a hacerlo por ti.";
+"tools.plugin.oneClick.download" = "No se pudo descargar el cargador Ammonia. Su proyecto está archivado y puede haberse retirado. Instálalo tú con los pasos de arriba o inténtalo más tarde.";
+"tools.plugin.oneClick.checksum" = "El cargador Ammonia descargado no coincidió con la suma de verificación esperada, así que MacReplica no lo instaló. Instálalo tú con los pasos de arriba.";
+"tools.plugin.undo.button" = "Deshacer la configuración…";
+"tools.plugin.undo.go" = "Eliminar y revertir";
+"tools.plugin.undo.message" = "MacReplica elimina su complemento, desinstala el cargador Ammonia y — cuando el argumento de arranque no contiene nada más — lo borra y reactiva la validación de bibliotecas, con tu contraseña de administrador. Después, reinicia y vuelve a activar la protección de la integridad del sistema en recoveryOS (csrutil enable); MacReplica nunca cambia eso.";
+"tools.plugin.undo.reason" = "MacReplica quiere eliminar su complemento y desinstalar el cargador de ajustes Ammonia.";
+"tools.plugin.undo.rebootSIP" = "Ahora reinicia y vuelve a activar la protección de la integridad del sistema en recoveryOS (csrutil enable).";
+"tools.plugin.undo.bootArgsManual" = "El argumento de arranque se dejó como está porque también contiene otros valores. Para borrarlo, ejecuta tú «sudo nvram -d boot-args» si quieres. Luego reinicia y vuelve a activar la protección de la integridad del sistema en recoveryOS.";

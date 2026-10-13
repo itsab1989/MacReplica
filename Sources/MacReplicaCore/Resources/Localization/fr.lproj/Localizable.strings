@@ -1976,3 +1976,17 @@
 "tools.corners.example.note.quickLook" = "La fenêtre qui s’ouvre quand tu appuies sur Espace sur un fichier. Le module modifie son cadre extérieur ; la zone d’image à l’intérieur garde ses propres coins (environ 15 pt).";
 "tools.corners.example.note.toolbars" = "Les « pilules » en verre qui regroupent des boutons de barre d’outils (par exemple le sélecteur de vue dans le Finder). Seul le module les modifie.";
 "tools.corners.example.note.buttons" = "Boutons en forme de capsule dans toutes les apps depuis macOS Tahoe (par exemple « Ouvrir avec … » dans Coup d’œil). Le module les dessine plutôt en rectangles arrondis — une forme, pas un rayon réglable.";
+"tools.plugin.oneClick.button" = "Configurer automatiquement…";
+"tools.plugin.oneClick.confirm.title" = "Configurer le module des coins automatiquement ?";
+"tools.plugin.oneClick.confirm.go" = "Télécharger et installer";
+"tools.plugin.oneClick.confirm.message" = "La protection de l’intégrité du système est déjà désactivée. MacReplica télécharge le chargeur de tweaks Ammonia depuis sa version officielle (une version figée, vérifiée avec une somme de contrôle connue avant l’installation), l’installe avec ton mot de passe administrateur et installe son propre module. L’installateur d’Ammonia définit aussi l’argument de démarrage et désactive la validation des bibliothèques — cela affaiblit la sécurité de ton Mac, et cela le reste jusqu’à ce que tu l’annules ici et réactives la protection de l’intégrité du système. Redémarre ensuite. Si le téléchargement ou la somme de contrôle ne correspond pas, rien n’est installé.";
+"tools.plugin.oneClick.reason" = "MacReplica veut installer le chargeur de tweaks Ammonia et son module des coins.";
+"tools.plugin.oneClick.needsSIP" = "Désactive d’abord la protection de l’intégrité du système (les étapes sont ci-dessus) ; MacReplica ne peut pas et ne le fera pas à ta place.";
+"tools.plugin.oneClick.download" = "Le chargeur Ammonia n’a pas pu être téléchargé. Son projet est archivé et a peut-être été retiré. Installe-le toi-même avec les étapes ci-dessus, ou réessaie plus tard.";
+"tools.plugin.oneClick.checksum" = "Le chargeur Ammonia téléchargé ne correspondait pas à la somme de contrôle attendue ; MacReplica ne l’a donc pas installé. Installe-le toi-même avec les étapes ci-dessus.";
+"tools.plugin.undo.button" = "Annuler la configuration…";
+"tools.plugin.undo.go" = "Supprimer et annuler";
+"tools.plugin.undo.message" = "MacReplica supprime son module, désinstalle le chargeur Ammonia et — quand l’argument de démarrage ne contient rien d’autre — l’efface et réactive la validation des bibliothèques, avec ton mot de passe administrateur. Ensuite, redémarre et réactive la protection de l’intégrité du système dans recoveryOS (csrutil enable) ; MacReplica ne modifie jamais cela.";
+"tools.plugin.undo.reason" = "MacReplica veut supprimer son module et désinstaller le chargeur de tweaks Ammonia.";
+"tools.plugin.undo.rebootSIP" = "Redémarre maintenant et réactive la protection de l’intégrité du système dans recoveryOS (csrutil enable).";
+"tools.plugin.undo.bootArgsManual" = "L’argument de démarrage a été laissé tel quel car il contient aussi d’autres valeurs. Pour l’effacer, exécute toi-même « sudo nvram -d boot-args » si tu veux. Puis redémarre et réactive la protection de l’intégrité du système dans recoveryOS.";

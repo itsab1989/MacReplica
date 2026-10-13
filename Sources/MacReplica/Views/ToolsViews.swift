@@ -779,6 +779,8 @@ struct CornerPluginView: View {
     @EnvironmentObject var model: AppModel
     @ViewState private var confirmInstall = false
     @ViewState private var confirmRemove = false
+    @ViewState private var confirmOneClick = false
+    @ViewState private var confirmUndo = false
 
     var body: some View {
         let l = model.l
@@ -805,15 +807,21 @@ struct CornerPluginView: View {
                     Text(l.t("tools.plugin.untested")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 HStack {
-                    if status.readiness == .ready, !(status.installed && status.current) {
+                    // SIP is off but Ammonia is not set up yet: offer the one-click setup (download + install).
+                    if status.sip == .disabled, !status.ammoniaInstalled {
+                        Button(l.t("tools.plugin.oneClick.button")) { confirmOneClick = true }
+                            .disabled(model.tools.pluginBusy)
+                            .accessibilityIdentifier("tools.plugin.oneClick")
+                    } else if status.readiness == .ready, !(status.installed && status.current) {
                         Button(l.t(status.installed ? "tools.plugin.update" : "tools.plugin.install")) { confirmInstall = true }
                             .disabled(model.tools.pluginBusy)
                             .accessibilityIdentifier("tools.plugin.install")
                     }
-                    if status.installed {
-                        Button(l.t("tools.plugin.remove")) { confirmRemove = true }
+                    // Anything MacReplica set up can be reversed in one step.
+                    if status.ammoniaInstalled || status.installed {
+                        Button(l.t("tools.plugin.undo.button")) { confirmUndo = true }
                             .disabled(model.tools.pluginBusy)
-                            .accessibilityIdentifier("tools.plugin.remove")
+                            .accessibilityIdentifier("tools.plugin.undo")
                     }
                     if model.tools.pluginBusy { ProgressView().controlSize(.small) }
                     Spacer()
@@ -838,6 +846,18 @@ struct CornerPluginView: View {
             Button(l.t("common.cancel"), role: .cancel) {}
         } message: {
             Text(l.t("tools.plugin.remove.message"))
+        }
+        .alert(l.t("tools.plugin.oneClick.confirm.title"), isPresented: $confirmOneClick) {
+            Button(l.t("tools.plugin.oneClick.confirm.go"), role: .destructive) { model.setUpCornerPluginOneClick() }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.plugin.oneClick.confirm.message"))
+        }
+        .alert(l.t("tools.plugin.undo.button"), isPresented: $confirmUndo) {
+            Button(l.t("tools.plugin.undo.go")) { model.undoCornerPluginOneClick() }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("tools.plugin.undo.message"))
         }
     }
 

@@ -1976,3 +1976,17 @@
 "tools.corners.example.note.quickLook" = "La finestra che si apre premendo Spazio su un file. Il plug-in cambia la cornice esterna; l’area immagine interna mantiene i propri angoli (circa 15 pt).";
 "tools.corners.example.note.toolbars" = "Le «pillole» di vetro che raggruppano i pulsanti della barra strumenti (per esempio il selettore di vista nel Finder). Solo il plug-in le cambia.";
 "tools.corners.example.note.buttons" = "Pulsanti a forma di capsula in tutte le app da macOS Tahoe (per esempio «Apri con …» in Quick Look). Il plug-in li disegna invece come rettangoli arrotondati — una forma, non un raggio regolabile.";
+"tools.plugin.oneClick.button" = "Configura automaticamente…";
+"tools.plugin.oneClick.confirm.title" = "Configurare automaticamente il plug-in degli angoli?";
+"tools.plugin.oneClick.confirm.go" = "Scarica e installa";
+"tools.plugin.oneClick.confirm.message" = "La protezione dell’integrità del sistema è già disattivata. MacReplica scarica il caricatore di tweak Ammonia dalla sua versione ufficiale (una versione fissa, verificata con un checksum noto prima dell’installazione), lo installa con la password di amministratore e installa il proprio plug-in. L’installer di Ammonia imposta anche l’argomento di avvio e disattiva la convalida delle librerie — questo indebolisce la sicurezza del Mac e resta così finché non lo annulli qui e riattivi la protezione dell’integrità del sistema. Riavvia dopo. Se il download o il checksum non corrispondono, non viene installato nulla.";
+"tools.plugin.oneClick.reason" = "MacReplica vuole installare il caricatore di tweak Ammonia e il suo plug-in degli angoli.";
+"tools.plugin.oneClick.needsSIP" = "Disattiva prima la protezione dell’integrità del sistema (i passaggi sono sopra); MacReplica non può e non lo farà al posto tuo.";
+"tools.plugin.oneClick.download" = "Non è stato possibile scaricare il caricatore Ammonia. Il suo progetto è archiviato e potrebbe essere stato rimosso. Installalo tu con i passaggi sopra, o riprova più tardi.";
+"tools.plugin.oneClick.checksum" = "Il caricatore Ammonia scaricato non corrispondeva al checksum atteso, quindi MacReplica non l’ha installato. Installalo tu con i passaggi sopra.";
+"tools.plugin.undo.button" = "Annulla la configurazione…";
+"tools.plugin.undo.go" = "Rimuovi e annulla";
+"tools.plugin.undo.message" = "MacReplica rimuove il suo plug-in, disinstalla il caricatore Ammonia e — quando l’argomento di avvio non contiene altro — lo cancella e riattiva la convalida delle librerie, con la password di amministratore. Dopo, riavvia e riattiva la protezione dell’integrità del sistema in recoveryOS (csrutil enable); MacReplica non lo cambia mai da solo.";
+"tools.plugin.undo.reason" = "MacReplica vuole rimuovere il suo plug-in e disinstallare il caricatore di tweak Ammonia.";
+"tools.plugin.undo.rebootSIP" = "Ora riavvia e riattiva la protezione dell’integrità del sistema in recoveryOS (csrutil enable).";
+"tools.plugin.undo.bootArgsManual" = "L’argomento di avvio è stato lasciato com’è perché contiene anche altri valori. Per cancellarlo, esegui tu «sudo nvram -d boot-args» se vuoi. Poi riavvia e riattiva la protezione dell’integrità del sistema in recoveryOS.";
