@@ -1557,3 +1557,7 @@
 "reinstall.link.sequoia" = "Mit macOS Sequoia kompatible Computer (Apple)";
 "reinstall.preflight.drive" = "Lass das Backup-Laufwerk beim Löschen und Installieren abgesteckt; schließ es danach wieder an.";
 "bootstrap.notThisMac" = "Sie läuft nicht mit dem Prozessor dieses Macs: Lade MacReplica stattdessen auf dem neuen Mac herunter (siehe README).";
+"guidance.manual.keychainPasswords" = "Passwörter in deinem Schlüsselbund werden nie kopiert: Der Schlüsselbund funktioniert nur auf diesem Mac, und Apple erlaubt keinen Export von Passwörtern aus der Schlüsselbundverwaltung. Schalte den iCloud-Schlüsselbund auf beiden Macs ein (Systemeinstellungen › dein Name › iCloud › Passwörter), oder wähl in der App „Passwörter“ Ablage › Alle Passwörter exportieren und importiere die Datei auf dem neuen Mac – die Datei ist nicht verschlüsselt, lösch sie direkt nach dem Import. WLAN-Passwörter werden nur über den iCloud-Schlüsselbund übertragen. Zertifikate mit privatem Schlüssel lassen sich in der Schlüsselbundverwaltung als passwortgeschützte .p12-Datei exportieren.";
+"guidance.name.keychainPasswords" = "Passwörter im Schlüsselbund";
+"guidance.name.mailAccounts" = "Mail-Accounts";
+"guidance.name.officeActivation" = "Anmeldung oder Aktivierung von Microsoft Office";

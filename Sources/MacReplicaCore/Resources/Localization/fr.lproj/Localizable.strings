@@ -1557,3 +1557,7 @@
 "reinstall.link.sequoia" = "Ordinateurs compatibles avec macOS Sequoia (Apple)";
 "reinstall.preflight.drive" = "Laisse le disque de sauvegarde débranché pendant l’effacement et l’installation ; rebranche-le ensuite.";
 "bootstrap.notThisMac" = "Elle ne fonctionne pas avec le processeur de ce Mac : télécharge plutôt MacReplica sur le nouveau Mac (voir le README).";
+"guidance.manual.keychainPasswords" = "Les mots de passe de ton trousseau ne sont jamais copiés : le trousseau ne fonctionne que sur ce Mac, et Apple ne permet pas d’exporter les mots de passe depuis Trousseaux d’accès. Active le trousseau iCloud sur les deux Mac (Réglages Système › ton nom › iCloud › Mots de passe), ou dans l’app Mots de passe choisis Fichier › Exporter tous les mots de passe et importe le fichier sur le nouveau Mac – ce fichier n’est pas chiffré, supprime-le juste après l’import. Les mots de passe Wi-Fi ne se synchronisent qu’avec le trousseau iCloud. Les certificats avec leur clé privée peuvent être exportés dans Trousseaux d’accès sous forme de fichier .p12 protégé par mot de passe.";
+"guidance.name.keychainPasswords" = "Mots de passe du trousseau";
+"guidance.name.mailAccounts" = "Comptes Mail";
+"guidance.name.officeActivation" = "Connexion ou activation de Microsoft Office";

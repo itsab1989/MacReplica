@@ -1557,3 +1557,7 @@
 "reinstall.link.sequoia" = "Computer compatibili con macOS Sequoia (Apple)";
 "reinstall.preflight.drive" = "Tieni scollegato il disco del backup durante inizializzazione e installazione; ricollegalo dopo.";
 "bootstrap.notThisMac" = "Non funziona con il processore di questo Mac: scarica invece MacReplica sul nuovo Mac (vedi il README).";
+"guidance.manual.keychainPasswords" = "Le password del portachiavi non vengono mai copiate: il portachiavi funziona solo su questo Mac e Apple non consente di esportare le password da Accesso Portachiavi. Attiva il portachiavi di iCloud su entrambi i Mac (Impostazioni di Sistema › il tuo nome › iCloud › Password) oppure, nell’app Password, scegli Archivio › Esporta tutte le password e importa il file sul nuovo Mac: il file non è cifrato, quindi eliminalo subito dopo l’importazione. Le password Wi-Fi si sincronizzano solo con il portachiavi di iCloud. I certificati con la chiave privata si possono esportare in Accesso Portachiavi come file .p12 protetto da password.";
+"guidance.name.keychainPasswords" = "Password nel portachiavi";
+"guidance.name.mailAccounts" = "Account di Mail";
+"guidance.name.officeActivation" = "Accesso o attivazione di Microsoft Office";

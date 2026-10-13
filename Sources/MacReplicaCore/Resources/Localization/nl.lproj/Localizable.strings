@@ -1557,3 +1557,7 @@
 "reinstall.link.sequoia" = "Computers die compatibel zijn met macOS Sequoia (Apple)";
 "reinstall.preflight.drive" = "Laat de reservekopieschijf tijdens het wissen en installeren losgekoppeld; sluit hem daarna weer aan.";
 "bootstrap.notThisMac" = "Hij werkt niet met de processor van deze Mac: download MacReplica in plaats daarvan op de nieuwe Mac (zie de README).";
+"guidance.manual.keychainPasswords" = "Wachtwoorden in je sleutelhanger worden nooit gekopieerd: de sleutelhanger werkt alleen op deze Mac en Apple staat niet toe dat wachtwoorden uit Sleutelhangertoegang worden geëxporteerd. Schakel de iCloud-sleutelhanger op beide Macs in (Systeeminstellingen › je naam › iCloud › Wachtwoorden), of kies in de app Wachtwoorden Archief › Exporteer alle wachtwoorden en importeer het bestand op de nieuwe Mac – dat bestand is niet versleuteld, verwijder het meteen na het importeren. Wifiwachtwoorden worden alleen via de iCloud-sleutelhanger gesynchroniseerd. Certificaten met hun privésleutel kun je in Sleutelhangertoegang exporteren als met een wachtwoord beveiligd .p12-bestand.";
+"guidance.name.keychainPasswords" = "Wachtwoorden in de sleutelhanger";
+"guidance.name.mailAccounts" = "Mail-accounts";
+"guidance.name.officeActivation" = "Aanmelding of activering van Microsoft Office";

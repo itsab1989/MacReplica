@@ -172,3 +172,10 @@ extension Localizer {
         }
     }
 }
+
+extension Localizer {
+    /// A translated name for generic entries (“Passwords in the keychain”); product names stay as they are.
+    public func guidanceName(_ record: GuidanceRecord) -> String {
+        has("guidance.name.\(record.id)") ? t("guidance.name.\(record.id)") : record.currentName
+    }
+}

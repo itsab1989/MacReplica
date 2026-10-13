@@ -1557,3 +1557,7 @@
 "reinstall.link.sequoia" = "Maskiner som er kompatible med macOS Sequoia (Apple)";
 "reinstall.preflight.drive" = "La sikkerhetskopidisken være frakoblet mens du sletter og installerer; koble den til igjen etterpå.";
 "bootstrap.notThisMac" = "Den kjører ikke på denne Macens prosessor: last ned MacReplica på den nye Macen i stedet (se README).";
+"guidance.manual.keychainPasswords" = "Passord i nøkkelringen din kopieres aldri: nøkkelringen virker bare på denne Macen, og Apple tillater ikke eksport av passord fra Nøkkelringtilgang. Slå på iCloud-nøkkelring på begge Mac-ene (Systeminnstillinger › navnet ditt › iCloud › Passord), eller velg Arkiv › Eksporter alle passord i Passord-appen og importer filen på den nye Macen – filen er ikke kryptert, så slett den rett etter importen. Wi-Fi-passord synkroniseres bare med iCloud-nøkkelring. Sertifikater med privat nøkkel kan eksporteres i Nøkkelringtilgang som en passordbeskyttet .p12-fil.";
+"guidance.name.keychainPasswords" = "Passord i nøkkelringen";
+"guidance.name.mailAccounts" = "Mail-kontoer";
+"guidance.name.officeActivation" = "Pålogging eller aktivering av Microsoft Office";

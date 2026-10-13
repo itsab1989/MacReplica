@@ -675,6 +675,10 @@ public enum GuidanceCatalog {
                url: "https://www.xp-pen.com/Uploads/images/manual/artistpro16/en/Artist%20Pro%2016%20(English).pdf"),
         manual("mailAccounts", "Mail accounts", ids: ["com.apple.mail"], paths: ["Library/Mail"],
                url: "https://support.apple.com/en-us/102613"),
+        // Passwords in the login keychain: never copied (bound to this Mac); Apple's supported ways are iCloud Keychain or
+        // the Passwords app's export and import. Every Mac with a user keychain gets this note.
+        manual("keychainPasswords", "Passwords in the keychain", paths: ["Library/Keychains"],
+               url: "https://support.apple.com/guide/keychain-access/import-and-export-keychain-items-kyca35961/mac"),
         manual("officeActivation", "Microsoft Office sign-in or activation",
                ids: ["com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.Outlook", "com.microsoft.onenote.mac"],
                url: "https://support.microsoft.com/en-us/office/activate-office-5bd38f38-db92-448b-a982-ad170b1e187e"),

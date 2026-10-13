@@ -1557,3 +1557,7 @@
 "reinstall.link.sequoia" = "Ordenadores compatibles con macOS Sequoia (Apple)";
 "reinstall.preflight.drive" = "Mantén desconectado el disco de la copia mientras borras e instalas; vuelve a conectarlo después.";
 "bootstrap.notThisMac" = "No funciona con el procesador de este Mac: descarga MacReplica en el Mac nuevo (consulta el README).";
+"guidance.manual.keychainPasswords" = "Las contraseñas de tu llavero nunca se copian: el llavero solo funciona en este Mac y Apple no permite exportar contraseñas desde Acceso a Llaveros. Activa el llavero de iCloud en ambos Mac (Ajustes del Sistema › tu nombre › iCloud › Contraseñas) o, en la app Contraseñas, elige Archivo › Exportar todas las contraseñas e importa el archivo en el Mac nuevo; ese archivo no está cifrado, así que bórralo justo después de importarlo. Las contraseñas Wi-Fi solo se sincronizan con el llavero de iCloud. Los certificados con su clave privada pueden exportarse en Acceso a Llaveros como archivo .p12 protegido con contraseña.";
+"guidance.name.keychainPasswords" = "Contraseñas del llavero";
+"guidance.name.mailAccounts" = "Cuentas de Mail";
+"guidance.name.officeActivation" = "Inicio de sesión o activación de Microsoft Office";

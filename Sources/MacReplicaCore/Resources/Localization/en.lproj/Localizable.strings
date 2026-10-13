@@ -1559,3 +1559,7 @@
 "reinstall.link.sequoia" = "macOS Sequoia is compatible with these computers (Apple)";
 "reinstall.preflight.drive" = "Keep the backup drive disconnected while you erase and install; connect it again afterwards.";
 "bootstrap.notThisMac" = "It does not run on this Mac's processor: download MacReplica on the new Mac instead (see the README).";
+"guidance.manual.keychainPasswords" = "Passwords in your keychain are never copied: the keychain only works on this Mac, and Apple does not allow exporting passwords from Keychain Access. Turn on iCloud Keychain on both Macs (System Settings › your name › iCloud › Passwords), or in the Passwords app choose File › Export All Passwords and import the file on the new Mac – that file is not encrypted, so delete it right after importing. Wi-Fi passwords sync only with iCloud Keychain. Certificates with their private key can be exported in Keychain Access as a password-protected .p12 file.";
+"guidance.name.keychainPasswords" = "Passwords in the keychain";
+"guidance.name.mailAccounts" = "Mail accounts";
+"guidance.name.officeActivation" = "Microsoft Office sign-in or activation";
