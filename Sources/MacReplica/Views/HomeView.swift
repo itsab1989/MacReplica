@@ -65,8 +65,16 @@ struct HomeView: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
+        // Four options plus a safe-mode or resume banner can exceed the smallest window: scroll only then.
+        ViewThatFits(in: .vertical) {
+            content
+            ScrollView { content }
+        }
+    }
+
+    private var content: some View {
         let l = model.l
-        VStack(spacing: 0) {
+        return VStack(spacing: 0) {
             Spacer(minLength: 16)
             AppIconView(size: 88)
             Text("MacReplica")
