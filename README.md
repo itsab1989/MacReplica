@@ -49,7 +49,7 @@ MacReplica is a native macOS app. You do not need the Terminal.
 - [How it works](#how-it-works)
 - [Screenshots](#screenshots)
 - [Installation](#installation) · [Requirements and compatibility](#requirements-and-compatibility)
-- [Using MacReplica](#using-macreplica)
+- [Using MacReplica](#using-macreplica) · [Tools](docs/TOOLS.md)
 - [Details](#details): apps · guided installation · developer tools · app data · Python · fonts and ICC profiles · dry run and resume
 - [Permissions, security and privacy](#permissions-security-and-privacy)
 - [Logs and troubleshooting](#logs-and-troubleshooting)
@@ -195,6 +195,17 @@ update, download the new disk image and replace the app.
    MacReplica explains why; for Homebrew packages it asks once per restore in its own window.
 5. Read the summary: what worked, what failed and what to do about it, apps to install yourself
    and services to sign in to again. **Retry Failed Items** runs only the failed steps again.
+
+**Tools** (fourth option on the start screen): three independent tools for this Mac. Each one shows what it
+finds, asks before changing anything and checks the real result afterwards ([details](docs/TOOLS.md)):
+- **Gatekeeper and app security:** why apps are or are not checked, a check of one app with Apple's “Open Anyway”,
+  opening it or removing its quarantine mark on request, and – after a warning – a profile that turns app
+  checking off for the whole Mac, with the way back.
+- **macOS updates:** your update switches, whether your macOS version still gets security updates, a setup that
+  keeps the current version up to date, and – where Apple still allows it – postponing major upgrades by up to
+  90 days (not possible on macOS 27).
+- **Window corners** (experimental, macOS 26.4 and later): less rounded app windows. Quick Look, popovers and
+  menus are not affected.
 
 The backup folder also contains `restore/RESTORE_INSTRUCTIONS.html` — a readable guide with the
 same steps, including commands for restoring by hand. Step-by-step instructions and the backup

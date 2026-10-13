@@ -139,6 +139,39 @@ If MacReplica was stopped, quit or crashed, the start screen offers:
   else can still be changed.
 - **Discard** — forget the unfinished restore (nothing that was installed is removed).
 
+## 3. Tools
+
+Click **Tools** on the start screen. Every tool first shows what it finds; nothing changes until you press a button
+and confirm, and MacReplica checks the real result afterwards. The **?** buttons explain each part; **Limits and
+details** lists what a tool cannot do. Changes appear under **Changes made with the tools**. Backups and restores
+never use these tools. Background and research: [TOOLS.md](TOOLS.md).
+
+**Gatekeeper and app security**
+- The top shows whether macOS checks apps, and why not (for example a configuration profile you installed).
+- **Choose an app …** checks one app: signature, notarisation, quarantine mark and Gatekeeper's verdict. If macOS
+  blocks it, **Open the app and Privacy & Security** guides you through Apple's “Open Anyway”; afterwards click
+  **I approved it – check again**.
+- **Open app** starts it right away. **Remove quarantine …** lets this one app open without Gatekeeper's first
+  check, including Apple's malware check; only do this for apps you trust. **Put quarantine back** undoes it.
+- **Turn off app checking for this Mac …** (advanced): MacReplica prepares a profile; you install it in System
+  Settings › General › Device Management, then click **Check again**. **Turn app checking back on …** guides you to
+  remove exactly that profile.
+
+**macOS updates**
+- Shows your automatic-update switches and, with **Ask Apple about this version**, whether your version still gets
+  security updates.
+- **Set up recommended settings …** opens Software Update and tells you which switches to change; click **I changed
+  it – check again** afterwards. **Restore previous settings …** goes back.
+- A new major version is installed only when you click “Upgrade”. **Postpone major macOS upgrades** (30, 60 or 90
+  days, Apple's maximum) is offered on macOS 13–15.7.4 and 26 via a profile you install in Device Management;
+  on macOS 15.7.5 and later 15.x it would also hold back security updates, and macOS 27 no longer supports it.
+
+**Window corners** (experimental, macOS 26.4 and later)
+- Choose a radius (10 pt like macOS 15, 7, 4, or any value from 2 to 24 pt) and **Apply …**, then quit and reopen
+  apps. **Restore previous** returns exactly to the earlier setting; **Restore macOS default appearance …** removes it.
+- Changes app windows, document windows, dialogs, sheets and alerts (and utility panels, if chosen). Quick Look,
+  menu-bar popovers, menus, Control Center and notifications keep their own corners.
+
 ## The backup folder
 
 ```
@@ -167,6 +200,8 @@ Keep the folder complete. **Check Backup** verifies every checksum at any time.
 | `~/Library/Application Support/MacReplica/Replaced Files/` | files MacReplica moved aside instead of overwriting them |
 | `~/Library/Application Support/MacReplica/Reports/` | restore reports |
 | `~/Library/Caches/MacReplica/Downloads/` | downloads of the guided installation (verified, quarantined) |
+| `~/Library/Application Support/MacReplica/tools-history.json` | changes made with the tools (no paths, no passwords) |
+| `~/Library/Application Support/MacReplica/Profiles/` | configuration profiles the tools prepared for you to install |
 
 ## Troubleshooting
 
