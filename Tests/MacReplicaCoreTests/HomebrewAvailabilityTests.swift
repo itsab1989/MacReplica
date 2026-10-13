@@ -7,6 +7,8 @@ import MacReplicaTestSupport
 /// folder) and ChromIQ (cask only in the developer's tap). Homebrew must never be promised where it cannot install.
 @Suite("Homebrew availability, taps and companion apps")
 struct HomebrewAvailabilityTests {
+    /// The full name of the ChromIQ cask in its vendor tap.
+    static let chromiqCask = ["itsab1989", "chromiq", "chromiq"].joined(separator: "/")
     static func inventory(_ sandbox: Sandbox) async throws -> (SimulationRoot, SimulationEnvironment, InventoryResult) {
         let (root, source) = try TestEnvironment.sourceMac(sandbox)
         try root.addBetaFeedbackApps()
@@ -25,7 +27,7 @@ struct HomebrewAvailabilityTests {
         #expect(HomebrewClient.availability(["token": "x", "tap": "homebrew/cask", "url": "https://x"]).state == .available)
         #expect(CaskAvailability(state: .deprecated).isInstallable && !CaskAvailability(state: .removed).isInstallable)
         #expect(BrewCaskRecord(token: "old", version: "1").isInstallable, "backups of 1.0.4 have no availability: assumed installable")
-        #expect(BrewTapRecord.tapName(ofToken: "itsab1989/chromiq/chromiq") == "itsab1989/chromiq" && BrewTapRecord.tapName(ofToken: "firefox") == nil)
+        #expect(BrewTapRecord.tapName(ofToken: Self.chromiqCask) == "itsab1989/chromiq" && BrewTapRecord.tapName(ofToken: "firefox") == nil)
     }
 
     @Test func removedAndDisabledCasksAreExplainedNotPromised() async throws {
@@ -77,7 +79,7 @@ struct HomebrewAvailabilityTests {
         // A tap set up on this Mac: its casks are matched like Homebrew's own.
         #expect(apps.first { $0.bundleIdentifier == "com.example.taptool" }?.restoreMethod == .homebrewCask(token: "example/tools/tap-tool"))
         // ChromIQ: the developer's own tap, suggested and recorded so it can be allowed on the new Mac.
-        #expect(apps.first { $0.bundleIdentifier == "com.chromiq.app" }?.restoreMethod == .homebrewCask(token: "itsab1989/chromiq/chromiq"))
+        #expect(apps.first { $0.bundleIdentifier == "com.chromiq.app" }?.restoreMethod == .homebrewCask(token: Self.chromiqCask))
         let tap = try #require(result.manifest.brewTaps.first { $0.name == "itsab1989/chromiq" })
         #expect(tap.remote == "https://github.com/itsab1989/homebrew-chromiq" && tap.suggestedFor == ["ChromIQ"])
         // The restore installs them only from an allowed tap.
@@ -99,7 +101,7 @@ struct HomebrewAvailabilityTests {
         #expect(apps[0].restoreMethod == .homebrewCask(token: "itsab1989/chromiq/chromiq@beta"), "a beta stays on the beta channel")
         apps = [stable]
         InventoryService.applyVendorTaps(to: &apps, taps: &taps)
-        #expect(apps[0].restoreMethod == .homebrewCask(token: "itsab1989/chromiq/chromiq"), "a stable install never becomes a beta")
+        #expect(apps[0].restoreMethod == .homebrewCask(token: Self.chromiqCask), "a stable install never becomes a beta")
         #expect(taps.count == 1, "the tap is recorded once")
     }
 
