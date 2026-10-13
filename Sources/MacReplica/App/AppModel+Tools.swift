@@ -156,7 +156,7 @@ extension AppModel {
                     else { verification = .partiallyVerified; text = l.t("tools.updates.deferral.partly", days) }
                 } else {
                     verification = active == nil ? .verified : .partiallyVerified
-                    text = l.t(active == nil ? "tools.updates.deferral.removed" : "tools.updates.deferral.otherStillActive")
+                    text = l.t(active == nil ? "tools.updates.deferral.profileGone" : "tools.updates.deferral.otherStillActive")
                 }
                 tools.deferralOutcome = ToolOutcome(verification: verification, stateAfter: text)
             }

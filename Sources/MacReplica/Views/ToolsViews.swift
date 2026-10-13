@@ -680,7 +680,7 @@ struct ToolHistoryView: View {
                         .foregroundStyle(entry.result == .succeeded ? .green : .orange)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(l.t("tools.change.\(entry.change)")).font(.callout)
-                        Text(entry.date.formatted(date: .abbreviated, time: .shortened) + " · macOS " + entry.macOSVersion + " · "
+                        Text(entry.date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(model.language.locale)) + " · macOS " + entry.macOSVersion + " · "
                              + l.t("tools.verification.\(entry.verification.rawValue)"))
                             .font(.caption).foregroundStyle(.secondary)
                     }
