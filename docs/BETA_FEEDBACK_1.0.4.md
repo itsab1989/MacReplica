@@ -24,7 +24,6 @@ Baseline: `main` at 5f29144 (MacReplica 1.0.4, manifest version 3), SwiftPM app,
 | B9 | Homebrew restore | Casks from third-party taps are skipped unless the tap is ticked; the tap list did not say which apps need it. Apps *matched* to a tap cask got no tap dependency. | `TapSection` lists tap names only; `RestorePlanner` adds tap dependencies only for installed casks/formulae. | Medium |
 | B10 | Companion apps | DisplayCAL's seven companion apps (`/Applications/DisplayCAL/*.app`, bundle IDs `net.displaycal.DisplayCAL-*`) were listed as seven independent apps to install. | No relationship model between apps. | Low/Medium |
 
-(Continued below as the work proceeds.)
 
 ### Additional findings from the tester's logs (2026-10-13)
 
@@ -124,3 +123,56 @@ bundle identifiers), ChromIQ installed from its DMG, and an app from a tap set u
   release workflow refuses an app without both slices); with the universal build the guide and the completion screen
   say “runs on Apple silicon and Intel”.
 - Tests: `ReinstallGuideTests` (5). The reinstall procedure itself was not carried out (it would erase a Mac).
+
+
+### V7 – macOS settings, printers and scanners, the full flow across macOS versions — **Verified** (real app, simulated Macs; real `defaults` on a throw-away domain)
+Simulated old Mac: Intel MacBook Pro (`MacBookPro16,1`), macOS 14.8.4, with changed Dock, keyboard, language and input
+source settings, two printers (Brother laser with the manufacturer's driver, HP with AirPrint) and an Epson scanner
+driver. Simulated new Mac: Apple silicon, macOS 26.1, with its own Dock settings.
+- Backup screen: settings by category with counts (“nothing changed” greyed out), what is not transferred and why;
+  printers with connection and driver; German at 760×600 without clipping; the saved selection restores the new choices
+  (input sources, printers).
+- Restore: “The settings were recorded on macOS 14.8.4; this Mac runs macOS 26.1”; input sources not selected by
+  default. 64 succeeded, 0 failed. Dock: tilesize, auto-hide and the hot corner applied, the new Mac's orientation
+  kept, the Dock restarted; keyboard and language applied; input sources not applied.
+- Guided steps under “steps for displays, printers and scanners” (they were wrongly under “developer tool steps” –
+  fixed); after the printer was added (its PPD appeared), Check Again marked it set up (65 succeeded).
+- Real `defaults export/import` round trip on a throw-away domain (deleted afterwards): `SystemSettingsTests`.
+  The user's real settings were never changed.
+
+## Issue checklist and final status
+
+| # | Reported | Root cause / finding | What changed | Status |
+|---|---|---|---|---|
+| 1 | Backup failed after deleting a DisplayCAL folder; “Normal.dotx” problem | B11, B12 | Office lock files skipped; names a backup cannot hold are left out with a reason; removed files reported as gone | **Verified** (V1) |
+| 2 | Help and tooltips not visible | B6: hover-only, missing on key controls | “?” buttons with popovers (also tooltip and VoiceOver hint) on installer options, not-in-backup lists, application data, taps, printers, settings, source/version, conflicts, dry run, resume, credentials, saved selection | **Verified** (popovers opened on screen; texts in 7 languages) |
+| 3 | ChromIQ not found for automatic installation | B8/B9/B17: only the public cask catalog was searched; tap casks failed verification | Casks of installed taps matched; vendor taps (ChromIQ `itsab1989/chromiq`, stable/beta by channel); tap list names the apps that need it; short-token verification | **Verified** (simulated Macs, real Homebrew behaviour checked); real ChromIQ install from the tap **Not verified** |
+| 4 | Can MacReplica reinstall itself? | – | A verified universal copy in every backup, README “start here”, reinstall guide | **Verified** (copy started from the backup, both slices); first start on a fresh real Mac **Not verified** |
+| 5 | DisplayCAL companions listed separately; latest DisplayCAL not found | B10, B7 (cask disabled 2026-09-01) | Companion relation (suite folder + bundle ID prefix, multi-app casks); suites installed as their folder; disabled cask explained; unverified installers usable after confirmation | **Verified** (simulation with the real bundle IDs); download of DisplayCAL 3.9.19 from GitHub **Unsupported** (no verifiable route: ad-hoc signed, no feed, cask disabled) – use your installer |
+| 6 | DMG rejected (“developer cannot be verified”), PKG inconsistent, APP no response | B2, B3, B13 | Every file gets a visible result; `.app` supported; licence images recorded; informed confirmation for unverified installers (Gatekeeper untouched) | **Verified** (selection on screen); restore of each kind **Simulated** (tests with hdiutil/pkgbuild); signed vendor installers **Not verified** (no Developer ID test artefacts) |
+| 7 | “In backup” / “My license is included” unclear | Semantics: copy the installer file into the backup / mark it as a private licence file | Renamed (“Copy into backup”, “Contains a licence or activation”), help texts, status lines | **Verified** |
+| 8 | Which Office choice for LTSC 2024 16.113.4? | One installer for all editions; licence decides | Activation type detected (licence file presence only), explained; match choices show descriptions | **Partially verified** (detection on this Mac's real licence file presence; LTSC re-activation **Not verified**) |
+| 9 | Exact version vs latest stable | Sources already existed; versions and channel were not shown | Version comparison per source, no silent channel switch, help | **Simulated** (unit tests); on screen only sources without versions were available |
+| 10 | Printer drivers and setup | – | Printers & scanners category, guided and checked | **Verified** (simulation); printing/scanning **Not verified** (no device) |
+| 11 | System Settings | Nothing was recorded | Ten categories via `defaults`, read back, cross-version rules, not-transferred list | **Verified** (V7) |
+| 12 | KeePassXC, key files, Keychain; “1 key file not backed up” without details | B4, B5, B15 | Classification, listing with path/reason/advice, include on request, KeePassXC databases and settings; Keychain: guidance only | **Verified** (synthetic KDBX/key files); Keychain export **Unsupported** by design (Apple allows no password export) |
+| 12.3 | Repeated Keychain password prompts | MacReplica makes no Keychain calls (no `SecItem`/`SecKeychain`/`security` in the code). Prompts come from macOS for administrator rights (Homebrew, installers) or privacy access | – | **Not reproduced** |
+| 13 | VueScan setups in Pictures/VueScan | Documented location of VueScan's settings | Provider; any other folder via “Your own folders” | **Verified** (synthetic files); scanner operation **Not verified** |
+| 14 | Which sensitive file was skipped? | B4 | Lists on every screen and in reports; completeness classes | **Verified** |
+| 15 | Printable reinstall guide | – | Per Mac family, Apple links | **Verified** (rendering); reinstall procedure **Not verified** |
+| C | Cakebrew not recognised | B16 | Removed/disabled casks explained, vendor feed route, front-end note | **Verified** (simulation, real Homebrew listing behaviour); real Cakebrew download **Partially verified** (artefact and signature checked, not installed) |
+
+### Intel compatibility
+Release builds are universal; the release workflow refuses an app without both slices and runs the tests on Intel.
+The copy in the backup was started on its Intel slice under Rosetta. A real Intel Mac was not available.
+
+### Credential and sensitive-file handling
+No secrets are read, logged or stored: classification uses names and file-format signatures only; paths are shown to
+the owner; included files are copied unchanged and checksummed; keychains and browser data are never copied; the
+Keychain is never accessed.
+
+### Not supported or not verified (summary)
+Keychain password export (Apple does not allow it), automatic printer setup (needs drivers and administrator rights),
+Accessibility/privacy/wallpaper settings (protected or private), telling Office LTSC 2021 from 2024, DisplayCAL
+download (no verifiable source), real installs of ChromIQ/Cakebrew/DisplayCAL/VueScan/KeePassXC apps, real printing
+and scanning, a real Intel Mac.
