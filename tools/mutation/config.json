@@ -12,7 +12,9 @@
     {
       "file": "Matching/Matcher.swift",
       "tests": [
-        "MatchingTests"
+        "MatchingTests",
+        "HomebrewAvailabilityTests",
+        "OfficeEditionTests"
       ],
       "area": "Matching"
     },
@@ -356,7 +358,8 @@
     {
       "file": "Downloads/InstallerArchive.swift",
       "tests": [
-        "OwnInstallerTests"
+        "OwnInstallerTests",
+        "InstallerDescriptionTests"
       ],
       "area": "Own installers (offline)",
       "threshold": 65
@@ -387,7 +390,8 @@
       "file": "Homebrew/HomebrewClient.swift",
       "tests": [
         "HomebrewTests",
-        "InventoryTests"
+        "InventoryTests",
+        "HomebrewAvailabilityTests"
       ],
       "area": "Homebrew detection"
     },
