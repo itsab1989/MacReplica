@@ -90,6 +90,8 @@ final class AppModel: ObservableObject {
     @Published var includeDisplayAssignments = true
     /// Printers and scanner drivers (queue names, connections, drivers, PPD files) go into the backup.
     @Published var includePrinters = true
+    /// Settings categories left out of the backup (by default those that are off by default).
+    @Published var excludedSettings: Set<String> = Set(SettingsCatalog.categories.filter { !$0.selectedByDefault }.map(\.id))
     /// Where the backup is saved (chosen on the selection screen before anything is written).
     @Published var backupDestination: URL?
     /// A selection saved next to the backups that the user has not applied yet.
@@ -281,6 +283,7 @@ final class AppModel: ObservableObject {
         excludedApplications = []
         includeDisplayAssignments = true
         includePrinters = true
+        excludedSettings = Set(SettingsCatalog.categories.filter { !$0.selectedByDefault }.map(\.id))
         preservedPythonEnvironments = []
         savedSelectionFound = nil
         matchChoices = [:]
@@ -593,6 +596,7 @@ final class AppModel: ObservableObject {
         inventory.excludeApplications(excludedApplications)
         if !includeDisplayAssignments { inventory.manifest.displayProfiles = [] }
         if !includePrinters { inventory.excludePrinters() }
+        inventory.keepSettings(Set(SettingsCatalog.categories.map(\.id)).subtracting(excludedSettings))
         for id in excludedApplicationData { inventory.removeApplicationData(id: id) }
         inventory.excludeFiles(excludedBackupFiles)
         return inventory
@@ -727,6 +731,8 @@ final class AppModel: ObservableObject {
             selection = RestoreSelection()
             // Third-party taps stay off until the user allows them.
             selection.enabledTaps = []
+            // Settings recorded on another macOS version start off where their meaning may differ (see SettingsCategory).
+            selection.excludedItemIDs.formUnion(SettingsCatalog.notRecommendedItemIDs(manifest, targetMacOS: services.macOSVersion))
             screen = .restoreSelection
             assessDestination(applyDefaults: true)
         }

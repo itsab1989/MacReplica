@@ -53,7 +53,7 @@ extension Manifest {
 
     /// Every file stored in the backup that has a recorded checksum.
     public var allFileRecords: [FileRecord] {
-        fonts + iccProfiles + python.environments.flatMap(\.projectFiles) + applicationData.flatMap(\.files) + installerRecords + printers.compactMap(\.ppd)
+        fonts + iccProfiles + python.environments.flatMap(\.projectFiles) + applicationData.flatMap(\.files) + installerRecords + printers.compactMap(\.ppd) + settings.flatMap(\.files)
     }
 
     /// The user's own installers that were copied into the backup.
@@ -162,6 +162,8 @@ public struct BackupWriter: Sendable {
             for index in manifest.applicationData.indices {
                 manifest.applicationData[index].files.removeAll { failed.contains($0.backupPath) }
             }
+            for index in manifest.settings.indices { manifest.settings[index].files.removeAll { failed.contains($0.backupPath) } }
+            manifest.settings.removeAll { $0.files.isEmpty }
             for index in manifest.printers.indices where manifest.printers[index].ppd.map({ failed.contains($0.backupPath) }) == true {
                 manifest.printers[index].ppd = nil
             }

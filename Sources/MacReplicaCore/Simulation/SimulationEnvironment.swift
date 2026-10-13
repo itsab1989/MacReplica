@@ -103,6 +103,8 @@ public struct SimulationEnvironment: Sendable {
         self.layout.simulationRoot = root
         self.layout.lpstat = root.appendingPathComponent("tools/lpstat").path
         self.layout.cupsPPDFolder = root.appendingPathComponent("etc/cups/ppd")
+        self.layout.defaults = root.appendingPathComponent("tools/defaults").path
+        self.layout.killall = root.appendingPathComponent("tools/killall").path
     }
 
     /// Reads `--simulation-root <folder>` from the launch arguments.

@@ -22,6 +22,11 @@ struct RestoreSelectionView: View {
                     }
                     if let manifest = model.manifest {
                         CompletenessNotice(manifest: manifest, onNewMac: true)
+                        if !manifest.settings.isEmpty, manifest.macosVersion.split(separator: ".").first != model.services.macOSVersion.split(separator: ".").first {
+                            NoticeView(style: .info, title: l.t("settings.otherVersion.title", manifest.macosVersion, model.services.macOSVersion),
+                                       message: l.t("settings.otherVersion.message"))
+                                .accessibilityIdentifier("settings.otherVersion")
+                        }
                         if manifest.completeness != .complete || !manifest.sensitiveFilesIncludedOnRequest.isEmpty {
                             DisclosureGroup(l.t("notInBackup.show"), isExpanded: $showNotInBackup) {
                                 NotInBackupView(manifest: manifest, editable: false, onThisMac: false).padding(.top, 6)

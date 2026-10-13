@@ -63,6 +63,8 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var printers: [PrinterRecord] = []
     /// Scanner drivers of manufacturers (`/Library/Image Capture/Devices`), to install again.
     public var scannerDrivers: [ScannerDriverRecord] = []
+    /// macOS settings by category (Dock, Finder, keyboard …), recorded through `defaults` (1.0.5 and later).
+    public var settings: [SettingsRecord] = []
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -115,7 +117,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
         case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
-        case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp, officeActivation, modelIdentifier, printers, scannerDrivers
+        case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp, officeActivation, modelIdentifier, printers, scannerDrivers, settings
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -156,6 +158,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         modelIdentifier = try c.decodeIfPresent(String.self, forKey: .modelIdentifier)
         printers = try c.decodeIfPresent(LenientList<PrinterRecord>.self, forKey: .printers)?.elements ?? []
         scannerDrivers = try c.decodeIfPresent(LenientList<ScannerDriverRecord>.self, forKey: .scannerDrivers)?.elements ?? []
+        settings = try c.decodeIfPresent(LenientList<SettingsRecord>.self, forKey: .settings)?.elements ?? []
     }
 }
 

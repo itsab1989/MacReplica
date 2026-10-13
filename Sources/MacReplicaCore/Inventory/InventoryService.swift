@@ -99,6 +99,14 @@ public struct InventoryResult: Sendable {
         }
     }
 
+    /// Keeps only the chosen settings categories.
+    public mutating func keepSettings(_ categories: Set<String>) {
+        let removed = manifest.settings.filter { !categories.contains($0.category) }
+        let paths = Set(removed.flatMap(\.files).map(\.backupPath))
+        extraFiles.removeAll { paths.contains($0.record.backupPath) }
+        manifest.settings.removeAll { !categories.contains($0.category) }
+    }
+
     /// Leaves out printers and scanner drivers (their PPD files included).
     public mutating func excludePrinters() {
         let ppds = Set(manifest.printers.compactMap(\.ppd?.backupPath))
@@ -366,9 +374,12 @@ public struct InventoryService: Sendable {
         let printing = await PrinterScanner(layout: layout, runner: runner).scan()
         manifest.printers = printing.printers
         manifest.scannerDrivers = printing.scanners
+        // macOS settings (Dock, Finder, keyboard …) through `defaults export`; nothing is changed.
+        let settings = await SettingsRecorder(store: SettingsStore(layout: layout, runner: runner)).record()
+        manifest.settings = settings.records
         manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)),
                                                     installedAppNames: Set(apps.map(\.name)))
-        var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles + printing.ppdFiles,
+        var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles + printing.ppdFiles + settings.files,
                                      warnings: warnings)
         // Known user-created data of supported apps (presets, styles, LUTs …) is suggested automatically.
         for var detected in detectedData {

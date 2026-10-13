@@ -30,6 +30,10 @@ public struct SystemLayout: Sendable, Equatable {
     public var ditto: String = "/usr/bin/ditto"
     /// Lists print queues (read-only; no administrator rights needed).
     public var lpstat: String = "/usr/bin/lpstat"
+    /// Reads and writes preferences through cfprefsd (`export` / `import` only).
+    public var defaults: String = "/usr/bin/defaults"
+    /// Restarts the Dock, Finder or the menu bar after their settings were applied (only those process names).
+    public var killall: String = "/usr/bin/killall"
     /// The PPD file of every print queue, readable by all users.
     public var cupsPPDFolder: URL = URL(fileURLWithPath: "/etc/cups/ppd")
     /// Files that only exist when the Command Line Tools are fully installed.
@@ -143,7 +147,7 @@ public struct SystemLayout: Sendable, Equatable {
     /// listed one by one (no patterns), and only Homebrew's own.
     public var allowedExecutables: Set<String> {
         let pythons = homebrewPrefixes.flatMap { prefix in PythonVersion.supportedMinors.map { homebrewPython(minor: $0, prefix: prefix) } }
-        return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto, lpstat])
+        return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto, lpstat, defaults, killall])
     }
 
     public func baseFolder(for kind: BackupFileKind, domain: FileDomain) -> URL {

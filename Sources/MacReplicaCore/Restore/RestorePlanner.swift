@@ -304,6 +304,14 @@ public struct RestorePlanner: Sendable {
             }
         }
 
+        if components.contains(.systemSettings) {
+            for record in manifest.settings {
+                var item = RestoreItem(id: "settings:\(record.category)", kind: .systemSetting, title: record.category, identifier: record.category,
+                                       originalVersion: manifest.macosVersion, component: .systemSettings)
+                item.settings = record
+                displaySteps.append(item)
+            }
+        }
         if components.contains(.printers) {
             for printer in manifest.printers {
                 var item = RestoreItem(id: "printer:\(printer.queue)", kind: .printer, title: printer.model ?? printer.queue, identifier: printer.queue,

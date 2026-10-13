@@ -87,6 +87,50 @@ struct PythonSection: View {
 }
 
 /// Application settings and customizations: detected app data (per item) and folders the user added.
+/// macOS settings by category, and what is never transferred (with the reason).
+struct SettingsSection: View {
+    @EnvironmentObject var model: AppModel
+    @ViewState private var showNotTransferred = false
+
+    var body: some View {
+        let l = model.l
+        let records = model.inventory?.manifest.settings ?? []
+        VStack(alignment: .leading, spacing: 6) {
+            LabelWithHelp(label: l.t("settings.section.title"), help: l.t("settings.section.help"), id: "help.settings", font: .headline)
+            Text(l.t("settings.section.message")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Card {
+                ForEach(SettingsCatalog.categories) { category in
+                    let record = records.first { $0.category == category.id }
+                    HStack(alignment: .firstTextBaseline) {
+                        Toggle(isOn: Binding(get: { record != nil && !model.excludedSettings.contains(category.id) },
+                                             set: { on in if on { model.excludedSettings.remove(category.id) } else { model.excludedSettings.insert(category.id) } })) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(l.t("settings.category.\(category.id)"))
+                                Text(l.t("settings.category.\(category.id).hint") + " " + l.t("settings.apply.\(category.apply.rawValue)"))
+                                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .toggleStyle(.checkbox)
+                        .disabled(record == nil)
+                        .accessibilityIdentifier("settings.\(category.id)")
+                        Spacer()
+                        Text(record.map { l.p("settings.count", $0.keyCount) } ?? l.t("settings.none")).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            DisclosureGroup(l.t("settings.notTransferred.title"), isExpanded: $showNotTransferred) {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(SettingsCatalog.notTransferred, id: \.self) { id in
+                        Text("• " + l.t("settings.not.\(id)")).font(.callout).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.top, 4)
+            }
+            .accessibilityIdentifier("settings.notTransferred")
+        }
+    }
+}
+
 /// Printers and scanner drivers: recorded so they can be set up again on the new Mac (with the user, never automatically).
 struct PrintersSection: View {
     @EnvironmentObject var model: AppModel

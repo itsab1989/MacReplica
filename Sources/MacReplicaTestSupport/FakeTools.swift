@@ -191,6 +191,38 @@ enum FakeTools {
     exit 0
     """#
 
+    /// `defaults export|import <domain|-g> …` on the simulated Mac's preference files (`home/Library/Preferences`), so the
+    /// real preferences are never touched. Uses the system's plutil for the format conversion.
+    static let defaults = #"""
+    #!/bin/bash
+    set -u
+    . "${MACREPLICA_SIMULATION_ROOT:?}/tools/lib.sh"
+    log_call "defaults $*"
+    H="${HOME:?}"
+    prefs="$H/Library/Preferences"; mkdir -p "$prefs"
+    domain="${2:-}"; [ "$domain" = "-g" ] && domain=".GlobalPreferences"
+    file="$prefs/$domain.plist"
+    case "${1:-}" in
+      export)
+        [ -f "$file" ] || { echo "Domain $domain does not exist" >&2; exit 1; }
+        /usr/bin/plutil -convert xml1 -o - "$file"; exit 0 ;;
+      import)
+        fail_if_needed "defaults-$domain"
+        /usr/bin/plutil -convert binary1 -o "$file" "$3"; exit $? ;;
+    esac
+    echo "defaults: unsupported in the simulation: $*" >&2; exit 1
+    """#
+
+    /// `killall <process>`: records which process would have been restarted.
+    static let killall = #"""
+    #!/bin/bash
+    set -u
+    . "${MACREPLICA_SIMULATION_ROOT:?}/tools/lib.sh"
+    log_call "killall $*"
+    echo "$1" >> "$S/restarted"
+    exit 0
+    """#
+
     static let brew = #"""
     #!/bin/bash
     set -u

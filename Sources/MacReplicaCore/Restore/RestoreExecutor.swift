@@ -315,6 +315,11 @@ struct Inspector: Sendable {
             return predictLaunchpad(item)
         case .printer:
             return printerIsSetUp(item) ? .alreadyPresent(version: nil) : .manualStep
+        case .systemSetting:
+            guard let record = item.settings else { return .willSkip(.fileNotSupported) }
+            let restorer = SettingsRestorer(store: SettingsStore(layout: layout, runner: environment.runner), backupRoot: backupRoot)
+            guard let change = try? await restorer.changes(record) else { return .willInstall }
+            return change.toChange.isEmpty ? .alreadyPresent(version: nil) : .willInstall
         }
     }
 
@@ -553,6 +558,8 @@ public final class RestoreExecutor: Sendable {
                 return restoreDisplayProfile(item, inspector: inspector, onEvent: onEvent)
             case .launchpadLayout:
                 return await restoreLaunchpad(item, inspector: inspector, plan: plan, session: session, onEvent: onEvent)
+            case .systemSetting:
+                return await restoreSettings(item, inspector: inspector, onEvent: onEvent)
             case .printer:
                 // Never set up automatically (drivers, administrator rights, a connected device): the user adds it; this
                 // step checks it again whenever the restore continues.
@@ -983,5 +990,35 @@ extension RestorePlan {
             }
         }
         return RestorePlan(items: items.filter { needed.contains($0.id) }, manualApps: manualApps)
+    }
+}
+
+extension RestoreExecutor {
+    /// Applies a category of macOS settings through `defaults` and reads every value back. Keys this macOS does not keep,
+    /// or stores as a different kind of value, are reported – never counted as restored.
+    func restoreSettings(_ item: RestoreItem, inspector: Inspector, onEvent: @escaping @Sendable (RestoreEvent) -> Void) async -> ItemResult {
+        guard let record = item.settings, let category = SettingsCatalog.category(record.category) else {
+            return failed(item, .unknown, "unknown settings category")
+        }
+        onEvent(.activity(itemID: item.id, .installing))
+        let restorer = SettingsRestorer(store: SettingsStore(layout: layout, runner: environment.runner), backupRoot: inspector.backupRoot)
+        let work = layout.caches.appendingPathComponent("Work/settings-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: work) }
+        do {
+            let result = try await restorer.apply(record, work: work)
+            var notes: [ResultNote] = []
+            if result.applied > 0 { notes.append(.settingsApplied(count: result.applied)) }
+            if !result.notKept.isEmpty { notes.append(.settingsNotKept(keys: result.notKept)) }
+            if !result.differentType.isEmpty { notes.append(.settingsDifferentType(keys: result.differentType)) }
+            if result.applied > 0, category.apply == .logout { notes.append(.logoutRequired) }
+            log.info("\(item.id): \(result.applied) settings applied, \(result.notKept.count) not kept, \(result.differentType.count) different type", component: .restore)
+            guard result.applied > 0 || !result.notKept.isEmpty else {
+                return ItemResult(itemID: item.id, outcome: .alreadyPresent, notes: notes)
+            }
+            guard result.applied > 0 else { return failed(item, .verificationFailed, "settings not kept by this macOS") }
+            return ItemResult(itemID: item.id, outcome: .succeeded, notes: notes)
+        } catch {
+            return failed(item, .unknown, layout.redact(String(describing: error)))
+        }
     }
 }

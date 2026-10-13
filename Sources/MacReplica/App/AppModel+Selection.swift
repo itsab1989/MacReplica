@@ -33,6 +33,7 @@ extension AppModel {
             destination: (destination ?? backupDestination).map { layout.displayPath($0) })
         preset.includedOnRequest = includedOnRequest.isEmpty ? nil : includedOnRequest.sorted()
         preset.includePrinters = includePrinters
+        preset.settings = BackupSelectionPreset.choices(ids: SettingsCatalog.categories.map(\.id), excluded: excludedSettings)
         return preset
     }
 
@@ -58,6 +59,8 @@ extension AppModel {
         includeGitEmail = preset.includeGitEmail
         includeDisplayAssignments = preset.includeDisplayAssignments
         includePrinters = preset.includePrinters ?? true
+        excludedSettings = BackupSelectionPreset.excluded(ids: SettingsCatalog.categories.map(\.id), saved: preset.settings ?? [:],
+                                                          excludedByDefault: Set(SettingsCatalog.categories.filter { !$0.selectedByDefault }.map(\.id)))
         let providers = Set(CredentialProviders.all.map(\.id))
         selectedCredentialProviders = Set(preset.credentialProviders).intersection(providers)
         for (appID, token) in preset.matchChoices where manifest.applications.contains(where: { $0.id == appID }) {

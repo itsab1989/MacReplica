@@ -163,6 +163,7 @@ enum Symbols {
         case .launchpad: return "square.grid.3x3"
         case .personalFolders: return "folder"
         case .printers: return "printer"
+        case .systemSettings: return "gearshape"
         }
     }
 
@@ -185,6 +186,7 @@ enum Symbols {
         case .displayProfile: return "display"
         case .launchpadLayout: return "square.grid.3x3"
         case .printer: return "printer"
+        case .systemSetting: return "gearshape"
         }
     }
 

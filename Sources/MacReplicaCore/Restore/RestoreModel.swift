@@ -21,6 +21,8 @@ public enum RestoreComponent: String, Codable, Sendable, CaseIterable, Identifia
     case launchpad
     /// Printers and scanner drivers: set up again with the user's help, then checked.
     case printers
+    /// macOS settings (Dock, Finder, keyboard, trackpad, language …) applied through `defaults`.
+    case systemSettings
     /// Encrypted credentials; only restored when the user switches this on.
     case credentials
 
@@ -54,6 +56,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
     case launchpadLayout
     /// A printer or scanner driver the user sets up (MacReplica checks it afterwards).
     case printer
+    /// A category of macOS settings.
+    case systemSetting
 
     /// Rough relative duration, used to estimate the remaining time before real timings exist.
     var weight: Double {
@@ -71,6 +75,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .gitConfiguration, .credential: return 1
         case .toolchainStep: return 60
         case .manualApp, .displayProfile, .printer: return 1
+        case .systemSetting: return 3
         case .launchpadLayout: return 15
         }
     }
@@ -87,7 +92,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .credential: return .permissions
         case .toolchainStep: return .developerTools
         case .manualApp: return .downloads
-        case .displayProfile, .launchpadLayout, .printer: return .restore
+        case .displayProfile, .launchpadLayout, .printer, .systemSetting: return .restore
         }
     }
 }
@@ -125,6 +130,7 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     public var launchpadLayout: LaunchpadLayout?
     public var printer: PrinterRecord?
     public var scannerDriver: ScannerDriverRecord?
+    public var settings: SettingsRecord?
 
     public init(id: String, kind: RestoreItemKind, title: String, identifier: String, originalVersion: String? = nil,
                 bundleIdentifier: String? = nil, appBundleNames: [String] = [], tapRemote: String? = nil, file: FileRecord? = nil,
@@ -397,6 +403,14 @@ public enum ResultNote: Codable, Equatable, Sendable {
     /// Installed from an installer whose developer macOS cannot verify (the user confirmed it): macOS blocks the
     /// first start until the user allows it in System Settings › Privacy & Security › Open Anyway.
     case approveInPrivacyAndSecurity(app: String)
+    /// macOS settings applied and read back.
+    case settingsApplied(count: Int)
+    /// Written but not kept by this macOS (it may no longer use them).
+    case settingsNotKept(keys: [String])
+    /// Left as they are: this Mac stores a different kind of value for them.
+    case settingsDifferentType(keys: [String])
+    /// The settings take effect after logging out and in again.
+    case logoutRequired
 }
 
 public struct RestoreSummary: Equatable, Sendable {

@@ -49,6 +49,7 @@ extension Localizer {
         case .launchpad: return t("component.launchpad")
         case .personalFolders: return t("component.personalFolders")
         case .printers: return t("component.printers")
+        case .systemSettings: return t("component.systemSettings")
         }
     }
 
@@ -69,6 +70,7 @@ extension Localizer {
         case .launchpad: return t("component.launchpad.hint")
         case .personalFolders: return t("component.personalFolders.hint")
         case .printers: return t("component.printers.hint")
+        case .systemSettings: return t("component.systemSettings.hint")
         }
     }
 
@@ -93,6 +95,7 @@ extension Localizer {
         case .displayProfile: return t("kind.displayProfile")
         case .launchpadLayout: return t("kind.launchpadLayout")
         case .printer: return t("kind.printer")
+        case .systemSetting: return t("kind.systemSetting")
         }
     }
 
@@ -219,6 +222,10 @@ extension Localizer {
         case .additionalPackageOpened(let name): return t("note.additionalPackageOpened", name)
         case .additionalPackageNotInstalled(let name): return t("note.additionalPackageNotInstalled", name)
         case .approveInPrivacyAndSecurity(let app): return t("note.approveInPrivacyAndSecurity", app)
+        case .settingsApplied(let count): return p("note.settingsApplied", count)
+        case .settingsNotKept(let keys): return t("note.settingsNotKept", keys.joined(separator: ", "))
+        case .settingsDifferentType(let keys): return t("note.settingsDifferentType", keys.joined(separator: ", "))
+        case .logoutRequired: return t("note.logoutRequired")
         }
     }
 
@@ -234,6 +241,7 @@ extension Localizer {
     /// The name shown for a restore step: localized for application data, otherwise the item's own name.
     public func itemTitle(_ item: RestoreItem) -> String {
         if let file = item.file { return fileTitle(file) }
+        if item.kind == .systemSetting { return t("settings.category.\(item.identifier)") }
         guard let profile = item.applicationData?.profile else { return item.title }
         let version = profile.appVersion.flatMap { $0 == profile.appName ? nil : " (\($0))" } ?? ""
         return profileText(profile) + version
