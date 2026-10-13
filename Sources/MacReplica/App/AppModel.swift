@@ -732,8 +732,9 @@ final class AppModel: ObservableObject {
         } else {
             reviewingSession = nil
             selection = RestoreSelection()
-            // Third-party taps stay off until the user allows them.
-            selection.enabledTaps = []
+            // Third-party taps stay off until the user allows them – except the developer taps MacReplica documents for
+            // an app in the backup (e.g. ChromIQ's), which start allowed and can be switched off.
+            selection.enabledTaps = VendorTaps.defaultEnabledTaps(manifest)
             // Settings recorded on another macOS version start off where their meaning may differ (see SettingsCategory).
             selection.excludedItemIDs.formUnion(SettingsCatalog.notRecommendedItemIDs(manifest, targetMacOS: services.macOSVersion))
             screen = .restoreSelection

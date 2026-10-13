@@ -34,6 +34,19 @@ python3 tools/mutation/mutate.py --merge r0 r1 r2 r3 r4 r5 --report merged --che
 
 ## Results
 
+**2026-10-14 (MacReplica 1.0.6: corner example overlay + Plugin Playground one-click loader):** the new/changed loader
+modules all reach 100 %, every module at or above threshold. Suites `PluginLoaderTests`, `ToolsCornerPluginTests`,
+`ToolsCornerEdgeTests` cover the pinned download + checksum, the readiness states, the `csrutil` parsing and SIP
+fallback, and the allow-listed privileged operations (install/remove/uninstall). Two survivors were closed with
+tests (the `status` fallback to the passed-in SIP value when `csrutil` is unreadable; creating a download work folder
+whose parent does not exist).
+
+| Module | Killed | Survived | Invalid | Excluded | Score | Threshold | Result |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Restore/PrivilegedExecutor.swift` | 19 | 0 | 3 | 1 | 100.0 % | 80 % | ✅ |
+| `Tools/CornerPlugin.swift` | 23 | 0 | 2 | 1 | 100.0 % | 80 % | ✅ |
+| `Tools/CornerPluginInstall.swift` | 2 | 0 | 0 | 0 | 100.0 % | 80 % | ✅ |
+
 **2026-10-13 (MacReplica 1.0.5: beta-feedback modules and the Tools section):** **98.1 %** (508 of 518 valid mutants
 killed), every module at or above its threshold. Three rounds, 6 parallel shards:
 - **Round 1** found test gaps in nine modules (58 survivors). New suites close them: `SystemSettingsEdgeTests`,

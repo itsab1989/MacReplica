@@ -174,9 +174,11 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
   without glass, ≈6 pt).
 - **Menus, popovers and Quick Look … (advanced)** shows, after a warning, the surfaces that need the corner plugin:
   menus with any radius, popovers, the Quick Look window, toolbar groups and capsule buttons in all apps. The plugin
-  runs only with System Integrity Protection off – only you can turn it off, in recoveryOS – and the Ammonia tweak
-  loader. The panel lists each requirement, the exact steps (and how to undo them) and installs or removes the plugin
-  with your administrator password. On macOS versions it was not tested on, the plugin does nothing.
+  runs through Plugin Playground, a maintained open-source tweak loader. It needs System Integrity Protection only
+  partly off – debugging allowed (`csrutil enable --without debug`), which only you can set in recoveryOS – and the
+  loader enabled once in its own app. **Set up automatically** downloads and installs the pinned loader and the plugin
+  (admin password) and opens Plugin Playground to enable; or do the steps by hand. **Undo setup** removes the plugin
+  and uninstalls the loader. On macOS versions it was not tested on, the plugin does nothing.
 - **Restore previous** returns every setting exactly to how it was; **Restore macOS default appearance …** removes
   them all. The picture area inside Quick Look keeps its own corners in any case.
 

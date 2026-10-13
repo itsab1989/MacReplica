@@ -143,3 +143,20 @@ struct HomebrewAvailabilityTests {
         #expect(HomebrewClient.shortToken("itsab1989/chromiq/chromiq@beta") == "chromiq@beta" && HomebrewClient.shortToken("firefox") == "firefox")
     }
 }
+
+/// End-to-end finding (real Homebrew 7, 2026-10-14): a developer tap MacReplica documents must start allowed, or the
+/// app's restore is skipped; any other third-party tap still waits for the user.
+@Suite("Homebrew: documented developer taps")
+struct DocumentedTapTests {
+    @Test func documentedTapsStartAllowedOnlyWithTheirAddress() {
+        var manifest = Manifest(macreplicaVersion: "1.0.6", createdAt: Date(), macosVersion: "27.0", architecture: .arm64)
+        manifest.brewTaps = [BrewTapRecord(name: "itsab1989/chromiq", remote: "https://github.com/itsab1989/homebrew-chromiq"),
+                             BrewTapRecord(name: "someone/tools", remote: "https://github.com/someone/homebrew-tools")]
+        #expect(VendorTaps.defaultEnabledTaps(manifest) == ["itsab1989/chromiq"])
+        manifest.brewTaps = [BrewTapRecord(name: "ItsAB1989/ChromIQ", remote: nil)]
+        #expect(VendorTaps.defaultEnabledTaps(manifest) == ["itsab1989/chromiq"], "Homebrew's default remote for the name")
+        manifest.brewTaps = [BrewTapRecord(name: "itsab1989/chromiq", remote: "https://example.com/evil/homebrew-chromiq")]
+        #expect(VendorTaps.defaultEnabledTaps(manifest).isEmpty, "another address is treated like any third-party tap")
+        #expect(VendorTaps.defaultEnabledTaps(Manifest(macreplicaVersion: "1", createdAt: Date(), macosVersion: "27", architecture: .arm64)).isEmpty)
+    }
+}

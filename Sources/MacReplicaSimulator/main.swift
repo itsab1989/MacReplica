@@ -97,6 +97,75 @@ if arguments.first == "real-appdata-backup", arguments.count >= 3 {
     print(outcome.url.path)
     exit(0)
 }
+// Real Homebrew end to end for a developer's own tap (ChromIQ): the real inventory finds a stand-in ChromIQ bundle and
+// assigns the tap; the real restore adds and trusts the tap and installs the cask with the real Homebrew – into a
+// scratch folder (HOMEBREW_CASK_OPTS --appdir), so /Applications stays untouched. Removing the cask and tap afterwards is
+// left to the caller (with HOMEBREW_NO_AUTOREMOVE=1).
+//   MacReplicaSimulator real-tap-e2e <scratch folder>
+if arguments.first == "real-tap-e2e", arguments.count == 2 {
+    struct AppDirRunner: CommandRunning {
+        let base: CommandRunning
+        let appdir: String
+        func run(_ command: Command, onOutputLine: (@Sendable (String) -> Void)?) async throws -> CommandResult {
+            var command = command
+            if command.executable.hasSuffix("/brew") { command.environment["HOMEBREW_CASK_OPTS"] = "--appdir=\(appdir)" }
+            return try await base.run(command, onOutputLine: onOutputLine)
+        }
+    }
+    let scratch = URL(fileURLWithPath: arguments[1])
+    let oldMac = scratch.appendingPathComponent("old-mac/Applications")
+    let newMac = scratch.appendingPathComponent("new-mac/Applications")
+    let contents = oldMac.appendingPathComponent("ChromIQ.app/Contents")
+    try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+    try FileManager.default.createDirectory(at: newMac, withIntermediateDirectories: true)
+    try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "com.chromiq.app", "CFBundleName": "ChromIQ",
+                                                          "CFBundleShortVersionString": "1.0"], format: .xml, options: 0)
+        .write(to: contents.appendingPathComponent("Info.plist"))
+    var layout = SystemLayout.live()
+    layout.applicationFolders = [oldMac]
+    let base = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables),
+                                    baseEnvironment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil))
+    let inventory = try await InventoryService(layout: layout, runner: base, catalogProvider: RemoteCatalogProvider(cacheFolder: layout.caches),
+                                               macOSVersion: SystemInfo.macOSVersion, architecture: SystemInfo.currentArchitecture).run()
+    guard let app = inventory.manifest.applications.first(where: { $0.bundleIdentifier == "com.chromiq.app" }) else { print("FAIL: ChromIQ not found"); exit(1) }
+    print("inventory: \(app.name) → \(app.restoreMethod)")
+    var manifest = inventory.manifest
+    manifest.applications = [app]
+    manifest.brewFormulae = []
+    manifest.brewCasks = []
+    manifest.brewTaps = manifest.brewTaps.filter { $0.suggestedFor?.contains(app.name) == true }
+    print("taps: \(manifest.brewTaps.map { "\($0.name) (\($0.remote ?? "-"), for \($0.suggestedFor ?? []))" })")
+    var restoreLayout = SystemLayout.live()
+    restoreLayout.applicationFolders = [newMac]
+    let runner = AppDirRunner(base: base, appdir: newMac.path)
+    // As the app starts the restore selection: documented developer taps are allowed by default.
+    let selection = RestoreSelection(components: [.applications, .brewFormulae, .brewCasks], enabledTaps: VendorTaps.defaultEnabledTaps(manifest))
+    print("enabled taps: \(selection.enabledTaps.sorted())")
+    let plan = RestorePlanner().plan(manifest: manifest, selection: selection)
+    print("plan: \(plan.items.map { "\($0.kind) \($0.identifier)" })")
+    let log = LogStore(fileURL: nil, homeDirectory: restoreLayout.homeDirectory)
+    var environment = RestoreEnvironment(layout: restoreLayout, runner: runner, privileged: AppleScriptPrivilegedExecutor(runner: runner, osascript: restoreLayout.osascript),
+                                         homebrewSource: GitHubHomebrewPackageSource(runner: runner, pkgutil: restoreLayout.pkgutil),
+                                         localizer: Localizer(language: .english), log: log)
+    environment.isApplicationRunning = { _ in false }
+    let executor = RestoreExecutor(environment: environment, backupRoot: scratch, sessionStore: nil)
+    let localizer = Localizer(language: .english)
+    for entry in await executor.dryRun(plan: plan, selection: selection) {
+        print("dry run \(entry.item.title): \(localizer.predictionText(entry.prediction, kind: entry.item.kind))")
+    }
+    let session = await executor.run(plan: plan, session: RestoreSession(backupPath: scratch.path, selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
+    for item in plan.items {
+        guard let result = session.results[item.id] else { continue }
+        print("restored \(item.title) [\(item.identifier)]: \(localizer.outcomeText(result.outcome)) \(result.notes.map { localizer.noteText($0) })")
+    }
+    let installed = (try? FileManager.default.contentsOfDirectory(atPath: newMac.path)) ?? []
+    print("new Mac Applications: \(installed)")
+    for name in installed where name.hasSuffix(".app") {
+        let info = NSDictionary(contentsOf: newMac.appendingPathComponent("\(name)/Contents/Info.plist")) as? [String: Any]
+        print("  \(name): \(info?["CFBundleIdentifier"] ?? "-") \(info?["CFBundleShortVersionString"] ?? "-")")
+    }
+    exit(0)
+}
 if arguments.first == "real-appdata-restore", arguments.count >= 2 {
     let layout = SystemLayout.live()
     let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables),

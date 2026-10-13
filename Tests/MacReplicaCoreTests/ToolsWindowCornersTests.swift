@@ -122,8 +122,10 @@ struct ToolsWindowCornersTests {
 /// The corner plugin: requirements, its two files only, and the same tested builds as the plugin source.
 @Suite("Tools: corner plugin")
 struct ToolsCornerPluginTests {
-    static func status(build: String? = "26A434", sip: GatekeeperStatus.SIP = .disabled, bootArg: Bool? = true, ammonia: Bool = true) -> CornerPlugin.Status {
-        CornerPlugin.Status(build: build, sip: sip, bootArgumentSet: bootArg, ammoniaInstalled: ammonia, installed: false, current: false)
+    static func status(build: String? = "26A434", debugging: Bool? = true, loaderInstalled: Bool = true, loaderEnabled: Bool = true,
+                       installed: Bool = false, current: Bool = false) -> CornerPlugin.Status {
+        CornerPlugin.Status(build: build, sip: .disabled, debuggingAllowed: debugging, loaderInstalled: loaderInstalled,
+                            loaderEnabled: loaderEnabled, installed: installed, current: current)
     }
 
     @Test func readinessNamesTheFirstMissingStep() {
@@ -132,20 +134,36 @@ struct ToolsCornerPluginTests {
         #expect(Self.status(build: "26B100").readiness == .untestedBuild)
         #expect(Self.status(build: nil).readiness == .untestedBuild)
         #expect(Self.status(build: "26B100").capability == .unsupportedOnThisVersion)
-        #expect(Self.status(sip: .enabled).readiness == .sipOn)
-        #expect(Self.status(sip: .unknown).readiness == .unknown)
-        #expect(Self.status(bootArg: false).readiness == .bootArgumentMissing)
-        #expect(Self.status(bootArg: nil).readiness == .unknown)
-        #expect(Self.status(ammonia: false).readiness == .ammoniaMissing)
-        #expect(Self.status(sip: .enabled).capability == .requiresUserAction)
+        #expect(Self.status(debugging: false).readiness == .sipFullyOn)
+        #expect(Self.status(debugging: nil).readiness == .unknown)
+        #expect(Self.status(loaderInstalled: false).readiness == .loaderMissing)
+        #expect(Self.status(loaderEnabled: false).readiness == .loaderNotEnabled)
+        #expect(Self.status(debugging: false).capability == .requiresUserAction)
+        #expect(Self.status(loaderInstalled: false).capability == .requiresUserAction)
     }
 
-    @Test func bootArgumentIsReadFromNvram() {
-        #expect(CornerPlugin.bootArgumentSet(nvramOutput: "boot-args\t-arm64e_preview_abi") == true)
-        #expect(CornerPlugin.bootArgumentSet(nvramOutput: "boot-args\t-v amfi_get_out_of_my_way=1") == false)
-        #expect(CornerPlugin.bootArgumentSet(nvramOutput: "nvram: Error getting variable - 'boot-args': (iokit/common) data was not found") == false)
-        #expect(CornerPlugin.bootArgumentSet(nvramOutput: nil) == nil)
+    @Test func debuggingAllowedIsReadFromCsrutil() {
+        #expect(CornerPlugin.debuggingAllowed(csrutilOutput: "System Integrity Protection status: disabled.") == true)
+        #expect(CornerPlugin.debuggingAllowed(csrutilOutput: "System Integrity Protection status: enabled.") == false)
+        // `csrutil enable --without debug` leaves a custom configuration with debugging allowed.
+        #expect(CornerPlugin.debuggingAllowed(csrutilOutput: "System Integrity Protection status: enabled (Custom Configuration).\n\tDebugging Restrictions: disabled") == true)
+        #expect(CornerPlugin.debuggingAllowed(csrutilOutput: "status: enabled (Custom Configuration).\n\tDebugging Restrictions: enabled") == false)
+        #expect(CornerPlugin.debuggingAllowed(csrutilOutput: nil) == nil)
         #expect(CornerPlugin.currentBuild()?.isEmpty == false)
+    }
+
+    @Test func statusFallsBackToTheSipArgumentWhenCsrutilCannotBeRead() async throws {
+        // A runner whose csrutil cannot be read: status must fall back to the sip value it was given.
+        var layout = SystemLayout.live()
+        layout.csrutil = "/nonexistent/csrutil"
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: []), baseEnvironment: [:])
+        let app = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let disabled = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
+        #expect(disabled.debuggingAllowed == true)
+        let enabled = await CornerPlugin.status(layout: layout, runner: runner, sip: .enabled, appBundle: app, build: "26A434")
+        #expect(enabled.debuggingAllowed == false)
+        let unknown = await CornerPlugin.status(layout: layout, runner: runner, sip: .unknown, appBundle: app, build: "26A434")
+        #expect(unknown.debuggingAllowed == nil)
     }
 
     @Test func testedBuildsMatchThePluginSource() throws {
@@ -160,20 +178,20 @@ struct ToolsCornerPluginTests {
     }
 
     @Test func onlyItsOwnTwoFilesCanBeRemoved() throws {
-        let tweaks = URL(fileURLWithPath: "/private/var/ammonia/core/tweaks")
+        let tweaks = URL(fileURLWithPath: "/opt/pluginplayground/tweaks")
         #expect(PrivilegedOperation.isRemovablePlugin(tweaks.appendingPathComponent("MacReplicaCorners.dylib")))
-        #expect(PrivilegedOperation.isRemovablePlugin(tweaks.appendingPathComponent("MacReplicaCorners.dylib.blacklist")))
+        #expect(PrivilegedOperation.isRemovablePlugin(tweaks.appendingPathComponent("MacReplicaCorners.dylib.options")))
         #expect(!PrivilegedOperation.isRemovablePlugin(tweaks.appendingPathComponent("OtherTweak.dylib")))
-        #expect(!PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/private/var/ammonia/core/MacReplicaCorners.dylib")))
-        #expect(!PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/private/var/ammonia/core/tweaks/../fridagum.dylib")))
+        #expect(!PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/opt/pluginplayground/MacReplicaCorners.dylib")))
+        #expect(!PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/opt/pluginplayground/tweaks/../bin/fangs")))
         #expect(throws: PrivilegedError.self) {
             _ = try AppleScriptPrivilegedExecutor.arguments(for: [.removePluginFile(URL(fileURLWithPath: "/etc/hosts"))], reason: "x")
         }
         let arguments = try AppleScriptPrivilegedExecutor.arguments(for: CornerPlugin.removeOperations(layout: .live()), reason: "x")
-        #expect(arguments.contains("/bin/rm") && arguments.contains("/private/var/ammonia/core/tweaks/MacReplicaCorners.dylib"))
+        #expect(arguments.contains("/bin/rm") && arguments.contains("/opt/pluginplayground/tweaks/MacReplicaCorners.dylib"))
     }
 
-    @Test func installCopiesBlacklistFirstAndRemoveTakesThePluginFirst() async throws {
+    @Test func installCopiesOptionsFirstAndRemoveTakesThePluginFirst() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: folder) }
         let app = folder.appendingPathComponent("MacReplica.app")
@@ -181,24 +199,35 @@ struct ToolsCornerPluginTests {
         let plugin = app.appendingPathComponent("Contents/Library/CornerPlugin")
         try FileManager.default.createDirectory(at: plugin, withIntermediateDirectories: true)
         try Data("dylib".utf8).write(to: plugin.appendingPathComponent(CornerPlugin.dylibName))
-        try Data("/usr/\n".utf8).write(to: plugin.appendingPathComponent(CornerPlugin.blacklistName))
+        try Data("<plist/>\n".utf8).write(to: plugin.appendingPathComponent(CornerPlugin.optionsName))
         var layout = SystemLayout.live()
-        layout.ammoniaTweaks = folder.appendingPathComponent("ammonia/core/tweaks")
+        layout.pluginTweaks = folder.appendingPathComponent("pluginplayground/tweaks")
+        layout.pluginLoaderBin = folder.appendingPathComponent("pluginplayground/bin")
+        layout.pluginLoaderDaemon = folder.appendingPathComponent("grant.plist")
         let install = try #require(CornerPlugin.installOperations(layout: layout, appBundle: app))
         guard case .installFile(_, let first) = install[0] else { Issue.record("not an install"); return }
-        #expect(first.lastPathComponent == CornerPlugin.blacklistName)
+        #expect(first.lastPathComponent == CornerPlugin.optionsName)
         guard case .removePluginFile(let removed) = CornerPlugin.removeOperations(layout: layout)[0] else { Issue.record("not a removal"); return }
         #expect(removed.lastPathComponent == CornerPlugin.dylibName)
         // Installing and removing through the executor used for simulated Macs; the status follows the files.
-        try FileManager.default.createDirectory(at: layout.ammoniaTweaks, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: layout.pluginTweaks, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: layout.pluginLoaderBin, withIntermediateDirectories: true)
+        try Data().write(to: layout.pluginLoaderDaemon)
         try await DirectPrivilegedExecutor().run(install, reason: "test")
-        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: []), baseEnvironment: [:])
+        // A csrutil stand-in that reports debugging allowed, so status reads it.
+        let csr = folder.appendingPathComponent("csrutil")
+        try "#!/bin/bash\necho \"System Integrity Protection status: disabled.\"\n".write(to: csr, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: csr.path)
+        layout.csrutil = csr.path
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: [csr.path]), baseEnvironment: [:])
         var status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
         #expect(status.installed && status.current)
-        #expect(status.bootArgumentSet == nil)
+        #expect(status.loaderInstalled && status.loaderEnabled)
+        #expect(status.debuggingAllowed == true)
+        #expect(status.readiness == .ready)
         try await DirectPrivilegedExecutor().run(CornerPlugin.removeOperations(layout: layout), reason: "test")
         status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
         #expect(!status.installed)
-        #expect(status.ammoniaInstalled)
+        #expect(status.loaderInstalled)
     }
 }

@@ -47,7 +47,7 @@ done
 mkdir -p "$APP/Contents/Library/CornerPlugin"
 clang -arch arm64 -arch arm64e -dynamiclib -fobjc-arc -framework AppKit -O2 -Wall -Werror -mmacosx-version-min=13.0 \
   -o "$APP/Contents/Library/CornerPlugin/MacReplicaCorners.dylib" Extras/CornerPlugin/MacReplicaCorners.m
-cp Extras/CornerPlugin/MacReplicaCorners.dylib.blacklist "$APP/Contents/Library/CornerPlugin/"
+cp Extras/CornerPlugin/MacReplicaCorners.dylib.options "$APP/Contents/Library/CornerPlugin/"
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$BUILD_NUMBER/" -e "s/__MINOS__/$MINOS/" Packaging/Info.plist > "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 plutil -lint "$APP/Contents/Info.plist" >/dev/null

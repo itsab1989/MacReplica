@@ -109,7 +109,8 @@
         "RestoreExecutionTests",
         "SessionAndPrivilegeEdgeTests",
         "ToolsCornerPluginTests",
-        "ToolsCornerEdgeTests"
+        "ToolsCornerEdgeTests",
+        "PluginLoaderTests"
       ],
       "area": "Security"
     },
@@ -534,6 +535,13 @@
       "tests": [
         "ToolsCornerPluginTests",
         "ToolsCornerEdgeTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/CornerPluginInstall.swift",
+      "tests": [
+        "PluginLoaderTests"
       ],
       "area": "Tools"
     }

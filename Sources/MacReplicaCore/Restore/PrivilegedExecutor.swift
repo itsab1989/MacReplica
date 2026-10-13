@@ -12,6 +12,8 @@ public enum PrivilegedOperation: Equatable, Sendable {
     case installPackage(URL)
     /// Removes MacReplica's own corner plugin from the Ammonia tweak folder – nothing else (see `isRemovablePlugin`).
     case removePluginFile(URL)
+    /// Removes one of the tweak loader's own items when uninstalling it – only the fixed set (see `isRemovableLoaderItem`).
+    case removeSystemItem(URL)
 
     /// The executable and arguments for this operation. Only these five
     /// fixed system tools can ever be run with administrator rights.
@@ -25,24 +27,33 @@ public enum PrivilegedOperation: Equatable, Sendable {
         case .move(let source, let destination): return ["/bin/mv", "-f", source.path, destination.path]
         case .installPackage(let url): return ["/usr/sbin/installer", "-pkg", url.path, "-target", "/"]
         case .removePluginFile(let url): return ["/bin/rm", "-f", url.path]
+        case .removeSystemItem(let url): return ["/bin/rm", "-rf", url.path]
         }
     }
 
     var paths: [URL] {
         switch self {
-        case .createFolder(let url), .installPackage(let url), .removePluginFile(let url): return [url]
+        case .createFolder(let url), .installPackage(let url), .removePluginFile(let url), .removeSystemItem(let url): return [url]
         case .installFile(let source, let destination), .move(let source, let destination): return [source, destination]
         }
     }
 }
 
 extension PrivilegedOperation {
-    /// Only `MacReplicaCorners.dylib` and its `.blacklist` directly inside a folder ending in `ammonia/core/tweaks`.
+    /// Only MacReplica's own corner-plugin files (`MacReplicaCorners.dylib` and its `.options`) directly inside a
+    /// `pluginplayground/tweaks` folder.
     public static func isRemovablePlugin(_ url: URL) -> Bool {
         // The path as given: parent steps are refused outright (standardizing would hide them).
         guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
-        return url.deletingLastPathComponent().path.hasSuffix("/ammonia/core/tweaks")
+        return url.deletingLastPathComponent().path.hasSuffix("/pluginplayground/tweaks")
             && CornerPlugin.fileNames.contains(url.lastPathComponent)
+    }
+
+    /// Only Plugin Playground's own fixed items may be removed by `removeSystemItem` when uninstalling the loader.
+    public static func isRemovableLoaderItem(_ url: URL) -> Bool {
+        guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
+        let allowed = [PluginLoader.daemonPlist, PluginLoader.app, PluginLoader.installRoot, PluginLoader.logs].map(\.standardizedFileURL)
+        return allowed.contains(url.standardizedFileURL)
     }
 }
 
@@ -105,6 +116,9 @@ public struct AppleScriptPrivilegedExecutor: PrivilegedExecuting {
             if case .removePluginFile(let url) = operation, !PrivilegedOperation.isRemovablePlugin(url) {
                 throw PrivilegedError.invalidPath(url.path)
             }
+            if case .removeSystemItem(let url) = operation, !PrivilegedOperation.isRemovableLoaderItem(url) {
+                throw PrivilegedError.invalidPath(url.path)
+            }
             let argv = operation.argv
             arguments.append(String(argv.count))
             arguments.append(contentsOf: argv)
@@ -159,6 +173,9 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
                 try packageInstaller(url)
             case .removePluginFile(let url):
                 guard PrivilegedOperation.isRemovablePlugin(url) else { throw PrivilegedError.invalidPath(url.path) }
+                if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+            case .removeSystemItem(let url):
+                guard PrivilegedOperation.isRemovableLoaderItem(url) else { throw PrivilegedError.invalidPath(url.path) }
                 if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
             }
         }
