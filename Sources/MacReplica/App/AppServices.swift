@@ -11,6 +11,8 @@ struct AppServices: Sendable {
     let homebrewSource: HomebrewPackageSource
     let macOSVersion: String
     let architecture: CPUArchitecture
+    /// The Mac's model identifier (a simulated Mac may set its own).
+    var modelIdentifier: String? = SystemInfo.modelIdentifier
     let askpassPath: String?
     let adminPasswordValidator: AdminPasswordValidating
     let defaultsSuite: String?
@@ -27,7 +29,7 @@ struct AppServices: Sendable {
 
     static func make(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppServices {
         if let simulation = SimulationEnvironment.fromLaunchArguments(arguments) {
-            return AppServices(
+            var services = AppServices(
                 layout: simulation.layout,
                 runner: simulation.makeRunner(),
                 catalogProvider: simulation.makeCatalogProvider(),
@@ -46,6 +48,8 @@ struct AppServices: Sendable {
                 releaseFetcher: LocalReleaseFetcher(file: simulation.root.appendingPathComponent("releases/releases.json")),
                 downloadFetcher: LocalFetcher(root: simulation.root),
                 downloadTransport: LocalDownloadTransport(root: simulation.root, chunkSize: 16 * 1024, delayPerChunk: 0.02))
+            if let model = simulation.config.modelIdentifier { services.modelIdentifier = model }
+            return services
         }
         let layout = SystemLayout.live()
         let runner = ProcessCommandRunner(

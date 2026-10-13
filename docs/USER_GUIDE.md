@@ -43,11 +43,19 @@
    - **Your own folders** — optional: add folders of your home folder (documents, pictures, projects), each
      on its own and without a size limit. Not the home folder as a whole or `~/Library`. Files that are only in
      iCloud are left out and listed. MacReplica checks that the destination has enough free space;
+   - **Not in this backup** — every file that will not be in the backup: files that look like passwords or keys
+     (left out on purpose, each with what it appears to be and what to do; **Include …** adds one, unchanged), and
+     files that could not be read. **Show in Finder** shows the file. Read this before you erase the Mac;
    - **Your installers (offline)** — installers you keep (for example Office LTSC with its activation package,
-     or a tablet driver, on an external drive): choose them for the app (**Use my installer …**) or add a
-     folder. Tick *In backup* to copy them into it (and *Contains my licence* for activation packages: they stay
-     private to your backup). On the new Mac they are used without internet,
-     only if checksum and developer still match;
+     or a tablet driver, on an external drive): choose them for the app (**Use my installer …**, also an `.app`)
+     or add a folder. Each file shows what it is, what is inside, where it is, whether it will be used and what
+     happens on the new Mac – or why it cannot be used. *Copy into backup* stores the installer itself in the
+     backup; *Contains a licence or activation* marks licence files as private (no licence is read). Installers
+     without a Developer ID (for example DisplayCAL) are used only after you tick *Use this unverified installer*;
+     macOS then asks you to allow the app on its first start (System Settings › Privacy & Security › Open Anyway);
+   - **Printers & Scanners** — your printers and scanner drivers, with connection and driver;
+   - **macOS settings** — Dock, Finder, keyboard, trackpad, language and more, by category, and what is not
+     transferred and why;
    - **Credentials** — off unless you choose a provider and set a passphrase;
    - **Sign in again** — services that need a new login on the new Mac;
    - locations macOS did not let MacReplica read;
@@ -60,7 +68,9 @@
    recorded automatically. If App Store apps could not be identified, MacReplica says so and offers to install
    the helper tool `mas`, which can look them up.
 3. Click **Save Backup** (or **Save Backup …** if no location is chosen yet). MacReplica creates a folder named
-   `MacReplica-Backup-<date>-<time>`, verifies it and shows its size, location and contents.
+   `MacReplica-Backup-<date>-<time>`, verifies it and shows its size, location, contents and how complete it is.
+   The folder also contains a copy of MacReplica itself and **REINSTALL_MACOS.html** – click **Reinstall Guide**
+   and print it before you erase the Mac.
 4. Copy that folder to the new Mac (or keep it on the external drive).
 
 ## 2. Restore on the new Mac
@@ -129,6 +139,47 @@ If MacReplica was stopped, quit or crashed, the start screen offers:
   else can still be changed.
 - **Discard** — forget the unfinished restore (nothing that was installed is removed).
 
+## 3. Tools
+
+Click **Tools** on the start screen. Every tool first shows what it finds; nothing changes until you press a button
+and confirm, and MacReplica checks the real result afterwards. The **?** buttons explain each part; **Limits and
+details** lists what a tool cannot do. Changes appear under **Changes made with the tools**. Backups and restores
+never use these tools. Background and research: [TOOLS.md](TOOLS.md).
+
+**Gatekeeper and app security**
+- The top shows whether macOS checks apps, and why not (for example a configuration profile you installed).
+- **Choose an app …** checks one app: signature, notarisation, quarantine mark and Gatekeeper's verdict. If macOS
+  blocks it, **Open the app and Privacy & Security** guides you through Apple's “Open Anyway”; afterwards click
+  **I approved it – check again**.
+- **Open app** starts it right away. **Remove quarantine …** lets this one app open without Gatekeeper's first
+  check, including Apple's malware check; only do this for apps you trust. **Put quarantine back** undoes it.
+- **Turn off app checking for this Mac …** (advanced): MacReplica prepares a profile; you install it in System
+  Settings › General › Device Management, then click **Check again**. **Turn app checking back on …** guides you to
+  remove exactly that profile.
+
+**macOS updates**
+- Shows your automatic-update switches and, with **Ask Apple about this version**, whether your version still gets
+  security updates.
+- **Set up recommended settings …** opens Software Update and tells you which switches to change; click **I changed
+  it – check again** afterwards. **Restore previous settings …** goes back.
+- A new major version is installed only when you click “Upgrade”. **Postpone major macOS upgrades** (30, 60 or 90
+  days, Apple's maximum) is offered on macOS 13–15.7.4 and 26 via a profile you install in Device Management;
+  on macOS 15.7.5 and later 15.x it would also hold back security updates, and macOS 27 no longer supports it.
+
+**Window corners** (experimental, macOS 26.4 and later)
+- By default one radius (10 pt like macOS 15, 7, 4, or any value from 2 to 24 pt) applies to everything you tick. Turn
+  off **Same radius for everything** to give each surface its own radius; untick a surface to leave it as macOS draws
+  it. **Apply …**, then quit and reopen apps.
+- Without anything else: app windows (with sheets and alerts), utility panels and **classic menus** (the older style
+  without glass, ≈6 pt).
+- **Menus, popovers and Quick Look … (advanced)** shows, after a warning, the surfaces that need the corner plugin:
+  menus with any radius, popovers, the Quick Look window, toolbar groups and capsule buttons in all apps. The plugin
+  runs only with System Integrity Protection off – only you can turn it off, in recoveryOS – and the Ammonia tweak
+  loader. The panel lists each requirement, the exact steps (and how to undo them) and installs or removes the plugin
+  with your administrator password. On macOS versions it was not tested on, the plugin does nothing.
+- **Restore previous** returns every setting exactly to how it was; **Restore macOS default appearance …** removes
+  them all. The picture area inside Quick Look keeps its own corners in any case.
+
 ## The backup folder
 
 ```
@@ -157,6 +208,8 @@ Keep the folder complete. **Check Backup** verifies every checksum at any time.
 | `~/Library/Application Support/MacReplica/Replaced Files/` | files MacReplica moved aside instead of overwriting them |
 | `~/Library/Application Support/MacReplica/Reports/` | restore reports |
 | `~/Library/Caches/MacReplica/Downloads/` | downloads of the guided installation (verified, quarantined) |
+| `~/Library/Application Support/MacReplica/tools-history.json` | changes made with the tools (no paths, no passwords) |
+| `~/Library/Application Support/MacReplica/Profiles/` | configuration profiles the tools prepared for you to install |
 
 ## Troubleshooting
 

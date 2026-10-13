@@ -36,6 +36,26 @@ struct OwnInstallerTests {
         return dmg
     }
 
+    /// A disk image with a licence agreement, like the OnyX, SuperDuper!, Krita and Murus images: macOS asks to accept it
+    /// before the image opens. The licence is a synthetic one written here (`hdiutil udifrez`).
+    static func licenceImage(app: String, bundleID: String, in sandbox: Sandbox, name: String) async throws -> URL {
+        let dmg = try await diskImage(app: app, bundleID: bundleID, version: "1.0", in: sandbox, name: name)
+        func pascal(_ text: String) -> Data { Data([UInt8(text.utf8.count)]) + Data(text.utf8) }
+        var lpic = Data()
+        for value: Int16 in [0, 1, 0, 0, 0] { withUnsafeBytes(of: value.bigEndian) { lpic.append(contentsOf: $0) } }
+        let labels = ["English", "Agree", "Disagree", "Print", "Save...", "Click Agree to continue."]
+        var strings = Data()
+        withUnsafeBytes(of: Int16(labels.count).bigEndian) { strings.append(contentsOf: $0) }
+        for label in labels { strings.append(pascal(label)) }
+        func resource(_ data: Data, _ name: String) -> [String: Any] { ["Attributes": "0x0000", "Data": data, "ID": "5000", "Name": name] }
+        let resources: [String: Any] = ["LPic": [resource(lpic, "")], "STR#": [resource(strings, "English")],
+                                        "TEXT": [resource(Data("MacReplica test licence.\r".utf8), "English")]]
+        let xml = sandbox.url.appendingPathComponent("\(name)-sla.plist")
+        try PropertyListSerialization.data(fromPropertyList: resources, format: .xml, options: 0).write(to: xml)
+        try run("/usr/bin/hdiutil", ["udifrez", "-xml", xml.path, "", dmg.path])
+        return dmg
+    }
+
     static func inspector(_ sandbox: Sandbox) -> (InstallerArchiveInspector, SystemLayout) {
         let layout = toolchainLayout(sandbox)
         let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:])
@@ -67,6 +87,42 @@ struct OwnInstallerTests {
         await #expect(throws: InstallerInspectionError.unsupportedType) {
             try await inspector.inspect(sandbox.url.appendingPathComponent("notes.txt"), workFolder: work)
         }
+    }
+
+    /// Beta feedback 1.0.4: images with a licence agreement were reported as "unreadable" – `hdiutil imageinfo` lists the
+    /// licence under `Properties`, so it was not recognised and the attach was cancelled. They are recorded now, with
+    /// their contents unchecked, and opened in Finder for the user on the new Mac.
+    @Test func imagesWithALicenceAgreementAreRecognised() async throws {
+        let sandbox = try Sandbox("own-licence")
+        let (inspector, layout) = Self.inspector(sandbox)
+        let dmg = try await Self.licenceImage(app: "Maintenance", bundleID: "com.example.maintenance", in: sandbox, name: "Maintenance")
+        let selection = await inspector.select(dmg, workFolder: sandbox.url.appendingPathComponent("work"), bundleStore: sandbox.url.appendingPathComponent("bundles"))
+        let archive = try selection.result.get().archive
+        #expect(archive.hasLicenseAgreement && archive.containedApps.isEmpty, "recorded without answering the licence")
+        let app = AppRecord(name: "Maintenance", bundleIdentifier: "com.example.maintenance", path: "/Applications/Maintenance.app")
+        #expect(archive.usability(for: app) == .unverified(.contentsNotInspected) && !archive.isUsable(for: app))
+        var approved = archive
+        approved.userApprovedUnverified = true
+        #expect(approved.isUsable(for: app), "usable after the user confirms it")
+
+        // On the new Mac the image is opened in Finder, where the user accepts the licence – MacReplica never answers it.
+        let installer = DownloadInstaller(layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]),
+                                          macOSVersion: "14.8", architecture: .x86_64)
+        let offer = DownloadOffer(id: "own:x", itemID: "manual:m", kind: .ownInstaller, url: dmg.absoluteString, sha256: archive.sha256,
+                                  expectedBundleIdentifier: app.bundleIdentifier, trust: .checksum)
+        let prepared = try await installer.prepare(dmg, offer: offer, staging: sandbox.url.appendingPathComponent("staging"))
+        #expect(prepared == .openInFinder(dmg, reason: .licenseAgreement))
+    }
+
+    @Test func licenceAgreementIsFoundWhereHdiutilPutsIt() {
+        func info(_ body: String) -> String {
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict>\(body)</dict></plist>"
+        }
+        #expect(DownloadInstaller.hasLicenseAgreement(imageInfo: info("<key>Properties</key><dict><key>Software License Agreement</key><true/></dict>")))
+        #expect(DownloadInstaller.hasLicenseAgreement(imageInfo: info("<key>Software License Agreement</key><true/>")), "older output")
+        #expect(!DownloadInstaller.hasLicenseAgreement(imageInfo: info("<key>Properties</key><dict><key>Software License Agreement</key><false/></dict>")))
+        #expect(DownloadInstaller.hasLicenseAgreement(imageInfo: "hdiutil: WARNING: deprecated\n" + info("<key>Properties</key><dict><key>Software License Agreement</key><true/></dict>")),
+                "warnings before the plist")
     }
 
     @Test func onlyInstallersOfTheAppsDeveloperAreUsed() {
@@ -107,8 +163,11 @@ struct OwnInstallerTests {
         #expect(verification.isIntact, "the installer is part of the checksummed backup")
         _ = root
 
+        // The new Mac reads manifest.json from disk (not the in-memory manifest): the installer must be recorded there.
+        let read = try ManifestIO.read(from: outcome.url)
+        #expect(read.applications.first { $0.id == app.id }?.ownInstallers == outcome.manifest.applications.first { $0.id == app.id }?.ownInstallers)
         // The new Mac, without the drive: the copy in the backup is used.
-        let restoredApp = try #require(outcome.manifest.applications.first { $0.id == app.id })
+        let restoredApp = try #require(read.applications.first { $0.id == app.id })
         let layout = toolchainLayout(sandbox)
         try FileManager.default.removeItem(at: drive)
         let offer = try #require(OwnInstallerSource.offer(for: restoredApp, itemID: "manual:quill", backupRoot: outcome.url, layout: layout))

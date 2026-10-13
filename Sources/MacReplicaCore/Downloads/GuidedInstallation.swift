@@ -147,6 +147,13 @@ public actor GuidedInstallation {
                 guard let version = isInstalled(item) else { return failed(item, .noApplicationFound) }
                 log?.info("\(item.id): installed \(version ?? "")", component: .downloads)
                 return finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version ?? nil))
+            case .suite(let folder, _, let mountPoint):
+                set(item.id, .installing)
+                let installed = Result { try installer.installSuite(folder, named: offer.suiteFolderName, source: offer.url) }
+                if let mountPoint { await installer.detach(mountPoint) }
+                _ = try installed.get()
+                guard let version = isInstalled(item) else { return failed(item, .noApplicationFound) }
+                return finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version ?? nil))
             case .package(let package, _):
                 await interaction.openPackage(package)
                 return await waitForUser(item, step: .finishInstaller, interaction: interaction, isInstalled: isInstalled)
@@ -184,6 +191,14 @@ public actor GuidedInstallation {
                 let installed = Result { try installer.installApplication(bundle, source: "file://" + path) }
                 if let mountPoint { await installer.detach(mountPoint) }
                 _ = try installed.get()
+                // Verified by what is on disk afterwards, not by the copy having worked.
+                guard let version = isInstalled(item) else { return failed(item, .noApplicationFound) }
+                result = finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version ?? nil))
+            case .suite(let folder, _, let mountPoint):
+                set(item.id, .installing)
+                let installed = Result { try installer.installSuite(folder, named: offer.suiteFolderName, source: "file://" + path) }
+                if let mountPoint { await installer.detach(mountPoint) }
+                _ = try installed.get()
                 guard let version = isInstalled(item) else { return failed(item, .noApplicationFound) }
                 result = finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version ?? nil))
             case .package(let package, _):
@@ -200,16 +215,21 @@ public actor GuidedInstallation {
         }
         guard result.outcome == .succeeded || result.outcome == .alreadyPresent else { return result }
         var notes = result.notes
+        // An app whose developer macOS cannot verify is blocked on its first start until the user allows it.
+        if offer.developerUnverified == true, result.outcome == .succeeded { notes.append(.approveInPrivacyAndSecurity(app: item.title)) }
         for package in offer.followUps ?? [] {
             do {
                 let copy = try Self.copyIntoStaging(URL(fileURLWithPath: package.path), staging: staging.appendingPathComponent("followup"))
                 guard (try? Hashing.sha256Hex(ofFile: copy)) == package.sha256 else { throw DownloadError.checksumMismatch }
                 var check = offer
                 check.expectedTeamIdentifier = package.teamIdentifier
-                guard case .package(let opened, _) = try await installer.prepare(copy, offer: check, staging: staging.appendingPathComponent("followup")) else {
-                    throw DownloadError.untrustedPackage("not a package")
+                check.developerUnverified = package.developerUnverified
+                switch try await installer.prepare(copy, offer: check, staging: staging.appendingPathComponent("followup")) {
+                case .package(let opened, _): await interaction.openPackage(opened)
+                // An unsigned package the user confirmed: shown in Finder, where macOS asks them to approve it.
+                case .openInFinder(let shown, _) where package.developerUnverified == true: await interaction.openInFinder(shown)
+                default: throw DownloadError.untrustedPackage("not a package")
                 }
-                await interaction.openPackage(opened)
                 switch await interaction.waitForUser(itemID: item.id, step: .finishAdditionalPackage(package.name)) {
                 case .checkAgain: notes.append(.additionalPackageOpened(name: package.name))
                 default: notes.append(.additionalPackageNotInstalled(name: package.name))

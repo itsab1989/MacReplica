@@ -101,7 +101,21 @@ public struct DownloadSourceFinder: Sendable {
         if let website = app.homepage ?? caskMatch(app)?.homepage, Self.isWebsite(website) {
             offers.append(DownloadOffer(id: "website", itemID: itemID, kind: .vendorWebsite, url: website))
         }
+        offers = offers.map { var offer = $0; offer.suiteFolderName = app.suiteFolderName; return offer }
         return Self.markRecommended(offers, originalChannel: app.channel)
+    }
+
+    /// The offer to use when the user has not chosen one: the recommended one, else one in the app's own channel.
+    /// A beta is never switched to stable (or the other way round) without the user choosing it: then there is no default.
+    public static func defaultOffer(_ offers: [DownloadOffer], originalChannel: ReleaseChannel?) -> DownloadOffer? {
+        if let recommended = offers.first(where: \.recommended) { return recommended }
+        let wanted = originalChannel ?? .stable
+        return offers.first { offer in
+            switch offer.kind {
+            case .vendorFeed, .homebrewCask: return (offer.channel ?? .stable) == wanted
+            case .ownInstaller, .appStore, .vendorWebsite: return true
+            }
+        }
     }
 
     static func isWebsite(_ value: String) -> Bool {

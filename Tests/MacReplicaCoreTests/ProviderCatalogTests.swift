@@ -33,7 +33,7 @@ struct ProviderCatalogTests {
         for provider in providers {
             #expect(!provider.bundleIdentifiers.isEmpty, "\(provider.id) has bundle identifiers")
             #expect(!provider.evidence.isEmpty && provider.evidence.allSatisfy { $0.url.hasPrefix("https://") }, "\(provider.id) cites sources")
-            #expect(["2026-10-02", "2026-10-03", "2026-10-04"].contains(provider.researchedOn))
+            #expect(["2026-10-02", "2026-10-03", "2026-10-04", "2026-10-13"].contains(provider.researchedOn))
             // Only providers checked inside the real app (docs/VALIDATION_REPORT.md) say so, and only for those categories.
             if provider.status == .verified {
                 #expect(Self.checkedInRealApp.contains(provider.id) && !provider.verifiedCategories.isEmpty, "\(provider.id) verified with evidence")

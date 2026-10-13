@@ -88,7 +88,7 @@ struct VerificationTests {
         let outcome = try BackupWriter(layout: source.layout, localizer: TestEnvironment.english)
             .write(result, into: parent, log: LogStore(fileURL: nil, homeDirectory: source.layout.homeDirectory))
         #expect(!outcome.isComplete)
-        #expect(outcome.manifest.backupIssues == [BackupIssue(path: vanished.record.originalPath, reason: .unreadable),
+        #expect(outcome.manifest.backupIssues == [BackupIssue(path: vanished.record.originalPath, reason: .unreadable, detail: .missing),
                                                    BackupIssue(path: changed.record.originalPath, reason: .changedDuringBackup)])
         #expect(!outcome.manifest.fonts.contains { $0.backupPath == vanished.record.backupPath || $0.backupPath == changed.record.backupPath })
         // The rest is complete and verifies cleanly; the gaps are written into the manifest and the instructions.
@@ -96,7 +96,7 @@ struct VerificationTests {
         #expect(report.isIntact)
         #expect(report.manifest?.backupIssues.count == 2)
         let guide = try String(contentsOf: outcome.url.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html"), encoding: .utf8)
-        #expect(guide.contains("2 items could not be included"))
+        #expect(guide.contains("Partial: 2 selected files are missing"))
         #expect(outcome.totalSize > 0 && outcome.fileCount > 10)
     }
 

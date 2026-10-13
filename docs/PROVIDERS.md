@@ -98,6 +98,21 @@ permissions, use the driver's own export/import), mail accounts (Internet Accoun
 Plus **user-chosen folders** (any folder in the home folder except credential stores, `~/Library` itself and other
 too-broad or sensitive locations; secret-looking files are always skipped).
 
+### Added 2026-10-13
+
+| App | Location | Left out | Status |
+|---|---|---|---|
+| KeePassXC | `~/Library/Application Support/KeePassXC/keepassxc.ini` (settings) | databases and key files (offered separately, see below), the list of recent databases in `~/Library/Caches` | fixture-tested |
+| VueScan | `~/Pictures/VueScan/*.ini` (settings saved on quit, option sets from File › Save Options), `.icc`/`.icm` kept there | the log, the licence `~/.vuescanrc` (re-enter the serial number; Hamrick allows the licence on every computer in the household) | fixture-tested |
+
+Sources: KeePassXC `src/core/Config.cpp` (AppDataLocation / CacheLocation), Qt `QStandardPaths`; Hamrick VueScan
+manual pages vuesc27 and vuesc36, the `vuescan` cask's zap list.
+
+**Password databases** are never part of a provider. Files that look like secrets are classified from name and file
+format only (KDBX signature, PEM header, Keynote zip) and listed; the user can include one explicitly. KeePassXC's
+remembered databases (`LastDatabases`, `LastOpenedDatabases`, `LastActiveDatabase`) are listed even when they are
+outside the chosen folders. Keychains and browser login data are never included.
+
 ## Credential providers (opt-in, encrypted, never selected by default)
 
 All use the same vault (AES-256-GCM, key from PBKDF2-HMAC-SHA256, 600 000 iterations; passphrase never stored).

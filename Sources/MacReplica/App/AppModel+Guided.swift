@@ -65,7 +65,7 @@ extension AppModel {
     var openApps: [RestoreItem] { openItems.filter { $0.kind == .manualApp || $0.kind == .appStoreApp } }
 
     /// Developer tool steps the user performs (commands MacReplica cannot run).
-    var openToolchainSteps: [RestoreItem] { openItems.filter { $0.kind == .toolchainStep || $0.kind == .displayProfile } }
+    var openToolchainSteps: [RestoreItem] { openItems.filter { $0.kind == .toolchainStep || $0.kind == .displayProfile || $0.kind == .printer } }
 
     func resetGuided() {
         guidedTask?.cancel()
@@ -140,7 +140,9 @@ extension AppModel {
 
     func chosenOffer(for itemID: String) -> DownloadOffer? {
         let offers = guided.offers[itemID] ?? []
-        return offers.first { $0.id == selection.sourceChoices[itemID] } ?? offers.first(where: \.recommended) ?? offers.first
+        if let chosen = offers.first(where: { $0.id == selection.sourceChoices[itemID] }) { return chosen }
+        let channel = openApps.first { $0.id == itemID }?.app?.channel
+        return DownloadSourceFinder.defaultOffer(offers, originalChannel: channel)
     }
 
     func chooseOffer(_ offerID: String, for itemID: String) {
@@ -221,15 +223,8 @@ extension AppModel {
 
     /// The installed version of an app the item describes, or nil if it is not installed.
     nonisolated static func installedVersion(of item: RestoreItem, layout: SystemLayout) -> String?? {
-        for folder in layout.applicationFolders {
-            for name in item.appBundleNames where !name.contains("/") {
-                let info = NSDictionary(contentsOf: folder.appendingPathComponent(name).appendingPathComponent("Contents/Info.plist")) as? [String: Any]
-                guard let info else { continue }
-                if let expected = item.bundleIdentifier, (info["CFBundleIdentifier"] as? String)?.lowercased() != expected.lowercased() { continue }
-                return .some(info["CFBundleShortVersionString"] as? String)
-            }
-        }
-        return nil
+        guard let app = ApplicationLocator.find(names: item.appBundleNames, bundleIdentifier: item.bundleIdentifier, in: layout.applicationFolders) else { return nil }
+        return .some(ApplicationLocator.version(of: app))
     }
 
     func copyToPasteboard(_ text: String) {
@@ -239,11 +234,19 @@ extension AppModel {
 
     /// The instruction for a guided developer-tool step, or the website for installing its manager.
     func instruction(for item: RestoreItem) -> String? {
+        if item.kind == .printer { return l.printerInstruction(item) }
         if let assignment = item.displayAssignment {
             let profile = assignment.profileDescription ?? assignment.macOSProfile ?? ""
             return l.t("guided.display.instruction", assignment.displayName ?? item.title, profile)
         }
         guard let action = item.toolchain else { return nil }
         return ToolchainCatalog.provider(action.provider).manualInstruction(for: action)
+    }
+}
+
+extension AppModel {
+    /// System Settings › Printers & Scanners, where the user adds a printer (never done by MacReplica).
+    func openPrinterSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension") { NSWorkspace.shared.open(url) }
     }
 }

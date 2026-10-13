@@ -178,6 +178,51 @@ enum FakeTools {
     exit 1
     """#
 
+    /// `lpstat -v`: one line per simulated print queue (`state/printers/<queue>` holds the device URI).
+    static let lpstat = #"""
+    #!/bin/bash
+    set -u
+    . "${MACREPLICA_SIMULATION_ROOT:?}/tools/lib.sh"
+    log_call "lpstat $*"
+    for f in "$S"/printers/*; do
+      [ -e "$f" ] || continue
+      echo "device for $(basename "$f"): $(cat "$f")"
+    done
+    exit 0
+    """#
+
+    /// `defaults export|import <domain|-g> …` on the simulated Mac's preference files (`home/Library/Preferences`), so the
+    /// real preferences are never touched. Uses the system's plutil for the format conversion.
+    static let defaults = #"""
+    #!/bin/bash
+    set -u
+    . "${MACREPLICA_SIMULATION_ROOT:?}/tools/lib.sh"
+    log_call "defaults $*"
+    H="${HOME:?}"
+    prefs="$H/Library/Preferences"; mkdir -p "$prefs"
+    domain="${2:-}"; [ "$domain" = "-g" ] && domain=".GlobalPreferences"
+    file="$prefs/$domain.plist"
+    case "${1:-}" in
+      export)
+        [ -f "$file" ] || { echo "Domain $domain does not exist" >&2; exit 1; }
+        /usr/bin/plutil -convert xml1 -o - "$file"; exit 0 ;;
+      import)
+        fail_if_needed "defaults-$domain"
+        /usr/bin/plutil -convert binary1 -o "$file" "$3"; exit $? ;;
+    esac
+    echo "defaults: unsupported in the simulation: $*" >&2; exit 1
+    """#
+
+    /// `killall <process>`: records which process would have been restarted.
+    static let killall = #"""
+    #!/bin/bash
+    set -u
+    . "${MACREPLICA_SIMULATION_ROOT:?}/tools/lib.sh"
+    log_call "killall $*"
+    echo "$1" >> "$S/restarted"
+    exit 0
+    """#
+
     static let brew = #"""
     #!/bin/bash
     set -u
@@ -197,6 +242,16 @@ enum FakeTools {
         exit 0 ;;
       info)
         if [ -f "$S/scan-delay" ]; then sleep "$(cat "$S/scan-delay")"; fi
+        # Definitions of casks from third-party taps: brew info --json=v2 --cask user/tap/token …
+        if [ "${2:-}" = "--json=v2" ] && [ "${3:-}" = "--cask" ]; then
+          shift 3; printf '{"formulae":[],"casks":['; first=1
+          for t in "$@"; do
+            f="$S/brew/tap-casks/$(echo "$t" | sed 's#/#__#g').json"
+            [ -f "$f" ] || { echo "Error: Cask '$t' is unavailable" >&2; exit 1; }
+            [ $first = 1 ] || printf ','; first=0; cat "$f"
+          done
+          printf ']}\n'; exit 0
+        fi
         printf '{"formulae":['
         first=1
         for f in "$S"/brew/formulae/*; do
@@ -219,7 +274,14 @@ enum FakeTools {
           [ -n "$app" ] && artifacts="[{\"app\":[\"$app\"]}]"
           [ $first = 1 ] || printf ','
           first=0
-          printf '{"token":"%s","full_token":"%s","tap":"homebrew/cask","installed":"%s","artifacts":%s}' "$t" "$t" "$v" "$artifacts"
+          # A cask Homebrew removed or disabled since it was installed (state file: removed, or disabled:reason:date).
+          state=""; [ -f "$S/brew/cask-state/$t" ] && state="$(cat "$S/brew/cask-state/$t")"
+          case "$state" in
+            removed) printf '{"token":"%s","full_token":"%s","tap":null,"url":"","installed":"%s","artifacts":%s}' "$t" "$t" "$v" "$artifacts" ;;
+            disabled:*) reason="$(echo "$state" | cut -d: -f2)"; date="$(echo "$state" | cut -d: -f3)"
+              printf '{"token":"%s","full_token":"%s","tap":"homebrew/cask","url":"https://example.com/x.dmg","disabled":true,"disable_reason":"%s","disable_date":"%s","installed":"%s","artifacts":%s}' "$t" "$t" "$reason" "$date" "$v" "$artifacts" ;;
+            *) printf '{"token":"%s","full_token":"%s","tap":"homebrew/cask","url":"https://example.com/x.dmg","installed":"%s","artifacts":%s}' "$t" "$t" "$v" "$artifacts" ;;
+          esac
         done
         printf ']}\n'
         exit 0 ;;
@@ -231,7 +293,10 @@ enum FakeTools {
           n="$(basename "$f" | sed 's#__#/#')"; r="$(cat "$f")"
           [ $first = 1 ] || printf ','
           first=0
-          printf '{"name":"%s","remote":"%s","installed":true}' "$n" "$r"
+          tokens=""; for c in "$S"/brew/tap-casks/"$(basename "$f")"__*.json; do
+            [ -e "$c" ] || continue; tok="$(basename "$c" .json | sed 's#__#/#g')"; tokens="$tokens${tokens:+,}\"$tok\""
+          done
+          printf '{"name":"%s","remote":"%s","installed":true,"cask_tokens":[%s]}' "$n" "$r" "$tokens"
         done
         printf ']\n'
         exit 0 ;;
@@ -250,6 +315,8 @@ enum FakeTools {
         exit 0 ;;
       list)
         kind="${2:-}"; name="${4:-}"
+        # Like Homebrew 5: `list --cask` knows casks only by their short token; `user/tap/token` fails.
+        if [ "$kind" = "--cask" ]; then case "$name" in */*) exit 1 ;; esac; fi
         if [ "$kind" = "--formula" ]; then f="$S/brew/formulae/$name"; else f="$S/brew/casks/$name"; fi
         if [ -n "$name" ] && [ -f "$f" ]; then echo "$name $(cat "$f")"; exit 0; fi
         echo "Error: No such keg or cask: $name" >&2
@@ -304,6 +371,10 @@ enum FakeTools {
         fi
         spec="$S/brew/available/casks/$name.json"
         [ -f "$spec" ] || { echo "Error: Cask '$name' is unavailable: No Cask with this name exists." >&2; exit 1; }
+        case "$(cat "$S/brew/cask-state/$name" 2>/dev/null)" in
+          removed) echo "Error: Cask '$name' is unavailable: No Cask with this name exists." >&2; exit 1 ;;
+          disabled:*) echo "Error: $name has been disabled because it does not pass the macOS Gatekeeper check!" >&2; exit 1 ;;
+        esac
         version="$(json_value "$spec" version)"; app="$(json_value "$spec" app)"; bid="$(json_value "$spec" bundle_id)"
         prefix="$(cd "$(dirname "$0")/.." && pwd)"
         case "$name" in
@@ -339,7 +410,7 @@ enum FakeTools {
           if [ -e "$appdir/$app" ]; then echo "Error: It seems there is already an App at '$appdir/$app'." >&2; exit 1; fi
           make_app "$appdir/$app" "$bid" "$version"
         fi
-        printf '%s' "$version" > "$S/brew/casks/$name"
+        printf '%s' "$version" > "$S/brew/casks/$(basename "$name")"
         echo "==> Installing Cask $name"
         exit 0 ;;
     esac

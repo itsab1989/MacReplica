@@ -8,11 +8,14 @@ struct GuidedInstallView: View {
     var body: some View {
         let l = model.l
         let apps = model.openApps
-        let tools = model.openToolchainSteps
+        let steps = model.openToolchainSteps
+        let tools = steps.filter { $0.kind == .toolchainStep }
+        // Displays, printers and scanners are set up in System Settings, not with a Terminal command.
+        let devices = steps.filter { $0.kind != .toolchainStep }
         ScreenLayout(title: l.t("guided.title"), subtitle: l.t("guided.subtitle")) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if apps.isEmpty && tools.isEmpty {
+                    if apps.isEmpty && steps.isEmpty {
                         NoticeView(style: .success, title: l.t("guided.allDone.title"), message: l.t("guided.allDone.message"))
                     }
                     if !apps.isEmpty {
@@ -31,6 +34,17 @@ struct GuidedInstallView: View {
                             ForEach(apps) { item in
                                 GuidedAppRow(item: item)
                                 if item.id != apps.last?.id { Divider() }
+                            }
+                        }
+                    }
+                    if !devices.isEmpty {
+                        Text(l.p("guided.devices.heading", devices.count)).font(.headline)
+                        Text(l.t("guided.devices.message")).font(.callout).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Card {
+                            ForEach(devices) { item in
+                                GuidedToolchainRow(item: item)
+                                if item.id != devices.last?.id { Divider() }
                             }
                         }
                     }
@@ -103,22 +117,37 @@ struct GuidedAppRow: View {
                 Spacer()
                 GuidedStatusView(item: item)
             }
+            if let app = item.app {
+                AppRelationNotes(app: app).padding(.leading, 22)
+            }
             if offers.count > 1 {
                 HStack {
                     Text(l.t("guided.source")).font(.caption).foregroundStyle(.secondary)
                     Picker(l.t("guided.source"), selection: Binding(get: { chosen?.id ?? "" }, set: { model.chooseOffer($0, for: item.id) })) {
+                        if chosen == nil { Text(l.t("guided.source.choose")).tag("") }
                         ForEach(offers) { offer in Text(l.offerText(offer)).tag(offer.id) }
                     }
                     .labelsHidden()
                     .fixedSize()
                     .disabled(model.guided.running)
                     .accessibilityIdentifier("guided.source.\(item.id)")
+                    HelpButton(text: l.t("guided.source.help"), title: l.t("guided.source"), id: "help.guided.source.\(item.id)")
                 }
                 .padding(.leading, 22)
+                if chosen == nil, let channel = item.app?.channel {
+                    Text(l.t("guided.source.noChannel", l.channelText(channel))).font(.caption).foregroundStyle(.orange)
+                        .padding(.leading, 22).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("guided.noChannel.\(item.id)")
+                }
             } else if let chosen {
                 Text(l.offerText(chosen)).font(.caption).foregroundStyle(.secondary).padding(.leading, 22)
             } else if model.guided.searched {
                 Text(l.t("guided.noSource")).font(.caption).foregroundStyle(.secondary).padding(.leading, 22)
+            }
+            if let chosen, let versionText = l.installedVersionText(chosen, original: item.originalVersion) {
+                Text(versionText).font(.caption).padding(.leading, 22)
+                    .foregroundStyle(chosen.version.map { VersionComparison.compare($0, item.originalVersion ?? $0) == .orderedAscending } == true ? Color.orange : Color.secondary)
+                    .accessibilityIdentifier("guided.version.\(item.id)")
             }
             if let chosen {
                 Text(chosen.kind == .appStore ? l.t("offer.appStore.hint") : chosen.kind == .vendorWebsite ? l.t("offer.website.hint") : l.trustText(chosen.trust))
@@ -207,7 +236,14 @@ struct GuidedToolchainRow: View {
                     Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            if item.kind == .displayProfile, let instruction {
+            if item.kind == .printer, let instruction {
+                Text(instruction).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("guided.printer.\(item.id)")
+                Button(l.t("printer.openSettings")) { model.openPrinterSettings() }
+                    .controlSize(.small)
+                    .accessibilityIdentifier("guided.printerSettings.\(item.id)")
+            } else if item.kind == .displayProfile, let instruction {
                 Text(instruction).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else if let instruction, instruction.hasPrefix("https://") {
                 Button(instruction) { model.openWebPage(instruction) }.buttonStyle(.link).font(.caption)

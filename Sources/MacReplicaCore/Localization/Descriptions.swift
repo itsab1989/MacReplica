@@ -48,6 +48,8 @@ extension Localizer {
         case .colorProfiles: return t("component.colorProfiles")
         case .launchpad: return t("component.launchpad")
         case .personalFolders: return t("component.personalFolders")
+        case .printers: return t("component.printers")
+        case .systemSettings: return t("component.systemSettings")
         }
     }
 
@@ -67,6 +69,8 @@ extension Localizer {
         case .colorProfiles: return t("component.colorProfiles.hint")
         case .launchpad: return t("component.launchpad.hint")
         case .personalFolders: return t("component.personalFolders.hint")
+        case .printers: return t("component.printers.hint")
+        case .systemSettings: return t("component.systemSettings.hint")
         }
     }
 
@@ -90,6 +94,8 @@ extension Localizer {
         case .manualApp: return t("kind.manualApp")
         case .displayProfile: return t("kind.displayProfile")
         case .launchpadLayout: return t("kind.launchpadLayout")
+        case .printer: return t("kind.printer")
+        case .systemSetting: return t("kind.systemSetting")
         }
     }
 
@@ -215,6 +221,11 @@ extension Localizer {
             return missing.isEmpty ? p("note.vaultsRegistered", found) : p("note.vaultsRegistered", found) + " " + t("note.vaultsMissing", missing.joined(separator: ", "))
         case .additionalPackageOpened(let name): return t("note.additionalPackageOpened", name)
         case .additionalPackageNotInstalled(let name): return t("note.additionalPackageNotInstalled", name)
+        case .approveInPrivacyAndSecurity(let app): return t("note.approveInPrivacyAndSecurity", app)
+        case .settingsApplied(let count): return p("note.settingsApplied", count)
+        case .settingsNotKept(let keys): return t("note.settingsNotKept", keys.joined(separator: ", "))
+        case .settingsDifferentType(let keys): return t("note.settingsDifferentType", keys.joined(separator: ", "))
+        case .logoutRequired: return t("note.logoutRequired")
         }
     }
 
@@ -230,6 +241,7 @@ extension Localizer {
     /// The name shown for a restore step: localized for application data, otherwise the item's own name.
     public func itemTitle(_ item: RestoreItem) -> String {
         if let file = item.file { return fileTitle(file) }
+        if item.kind == .systemSetting { return t("settings.category.\(item.identifier)") }
         guard let profile = item.applicationData?.profile else { return item.title }
         let version = profile.appVersion.flatMap { $0 == profile.appName ? nil : " (\($0))" } ?? ""
         return profileText(profile) + version
@@ -417,6 +429,11 @@ extension Localizer {
     }
 
     public func backupIssueText(_ reason: BackupIssue.Reason) -> String { t("backupIssue.\(reason.rawValue)") }
+
+    /// The precise reason when one was recorded, else the general one.
+    public func backupIssueText(_ issue: BackupIssue) -> String {
+        issue.detail.map { t("backupIssue.detail.\($0.rawValue)") } ?? backupIssueText(issue.reason)
+    }
 
     public func manualHint(for app: AppRecord) -> String {
         if app.source == .appStore || app.restoreMethod.category == .appStore { return t("manual.hint.appStore") }

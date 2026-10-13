@@ -380,7 +380,8 @@ struct DryRunTests {
         let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.brewFormulae]))
         let executor = RestoreExecutor(environment: TestEnvironment.restoreEnvironment(target), backupRoot: sandbox.url, sessionStore: nil)
         let entries = await executor.dryRun(plan: plan, selection: RestoreSelection())
-        #expect(entries.first { $0.item.id == "formula:example/tools/tool" }?.prediction == .willSkip(.dependencyFailed(itemTitle: "example/tools")))
+        // The tap was not allowed: the package says so (allowing the tap fixes it) rather than “dependency failed”.
+        #expect(entries.first { $0.item.id == "formula:example/tools/tool" }?.prediction == .willSkip(.tapNotEnabled(tap: "example/tools")))
     }
 
     func snapshot(_ root: URL) throws -> [String: String] {

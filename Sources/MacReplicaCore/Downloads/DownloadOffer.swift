@@ -21,6 +21,8 @@ public struct DownloadOffer: Codable, Equatable, Hashable, Sendable, Identifiabl
         public var path: String
         public var sha256: String
         public var teamIdentifier: String?
+        /// Not signed with a Developer ID; the user confirmed it on the old Mac. Shown in Finder, never opened by MacReplica.
+        public var developerUnverified: Bool?
         public init(name: String, path: String, sha256: String, teamIdentifier: String?) {
             self.name = name
             self.path = path
@@ -66,6 +68,13 @@ public struct DownloadOffer: Codable, Equatable, Hashable, Sendable, Identifiabl
     /// For `.ownInstaller`: the installer file on this Mac (in the backup or on the drive it was kept on).
     public var localPath: String?
     public var followUps: [LocalPackage]?
+    /// For `.ownInstaller`: the developer could not be verified (no Developer ID signature) and the user confirmed using
+    /// it anyway. The checksum is still checked; packages are shown in Finder instead of being opened, and macOS asks
+    /// the user to approve the app on its first start.
+    public var developerUnverified: Bool?
+    /// The folder the app was in on the old Mac when it belongs to a suite (e.g. `DisplayCAL`); a suite is installed
+    /// into a folder of this name.
+    public var suiteFolderName: String?
 
     public init(id: String, itemID: String, kind: Kind, url: String, version: String? = nil, channel: ReleaseChannel? = nil,
                 expectedLength: Int64? = nil, sha256: String? = nil, edSignature: String? = nil, publicEDKey: String? = nil,

@@ -13,6 +13,15 @@ public enum BackupError: Error, Equatable, Sendable {
     case verificationFailed(String)
 }
 
+/// How complete a saved backup is. A backup that could not be saved at all is not a `BackupOutcome` (it is removed).
+public enum BackupCompleteness: String, Sendable {
+    case complete
+    /// Everything selected is in it, except files MacReplica leaves out on purpose because they look like secrets.
+    case completeWithIntentionalExclusions
+    /// Some selected items could not be included (unreadable, removed, changed while copying, only in iCloud …).
+    case partial
+}
+
 /// The result of writing a backup.
 public struct BackupOutcome: Sendable, Equatable {
     public var url: URL
@@ -30,9 +39,21 @@ extension Manifest {
     /// Files left out on purpose because they look like passwords, keys or cookies.
     public var excludedSensitiveFiles: [BackupIssue] { backupIssues.filter { $0.reason == .refusedSensitive } }
 
+    /// Files that look like a secret and are in the backup because the user explicitly asked for them.
+    public var sensitiveFilesIncludedOnRequest: [FileRecord] {
+        applicationData.flatMap(\.files).filter { $0.metadata[AppDataScanner.includedOnRequestKey] != nil }
+    }
+
+    /// How complete the backup is: what was selected is all there; or all there except files left out on purpose
+    /// (they look like secrets); or some selected items are missing.
+    public var completeness: BackupCompleteness {
+        if !backupGaps.isEmpty { return .partial }
+        return excludedSensitiveFiles.isEmpty ? .complete : .completeWithIntentionalExclusions
+    }
+
     /// Every file stored in the backup that has a recorded checksum.
     public var allFileRecords: [FileRecord] {
-        fonts + iccProfiles + python.environments.flatMap(\.projectFiles) + applicationData.flatMap(\.files) + installerRecords
+        fonts + iccProfiles + python.environments.flatMap(\.projectFiles) + applicationData.flatMap(\.files) + installerRecords + printers.compactMap(\.ppd) + settings.flatMap(\.files)
     }
 
     /// The user's own installers that were copied into the backup.
@@ -79,6 +100,7 @@ public struct BackupWriter: Sendable {
     }
 
     public static let checksumsPath = "checksums/SHA256SUMS"
+    public static let reinstallGuidePath = "restore/REINSTALL_MACOS.html"
 
     public static func folderName(for date: Date) -> String {
         let formatter = DateFormatter()
@@ -91,9 +113,9 @@ public struct BackupWriter: Sendable {
     /// and recorded as backup issues (a partial backup). Anything that would make
     /// the backup unusable removes the incomplete folder again and throws.
     /// The files plus a margin for the manifest, checksums and reports.
-    static func estimatedSize(of inventory: InventoryResult) -> Int64 {
+    static func estimatedSize(of inventory: InventoryResult, selfCopy: URL? = nil) -> Int64 {
         let files = (inventory.fonts + inventory.colorProfiles + inventory.extraFiles).reduce(Int64(0)) { $0 + $1.record.size }
-        return files + files / 100 + 50_000_000
+        return files + files / 100 + 50_000_000 + (selfCopy.map(BootstrapApp.size(of:)) ?? 0)
     }
 
     /// Free space of the volume (nil if it cannot be read, e.g. some network shares; then the copy itself reports a full disk).
@@ -104,12 +126,13 @@ public struct BackupWriter: Sendable {
     }
 
     public func write(_ inventory: InventoryResult, into parent: URL, log: LogStore, credentials: CredentialExportRequest? = nil,
+                      selfCopy: URL? = nil,
                       progress: @Sendable (BackupProgress) -> Void = { _ in }) throws -> BackupOutcome {
         guard FileManager.default.isWritableFile(atPath: parent.path) else {
             throw BackupError.destinationNotWritable(layout.displayPath(parent))
         }
         // Checked before anything is written: own folders have no size limit.
-        let needed = Self.estimatedSize(of: inventory)
+        let needed = Self.estimatedSize(of: inventory, selfCopy: selfCopy)
         if let available = Self.availableSpace(at: parent), needed > available {
             throw BackupError.notEnoughSpace(needed: needed, available: available)
         }
@@ -125,10 +148,10 @@ public struct BackupWriter: Sendable {
             var failed = Set<String>()
             for (index, file) in files.enumerated() {
                 progress(BackupProgress(fraction: Double(index) / Double(max(files.count, 1)) * 0.85, currentFile: file.record.fileName))
-                if let reason = try copy(file, into: root) {
+                if let issue = try copy(file, into: root) {
                     failed.insert(file.record.backupPath)
-                    manifest.backupIssues.append(BackupIssue(path: file.record.originalPath, reason: reason))
-                    log.warning("Not included (\(reason.rawValue)): \(file.record.originalPath)", component: .backup)
+                    manifest.backupIssues.append(issue)
+                    log.warning("Not included (\(issue.detail?.rawValue ?? issue.reason.rawValue)): \(file.record.originalPath)", component: .backup)
                 }
             }
             manifest.fonts.removeAll { failed.contains($0.backupPath) }
@@ -138,6 +161,11 @@ public struct BackupWriter: Sendable {
             }
             for index in manifest.applicationData.indices {
                 manifest.applicationData[index].files.removeAll { failed.contains($0.backupPath) }
+            }
+            for index in manifest.settings.indices { manifest.settings[index].files.removeAll { failed.contains($0.backupPath) } }
+            manifest.settings.removeAll { $0.files.isEmpty }
+            for index in manifest.printers.indices where manifest.printers[index].ppd.map({ failed.contains($0.backupPath) }) == true {
+                manifest.printers[index].ppd = nil
             }
             for index in manifest.applications.indices {
                 guard var installers = manifest.applications[index].ownInstallers else { continue }
@@ -170,7 +198,20 @@ public struct BackupWriter: Sendable {
                 }
             }
 
-            // 4. Manifest, reports, instructions
+            // 4. A copy of MacReplica itself, to start the restore on the new Mac without a download. A problem with it
+            //    is logged and shown; it never stops the backup of the user's data.
+            if let selfCopy {
+                do {
+                    manifest.bootstrapApp = try BootstrapApp.copy(selfCopy, into: root)
+                    if let app = manifest.bootstrapApp {
+                        log.info("MacReplica \(app.version) copied into the backup (\(app.architectures.map(\.rawValue).joined(separator: ", ")))", component: .backup)
+                    }
+                } catch {
+                    log.warning("MacReplica could not be copied into the backup: \(error)", component: .backup)
+                }
+            }
+
+            // 5. Manifest, reports, instructions
             try ManifestIO.write(manifest, to: root)
             log.info("Wrote manifest version \(manifest.manifestVersion)", component: .backup)
             let builder = ReportBuilder(localizer: localizer)
@@ -178,7 +219,12 @@ public struct BackupWriter: Sendable {
             try writeText(builder.manualInstallationsReport(manifest), to: root.appendingPathComponent("reports/manual_installations.html"))
             try writeText(builder.restoreInstructions(manifest, folderName: root.lastPathComponent),
                           to: root.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html"))
-            try writeText(localizer.t("backup.readme", root.lastPathComponent), to: root.appendingPathComponent("README.txt"))
+            let profile = MacProfile(architecture: manifest.architecture, modelIdentifier: manifest.modelIdentifier, macOSVersion: manifest.macosVersion)
+            try writeText(builder.reinstallGuide(profile: profile, manifest: manifest, backupFolderName: root.lastPathComponent),
+                          to: root.appendingPathComponent(Self.reinstallGuidePath))
+            var readme = localizer.t("backup.readme", root.lastPathComponent)
+            if let app = manifest.bootstrapApp { readme = localizer.bootstrapReadme(app) + "\n\n" + readme }
+            try writeText(readme, to: root.appendingPathComponent("README.txt"))
 
             // 4. Checksums over everything, then verify the finished backup.
             progress(BackupProgress(fraction: 0.9, currentFile: nil))
@@ -210,13 +256,23 @@ public struct BackupWriter: Sendable {
         try Data(text.utf8).write(to: url, options: .atomic)
     }
 
-    /// Copies one file. Returns a reason if the file could not be included.
-    private func copy(_ file: ScannedFile, into root: URL) throws -> BackupIssue.Reason? {
-        guard let destination = PathSafety.resolve(file.record.backupPath, inside: root) else {
-            throw BackupError.copyFailed(file.record.backupPath)
+    /// Copies one file. Returns the issue if the file could not be included.
+    ///
+    /// The names are checked with the same rules the verifier and the restore use: a file whose name the backup cannot
+    /// hold (for example one starting with `~`) is left out and reported here, so it can never make the verification
+    /// of the whole backup fail afterwards.
+    private func copy(_ file: ScannedFile, into root: URL) throws -> BackupIssue? {
+        let original = file.record.originalPath
+        guard PathSafety.isSafeRelativePath(file.record.relativePath),
+              let destination = PathSafety.resolve(file.record.backupPath, inside: root) else {
+            return BackupIssue(path: original, reason: .unreadable, detail: .unsupportedName)
         }
+        // Files with prepared contents (home folder replaced by a placeholder) were read during the scan.
+        guard file.contents != nil || FileManager.default.fileExists(atPath: file.url.path) else {
+            return BackupIssue(path: original, reason: .unreadable, detail: .missing)
+        }
+        guard file.contents != nil || FileManager.default.isReadableFile(atPath: file.url.path) else { return BackupIssue(path: original, reason: .unreadable) }
         try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-        guard FileManager.default.isReadableFile(atPath: file.url.path) else { return .unreadable }
         do {
             if let contents = file.contents {
                 try contents.write(to: destination)
@@ -224,12 +280,13 @@ public struct BackupWriter: Sendable {
                 try FileManager.default.copyItem(at: file.url, to: destination)
             }
         } catch {
-            return .unreadable
+            let gone = !FileManager.default.fileExists(atPath: file.url.path)
+            return BackupIssue(path: original, reason: .unreadable, detail: gone ? .missing : nil)
         }
         // The copy must match the checksum recorded during the scan.
         guard (try? Hashing.sha256Hex(ofFile: destination)) == file.record.sha256 else {
             try? FileManager.default.removeItem(at: destination)
-            return .changedDuringBackup
+            return BackupIssue(path: original, reason: .changedDuringBackup)
         }
         return nil
     }

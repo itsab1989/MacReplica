@@ -60,7 +60,7 @@ struct PythonSection: View {
                                     if on { model.preservedPythonEnvironments.insert(environment.id) } else { model.preservedPythonEnvironments.remove(environment.id) }
                                 })) {
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(l.t("python.keepCopy"))
+                                    LabelWithHelp(label: l.t("python.keepCopy"), help: l.t("python.keepCopy.help"), id: "help.python.keepCopy.\(environment.id)")
                                     Text(l.t("python.keepCopy.hint")).font(.caption).foregroundStyle(.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
@@ -87,6 +87,86 @@ struct PythonSection: View {
 }
 
 /// Application settings and customizations: detected app data (per item) and folders the user added.
+/// macOS settings by category, and what is never transferred (with the reason).
+struct SettingsSection: View {
+    @EnvironmentObject var model: AppModel
+    @ViewState private var showNotTransferred = false
+
+    var body: some View {
+        let l = model.l
+        let records = model.inventory?.manifest.settings ?? []
+        VStack(alignment: .leading, spacing: 6) {
+            LabelWithHelp(label: l.t("settings.section.title"), help: l.t("settings.section.help"), id: "help.settings", font: .headline)
+            Text(l.t("settings.section.message")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Card {
+                ForEach(SettingsCatalog.categories) { category in
+                    let record = records.first { $0.category == category.id }
+                    HStack(alignment: .firstTextBaseline) {
+                        Toggle(isOn: Binding(get: { record != nil && !model.excludedSettings.contains(category.id) },
+                                             set: { on in if on { model.excludedSettings.remove(category.id) } else { model.excludedSettings.insert(category.id) } })) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(l.t("settings.category.\(category.id)"))
+                                Text(l.t("settings.category.\(category.id).hint") + " " + l.t("settings.apply.\(category.apply.rawValue)"))
+                                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .toggleStyle(.checkbox)
+                        .disabled(record == nil)
+                        .accessibilityIdentifier("settings.\(category.id)")
+                        Spacer()
+                        Text(record.map { l.p("settings.count", $0.keyCount) } ?? l.t("settings.none")).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            DisclosureGroup(l.t("settings.notTransferred.title"), isExpanded: $showNotTransferred) {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(SettingsCatalog.notTransferred, id: \.self) { id in
+                        Text("• " + l.t("settings.not.\(id)")).font(.callout).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.top, 4)
+            }
+            .accessibilityIdentifier("settings.notTransferred")
+        }
+    }
+}
+
+/// Printers and scanner drivers: recorded so they can be set up again on the new Mac (with the user, never automatically).
+struct PrintersSection: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        let manifest = model.inventory?.manifest
+        let printers = manifest?.printers ?? []
+        let scanners = manifest?.scannerDrivers ?? []
+        if !printers.isEmpty || !scanners.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    LabelWithHelp(label: l.t("printer.section.title"), help: l.t("printer.section.help"), id: "help.printers", font: .headline)
+                    Spacer()
+                    Toggle(l.t("printer.section.include"), isOn: $model.includePrinters)
+                        .toggleStyle(.checkbox)
+                        .accessibilityIdentifier("printers.include")
+                }
+                Card {
+                    ForEach(printers) { printer in
+                        Label(l.printerSummary(printer), systemImage: "printer")
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("printer.\(printer.queue)")
+                    }
+                    ForEach(scanners) { scanner in
+                        Label(l.t("printer.scanner.summary", scanner.name, scanner.version ?? "–"), systemImage: "scanner")
+                            .accessibilityIdentifier("scanner.\(scanner.name)")
+                    }
+                    Text(l.t("printer.section.message")).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+}
+
 struct ApplicationDataSection: View {
     @EnvironmentObject var model: AppModel
 
@@ -123,7 +203,7 @@ struct ApplicationDataSection: View {
             }
             let refused = (model.inventory?.manifest.backupIssues ?? []).filter { $0.reason == .refusedSensitive }
             if !refused.isEmpty {
-                Text(l.p("appData.refused", refused.count))
+                Text(l.p("appData.refused", refused.count) + " " + l.t("appData.refused.where"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -220,6 +300,9 @@ struct AppDataRow: View {
             .toggleStyle(.checkbox)
             .help(l.appDataHelp(folder))
             .accessibilityIdentifier("appData.\(folder.profile.map { "\($0.provider).\($0.category)" } ?? folder.id)")
+            // Visible help: hover tooltips alone were not found (beta feedback 1.0.4).
+            HelpButton(text: l.appDataHelp(folder), title: folder.name,
+                       id: "help.appData.\(folder.profile.map { "\($0.provider).\($0.category)" } ?? folder.id)")
             Spacer()
             Text(l.t("appData.summary", l.p("guide.appData.files", folder.files.count), l.fileSize(folder.totalSize)))
                 .font(.callout).foregroundStyle(.secondary)
@@ -248,25 +331,22 @@ struct BackupSavedView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if let outcome {
-                        if outcome.isComplete {
-                            NoticeView(style: .success, title: l.t("saved.verified"), message: l.t("saved.message"))
+                        NoticeView(style: .success, title: l.t("saved.verified"), message: l.t("saved.message"))
+                        CompletenessNotice(manifest: outcome.manifest)
+                        if let app = outcome.manifest.bootstrapApp {
+                            let runsHere = app.runs(on: outcome.manifest.architecture)
+                            NoticeView(style: app.isUniversal ? .info : .warning, title: l.bootstrapSummary(app),
+                                       message: runsHere ? l.t("bootstrap.saved.message") : l.t("bootstrap.notThisMac"))
+                                .accessibilityIdentifier("saved.bootstrap")
                         } else {
-                            NoticeView(style: .warning, title: l.p("saved.partial", outcome.manifest.backupGaps.count), message: l.t("saved.partialMessage"))
-                            Card {
-                                ForEach(Array(outcome.manifest.backupGaps.prefix(8).enumerated()), id: \.offset) { _, issue in
-                                    HStack(alignment: .firstTextBaseline) {
-                                        Text(issue.path).font(.caption.monospaced()).lineLimit(1).truncationMode(.middle)
-                                        Spacer()
-                                        Text(l.backupIssueText(issue.reason)).font(.caption).foregroundStyle(.secondary)
-                                    }
-                                }
-                                if outcome.manifest.backupGaps.count > 8 {
-                                    Text(l.t("saved.moreIssues", outcome.manifest.backupGaps.count - 8)).font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
+                            NoticeView(style: .warning, title: l.t("bootstrap.missing"), message: l.t("bootstrap.missing.message", MacReplicaLinks.releases.absoluteString))
+                                .accessibilityIdentifier("saved.bootstrap")
                         }
-                        if !outcome.manifest.excludedSensitiveFiles.isEmpty {
-                            NoticeView(style: .info, title: l.p("appData.refused", outcome.manifest.excludedSensitiveFiles.count))
+                        if outcome.manifest.completeness != .complete || !outcome.manifest.sensitiveFilesIncludedOnRequest.isEmpty {
+                            Card {
+                                NotInBackupView(manifest: outcome.manifest, editable: false, onThisMac: true)
+                            }
+                            .accessibilityElement(children: .contain).accessibilityIdentifier("saved.notInBackup")
                         }
                         Card {
                             Text(l.t("saved.location")).font(.caption).foregroundStyle(.secondary)
@@ -304,6 +384,9 @@ struct BackupSavedView: View {
             }
         } buttons: {
             if let url = model.savedBackup {
+                Button(l.t("saved.reinstallGuide")) { model.open(url.appendingPathComponent(BackupWriter.reinstallGuidePath)) }
+                    .help(l.t("saved.reinstallGuide.help"))
+                    .accessibilityIdentifier("saved.reinstallGuide")
                 Button(l.t("saved.openInstructions")) { model.open(url.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html")) }
                     .accessibilityIdentifier("saved.instructions")
                 Button(l.t("saved.openReport")) { model.open(url.appendingPathComponent("reports/inventory.html")) }
@@ -376,8 +459,11 @@ struct CredentialsSection: View {
         let guidance = model.inventory?.manifest.guidance ?? []
         DisclosureGroup(isExpanded: $expanded) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(l.t("credentials.section.message"))
-                    .font(.callout).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(l.t("credentials.section.message"))
+                        .font(.callout).foregroundStyle(.secondary)
+                    HelpButton(text: l.t("credentials.help"), title: l.t("component.credentials"), id: "help.credentials")
+                }
                     .fixedSize(horizontal: false, vertical: true)
                 if detected.isEmpty {
                     Text(l.t("credentials.none")).foregroundStyle(.secondary)
@@ -435,7 +521,7 @@ struct GuidanceList: View {
         VStack(alignment: .leading, spacing: 4) {
             if !reauth.isEmpty {
                 Text(l.t("guidance.reauth.title")).font(.subheadline.weight(.semibold))
-                Text(reauth.map(\.currentName).joined(separator: ", ")).font(.callout)
+                Text(reauth.map { l.guidanceName($0) }.joined(separator: ", ")).font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(l.t("guidance.reauth.message")).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -443,7 +529,7 @@ struct GuidanceList: View {
             if !manual.isEmpty {
                 Text(l.t("guidance.manual.title")).font(.subheadline.weight(.semibold)).padding(.top, 4)
                 ForEach(manual) { record in
-                    Text("\(record.currentName): \(l.t("guidance.manual.\(record.id)"))").font(.callout)
+                    Text("\(l.guidanceName(record)): \(l.t("guidance.manual.\(record.id)"))").font(.callout)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

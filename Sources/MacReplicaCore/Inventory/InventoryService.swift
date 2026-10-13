@@ -99,6 +99,22 @@ public struct InventoryResult: Sendable {
         }
     }
 
+    /// Keeps only the chosen settings categories.
+    public mutating func keepSettings(_ categories: Set<String>) {
+        let removed = manifest.settings.filter { !categories.contains($0.category) }
+        let paths = Set(removed.flatMap(\.files).map(\.backupPath))
+        extraFiles.removeAll { paths.contains($0.record.backupPath) }
+        manifest.settings.removeAll { !categories.contains($0.category) }
+    }
+
+    /// Leaves out printers and scanner drivers (their PPD files included).
+    public mutating func excludePrinters() {
+        let ppds = Set(manifest.printers.compactMap(\.ppd?.backupPath))
+        extraFiles.removeAll { ppds.contains($0.record.backupPath) }
+        manifest.printers = []
+        manifest.scannerDrivers = []
+    }
+
     /// Keeps only the chosen package and version managers (by provider).
     public mutating func keepToolchains(_ providers: Set<ToolchainProviderID>) {
         manifest.toolchains.removeAll { !providers.contains($0.provider) }
@@ -163,6 +179,7 @@ public struct InventoryService: Sendable {
     public var architecture: CPUArchitecture
     /// Extra folders to search for Python environments.
     public var pythonSearchFolders: [URL]
+    public var modelIdentifier: String? = SystemInfo.modelIdentifier
 
     public init(layout: SystemLayout, runner: CommandRunning, catalogProvider: CatalogProviding,
                 macOSVersion: String = SystemInfo.macOSVersion, architecture: CPUArchitecture = SystemInfo.currentArchitecture,
@@ -204,6 +221,7 @@ public struct InventoryService: Sendable {
         var snapshot: HomebrewSnapshot?
         var packages = InstalledHomebrewPackages(formulae: [], casks: [])
         var taps: [BrewTapRecord] = []
+        var tapCasks: [CaskInfo] = []
         switch await homebrew.locate() {
         case .notInstalled:
             warnings.append(.homebrewNotInstalled)
@@ -217,11 +235,14 @@ public struct InventoryService: Sendable {
             do {
                 packages = try await homebrew.installedPackages(brew)
                 taps = (try? await homebrew.taps(brew)) ?? []
+                // Casks of the third-party taps on this Mac, so apps installed from a vendor's DMG are matched too.
+                tapCasks = await homebrew.tapCasks(brew, tokens: taps.flatMap { $0.caskTokens ?? [] })
             } catch {
                 warnings.append(.homebrewListFailed)
             }
         }
         Self.linkCasks(packages.casks, to: &apps)
+        Self.linkCompanions(&apps, casks: packages.casks)
 
         // Apps whose origin is still unknown may come from an installer package.
         for index in apps.indices where apps[index].source == .unknown {
@@ -275,12 +296,16 @@ public struct InventoryService: Sendable {
         progress(InventoryProgress(phase: .matching, fraction: 0.55, detail: nil))
         if apps.contains(where: { $0.restoreMethod == .manual && $0.source != .appStore }) {
             do {
-                let matcher = Matcher(catalog: try await catalogProvider.loadCatalog())
+                var catalog = try await catalogProvider.loadCatalog()
+                catalog.casks += tapCasks
+                let matcher = Matcher(catalog: catalog)
                 Self.applyMatches(matcher, to: &apps)
             } catch {
                 warnings.append(.catalogUnavailable)
+                if !tapCasks.isEmpty { Self.applyMatches(Matcher(catalog: CaskCatalog(casks: tapCasks)), to: &apps) }
             }
         }
+        Self.applyVendorTaps(to: &apps, taps: &taps)
 
         // 5. Python (70 – 80 %)
         progress(InventoryProgress(phase: .python, fraction: 0.7, detail: nil))
@@ -325,6 +350,8 @@ public struct InventoryService: Sendable {
             developer: developer,
             toolchains: toolchains)
         manifest.macreplicaBuild = SystemInfo.buildNumber
+        manifest.modelIdentifier = modelIdentifier
+        if apps.contains(where: OfficeActivation.isOfficeApp) { manifest.officeActivation = OfficeActivation.detect(layout: layout) }
         // Display profile assignments (read-only); identifiers only as salted hashes.
         let displayManager = layout.displayColorManager
         let keys = HardwareKeys.make(platformIdentifier: displayManager.platformIdentifier())
@@ -343,9 +370,17 @@ public struct InventoryService: Sendable {
                 warnings.append(.launchpadUnreadable)
             }
         }
+        // Printers and scanners (read-only: lpstat and the PPD files).
+        let printing = await PrinterScanner(layout: layout, runner: runner).scan()
+        manifest.printers = printing.printers
+        manifest.scannerDrivers = printing.scanners
+        // macOS settings (Dock, Finder, keyboard …) through `defaults export`; nothing is changed.
+        let settings = await SettingsRecorder(store: SettingsStore(layout: layout, runner: runner)).record()
+        manifest.settings = settings.records
         manifest.guidance = GuidanceDetector.detect(layout: layout, installedBundleIDs: Set(apps.compactMap(\.bundleIdentifier)),
                                                     installedAppNames: Set(apps.map(\.name)))
-        var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles, warnings: warnings)
+        var result = InventoryResult(manifest: manifest, fonts: fonts, colorProfiles: profiles, extraFiles: python.projectFiles + printing.ppdFiles + settings.files,
+                                     warnings: warnings)
         // Known user-created data of supported apps (presets, styles, LUTs …) is suggested automatically.
         for var detected in detectedData {
             if detected.profile.notForOlderApp {
@@ -363,6 +398,12 @@ public struct InventoryService: Sendable {
                 result.manifest.locations.append(LocationAccess(area: .applicationData, location: layout.displayPath(detected.folder),
                                                                 status: AccessProbe.status(of: detected.folder)))
             }
+        }
+        // Password databases KeePassXC remembers are listed (never included by themselves), so nobody erases the old Mac
+        // believing they are in the backup.
+        for database in result.rememberedPasswordDatabases(layout: layout) {
+            result.manifest.backupIssues.append(BackupIssue(path: layout.displayPath(database), reason: .refusedSensitive, detail: .rememberedByApp,
+                                                            sensitive: SensitiveFileClassifier.classify(database)))
         }
         progress(InventoryProgress(phase: .colorProfiles, fraction: 1, detail: nil))
         return result
@@ -397,12 +438,47 @@ public struct InventoryService: Sendable {
         return result
     }
 
+    /// Apps that come with another app: in the same folder of an application folder (a suite folder such as
+    /// `/Applications/DisplayCAL/`) with a bundle identifier that extends the main app's (`net.displaycal.DisplayCAL` →
+    /// `net.displaycal.DisplayCAL-3DLUT-maker`), or installed by the same cask as the cask's first app. Apps that are
+    /// merely from the same developer are not grouped.
+    static func linkCompanions(_ apps: inout [AppRecord], casks: [BrewCaskRecord]) {
+        var bySuite: [String: [Int]] = [:]
+        for index in apps.indices { if let folder = apps[index].suiteFolderName { bySuite[folder, default: []].append(index) } }
+        for (_, members) in bySuite where members.count > 1 {
+            let identified = members.filter { apps[$0].bundleIdentifier != nil }
+            guard let main = identified.first(where: { candidate in
+                let prefix = apps[candidate].bundleIdentifier!.lowercased()
+                return identified.contains { $0 != candidate && apps[$0].bundleIdentifier!.lowercased().hasPrefix(prefix) }
+            }) else { continue }
+            let prefix = apps[main].bundleIdentifier!.lowercased()
+            for member in identified where member != main && apps[member].bundleIdentifier!.lowercased().hasPrefix(prefix) {
+                apps[member].companionOf = apps[main].id
+            }
+        }
+        for cask in casks where cask.appArtifacts.count > 1 {
+            guard let main = apps.firstIndex(where: { $0.bundleFileName.caseInsensitiveCompare(cask.appArtifacts[0]) == .orderedSame }) else { continue }
+            for artifact in cask.appArtifacts.dropFirst() {
+                for index in apps.indices where index != main && apps[index].bundleFileName.caseInsensitiveCompare(artifact) == .orderedSame
+                    && apps[index].companionOf == nil {
+                    apps[index].companionOf = apps[main].id
+                }
+            }
+        }
+    }
+
     /// Marks apps that an installed cask provides.
     static func linkCasks(_ casks: [BrewCaskRecord], to apps: inout [AppRecord]) {
         for cask in casks {
             for artifact in cask.appArtifacts {
                 for index in apps.indices where apps[index].bundleFileName.caseInsensitiveCompare(artifact) == .orderedSame {
                     apps[index].source = .homebrewCask(token: cask.token)
+                    // A cask Homebrew disabled or removed cannot install the app again: the app gets the official
+                    // download route instead, with the reason (e.g. Cakebrew, removed from Homebrew in 2025).
+                    guard cask.isInstallable else {
+                        apps[index].homebrewNote = cask.availability.map { HomebrewNote(token: cask.token, availability: $0) }
+                        continue
+                    }
                     apps[index].restoreMethod = .homebrewCask(token: cask.token)
                     // The cask token names the channel exactly (`firefox@nightly`); restoring the same cask reproduces it.
                     if let channel = ChannelDetector.channel(caskToken: cask.token) {
@@ -415,7 +491,7 @@ public struct InventoryService: Sendable {
     }
 
     static func applyMatches(_ matcher: Matcher, to apps: inout [AppRecord]) {
-        for index in apps.indices where apps[index].restoreMethod == .manual && apps[index].source != .appStore {
+        for index in apps.indices where apps[index].restoreMethod == .manual && apps[index].source != .appStore && apps[index].companionOf == nil {
             switch matcher.match(apps[index]) {
             case .unique(let candidate):
                 apps[index].restoreMethod = candidate.restoreMethod
@@ -429,7 +505,33 @@ public struct InventoryService: Sendable {
                     apps[index].restoreMethod = .officialDownload(url: homepage)
                 }
             case .none:
-                break
+                // Homebrew knows the app, but its cask was disabled: say why it is not used.
+                if apps[index].homebrewNote == nil, let cask = matcher.disabledCask(for: apps[index]) {
+                    apps[index].homebrewNote = HomebrewNote(token: cask.token, availability: CaskAvailability(state: .disabled, reason: cask.disableReason,
+                                                                                                             date: cask.disableDate))
+                    if let homepage = cask.homepage, Self.isWebURL(homepage) {
+                        apps[index].homepage = apps[index].homepage ?? homepage
+                    }
+                }
+            }
+        }
+    }
+
+    /// Apps whose developer documents their own Homebrew tap (and that no other package matched): restored with that
+    /// tap's cask, in the same channel (stable or beta) as on this Mac. The tap is recorded so the user can allow it.
+    static func applyVendorTaps(to apps: inout [AppRecord], taps: inout [BrewTapRecord]) {
+        for index in apps.indices where apps[index].source != .appStore {
+            guard let vendor = VendorTaps.tap(for: apps[index]) else { continue }
+            if case .homebrewCask = apps[index].restoreMethod { continue }
+            let token = vendor.fullToken(for: apps[index].channel?.isPrerelease == true ? .beta : .stable)
+            apps[index].restoreMethod = .homebrewCask(token: token)
+            apps[index].candidates = []
+            if let tapIndex = taps.firstIndex(where: { $0.name.lowercased() == vendor.tap }) {
+                taps[tapIndex].suggestedFor = (taps[tapIndex].suggestedFor ?? []) + [apps[index].name]
+            } else {
+                var record = BrewTapRecord(name: vendor.tap, remote: vendor.remote)
+                record.suggestedFor = [apps[index].name]
+                taps.append(record)
             }
         }
     }
@@ -481,5 +583,78 @@ public struct InventoryService: Sendable {
             }
         }
         return nil
+    }
+}
+
+/// Files left out because they look like secrets, included again at the user's explicit request (and left out again).
+extension InventoryResult {
+    public enum IncludeOnRequestError: Error, Equatable, Sendable {
+        /// Keychains and browser data are never copied.
+        case notAllowed
+        /// The file is no longer there or cannot be read.
+        case unreadable
+        /// The file is not in a folder MacReplica may back up (outside the home folder, or in `~/Library` outside a provider folder).
+        case outsideSelectedFolders
+    }
+
+    /// Includes a file that was left out as sensitive, exactly as it is (an encrypted database stays encrypted).
+    /// The file is added to the folder it was found in; a file outside the chosen folders (e.g. a KeePass database
+    /// KeePassXC remembers) is added as one of "Your own folders" with only this file.
+    public mutating func includeOnRequest(_ path: String, layout: SystemLayout) throws {
+        let url = layout.resolve(displayPath: path)
+        guard let classification = SensitiveFileClassifier.classify(url) else { throw IncludeOnRequestError.unreadable }
+        guard classification.kind.canBeIncludedOnRequest else { throw IncludeOnRequestError.notAllowed }
+        guard FileManager.default.isReadableFile(atPath: url.path),
+              let sha = try? Hashing.sha256Hex(ofFile: url),
+              let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]) else { throw IncludeOnRequestError.unreadable }
+        if let index = manifest.applicationData.indices
+            .filter({ path.hasPrefix(manifest.applicationData[$0].displayPath + "/") })
+            .max(by: { manifest.applicationData[$0].displayPath.count < manifest.applicationData[$1].displayPath.count }) {
+            let folder = manifest.applicationData[index]
+            let relative = String(path.dropFirst(folder.displayPath.count + 1))
+            guard PathSafety.isSafeRelativePath(relative), !folder.files.contains(where: { $0.relativePath == relative }) else { return }
+            var record = FileRecord(fileName: url.lastPathComponent, domain: folder.effectiveScope == .home ? .user : .system, relativePath: relative,
+                                    originalPath: path, backupPath: "application-data/\(folder.id)/\(relative)", sha256: sha,
+                                    size: Int64(values.fileSize ?? 0), modifiedAt: values.contentModificationDate)
+            record.metadata[AppDataScanner.includedOnRequestKey] = classification.kind.rawValue
+            manifest.applicationData[index].files.append(record)
+            extraFiles.append(ScannedFile(url: url, record: record))
+            manifest.backupIssues.removeAll { $0.path == path && $0.reason == .refusedSensitive }
+            return
+        }
+        let parent = url.deletingLastPathComponent()
+        guard let scan = try? AppDataScanner(layout: layout).scanPersonal(parent, onlyFiles: [url.lastPathComponent],
+                                                                          includeSensitive: [url.lastPathComponent]) else {
+            throw IncludeOnRequestError.outsideSelectedFolders
+        }
+        // A folder that already holds other files of the user keeps them; this adds only the one file.
+        addApplicationData(scan.folder, files: scan.files, issues: [])
+        manifest.backupIssues.removeAll { $0.path == path && $0.reason == .refusedSensitive }
+    }
+
+    /// Leaves a file out again that was included on request; it is listed as left out (sensitive) as before.
+    public mutating func excludeAgain(_ path: String, layout: SystemLayout) {
+        for index in manifest.applicationData.indices {
+            guard let record = manifest.applicationData[index].files.first(where: { $0.originalPath == path }),
+                  record.metadata[AppDataScanner.includedOnRequestKey] != nil else { continue }
+            manifest.applicationData[index].files.removeAll { $0.originalPath == path }
+            extraFiles.removeAll { $0.record.backupPath == record.backupPath }
+            let classification = SensitiveFileClassifier.classify(layout.resolve(displayPath: path))
+            manifest.backupIssues.append(BackupIssue(path: path, reason: .refusedSensitive, sensitive: classification))
+        }
+        // A folder that only existed for this file is removed.
+        let empty = manifest.applicationData.filter { $0.isPersonal && $0.files.isEmpty }.map(\.id)
+        for id in empty { removeApplicationData(id: id) }
+    }
+
+    /// KeePass databases KeePassXC remembers that are neither in the backup nor already listed as left out: offered
+    /// to the user, never included by themselves.
+    public func rememberedPasswordDatabases(layout: SystemLayout) -> [URL] {
+        let listed = Set(manifest.backupIssues.map(\.path))
+        let included = Set(manifest.applicationData.flatMap(\.files).map(\.originalPath))
+        return KeePassXCLocations.rememberedDatabases(layout: layout).filter {
+            let path = layout.displayPath($0)
+            return !listed.contains(path) && !included.contains(path)
+        }
     }
 }

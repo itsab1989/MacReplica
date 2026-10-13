@@ -156,3 +156,39 @@ struct ManifestTests {
         #expect(VersionComparison.compare("1.0b2", "1.0") == .orderedSame)
     }
 }
+
+/// Everything added in 1.0.5 is written to manifest.json and read back unchanged (snake_case and acronyms such as
+/// `deviceURI` have lost data before: own installers in 1.0.2–1.0.4).
+@Suite("Manifest 1.0.5 fields")
+struct Manifest105FieldsTests {
+    @Test func everyNewFieldRoundTrips() throws {
+        var manifest = Manifest(macreplicaVersion: "1.0.5", createdAt: Date(timeIntervalSince1970: 1_800_000_000), macosVersion: "14.8.4", architecture: .x86_64)
+        var app = AppRecord(name: "DisplayCAL", version: "3.9.19", bundleIdentifier: "net.displaycal.DisplayCAL", path: "/Applications/DisplayCAL/DisplayCAL.app")
+        app.homebrewNote = HomebrewNote(token: "displaycal", availability: CaskAvailability(state: .disabled, reason: "fails_gatekeeper_check", date: "2026-09-01"))
+        app.otherCopies = [.init(path: "~/Applications/DisplayCAL.app", version: "3.9.18")]
+        app.ownInstallers = [InstallerArchive(id: "a", fileName: "DisplayCAL-3.9.19.dmg", kind: .dmg, size: 1, sha256: "ab", architectures: [.x86_64],
+                                              includedPath: "installers/a/DisplayCAL-3.9.19.dmg", originalPath: "/Volumes/USB/DisplayCAL-3.9.19.dmg",
+                                              containsLicence: true, containedApps: [.init(name: "DisplayCAL", bundleIdentifier: "net.displaycal.DisplayCAL", version: "3.9.19", path: "DisplayCAL/DisplayCAL.app")],
+                                              hasLicenseAgreement: true, userApprovedUnverified: true)]
+        var companion = AppRecord(name: "3D LUT Maker", bundleIdentifier: "net.displaycal.DisplayCAL-3DLUT-maker", path: "/Applications/DisplayCAL/3D LUT Maker.app")
+        companion.companionOf = app.id
+        manifest.applications = [app, companion]
+        manifest.brewCasks = [BrewCaskRecord(token: "cakebrew", version: "1.3", appArtifacts: ["Cakebrew.app"], availability: CaskAvailability(state: .removed))]
+        var tap = BrewTapRecord(name: "itsab1989/chromiq", remote: "https://github.com/itsab1989/homebrew-chromiq", caskTokens: ["itsab1989/chromiq/chromiq"])
+        tap.suggestedFor = ["ChromIQ"]
+        manifest.brewTaps = [tap]
+        manifest.backupIssues = [BackupIssue(path: "~/Vault/Family.keyx", reason: .refusedSensitive, sensitive: SensitiveClassification(kind: .keePassKeyFile, confidence: .high)),
+                                 BackupIssue(path: "~/gone.txt", reason: .unreadable, detail: .missing)]
+        manifest.bootstrapApp = BootstrapAppRecord(path: "MacReplica.app", version: "1.0.5", build: "60", architectures: [.arm64, .x86_64], teamIdentifier: nil)
+        manifest.officeActivation = .volumeLicence
+        manifest.modelIdentifier = "MacBookPro16,1"
+        manifest.printers = [PrinterRecord(queue: "Office_Laser", deviceURI: "lpd://192.168.1.20/queue", manufacturer: "Brother", model: "HL-5250DN",
+                                           driver: .vendor, vendorDriverFolders: ["Brother"])]
+        manifest.scannerDrivers = [ScannerDriverRecord(name: "EPSON Scanner", bundleIdentifier: "com.epson.scanner.ICA", version: "5.9.0")]
+        var candidate = MatchCandidate(kind: .cask, token: "microsoft-word", name: "Microsoft Word", homepage: nil, score: 1, evidence: [.appBundleName])
+        candidate.summary = "Word processor"
+        manifest.applications[1].candidates = [candidate]
+        let read = try ManifestIO.decode(try ManifestIO.encode(manifest))
+        #expect(read == manifest)
+    }
+}

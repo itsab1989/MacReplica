@@ -113,11 +113,28 @@ public struct HomebrewClient: Sendable {
             let version = item["installed"] as? String ?? item["version"] as? String ?? ""
             casks.append(BrewCaskRecord(
                 token: token, version: version, tap: item["tap"] as? String,
-                appArtifacts: CaskCatalog.appArtifacts(from: item["artifacts"])))
+                appArtifacts: CaskCatalog.appArtifacts(from: item["artifacts"]), availability: Self.availability(item)))
         }
         return InstalledHomebrewPackages(
             formulae: formulae.sorted { $0.name < $1.name },
             casks: casks.sorted { $0.token < $1.token })
+    }
+
+    static func shortToken(_ token: String) -> String { String(token.split(separator: "/").last ?? Substring(token)) }
+
+    /// From `brew info --json=v2`: a cask whose definition is gone (removed from Homebrew) is still listed for an
+    /// installed copy, with an empty `url` and no tap (checked with Homebrew 5 on 2026-10-13).
+    static func availability(_ item: [String: Any]) -> CaskAvailability {
+        if item["disabled"] as? Bool == true {
+            return CaskAvailability(state: .disabled, reason: item["disable_reason"] as? String, date: item["disable_date"] as? String)
+        }
+        if let url = item["url"] as? String, url.isEmpty, item["tap"] == nil || item["tap"] is NSNull {
+            return CaskAvailability(state: .removed)
+        }
+        if item["deprecated"] as? Bool == true {
+            return CaskAvailability(state: .deprecated, reason: item["deprecation_reason"] as? String, date: item["deprecation_date"] as? String)
+        }
+        return CaskAvailability(state: .available)
     }
 
     public func taps(_ brew: HomebrewInstallation) async throws -> [BrewTapRecord] {
@@ -134,10 +151,20 @@ public struct HomebrewClient: Sendable {
         }
         return items.compactMap { item -> BrewTapRecord? in
             guard let name = item["name"] as? String else { return nil }
-            return BrewTapRecord(name: name, remote: item["remote"] as? String)
+            let tokens = (item["cask_tokens"] as? [String] ?? []).map { $0.contains("/") ? $0 : "\(name)/\($0)" }
+            return BrewTapRecord(name: name, remote: item["remote"] as? String, caskTokens: tokens.isEmpty ? nil : tokens)
         }
         .filter { !$0.isBuiltIn }
         .sorted { $0.name < $1.name }
+    }
+
+    /// The definitions of casks from third-party taps (full tokens), read from the tap on this Mac. Only parsed, never run.
+    public func tapCasks(_ brew: HomebrewInstallation, tokens: [String]) async -> [CaskInfo] {
+        let valid = tokens.filter { $0.range(of: #"^[a-z0-9][a-z0-9_.-]*/[a-z0-9][a-z0-9_.-]*/[a-z0-9][a-z0-9@_.+-]*$"#, options: .regularExpression) != nil }
+        guard !valid.isEmpty, let result = try? await runner.run(command(brew, ["info", "--json=v2", "--cask"] + valid.prefix(200), timeout: 300)),
+              result.succeeded, let root = try? JSONSerialization.jsonObject(with: Data(result.stdout.utf8)) as? [String: Any],
+              let casks = root["casks"], let data = try? JSONSerialization.data(withJSONObject: casks) else { return [] }
+        return (try? CaskCatalog.parseCasks(data)) ?? []
     }
 
     /// The installed version of a formula, or nil if it is not installed.
@@ -147,8 +174,10 @@ public struct HomebrewClient: Sendable {
         return Self.parseListVersions(result.stdout)
     }
 
+    /// `brew list --cask --versions` accepts only the short token: for `user/tap/token` it prints nothing and fails
+    /// (checked with Homebrew 5, 2026-10-13), so a cask from a third-party tap is asked for by its last part.
     public func installedCaskVersion(_ brew: HomebrewInstallation, token: String) async throws -> String? {
-        let result = try await runner.run(command(brew, ["list", "--cask", "--versions", token], timeout: 120))
+        let result = try await runner.run(command(brew, ["list", "--cask", "--versions", Self.shortToken(token)], timeout: 120))
         guard result.succeeded else { return nil }
         return Self.parseListVersions(result.stdout)
     }

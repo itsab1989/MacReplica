@@ -20,6 +20,7 @@ struct RootView: View {
             case .verifying: VerifyingView()
             case .verificationResult: VerificationResultView()
             case .problem: ProblemView()
+            case .tools: ToolsView()
             }
         }
         .frame(minWidth: 700, idealWidth: 760, minHeight: 540, idealHeight: 600)
@@ -64,8 +65,16 @@ struct HomeView: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
+        // Four options plus a safe-mode or resume banner can exceed the smallest window: scroll only then.
+        ViewThatFits(in: .vertical) {
+            content
+            ScrollView { content }
+        }
+    }
+
+    private var content: some View {
         let l = model.l
-        VStack(spacing: 0) {
+        return VStack(spacing: 0) {
             Spacer(minLength: 16)
             AppIconView(size: 88)
             Text("MacReplica")
@@ -98,6 +107,9 @@ struct HomeView: View {
                 ActionRow(symbol: "checkmark.shield", title: l.t("home.verify.title"),
                           subtitle: l.t("home.verify.subtitle")) { model.chooseBackup(for: .verify) }
                     .accessibilityIdentifier("home.verify")
+                ActionRow(symbol: "wrench.and.screwdriver", title: l.t("home.tools.title"),
+                          subtitle: l.t("home.tools.subtitle")) { model.openTools() }
+                    .accessibilityIdentifier("home.tools")
             }
             .frame(maxWidth: 520)
             .padding(.top, 22)
@@ -179,6 +191,7 @@ struct ResumeBanner: View {
                 Button(l.t("resume.continue")) { model.resumeUnfinished() }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier("resume.continue")
+                HelpButton(text: l.t("resume.help"), title: l.t("resume.title"), id: "help.resume")
             }
         }
     }

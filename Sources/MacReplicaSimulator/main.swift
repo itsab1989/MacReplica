@@ -33,6 +33,7 @@ func usage() -> Never {
            MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
            MacReplicaSimulator creative <folder>
            MacReplicaSimulator workflow <folder>
+           MacReplicaSimulator beta-feedback <folder>
            MacReplicaSimulator launchpad <folder>
            MacReplicaSimulator install-resolve <folder> <version>
            MacReplicaSimulator launch-photoshop <folder> <folder name>
@@ -205,6 +206,25 @@ do {
     case "workflow":
         try root.addWorkflowAppData()
         print("Added Krita, GIMP, Inkscape, Scribus, Office, Mail, Cryptomator, DisplayCAL and other app data")
+    case "corner-store":
+        // Validation only: MacReplica's real corner write path into a test app's own domain (never the global one).
+        // corner-store <domain> <points|system|restore:<history text>>
+        guard arguments.count > 2, arguments[1].contains("."), arguments[1] != "NSGlobalDomain" else { usage() }
+        let tool = WindowCornersTool(store: LiveGlobalPreferenceStore(application: arguments[1]), environment: .current)
+        let request = arguments[2]
+        if request.hasPrefix("restore:"), let previous = CornerSnapshot(historyText: String(request.dropFirst(8))) {
+            let result = try tool.restore(previous)
+            print("restored", result.after.historyText.isEmpty ? "(nothing set)" : result.after.historyText, result.outcome.rawValue)
+        } else {
+            let configuration: CornerConfiguration = request == "system"
+                ? CornerConfiguration() : .uniform(Int(request) ?? 0, surfaces: [.windows, .utilityPanels])
+            let result = try tool.apply(configuration)
+            print("before", result.before.historyText.isEmpty ? "-" : result.before.historyText)
+            print("after", result.outcome.rawValue)
+        }
+    case "beta-feedback":
+        try root.addBetaFeedbackApps()
+        print("Added Cakebrew (cask removed), the DisplayCAL suite (cask disabled), ChromIQ (vendor tap) and Tap Tool (tapped tap)")
     case "launchpad":
         // A Launchpad with the sample apps on one page and a folder (the simulated Dock is never signalled).
         let apps = ["com.example.nimbusnotes", "com.example.pixelforge", "org.example.orbit", "com.example.terminalplus", "com.example.ledgerlite", "com.example.quillwriter", "com.example.studiomixer"]

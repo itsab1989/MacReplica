@@ -4,6 +4,7 @@ import SwiftUI
 struct RestoreSelectionView: View {
     @EnvironmentObject var model: AppModel
     @ViewState private var showItems = false
+    @ViewState private var showNotInBackup = false
 
     var body: some View {
         let l = model.l
@@ -18,6 +19,21 @@ struct RestoreSelectionView: View {
                         Text(l.t("restore.select.intro"))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let manifest = model.manifest {
+                        CompletenessNotice(manifest: manifest, onNewMac: true)
+                        if !manifest.settings.isEmpty, manifest.macosVersion.split(separator: ".").first != model.services.macOSVersion.split(separator: ".").first {
+                            NoticeView(style: .info, title: l.t("settings.otherVersion.title", manifest.macosVersion, model.services.macOSVersion),
+                                       message: l.t("settings.otherVersion.message"))
+                                .accessibilityIdentifier("settings.otherVersion")
+                        }
+                        if manifest.completeness != .complete || !manifest.sensitiveFilesIncludedOnRequest.isEmpty {
+                            DisclosureGroup(l.t("notInBackup.show"), isExpanded: $showNotInBackup) {
+                                NotInBackupView(manifest: manifest, editable: false, onThisMac: false).padding(.top, 6)
+                            }
+                            .accessibilityIdentifier("restore.notInBackup")
+                            .onAppear { if model.stagingExpandLists { showNotInBackup = true } }
+                        }
                     }
                     warnings
 
@@ -50,6 +66,7 @@ struct RestoreSelectionView: View {
             Button(l.t("common.back")) { model.goHome() }
                 .keyboardShortcut(.cancelAction)
             Spacer()
+            HelpButton(text: l.t("restore.dryRun.help"), title: l.t("restore.select.dryRun"), id: "help.dryRun")
             Button(l.t("restore.select.dryRun")) { model.startDryRun() }
                 .accessibilityIdentifier("restore.dryRun")
             Button(l.t("restore.select.start")) { model.requestRestoreStart() }
@@ -168,13 +185,15 @@ struct TapSection: View {
         let l = model.l
         let taps = (model.manifest?.brewTaps ?? []).filter { !$0.isBuiltIn }
         if !taps.isEmpty, model.selection.components.contains(.brewFormulae) || model.selection.components.contains(.brewCasks) {
+            let plan = model.currentPlan()
             VStack(alignment: .leading, spacing: 6) {
-                Text(l.t("taps.title")).font(.headline)
+                LabelWithHelp(label: l.t("taps.title"), help: l.t("taps.help"), id: "help.taps", font: .headline)
                 Text(l.t("taps.message"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 ForEach(taps) { tap in
+                    let dependents = plan?.items.filter { $0.dependsOn.contains("tap:\(tap.name.lowercased())") }.map(\.title) ?? []
                     Toggle(isOn: Binding(
                         get: { model.selection.enabledTaps.contains(tap.name.lowercased()) },
                         set: { on in
@@ -185,9 +204,21 @@ struct TapSection: View {
                             if let remote = tap.remote {
                                 Text(remote).font(.caption).foregroundStyle(.secondary)
                             }
+                            if !dependents.isEmpty {
+                                Text(l.t("taps.neededFor", dependents.joined(separator: ", ")))
+                                    .font(.caption)
+                                    .foregroundStyle(model.selection.enabledTaps.contains(tap.name.lowercased()) ? Color.secondary : Color.orange)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .accessibilityIdentifier("tap.neededFor.\(tap.name)")
+                            }
+                            if let apps = tap.suggestedFor, !apps.isEmpty {
+                                Text(l.t("taps.suggested", apps.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                     .toggleStyle(.checkbox)
+                    .accessibilityIdentifier("tap.\(tap.name)")
                 }
             }
         }
@@ -645,7 +676,10 @@ struct ConflictSheet: View {
         let l = model.l
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(l.p("conflict.title", conflicts.count)).font(.title3.weight(.semibold))
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(l.p("conflict.title", conflicts.count)).font(.title3.weight(.semibold))
+                    HelpButton(text: l.t("conflict.help"), title: l.p("conflict.title", conflicts.count), id: "help.conflict")
+                }
                 Text(l.t("conflict.message")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             .padding(16)

@@ -53,6 +53,18 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var displayProfiles: [DisplayProfileAssignment]
     /// The Launchpad arrangement (macOS 13–15): pages, folders with their names, and the order of the apps.
     public var launchpadLayout: LaunchpadLayout?
+    /// The copy of MacReplica in the backup (1.0.5 and later), to start the restore on a new Mac without a download.
+    public var bootstrapApp: BootstrapAppRecord?
+    /// How Microsoft Office was activated on the old Mac, as far as MacReplica can tell (no licence data is read or kept).
+    public var officeActivation: OfficeActivation?
+    /// The old Mac's model identifier (e.g. `MacBookPro16,1`), for the reinstall guide.
+    public var modelIdentifier: String?
+    /// Print queues, set up again on the new Mac with the user (1.0.5 and later).
+    public var printers: [PrinterRecord] = []
+    /// Scanner drivers of manufacturers (`/Library/Image Capture/Devices`), to install again.
+    public var scannerDrivers: [ScannerDriverRecord] = []
+    /// macOS settings by category (Dock, Finder, keyboard …), recorded through `defaults` (1.0.5 and later).
+    public var settings: [SettingsRecord] = []
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -105,7 +117,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
         case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
-        case hardwareKeys, displayProfiles, launchpadLayout
+        case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp, officeActivation, modelIdentifier, printers, scannerDrivers, settings
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -141,6 +153,38 @@ public struct Manifest: Codable, Equatable, Sendable {
         displayProfiles = try c.decodeIfPresent(LenientList<DisplayProfileAssignment>.self, forKey: .displayProfiles)?.elements ?? []
         // A layout this version cannot read is left out rather than failing the manifest.
         launchpadLayout = try? c.decodeIfPresent(LaunchpadLayout.self, forKey: .launchpadLayout)
+        bootstrapApp = try? c.decodeIfPresent(BootstrapAppRecord.self, forKey: .bootstrapApp)
+        officeActivation = try? c.decodeIfPresent(OfficeActivation.self, forKey: .officeActivation)
+        modelIdentifier = try c.decodeIfPresent(String.self, forKey: .modelIdentifier)
+        printers = try c.decodeIfPresent(LenientList<PrinterRecord>.self, forKey: .printers)?.elements ?? []
+        scannerDrivers = try c.decodeIfPresent(LenientList<ScannerDriverRecord>.self, forKey: .scannerDrivers)?.elements ?? []
+        settings = try c.decodeIfPresent(LenientList<SettingsRecord>.self, forKey: .settings)?.elements ?? []
+    }
+}
+
+/// How Office for Mac is activated. Microsoft ships one installer for Microsoft 365, Office LTSC 2024/2021 and retail
+/// Office; the version number does not tell them apart. A volume licence (LTSC) is a file in `/Library/Preferences`
+/// that is bound to the Mac's startup disk; its presence is checked, never its contents.
+public enum OfficeActivation: String, Codable, Sendable {
+    /// `/Library/Preferences/com.microsoft.office.licensingV2.plist` exists: a volume licence (Office LTSC 2021/2024) or
+    /// another perpetual licence installed for the whole Mac. 2021 and 2024 cannot be told apart.
+    case volumeLicence
+    /// No such file: activated by signing in (Microsoft 365, or a retail licence linked to a Microsoft account), or not activated.
+    case signIn
+
+    public init(from decoder: Decoder) throws {
+        self = OfficeActivation(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .signIn
+    }
+
+    public static let bundleIdentifiers: Set<String> = ["com.microsoft.word", "com.microsoft.excel", "com.microsoft.powerpoint",
+                                                        "com.microsoft.outlook", "com.microsoft.onenote.mac"]
+
+    public static func isOfficeApp(_ app: AppRecord) -> Bool { app.bundleIdentifier.map { bundleIdentifiers.contains($0.lowercased()) } ?? false }
+
+    /// Only the existence of the licence file is checked.
+    public static func detect(layout: SystemLayout) -> OfficeActivation {
+        let file = layout.sharedLibrary.appendingPathComponent("Preferences/com.microsoft.office.licensingV2.plist")
+        return FileManager.default.fileExists(atPath: file.path) ? .volumeLicence : .signIn
     }
 }
 
@@ -289,6 +333,8 @@ public struct MatchCandidate: Codable, Equatable, Hashable, Sendable {
     public var homepage: String?
     public var score: Int
     public var evidence: [MatchEvidence]
+    /// Homebrew's one-line description of the package, e.g. “Office suite”.
+    public var summary: String?
 
     public init(kind: Kind, token: String, name: String, homepage: String?, score: Int, evidence: [MatchEvidence]) {
         self.kind = kind
@@ -342,6 +388,11 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     /// Installers the user keeps for this app, in the order they are run (e.g. the installer, then an
     /// activation package). See `InstallerArchive`.
     public var ownInstallers: [InstallerArchive]? = nil
+    /// A Homebrew cask exists (or existed) for the app but cannot install it any more (disabled or removed).
+    public var homebrewNote: HomebrewNote? = nil
+    /// The app comes with another app (`AppRecord.id` of the main app), e.g. DisplayCAL's 3D LUT Maker: installing the
+    /// main app's installer or cask brings it back, so it is not a separate step.
+    public var companionOf: String? = nil
 
     public struct OtherCopy: Codable, Equatable, Hashable, Sendable {
         public var path: String
@@ -380,6 +431,9 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case name, version, buildVersion, bundleIdentifier, path, vendor, architectures
         case minimumSystemVersion, source, restoreMethod, candidates, homepage, channel, channelEvidence, updateFeed, teamIdentifier
+        // Written since 1.0.5: before, these were left out of manifest.json, so installers copied into a backup
+        // were not offered on the new Mac.
+        case otherCopies, ownInstallers, homebrewNote, companionOf
     }
 
     public init(from decoder: Decoder) throws {
@@ -400,12 +454,23 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
         channelEvidence = try c.decodeIfPresent(ChannelEvidence.self, forKey: .channelEvidence)
         updateFeed = try c.decodeIfPresent(UpdateFeed.self, forKey: .updateFeed)
         teamIdentifier = try c.decodeIfPresent(String.self, forKey: .teamIdentifier)
+        otherCopies = try? c.decodeIfPresent([OtherCopy].self, forKey: .otherCopies)
+        ownInstallers = try? c.decodeIfPresent([InstallerArchive].self, forKey: .ownInstallers)
+        homebrewNote = try? c.decodeIfPresent(HomebrewNote.self, forKey: .homebrewNote)
+        companionOf = try c.decodeIfPresent(String.self, forKey: .companionOf)
     }
 
     /// True when MacReplica found possible Homebrew packages but none was certain enough
     /// to use automatically, so the user should pick one (or none).
     public var needsMatchDecision: Bool {
         restoreMethod.category != .homebrew && restoreMethod.category != .appStore && !candidates.isEmpty
+    }
+
+    /// The folder of an application folder the app was in, e.g. `DisplayCAL` for `/Applications/DisplayCAL/DisplayCAL.app`.
+    public var suiteFolderName: String? {
+        let parent = (path as NSString).deletingLastPathComponent
+        guard ((parent as NSString).deletingLastPathComponent as NSString).lastPathComponent == "Applications" else { return nil }
+        return (parent as NSString).lastPathComponent
     }
 
     /// The `.app` file name, e.g. `Example Editor.app`.
@@ -440,12 +505,59 @@ public struct BrewCaskRecord: Codable, Equatable, Identifiable, Sendable {
     public var tap: String?
     /// The `.app` bundles this cask installs, used to link casks and applications.
     public var appArtifacts: [String]
+    /// Whether Homebrew can still install the cask (nil in backups of 1.0.4 and earlier: assumed available).
+    public var availability: CaskAvailability?
 
-    public init(token: String, version: String, tap: String? = nil, appArtifacts: [String] = []) {
+    public init(token: String, version: String, tap: String? = nil, appArtifacts: [String] = [], availability: CaskAvailability? = nil) {
         self.token = token
         self.version = version
         self.tap = tap
         self.appArtifacts = appArtifacts
+        self.availability = availability
+    }
+
+    /// `brew install --cask` can install it on the new Mac.
+    public var isInstallable: Bool { availability?.isInstallable ?? true }
+}
+
+/// Whether Homebrew can still install a cask, and why not.
+public struct CaskAvailability: Codable, Equatable, Hashable, Sendable {
+    public enum State: String, Codable, Sendable {
+        case available
+        /// Still installable, but scheduled to be disabled (Homebrew's `deprecate!`).
+        case deprecated
+        /// No longer installable (Homebrew's `disable!`), e.g. because it fails the macOS Gatekeeper check.
+        case disabled
+        /// Removed from Homebrew altogether: an installed copy still works, it cannot be installed again.
+        case removed
+
+        public init(from decoder: Decoder) throws {
+            self = State(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .available
+        }
+    }
+
+    public var state: State
+    /// Homebrew's reason, e.g. `fails_gatekeeper_check`, `discontinued`, `unmaintained`.
+    public var reason: String?
+    /// The date Homebrew disabled (or will disable) it, `YYYY-MM-DD`.
+    public var date: String?
+
+    public init(state: State, reason: String? = nil, date: String? = nil) {
+        self.state = state
+        self.reason = reason
+        self.date = date
+    }
+
+    public var isInstallable: Bool { state == .available || state == .deprecated }
+}
+
+/// Why an app is not restored with Homebrew although Homebrew knows it (shown to the user, kept in the manifest).
+public struct HomebrewNote: Codable, Equatable, Hashable, Sendable {
+    public var token: String
+    public var availability: CaskAvailability
+    public init(token: String, availability: CaskAvailability) {
+        self.token = token
+        self.availability = availability
     }
 }
 
@@ -453,10 +565,21 @@ public struct BrewTapRecord: Codable, Equatable, Identifiable, Sendable {
     public var id: String { name }
     public var name: String
     public var remote: String?
+    /// Casks the tap offers (full tokens, `user/tap/token`), used to find packages for apps installed without Homebrew.
+    public var caskTokens: [String]?
+    /// Set for a tap MacReplica suggests because the app's developer documents it (not tapped on the old Mac).
+    public var suggestedFor: [String]?
 
-    public init(name: String, remote: String? = nil) {
+    public init(name: String, remote: String? = nil, caskTokens: [String]? = nil) {
         self.name = name
         self.remote = remote
+        self.caskTokens = caskTokens
+    }
+
+    /// The tap of a full cask or formula token `user/tap/token`, nil for packages of Homebrew's own taps.
+    public static func tapName(ofToken token: String) -> String? {
+        let parts = token.split(separator: "/")
+        return parts.count == 3 ? parts[0...1].joined(separator: "/") : nil
     }
 
     /// Official taps that Homebrew provides out of the box and that never need tapping.
@@ -496,14 +619,42 @@ public enum FileDomain: String, Codable, Sendable, CaseIterable {
 public struct BackupIssue: Codable, Equatable, Sendable {
     /// `notDownloaded`: an iCloud file whose contents are not on the Mac (reading it would download it).
     public enum Reason: String, Codable, Sendable { case unreadable, refusedSensitive, tooLarge, changedDuringBackup, notDownloaded }
+    /// A more precise reason, added in 1.0.5. Kept apart from `reason` so that MacReplica 1.0.4, which only knows the
+    /// reasons above, still reads the backup (it shows the general reason).
+    public enum Detail: String, Codable, Sendable {
+        /// The file was there during the scan but no longer when the backup was saved (deleted or moved).
+        case missing
+        /// The name cannot be stored safely in a backup (e.g. it starts with `~`), so the file was left out.
+        case unsupportedName
+        /// A password database an app remembers (KeePassXC) that is outside the folders chosen for the backup.
+        case rememberedByApp
+    }
     /// Display path (home written as `~`).
     public var path: String
     public var reason: Reason
+    public var detail: Detail?
+    /// For files left out because they look like a secret: what they appear to be (from the name and file format only).
+    public var sensitive: SensitiveClassification?
 
-    public init(path: String, reason: Reason) {
+    public init(path: String, reason: Reason, detail: Detail? = nil, sensitive: SensitiveClassification? = nil) {
         self.path = path
         self.reason = reason
+        self.detail = detail
+        self.sensitive = sensitive
     }
+
+    private enum CodingKeys: String, CodingKey { case path, reason, detail, sensitive }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        path = try c.decode(String.self, forKey: .path)
+        reason = (try? c.decode(Reason.self, forKey: .reason)) ?? .unreadable
+        detail = try? c.decodeIfPresent(Detail.self, forKey: .detail)
+        sensitive = try? c.decodeIfPresent(SensitiveClassification.self, forKey: .sensitive)
+    }
+
+    /// The file name (the last path component), shown first in lists.
+    public var fileName: String { (path as NSString).lastPathComponent }
 }
 
 /// A font or ICC profile file stored in the backup.

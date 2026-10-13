@@ -64,10 +64,12 @@ public struct Matcher: Sendable {
             var score = Self.score(allSignals)
             if cask.deprecated { score -= 10 }
             guard score >= Self.minimumScore else { continue }
-            candidates.append(MatchCandidate(
+            var candidate = MatchCandidate(
                 kind: .cask, token: cask.token, name: cask.names.first ?? cask.token,
                 homepage: cask.homepage, score: score,
-                evidence: MatchEvidence.allCases.filter { allSignals.contains($0) }))
+                evidence: MatchEvidence.allCases.filter { allSignals.contains($0) })
+            candidate.summary = cask.desc
+            candidates.append(candidate)
         }
 
         if candidates.isEmpty {
@@ -91,6 +93,21 @@ public struct Matcher: Sendable {
             return .needsDecision(candidates)
         }
         return outcome
+    }
+
+    /// A disabled cask that installs exactly this app (bundle identifier, or app bundle name plus name/token): used only
+    /// to explain why Homebrew cannot reinstall it, never to install.
+    public func disabledCask(for app: AppRecord) -> CaskInfo? {
+        let bundle = app.bundleIdentifier?.lowercased()
+        return catalog.casks.first { cask in
+            guard cask.disabled else { return false }
+            if let bundle, cask.bundleIdentifiers.contains(bundle) { return true }
+            let artifact = cask.appArtifacts.contains { $0.caseInsensitiveCompare(app.bundleFileName) == .orderedSame }
+            let token = cask.token == Self.slug(app.name)
+            let name = cask.names.contains { Self.normalize($0) == Self.normalize(app.name) }
+            // Two independent signals. Casks that install a package (DisplayCAL) name no app, so token and name must agree.
+            return [artifact, token, name].filter { $0 }.count >= 2
+        }
     }
 
     static func decide(_ candidates: [MatchCandidate]) -> MatchOutcome {

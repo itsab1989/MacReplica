@@ -26,6 +26,8 @@ public struct SimulationEnvironment: Sendable {
         public var homebrewPackage: String
         public var architecture: CPUArchitecture
         public var macosVersion: String
+        /// The simulated Mac's model identifier (e.g. `MacBookPro16,1`); nil uses this Mac's.
+        public var modelIdentifier: String?
 
         public init(home: String, applicationFolders: [String], userFonts: String, systemFonts: String, userColorProfiles: String,
                     systemColorProfiles: String, homebrewPrefixes: [String], xcodeSelect: String, pkgutil: String, mdls: String,
@@ -99,6 +101,26 @@ public struct SimulationEnvironment: Sendable {
             macOSFontAssets: root.appendingPathComponent("System/Library/AssetsV2"),
             isSimulation: true)
         self.layout.simulationRoot = root
+        self.layout.lpstat = root.appendingPathComponent("tools/lpstat").path
+        self.layout.cupsPPDFolder = root.appendingPathComponent("etc/cups/ppd")
+        self.layout.defaults = root.appendingPathComponent("tools/defaults").path
+        self.layout.killall = root.appendingPathComponent("tools/killall").path
+        // Tools section: the real (read-only) status tools and profiles, unless the simulated Mac brings stand-ins to
+        // show states this Mac is not in (e.g. a managed Mac). Mixing both would show a state no Mac is in.
+        let managed = root.appendingPathComponent("Library/Managed Preferences")
+        if FileManager.default.fileExists(atPath: managed.path) { self.layout.managedPreferences = managed }
+        self.layout.ammoniaTweaks = root.appendingPathComponent("private/var/ammonia/core/tweaks")
+        for name in ["spctl", "csrutil", "profiles", "softwareupdate", "nvram"] {
+            let standIn = root.appendingPathComponent("tools/\(name)").path
+            guard FileManager.default.isExecutableFile(atPath: standIn) else { continue }
+            switch name {
+            case "spctl": self.layout.spctl = standIn
+            case "csrutil": self.layout.csrutil = standIn
+            case "profiles": self.layout.profiles = standIn
+            case "nvram": self.layout.nvram = standIn
+            default: self.layout.softwareupdate = standIn
+            }
+        }
     }
 
     /// Reads `--simulation-root <folder>` from the launch arguments.

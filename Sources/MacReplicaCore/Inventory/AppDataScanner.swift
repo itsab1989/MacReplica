@@ -117,11 +117,12 @@ public struct AppDataScanner: Sendable {
     }
 
     /// Scans one of the user's own folders: like application data, but without a size limit.
-    public func scanPersonal(_ folder: URL) throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
+    public func scanPersonal(_ folder: URL, onlyFiles: [String]? = nil, includeSensitive: Set<String> = []) throws
+        -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
         _ = try validatePersonal(folder)
         var scanner = self
         scanner.maxFolderSize = .max
-        var result = try scanner.scan(folder, personalFolder: true)
+        var result = try scanner.scan(folder, onlyFiles: onlyFiles, personalFolder: true, includeSensitive: includeSensitive)
         result.folder.personal = true
         return result
     }
@@ -160,6 +161,8 @@ public struct AppDataScanner: Sendable {
     /// Stands for the home folder in backed-up text files of providers that store absolute home paths.
     public static let homePlaceholder = "{{MACREPLICA_HOME}}"
     static let homePlaceholderKey = "homePlaceholder"
+    /// Metadata of a file that looks like a secret and was included because the user asked for it (value: its `SensitiveKind`).
+    public static let includedOnRequestKey = "includedOnRequest"
 
     /// The file with this Mac's home path replaced by the placeholder; nil if it is not text, too large or
     /// contains no home path.
@@ -174,6 +177,10 @@ public struct AppDataScanner: Sendable {
         return Data(expression.stringByReplacingMatches(in: text, range: range, withTemplate: template).utf8)
     }
 
+    /// Microsoft Office's owner files: `~$` plus the document's name, created while a document is open and removed when
+    /// it is closed. They hold only the name of the user who has the document open.
+    static func isTemporaryLockFile(_ name: String) -> Bool { name.hasPrefix("~$") }
+
     static func isRefusedFile(_ name: String) -> Bool {
         refusedFilePatterns.contains { name.range(of: $0, options: .regularExpression) != nil }
     }
@@ -182,7 +189,7 @@ public struct AppDataScanner: Sendable {
     /// - Parameter shipped: paths relative to `folder` that came with the app (installer receipt); left out.
     public func scan(_ folder: URL, profile: AppDataProfileReference? = nil, onlyFiles: [String]? = nil, excluding: [String] = [],
                      scope: AppDataScope = .home, shipped: Set<String> = [], rewritesHomeFolder: Bool = false,
-                     allowProviderExceptions: Bool = false, personalFolder: Bool = false)
+                     allowProviderExceptions: Bool = false, personalFolder: Bool = false, includeSensitive: Set<String> = [])
         throws -> (folder: AppDataFolder, files: [ScannedFile], issues: [BackupIssue]) {
         let relative: String
         switch scope {
@@ -211,6 +218,8 @@ public struct AppDataScanner: Sendable {
             guard let values = try? url.resourceValues(forKeys: Set(keys)) else { continue }
             if values.isSymbolicLink == true { continue }
             guard values.isRegularFile == true, url.lastPathComponent != ".DS_Store" else { continue }
+            // Temporary files that only exist while a document is open (Microsoft Office's owner files `~$Name.docx`).
+            if Self.isTemporaryLockFile(url.lastPathComponent) { continue }
             guard let fileRelative = FileScanner.relativePath(of: url, below: base) else { continue }
             // Finder's translations of folder names, not user data.
             if fileRelative.split(separator: "/").contains(".localized") { continue }
@@ -220,9 +229,15 @@ public struct AppDataScanner: Sendable {
                 shippedLeftOut += 1
                 continue
             }
-            if Self.isRefusedFile(url.lastPathComponent) {
-                issues.append(BackupIssue(path: layout.displayPath(url), reason: .refusedSensitive))
-                continue
+            // Files that look like secrets are left out and listed with what they appear to be – unless the user explicitly
+            // asked for this very file (e.g. an encrypted KeePass database); keychains and browser data never.
+            var includedOnRequest: SensitiveKind?
+            if let classification = SensitiveFileClassifier.classify(url) {
+                guard classification.kind.canBeIncludedOnRequest, includeSensitive.contains(fileRelative) else {
+                    issues.append(BackupIssue(path: layout.displayPath(url), reason: .refusedSensitive, sensitive: classification))
+                    continue
+                }
+                includedOnRequest = classification.kind
             }
             if Self.isDataless(url) {
                 issues.append(BackupIssue(path: layout.displayPath(url), reason: .notDownloaded))
@@ -243,6 +258,7 @@ public struct AppDataScanner: Sendable {
                                     originalPath: layout.displayPath(url), backupPath: "application-data/\(id)/\(fileRelative)",
                                     sha256: hash, size: converted.map { Int64($0.count) } ?? size, modifiedAt: values.contentModificationDate)
             if converted != nil { record.metadata[Self.homePlaceholderKey] = "1" }
+            if let includedOnRequest { record.metadata[Self.includedOnRequestKey] = includedOnRequest.rawValue }
             files.append(ScannedFile(url: url, record: record, contents: converted))
         }
         files.sort { $0.record.relativePath < $1.record.relativePath }

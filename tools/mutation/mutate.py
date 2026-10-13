@@ -99,11 +99,16 @@ def generate_mutants(path):
     in_block_comment = False
     for number, line in enumerate(lines):
         stripped = line.strip()
-        if "/*" in stripped:
-            in_block_comment = True
         if in_block_comment:
             if "*/" in stripped:
                 in_block_comment = False
+            continue
+        # A block comment starts only in code: `/*` inside a string or a `//` comment (e.g. a path like
+        # `Devices/*.app` in a doc comment) is text and must not hide the rest of the file.
+        code_mask = strip_strings_and_comments(line)
+        opener = next((i for i in range(len(line) - 1) if line.startswith("/*", i) and code_mask[i]), None)
+        if opener is not None:
+            in_block_comment = "*/" not in line[opener + 2:]
             continue
         if (not stripped or stripped.startswith("//") or stripped.startswith("import ") or stripped.startswith("///")
                 or stripped.startswith("case ") and "=" in stripped and "\"" in stripped
@@ -151,6 +156,8 @@ def main():
     parser.add_argument("--shard", type=int, default=0)
     parser.add_argument("--shards", type=int, default=1)
     parser.add_argument("--merge", nargs="*", help="combine mutation-results.json of these report folders")
+    parser.add_argument("--resume", action="store_true",
+                        help="keep the results saved in the report folder (partial.json) and test only the remaining mutants")
     parser.add_argument("--only-survivors", nargs="*",
                         help="re-test only mutants that survived in these report folders (after adding tests; kills stay kills)")
     args = parser.parse_args()
@@ -159,6 +166,10 @@ def main():
     modules = config["modules"]
     if args.files:
         modules = [m for m in modules if m["file"] in args.files]
+        # A list that matches nothing (e.g. all files passed as one argument) would report 100 % for 0 mutants.
+        missing = [f for f in args.files if f not in {m["file"] for m in modules}]
+        if missing:
+            sys.exit(f"not in config.json: {missing}")
 
     report_dir = Path(args.report)
     report_dir.mkdir(parents=True, exist_ok=True)
@@ -186,6 +197,18 @@ def main():
         sys.exit("baseline build failed")
 
     results = []
+    # Every result is saved right away, so an interrupted run (Ctrl-C, sleep, shutdown) can continue with --resume.
+    partial_file = report_dir / "partial.json"
+    done = {}
+    if args.resume and partial_file.exists():
+        for r in json.loads(partial_file.read_text()):
+            done[(r["file"], r["line"], r["start"], r["operator"])] = r
+
+    def save_partial():
+        tmp = partial_file.with_suffix(".tmp")
+        tmp.write_text(json.dumps(results, indent=1))
+        tmp.replace(partial_file)
+
     current = {"path": None, "content": None}
 
     def restore(*_):
@@ -234,9 +257,14 @@ def main():
                 sys.exit(f"tests for {module['file']} fail without mutations")
             print(f"== {module['file']}: {len(mutants)} mutants", flush=True)
             for index, mutant in enumerate(mutants, 1):
+                previous = done.get((module["file"], mutant["line"], mutant["start"], mutant["operator"]))
+                if previous is not None:
+                    results.append(previous)
+                    continue
                 if any(rx.search(mutant["original"]) and operator in (None, mutant["operator"]) for rx, operator in excluded):
                     mutant["status"] = "excluded"
                     results.append({**mutant, "file": module["file"]})
+                    save_partial()
                     continue
                 mutated_lines = list(lines)
                 line = mutated_lines[mutant["line"] - 1]
@@ -253,6 +281,7 @@ def main():
                 restore()
                 mutant.update(status=status, seconds=round(time.time() - started, 1), file=module["file"])
                 results.append(mutant)
+                save_partial()
                 print(f"  [{index}/{len(mutants)}] {status:8} L{mutant['line']} {mutant['operator']}", flush=True)
     finally:
         restore()

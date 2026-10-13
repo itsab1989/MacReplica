@@ -457,6 +457,35 @@ public enum AppDataCatalog {
             verifiedCategories: ["vaultList"],
             verification: .cryptomatorVaults),
 
+        AppDataProvider(
+            id: "keepassxc", appName: "KeePassXC", bundleIdentifiers: ["org.keepassxc.keepassxc"],
+            base: "Library/Application Support/KeePassXC", versionFolderPattern: nil,
+            // Only the app's settings. Databases and key files are never part of a provider: MacReplica lists the
+            // databases KeePassXC remembers and the user includes them explicitly (they stay encrypted as they are).
+            categories: [AppDataCategory("passwordManagerSettings", "", files: ["keepassxc.ini"], rewritesHomeFolder: true)],
+            mustBeClosed: true, status: .fixtureTested,
+            evidence: [Evidence(title: "KeePassXC source: configuration file locations (Config.cpp)",
+                                url: "https://github.com/keepassxreboot/keepassxc/blob/develop/src/core/Config.cpp"),
+                       Evidence(title: "Qt: QStandardPaths (AppDataLocation, CacheLocation on macOS)", url: "https://doc.qt.io/qt-6/qstandardpaths.html")],
+            researchedOn: researchedR5,
+            limitations: ["The list of recently opened databases and key files is kept in ~/Library/Caches and is not copied; open each database once on the new Mac.",
+                          "Databases and key files are not part of this item; include them explicitly (they are listed under files left out)."]),
+
+        // MARK: Scanning
+        AppDataProvider(
+            id: "vuescan", appName: "VueScan", bundleIdentifiers: ["com.hamrick.vuescan"],
+            base: "Pictures/VueScan", versionFolderPattern: nil,
+            // vuescan.ini (settings saved on quit) and option sets saved with File › Save Options; the log stays behind.
+            categories: [AppDataCategory("scannerSettings", "", filePattern: #"(?i)^.+\.(ini|icc|icm)$"#)],
+            mustBeClosed: true, status: .fixtureTested,
+            evidence: [Evidence(title: "VueScan: Menus (settings saved to vuescan.ini; File › Save Options)", url: "https://www.hamrick.com/vuescan/html/vuesc27.htm"),
+                       Evidence(title: "VueScan: Activation (location of VueScan's .ini files and .vuescanrc)", url: "https://www.hamrick.com/vuescan/html/vuesc36.htm"),
+                       Evidence(title: "Homebrew cask vuescan (zap: ~/Pictures/VueScan/vuescan.ini)", url: "https://formulae.brew.sh/api/cask/vuescan.json")],
+            researchedOn: researchedR5,
+            limitations: ["Option files saved elsewhere, and subfolders, are not part of this item: add their folder under Your own folders.",
+                          "The licence (~/.vuescanrc) is not copied; Hamrick allows the licence on every computer in the household – enter the serial number again.",
+                          "Scanner operation itself cannot be checked without the scanner."]),
+
         // MARK: Configuration folders of tools
         configFolder(id: "karabiner", name: "Karabiner-Elements", ids: ["org.pqrs.Karabiner-Elements.Settings"], path: ".config/karabiner",
                      key: "keyboardRules", excluding: ["automatic_backups"],
@@ -521,6 +550,7 @@ public enum AppDataCatalog {
 
     static let researchedPS = "2026-10-03"
     static let researchedR3 = "2026-10-04"
+    static let researchedR5 = "2026-10-13"
 
     /// A tool whose whole configuration is one folder of plain files in the home folder.
     static func configFolder(id: String, name: String, ids: [String], path: String, key: String, excluding: [String] = [],
@@ -645,6 +675,10 @@ public enum GuidanceCatalog {
                url: "https://www.xp-pen.com/Uploads/images/manual/artistpro16/en/Artist%20Pro%2016%20(English).pdf"),
         manual("mailAccounts", "Mail accounts", ids: ["com.apple.mail"], paths: ["Library/Mail"],
                url: "https://support.apple.com/en-us/102613"),
+        // Passwords in the login keychain: never copied (bound to this Mac); Apple's supported ways are iCloud Keychain or
+        // the Passwords app's export and import. Every Mac with a user keychain gets this note.
+        manual("keychainPasswords", "Passwords in the keychain", paths: ["Library/Keychains"],
+               url: "https://support.apple.com/guide/keychain-access/import-and-export-keychain-items-kyca35961/mac"),
         manual("officeActivation", "Microsoft Office sign-in or activation",
                ids: ["com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.Outlook", "com.microsoft.onenote.mac"],
                url: "https://support.microsoft.com/en-us/office/activate-office-5bd38f38-db92-448b-a982-ad170b1e187e"),

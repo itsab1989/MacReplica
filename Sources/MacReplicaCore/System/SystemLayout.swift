@@ -28,6 +28,28 @@ public struct SystemLayout: Sendable, Equatable {
     /// Disk image and archive tools used to unpack verified downloads (read-only mounts, no installation).
     public var hdiutil: String = "/usr/bin/hdiutil"
     public var ditto: String = "/usr/bin/ditto"
+    /// Lists print queues (read-only; no administrator rights needed).
+    public var lpstat: String = "/usr/bin/lpstat"
+    /// Reads and writes preferences through cfprefsd (`export` / `import` only).
+    public var defaults: String = "/usr/bin/defaults"
+    /// Restarts the Dock, Finder or the menu bar after their settings were applied (only those process names).
+    public var killall: String = "/usr/bin/killall"
+    /// Read-only status tools of the Tools section (Gatekeeper, signatures, profiles, SIP, Software Update).
+    public var spctl: String = "/usr/sbin/spctl"
+    public var csrutil: String = "/usr/bin/csrutil"
+    public var profiles: String = "/usr/bin/profiles"
+    public var codesign: String = "/usr/bin/codesign"
+    public var syspolicyCheck: String = "/usr/bin/syspolicy_check"
+    public var softwareupdate: String = "/usr/sbin/softwareupdate"
+    /// Read-only: `nvram boot-args` (whether the Ammonia tweak loader's boot argument is set).
+    public var nvram: String = "/usr/sbin/nvram"
+    /// The tweak folder of the Ammonia loader (only used by the corner plugin; MacReplica writes there only with the
+    /// administrator password and only its own two files).
+    public var ammoniaTweaks: URL = URL(fileURLWithPath: "/private/var/ammonia/core/tweaks")
+    /// Settings that configuration profiles enforce, readable by all users.
+    public var managedPreferences: URL = URL(fileURLWithPath: "/Library/Managed Preferences")
+    /// The PPD file of every print queue, readable by all users.
+    public var cupsPPDFolder: URL = URL(fileURLWithPath: "/etc/cups/ppd")
     /// Files that only exist when the Command Line Tools are fully installed.
     public var commandLineToolsMarkers: [String]
     public var rosettaMarker: String
@@ -139,7 +161,8 @@ public struct SystemLayout: Sendable, Equatable {
     /// listed one by one (no patterns), and only Homebrew's own.
     public var allowedExecutables: Set<String> {
         let pythons = homebrewPrefixes.flatMap { prefix in PythonVersion.supportedMinors.map { homebrewPython(minor: $0, prefix: prefix) } }
-        return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto])
+        return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto, lpstat, defaults, killall,
+                                                                  spctl, csrutil, profiles, codesign, syspolicyCheck, softwareupdate, nvram])
     }
 
     public func baseFolder(for kind: BackupFileKind, domain: FileDomain) -> URL {

@@ -34,6 +34,44 @@ python3 tools/mutation/mutate.py --merge r0 r1 r2 r3 r4 r5 --report merged --che
 
 ## Results
 
+**2026-10-13 (MacReplica 1.0.5: beta-feedback modules and the Tools section):** **98.1 %** (508 of 518 valid mutants
+killed), every module at or above its threshold. Three rounds, 6 parallel shards:
+- **Round 1** found test gaps in nine modules (58 survivors). New suites close them: `SystemSettingsEdgeTests`,
+  `ReinstallGuideStructureTests`, `BootstrapAppEdgeTests`, `MatcherEdgeTests`, `SensitiveFilesEdgeTests`,
+  `InstallerApprovalTests`, `HomebrewRemovedCaskTests`, `ApplicationLocatorTests`, `InstallerArchiveEdgeTests`,
+  `ToolsEdgeTests`, `ToolsCornerEdgeTests` and `PrinterEdgeTests`.
+- **Two real defects were found and fixed:**
+  - The corner-plugin removal rule checked for `/../` only after standardising the path, so the check could never
+    fire. It now refuses parent steps in the path as given.
+  - The runner itself treated `/*` in a doc comment as the start of a block comment and skipped the rest of
+    `Printers.swift`, which had shown 0 mutants. It now only recognises `/*` in code.
+- **Equivalent mutants** are listed in `config.json` with the exact operator and a reason. Examples: `first → last`
+  where only one element can match, `<` vs `<=` when sorting unique names, and branches an earlier line already
+  decides.
+- **`InstallerArchive.swift` (87.2 %, threshold 65 %):** the 10 survivors are in the disk-image mounting, nesting
+  depth and signature paths, which need real Developer-ID-signed installers.
+
+| Module | Killed | Survived | Invalid | Excluded | Score | Threshold | Result |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Matching/Matcher.swift` | 56 | 0 | 4 | 3 | 100.0 % | 80 % | ✅ |
+| `Restore/PrivilegedExecutor.swift` | 14 | 0 | 2 | 1 | 100.0 % | 80 % | ✅ |
+| `Downloads/InstallerArchive.swift` | 68 | 10 | 2 | 5 | 87.2 % | 65 % | ✅ |
+| `Homebrew/HomebrewClient.swift` | 33 | 0 | 7 | 3 | 100.0 % | 80 % | ✅ |
+| `Inventory/SensitiveFiles.swift` | 29 | 0 | 3 | 0 | 100.0 % | 80 % | ✅ |
+| `Backup/BootstrapApp.swift` | 10 | 0 | 0 | 0 | 100.0 % | 80 % | ✅ |
+| `Inventory/Printers.swift` | 19 | 0 | 1 | 2 | 100.0 % | 80 % | ✅ |
+| `Settings/SystemSettings.swift` | 49 | 0 | 2 | 4 | 100.0 % | 80 % | ✅ |
+| `Reports/ReinstallGuide.swift` | 19 | 0 | 34 | 0 | 100.0 % | 80 % | ✅ |
+| `Matching/VendorTaps.swift` | 2 | 0 | 0 | 2 | 100.0 % | 80 % | ✅ |
+| `Inventory/ApplicationLocator.swift` | 6 | 0 | 1 | 0 | 100.0 % | 80 % | ✅ |
+| `Localization/InstallerDescriptions.swift` | 22 | 0 | 2 | 1 | 100.0 % | 80 % | ✅ |
+| `Tools/ToolKit.swift` | 10 | 0 | 0 | 1 | 100.0 % | 80 % | ✅ |
+| `Tools/GatekeeperTool.swift` | 56 | 0 | 1 | 4 | 100.0 % | 80 % | ✅ |
+| `Tools/UpdatePreferencesTool.swift` | 37 | 0 | 0 | 2 | 100.0 % | 80 % | ✅ |
+| `Tools/ConfigurationProfiles.swift` | 22 | 0 | 3 | 0 | 100.0 % | 80 % | ✅ |
+| `Tools/WindowCornersTool.swift` | 39 | 0 | 1 | 1 | 100.0 % | 80 % | ✅ |
+| `Tools/CornerPlugin.swift` | 17 | 0 | 0 | 1 | 100.0 % | 80 % | ✅ |
+
 **2026-10-04 (MacReplica 1.0.2, new modules only):** 84.7 % (177 of 209); details in
 [VALIDATION_REPORT.md](VALIDATION_REPORT.md#mutation-testing-of-the-new-modules). `InstallerArchive.swift` has a
 threshold of 65 %: its signature and detach paths need real Developer-ID-signed installers.

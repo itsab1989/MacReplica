@@ -8,8 +8,12 @@ public struct CaskInfo: Sendable, Equatable, Codable {
     public var bundleIdentifiers: [String]
     public var homepage: String?
     public var version: String?
+    /// Homebrew's one-line description.
+    public var desc: String?
     public var deprecated: Bool
     public var disabled: Bool
+    public var disableReason: String?
+    public var disableDate: String?
     /// Architectures the cask is limited to; empty means no restriction.
     public var requiredArchitectures: [CPUArchitecture]
     /// The vendor download Homebrew uses: the default (Apple silicon, newest macOS) plus per-platform overrides.
@@ -19,8 +23,8 @@ public struct CaskInfo: Sendable, Equatable, Codable {
     public var minimumMacOS: String?
 
     public init(token: String, names: [String] = [], appArtifacts: [String] = [], bundleIdentifiers: [String] = [],
-                homepage: String? = nil, version: String? = nil, deprecated: Bool = false, disabled: Bool = false,
-                requiredArchitectures: [CPUArchitecture] = [], download: CaskDownload? = nil,
+                homepage: String? = nil, version: String? = nil, desc: String? = nil, deprecated: Bool = false, disabled: Bool = false,
+                disableReason: String? = nil, disableDate: String? = nil, requiredArchitectures: [CPUArchitecture] = [], download: CaskDownload? = nil,
                 downloadVariations: [String: CaskDownload] = [:], minimumMacOS: String? = nil) {
         self.download = download
         self.downloadVariations = downloadVariations
@@ -31,8 +35,11 @@ public struct CaskInfo: Sendable, Equatable, Codable {
         self.bundleIdentifiers = bundleIdentifiers
         self.homepage = homepage
         self.version = version
+        self.desc = desc
         self.deprecated = deprecated
         self.disabled = disabled
+        self.disableReason = disableReason
+        self.disableDate = disableDate
         self.requiredArchitectures = requiredArchitectures
     }
 }
@@ -111,7 +118,8 @@ public struct CaskCatalog: Sendable {
             throw HomebrewError.unexpectedOutput("cask catalog")
         }
         return items.compactMap { item in
-            guard let token = item["token"] as? String else { return nil }
+            // Casks of third-party taps are known by their full token (`user/tap/token`).
+            guard let token = (item["full_token"] as? String).flatMap({ $0.isEmpty ? nil : $0 }) ?? item["token"] as? String else { return nil }
             var architectures: [CPUArchitecture] = []
             var minimumMacOS: String?
             if let dependsOn = item["depends_on"] as? [String: Any] {
@@ -131,8 +139,10 @@ public struct CaskCatalog: Sendable {
                 bundleIdentifiers: bundleIdentifiers(from: item["artifacts"]),
                 homepage: item["homepage"] as? String,
                 version: item["version"] as? String,
+                desc: item["desc"] as? String,
                 deprecated: item["deprecated"] as? Bool ?? false,
                 disabled: item["disabled"] as? Bool ?? false,
+                disableReason: item["disable_reason"] as? String, disableDate: item["disable_date"] as? String,
                 requiredArchitectures: architectures,
                 download: CaskDownload.parse(item),
                 downloadVariations: variations,

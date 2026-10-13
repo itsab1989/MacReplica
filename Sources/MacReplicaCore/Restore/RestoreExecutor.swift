@@ -171,29 +171,10 @@ struct Inspector: Sendable {
         return []
     }
 
-    /// The installed `.app` matching the item, checked by bundle name and, when known, bundle identifier.
+    /// The installed `.app` matching the item, checked by bundle name and, when known, bundle identifier (also in a
+    /// suite folder one level down).
     func installedApp(for item: RestoreItem) -> URL? {
-        for folder in layout.applicationFolders {
-            for name in item.appBundleNames {
-                guard PathSafety.isSafeRelativePath(name), !name.contains("/") else { continue }
-                let url = folder.appendingPathComponent(name)
-                guard let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any] else { continue }
-                if let expected = item.bundleIdentifier {
-                    if (info["CFBundleIdentifier"] as? String)?.lowercased() == expected.lowercased() { return url }
-                } else {
-                    return url
-                }
-            }
-            // Without a known bundle name, search by bundle identifier.
-            if item.appBundleNames.isEmpty, let expected = item.bundleIdentifier?.lowercased(),
-               let items = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) {
-                for url in items where url.pathExtension == "app" {
-                    let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
-                    if (info?["CFBundleIdentifier"] as? String)?.lowercased() == expected { return url }
-                }
-            }
-        }
-        return nil
+        ApplicationLocator.find(names: item.appBundleNames, bundleIdentifier: item.bundleIdentifier, in: layout.applicationFolders)
     }
 
     func installedVersion(ofApp url: URL) -> String? {
@@ -332,7 +313,27 @@ struct Inspector: Sendable {
             return predictDisplayProfile(item)
         case .launchpadLayout:
             return predictLaunchpad(item)
+        case .printer:
+            return printerIsSetUp(item) ? .alreadyPresent(version: nil) : .manualStep
+        case .systemSetting:
+            guard let record = item.settings else { return .willSkip(.fileNotSupported) }
+            let restorer = SettingsRestorer(store: SettingsStore(layout: layout, runner: environment.runner), backupRoot: backupRoot)
+            guard let change = try? await restorer.changes(record) else { return .willInstall }
+            return change.toChange.isEmpty ? .alreadyPresent(version: nil) : .willInstall
         }
+    }
+
+    /// A printer is set up when a queue of the same name exists (its PPD in `/etc/cups/ppd`); a scanner driver when its
+    /// app is in `/Library/Image Capture/Devices`. Whether the device prints or scans can only be checked with it connected.
+    func printerIsSetUp(_ item: RestoreItem) -> Bool {
+        if let printer = item.printer {
+            return PrinterScanner.isSafeQueueName(printer.queue)
+                && FileManager.default.fileExists(atPath: layout.cupsPPDFolder.appendingPathComponent("\(printer.queue).ppd").path)
+        }
+        if let scanner = item.scannerDriver, PathSafety.isSafeRelativePath(scanner.name), !scanner.name.contains("/") {
+            return FileManager.default.fileExists(atPath: layout.sharedLibrary.appendingPathComponent("Image Capture/Devices/\(scanner.name).app").path)
+        }
+        return false
     }
 }
 
@@ -379,7 +380,11 @@ public final class RestoreExecutor: Sendable {
             var prediction = await inspector.predict(item, brew: brew, taps: taps)
             if let dependency = item.dependsOn.first(where: { blocked.contains($0) }) {
                 if case .alreadyPresent = prediction {} else {
-                    prediction = .willSkip(.dependencyFailed(itemTitle: plan.item(id: dependency)?.title ?? dependency))
+                    // A package of a tap the user did not allow says so (allowing the tap fixes it).
+                    let blocker = plan.item(id: dependency)
+                    prediction = blocker?.kind == .tap && !selection.enabledTaps.contains(blocker!.identifier.lowercased())
+                        ? .willSkip(.tapNotEnabled(tap: blocker!.identifier))
+                        : .willSkip(.dependencyFailed(itemTitle: blocker?.title ?? dependency))
                 }
             }
             if case .willSkip = prediction { blocked.insert(item.id) }
@@ -454,6 +459,8 @@ public final class RestoreExecutor: Sendable {
                 } else if session.results[blocker]?.outcome.isOpen == true {
                     // The prerequisite waits for the user, so this step waits as well.
                     result = ItemResult(itemID: item.id, outcome: .skipped(.waitingForManualStep(itemTitle: title)))
+                } else if let tap = plan.item(id: blocker), tap.kind == .tap, !session.selection.enabledTaps.contains(tap.identifier.lowercased()) {
+                    result = ItemResult(itemID: item.id, outcome: .skipped(.tapNotEnabled(tap: tap.identifier)))
                 } else {
                     result = ItemResult(itemID: item.id, outcome: .skipped(.dependencyFailed(itemTitle: title)))
                 }
@@ -557,6 +564,12 @@ public final class RestoreExecutor: Sendable {
                 return restoreDisplayProfile(item, inspector: inspector, onEvent: onEvent)
             case .launchpadLayout:
                 return await restoreLaunchpad(item, inspector: inspector, plan: plan, session: session, onEvent: onEvent)
+            case .systemSetting:
+                return await restoreSettings(item, inspector: inspector, onEvent: onEvent)
+            case .printer:
+                // Never set up automatically (drivers, administrator rights, a connected device): the user adds it; this
+                // step checks it again whenever the restore continues.
+                return ItemResult(itemID: item.id, outcome: inspector.printerIsSetUp(item) ? .alreadyPresent : .skipped(.manualStepRequired))
             }
         } catch is CancellationError {
             return failed(item, .cancelled)
@@ -983,5 +996,35 @@ extension RestorePlan {
             }
         }
         return RestorePlan(items: items.filter { needed.contains($0.id) }, manualApps: manualApps)
+    }
+}
+
+extension RestoreExecutor {
+    /// Applies a category of macOS settings through `defaults` and reads every value back. Keys this macOS does not keep,
+    /// or stores as a different kind of value, are reported – never counted as restored.
+    func restoreSettings(_ item: RestoreItem, inspector: Inspector, onEvent: @escaping @Sendable (RestoreEvent) -> Void) async -> ItemResult {
+        guard let record = item.settings, let category = SettingsCatalog.category(record.category) else {
+            return failed(item, .unknown, "unknown settings category")
+        }
+        onEvent(.activity(itemID: item.id, .installing))
+        let restorer = SettingsRestorer(store: SettingsStore(layout: layout, runner: environment.runner), backupRoot: inspector.backupRoot)
+        let work = layout.caches.appendingPathComponent("Work/settings-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: work) }
+        do {
+            let result = try await restorer.apply(record, work: work)
+            var notes: [ResultNote] = []
+            if result.applied > 0 { notes.append(.settingsApplied(count: result.applied)) }
+            if !result.notKept.isEmpty { notes.append(.settingsNotKept(keys: result.notKept)) }
+            if !result.differentType.isEmpty { notes.append(.settingsDifferentType(keys: result.differentType)) }
+            if result.applied > 0, category.apply == .logout { notes.append(.logoutRequired) }
+            log.info("\(item.id): \(result.applied) settings applied, \(result.notKept.count) not kept, \(result.differentType.count) different type", component: .restore)
+            guard result.applied > 0 || !result.notKept.isEmpty else {
+                return ItemResult(itemID: item.id, outcome: .alreadyPresent, notes: notes)
+            }
+            guard result.applied > 0 else { return failed(item, .verificationFailed, "settings not kept by this macOS") }
+            return ItemResult(itemID: item.id, outcome: .succeeded, notes: notes)
+        } catch {
+            return failed(item, .unknown, layout.redact(String(describing: error)))
+        }
     }
 }

@@ -13,9 +13,17 @@ public struct BackupSelectionPreset: Codable, Equatable, Sendable {
     public struct OwnInstaller: Codable, Equatable, Sendable {
         public var path: String
         public var include: Bool
-        public init(path: String, include: Bool) {
+        /// The user marked the file as containing a licence.
+        public var licence: Bool?
+        /// The user confirmed using this unverified installer – valid only for exactly this file (`sha256`).
+        public var approvedUnverified: Bool?
+        public var sha256: String?
+        public init(path: String, include: Bool, licence: Bool? = nil, approvedUnverified: Bool? = nil, sha256: String? = nil) {
             self.path = path
             self.include = include
+            self.licence = licence
+            self.approvedUnverified = approvedUnverified
+            self.sha256 = sha256
         }
     }
 
@@ -43,6 +51,12 @@ public struct BackupSelectionPreset: Codable, Equatable, Sendable {
     public var ownInstallers: [String: [OwnInstaller]]
     /// Where the backup is saved (home folder written as `~`).
     public var destination: String?
+    /// Files left out as sensitive that the user included explicitly (home folder written as `~`). Added in 1.0.5.
+    public var includedOnRequest: [String]?
+    /// Printers and scanner drivers are included (nil in selections of 1.0.4: yes).
+    public var includePrinters: Bool?
+    /// Settings category → included.
+    public var settings: [String: Bool]?
 
     public init(savedAt: Date = Date(), macreplicaVersion: String = SystemInfo.appVersion, applications: [String: Bool] = [:],
                 files: [String: Bool] = [:], applicationData: [String: Bool] = [:], toolchains: [String: Bool] = [:],
@@ -68,6 +82,9 @@ public struct BackupSelectionPreset: Codable, Equatable, Sendable {
         self.personalFolders = personalFolders
         self.ownInstallers = ownInstallers
         self.destination = destination
+        self.includedOnRequest = nil
+        self.includePrinters = nil
+        self.settings = nil
     }
 
     /// Turns a choice map into the set of excluded IDs for the items that exist now: a saved choice wins,
