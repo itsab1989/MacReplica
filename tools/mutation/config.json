@@ -14,7 +14,8 @@
       "tests": [
         "MatchingTests",
         "HomebrewAvailabilityTests",
-        "OfficeEditionTests"
+        "OfficeEditionTests",
+        "MatcherEdgeTests"
       ],
       "area": "Matching"
     },
@@ -106,7 +107,8 @@
       "tests": [
         "SecurityTests",
         "RestoreExecutionTests",
-        "SessionAndPrivilegeEdgeTests"
+        "SessionAndPrivilegeEdgeTests",
+        "ToolsCornerPluginTests"
       ],
       "area": "Security"
     },
@@ -359,7 +361,8 @@
       "file": "Downloads/InstallerArchive.swift",
       "tests": [
         "OwnInstallerTests",
-        "InstallerDescriptionTests"
+        "InstallerDescriptionTests",
+        "InstallerArchiveEdgeTests"
       ],
       "area": "Own installers (offline)",
       "threshold": 65
@@ -391,7 +394,8 @@
       "tests": [
         "HomebrewTests",
         "InventoryTests",
-        "HomebrewAvailabilityTests"
+        "HomebrewAvailabilityTests",
+        "HomebrewRemovedCaskTests"
       ],
       "area": "Homebrew detection"
     },
@@ -414,14 +418,16 @@
     {
       "file": "Inventory/SensitiveFiles.swift",
       "tests": [
-        "SensitiveFilesTests"
+        "SensitiveFilesTests",
+        "SensitiveFilesEdgeTests"
       ],
       "area": "Sensitive files"
     },
     {
       "file": "Backup/BootstrapApp.swift",
       "tests": [
-        "BootstrapAppTests"
+        "BootstrapAppTests",
+        "BootstrapAppEdgeTests"
       ],
       "area": "MacReplica in the backup"
     },
@@ -436,14 +442,16 @@
     {
       "file": "Settings/SystemSettings.swift",
       "tests": [
-        "SystemSettingsTests"
+        "SystemSettingsTests",
+        "SystemSettingsEdgeTests"
       ],
       "area": "macOS settings"
     },
     {
       "file": "Reports/ReinstallGuide.swift",
       "tests": [
-        "ReinstallGuideTests"
+        "ReinstallGuideTests",
+        "ReinstallGuideStructureTests"
       ],
       "area": "Reinstall guide"
     },
@@ -459,7 +467,8 @@
       "tests": [
         "HomebrewAvailabilityTests",
         "OwnInstallerTests",
-        "PrinterTests"
+        "PrinterTests",
+        "ApplicationLocatorTests"
       ],
       "area": "Installed apps"
     },
@@ -471,7 +480,8 @@
         "VersionChoiceTests",
         "OfficeEditionTests",
         "HomebrewAvailabilityTests",
-        "ReinstallGuideTests"
+        "ReinstallGuideTests",
+        "InstallerApprovalTests"
       ],
       "area": "Descriptions"
     },
@@ -485,28 +495,40 @@
     {
       "file": "Tools/GatekeeperTool.swift",
       "tests": [
-        "ToolsGatekeeperTests"
+        "ToolsGatekeeperTests",
+        "ToolsEdgeTests"
       ],
       "area": "Tools"
     },
     {
       "file": "Tools/UpdatePreferencesTool.swift",
       "tests": [
-        "ToolsUpdatesTests"
+        "ToolsUpdatesTests",
+        "ToolsEdgeTests"
       ],
       "area": "Tools"
     },
     {
       "file": "Tools/ConfigurationProfiles.swift",
       "tests": [
-        "ToolsProfilesTests"
+        "ToolsProfilesTests",
+        "ToolsUpdatesTests",
+        "ToolsEdgeTests"
       ],
       "area": "Tools"
     },
     {
       "file": "Tools/WindowCornersTool.swift",
       "tests": [
-        "ToolsWindowCornersTests"
+        "ToolsWindowCornersTests",
+        "ToolsCornerPluginTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/CornerPlugin.swift",
+      "tests": [
+        "ToolsCornerPluginTests"
       ],
       "area": "Tools"
     }
@@ -729,6 +751,102 @@
       "file": "Downloads/DownloadInstaller.swift",
       "pattern": "sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
       "reason": "File names in one folder are unique, so < and <= sort the same (equivalent mutant)."
+    },
+    {
+      "file": "Matching/VendorTaps.swift",
+      "pattern": "return all\\.first \\{",
+      "reason": "Every entry has distinct bundle identifiers, so at most one matches: first and last are the same (equivalent mutant).",
+      "operator": "first → last"
+    },
+    {
+      "file": "Matching/Matcher.swift",
+      "pattern": "var lastWasDash = false",
+      "reason": "Before the first allowed character nothing is appended anyway (the dash also needs a non-empty result): equivalent mutant.",
+      "operator": "false → true"
+    },
+    {
+      "file": "Localization/InstallerDescriptions.swift",
+      "pattern": "return known\\.first\\.map",
+      "reason": "After removing unknown entries, two different architectures are reported as universal earlier; first and last are the same (equivalent mutant).",
+      "operator": "first → last"
+    },
+    {
+      "file": "Settings/SystemSettings.swift",
+      "pattern": "categories\\.first \\{ \\$0\\.id == id \\}",
+      "reason": "Category identifiers are unique: first and last are the same (equivalent mutant).",
+      "operator": "first → last"
+    },
+    {
+      "file": "Settings/SystemSettings.swift",
+      "pattern": "sorted\\(by: \\{ \\$0\\.key < \\$1\\.key \\}\\)",
+      "reason": "Dictionary keys are unique, so < and <= sort them identically (equivalent mutant).",
+      "operator": "< → <="
+    },
+    {
+      "file": "Settings/SystemSettings.swift",
+      "pattern": "return to > from && crossVersion",
+      "reason": "Equal major versions return earlier, so > and >= cannot differ here (equivalent mutant).",
+      "operator": "> → >="
+    },
+    {
+      "file": "Tools/GatekeeperTool.swift",
+      "pattern": "split\\(separator: \"\\\\n\"\\)\\.first \\{ \\$0\\.contains\\(\"MDM enrollment:\"\\) \\}",
+      "operator": "first → last",
+      "reason": "`profiles status` prints one “MDM enrollment:” line: first and last are the same (equivalent mutant)."
+    },
+    {
+      "file": "Tools/GatekeeperTool.swift",
+      "pattern": "lines\\.first \\{ \\$0\\.hasPrefix\\(",
+      "operator": "first → last",
+      "reason": "`spctl --assess` prints each of these lines once: first and last are the same (equivalent mutant)."
+    },
+    {
+      "file": "Tools/GatekeeperTool.swift",
+      "pattern": "getxattr\\(url\\.path, attribute, nil, 0, 0, XATTR_NOFOLLOW\\) > 0",
+      "operator": "> → >=",
+      "reason": "An empty quarantine attribute carries no information; removing it or leaving it is the same (equivalent mutant)."
+    },
+    {
+      "file": "Tools/ToolKit.swift",
+      "pattern": "if all\\.count > limit",
+      "operator": "> → >=",
+      "reason": "At exactly the limit, removeFirst(0) removes nothing (equivalent mutant)."
+    },
+    {
+      "file": "Tools/UpdatePreferencesTool.swift",
+      "pattern": "else if installedMajor < newest",
+      "operator": "< → <=",
+      "reason": "Reached only when the installed major is older than the newest (the earlier branch handles the rest): equivalent mutant."
+    },
+    {
+      "file": "Tools/UpdatePreferencesTool.swift",
+      "pattern": "allSatisfy\\(\\{ \\$0 > installedMajor \\}\\)",
+      "operator": "> → >=",
+      "reason": "An installed major among the three newest is handled by the earlier branch: equivalent mutant."
+    },
+    {
+      "file": "Downloads/InstallerArchive.swift",
+      "pattern": "if item\\.pathExtension\\.lowercased\\(\\) == \"app\" \\{ result\\.append\\(item\\); continue \\}",
+      "operator": "remove continue",
+      "reason": "An app bundle has an extension, so the following guard skips it anyway (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/InstallerArchive.swift",
+      "pattern": "var isDirectory: ObjCBool = false",
+      "operator": "false → true",
+      "reason": "fileExists(atPath:isDirectory:) always sets the value before it is read (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/InstallerArchive.swift",
+      "pattern": "createDirectory\\(at: (bundleStore|folder), withIntermediateDirectories: true\\)",
+      "operator": "true → false",
+      "reason": "The parent folders exist at this point, so both settings create the same folder (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/InstallerArchive.swift",
+      "pattern": "\\.sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
+      "operator": "< → <=",
+      "reason": "Names in one folder are unique, so < and <= sort them identically (equivalent mutant)."
     }
   ]
 }
