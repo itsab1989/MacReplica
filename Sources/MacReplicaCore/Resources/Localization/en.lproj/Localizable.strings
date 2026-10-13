@@ -1473,3 +1473,4 @@
 "frontEnd.homebrew.other" = "A graphical interface for Homebrew. Restoring it does not restore Homebrew or your packages – those are restored with Homebrew (%1$d packages in this backup).";
 "frontEnd.homebrew.missing" = "A graphical interface for Homebrew – but Homebrew was not found or could not be used on this Mac, so no Homebrew packages are in the backup. This app alone does not install Homebrew.";
 "companions.includes" = "Comes with: %1$@ (installed together with it)";
+"app.fromTap" = "From the tap %1$@ (a package source outside Homebrew's own collection): allow it in the restore selection on the new Mac.";

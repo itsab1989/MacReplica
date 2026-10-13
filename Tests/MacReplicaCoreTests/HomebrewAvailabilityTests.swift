@@ -116,4 +116,28 @@ struct HomebrewAvailabilityTests {
         #expect(l.frontEndText(frontEnd, manifest: withoutHomebrew).contains("This app alone does not install Homebrew"))
         #expect(PackageManagerFrontEnds.frontEnd(for: AppRecord(name: "Pixel Forge", bundleIdentifier: "com.example.pixelforge", path: "/x")) == nil)
     }
+
+    /// `brew list --cask --versions user/tap/token` fails in Homebrew 5 even when the cask is installed: tap casks were
+    /// reported as failed after a successful installation. They are checked by their short token now.
+    @Test func casksFromTapsAreInstalledAndVerified() async throws {
+        let sandbox = try Sandbox("brew-tap-restore")
+        let (_, source, result) = try await Self.inventory(sandbox)
+        let (fresh, target) = try TestEnvironment.freshMac(sandbox)
+        for (path, spec) in [("itsab1989/chromiq/chromiq", #"{"version": "4.3.4", "app": "ChromIQ.app", "bundle_id": "com.chromiq.app"}"#),
+                             ("example/tools/tap-tool", #"{"version": "2.1", "app": "Tap Tool.app", "bundle_id": "com.example.taptool"}"#)] {
+            let url = fresh.state.appendingPathComponent("brew/available/casks/\(path).json")
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data(spec.utf8).write(to: url)
+        }
+        _ = source
+        let selection = RestoreSelection(components: [.applications, .brewCasks], enabledTaps: ["itsab1989/chromiq"])
+        let plan = RestorePlanner().plan(manifest: result.manifest, selection: selection)
+        let session = await RestoreExecutor(environment: TestEnvironment.restoreEnvironment(target), backupRoot: try sandbox.folder("no-backup"), sessionStore: nil)
+            .run(plan: plan, session: RestoreSession(backupPath: "", selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
+        #expect(session.results["cask:itsab1989/chromiq/chromiq"]?.outcome == .succeeded, "installed from the allowed tap and verified")
+        #expect(session.results["cask:example/tools/tap-tool"]?.outcome.isFailure == false, "a tap that was not allowed is skipped, not failed")
+        #expect(FileManager.default.fileExists(atPath: fresh.url.appendingPathComponent("Applications/ChromIQ.app").path))
+        #expect(!FileManager.default.fileExists(atPath: fresh.url.appendingPathComponent("Applications/Tap Tool.app").path))
+        #expect(HomebrewClient.shortToken("itsab1989/chromiq/chromiq@beta") == "chromiq@beta" && HomebrewClient.shortToken("firefox") == "firefox")
+    }
 }

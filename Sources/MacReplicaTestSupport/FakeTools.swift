@@ -270,6 +270,8 @@ enum FakeTools {
         exit 0 ;;
       list)
         kind="${2:-}"; name="${4:-}"
+        # Like Homebrew 5: `list --cask` knows casks only by their short token; `user/tap/token` fails.
+        if [ "$kind" = "--cask" ]; then case "$name" in */*) exit 1 ;; esac; fi
         if [ "$kind" = "--formula" ]; then f="$S/brew/formulae/$name"; else f="$S/brew/casks/$name"; fi
         if [ -n "$name" ] && [ -f "$f" ]; then echo "$name $(cat "$f")"; exit 0; fi
         echo "Error: No such keg or cask: $name" >&2
@@ -363,7 +365,7 @@ enum FakeTools {
           if [ -e "$appdir/$app" ]; then echo "Error: It seems there is already an App at '$appdir/$app'." >&2; exit 1; fi
           make_app "$appdir/$app" "$bid" "$version"
         fi
-        printf '%s' "$version" > "$S/brew/casks/$name"
+        printf '%s' "$version" > "$S/brew/casks/$(basename "$name")"
         echo "==> Installing Cask $name"
         exit 0 ;;
     esac

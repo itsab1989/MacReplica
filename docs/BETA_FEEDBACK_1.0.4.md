@@ -83,3 +83,31 @@ file remembering `~/Sync/Passwords.kdbx`, VueScan `.ini` files.
   bundle never stops the backup).
 - Not removed or changed: the copy keeps the original file attributes, including a quarantine flag – Gatekeeper
   checks it on the new Mac like any other app.
+
+### Findings in the Homebrew area (Cakebrew follow-up, ChromIQ, DisplayCAL)
+
+| # | Area | Baseline behaviour | Root cause | Severity |
+|---|---|---|---|---|
+| B16 | Cakebrew | Installed with `brew install --cask cakebrew` before Homebrew removed the cask (disabled 2024-12-16, removed 2025-12-17): recorded as “restorable with Homebrew”; on the new Mac `brew install --cask cakebrew` fails. Installed manually: “install yourself” with no reason. | `brew info --json=v2 --installed` still lists a removed cask (checked with a throw-away local tap: empty `url`, `tap: null`, the app artifact); MacReplica did not look at availability. | High (fails only after erasing) |
+| B17 | Taps | Every cask installed from a third-party tap was reported as **failed** after a successful installation. | Verification ran `brew list --cask --versions user/tap/token`; Homebrew 5 answers that with exit 1 and no output (only the short token works; formulae accept both). | High (since 1.0.0) |
+
+### V5 – Homebrew: removed/disabled casks, taps, companions, front ends — **Verified** (real app, simulated Macs) / **Partially verified** (real Cakebrew download)
+Simulated Mac with Cakebrew (cask removed), the DisplayCAL suite (cask disabled, three of its apps with the real
+bundle identifiers), ChromIQ installed from its DMG, and an app from a tap set up on that Mac.
+- Selection screen: Cakebrew “Homebrew can no longer install it: the cask “cakebrew” was removed …” plus “A graphical
+  interface for Homebrew. Restoring it does not restore Homebrew or your packages … (8 packages in this backup)”;
+  DisplayCAL “Comes with: 3D LUT Maker, Curve Viewer” and “disabled on 2026-09-01 (it does not pass Apple's Gatekeeper
+  check)”; ChromIQ and Tap Tool restorable with Homebrew from their taps. Manifest records availability, the
+  suggested tap and the companion relation.
+- Restore: the tap list names “Needed for: ChromIQ” (orange until allowed) and “Suggested by MacReplica …”. With both
+  taps allowed: 39 succeeded, **0 failed** (before the B17 fix: 2 failed, “cask not listed after installation”);
+  `brew install --cask itsab1989/chromiq/chromiq` and `example/tools/tap-tool` ran, `cakebrew` was never attempted;
+  Cakebrew and DisplayCAL are in the guided installation with their notes.
+- Real Cakebrew route: the feed declared in Cakebrew's Info.plist (`https://www.cakebrew.com/appcast/profileInfo.php`)
+  offers 1.3 over HTTPS; the download (3,763,899 bytes, as declared) is universal, `codesign --verify --strict --deep`
+  passes, team R85D3K8ATT – what MacReplica's guided download requires. The guided installation of the real Cakebrew
+  was not run end to end (it would install into the real /Applications).
+- Real Homebrew behaviour was checked on this Mac with a throw-away local tap and app folder, removed afterwards
+  (formula and cask lists identical before and after; Homebrew's automatic `autoremove` had removed the unused
+  dependency `openssl@3` during the clean-up – it was reinstalled and marked as a dependency again).
+- Tests: `HomebrewAvailabilityTests` (7, including a restore run that fails without the B17 fix), `HomebrewTests`.

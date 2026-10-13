@@ -120,6 +120,8 @@ public struct HomebrewClient: Sendable {
             casks: casks.sorted { $0.token < $1.token })
     }
 
+    static func shortToken(_ token: String) -> String { String(token.split(separator: "/").last ?? Substring(token)) }
+
     /// From `brew info --json=v2`: a cask whose definition is gone (removed from Homebrew) is still listed for an
     /// installed copy, with an empty `url` and no tap (checked with Homebrew 5 on 2026-10-13).
     static func availability(_ item: [String: Any]) -> CaskAvailability {
@@ -172,8 +174,10 @@ public struct HomebrewClient: Sendable {
         return Self.parseListVersions(result.stdout)
     }
 
+    /// `brew list --cask --versions` accepts only the short token: for `user/tap/token` it prints nothing and fails
+    /// (checked with Homebrew 5, 2026-10-13), so a cask from a third-party tap is asked for by its last part.
     public func installedCaskVersion(_ brew: HomebrewInstallation, token: String) async throws -> String? {
-        let result = try await runner.run(command(brew, ["list", "--cask", "--versions", token], timeout: 120))
+        let result = try await runner.run(command(brew, ["list", "--cask", "--versions", Self.shortToken(token)], timeout: 120))
         guard result.succeeded else { return nil }
         return Self.parseListVersions(result.stdout)
     }

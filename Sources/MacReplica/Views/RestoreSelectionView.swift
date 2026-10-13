@@ -4,6 +4,7 @@ import SwiftUI
 struct RestoreSelectionView: View {
     @EnvironmentObject var model: AppModel
     @ViewState private var showItems = false
+    @ViewState private var showNotInBackup = false
 
     var body: some View {
         let l = model.l
@@ -22,10 +23,11 @@ struct RestoreSelectionView: View {
                     if let manifest = model.manifest {
                         CompletenessNotice(manifest: manifest, onNewMac: true)
                         if manifest.completeness != .complete || !manifest.sensitiveFilesIncludedOnRequest.isEmpty {
-                            DisclosureGroup(l.t("notInBackup.show")) {
+                            DisclosureGroup(l.t("notInBackup.show"), isExpanded: $showNotInBackup) {
                                 NotInBackupView(manifest: manifest, editable: false, onThisMac: false).padding(.top, 6)
                             }
-                            .accessibilityElement(children: .contain).accessibilityIdentifier("restore.notInBackup")
+                            .accessibilityIdentifier("restore.notInBackup")
+                            .onAppear { if model.stagingExpandLists { showNotInBackup = true } }
                         }
                     }
                     warnings

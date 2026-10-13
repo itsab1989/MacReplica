@@ -563,6 +563,10 @@ final class AppModel: ObservableObject {
         services.layout.homeDirectory.appendingPathComponent("Desktop")
     }
 
+    /// Staging only (simulated Mac, `stagingExpandLists`): collapsed lists start open, so on-screen validation can read
+    /// their rows through accessibility. Real use is unaffected.
+    var stagingExpandLists: Bool { services.simulationRoot != nil && defaults.bool(forKey: "stagingExpandLists") }
+
     /// Staging only (a simulated Mac and `stagingSkipPanels` set in the simulation's defaults): the folder
     /// remembered under `key` is used without showing the file panel, so the whole flow can be driven on screen
     /// through accessibility actions. Never active outside a simulation.

@@ -1471,3 +1471,4 @@
 "frontEnd.homebrew.other" = "Een grafische interface voor Homebrew. Deze herstellen herstelt Homebrew en je pakketten niet – die worden met Homebrew hersteld (%1$d pakketten in deze reservekopie).";
 "frontEnd.homebrew.missing" = "Een grafische interface voor Homebrew – maar Homebrew is op deze Mac niet gevonden of was niet bruikbaar, dus er zitten geen Homebrew-pakketten in de reservekopie. Deze app alleen installeert Homebrew niet.";
 "companions.includes" = "Hoort erbij: %1$@ (wordt mee geïnstalleerd)";
+"app.fromTap" = "Uit de tap %1$@ (een pakketbron buiten de eigen verzameling van Homebrew): sta hem op de nieuwe Mac toe in de selectie voor het herstel.";

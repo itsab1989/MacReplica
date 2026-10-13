@@ -1471,3 +1471,4 @@
 "frontEnd.homebrew.other" = "Une interface graphique pour Homebrew. La restaurer ne restaure ni Homebrew ni tes paquets – ceux-ci sont restaurés avec Homebrew (%1$d paquets dans cette sauvegarde).";
 "frontEnd.homebrew.missing" = "Une interface graphique pour Homebrew – mais Homebrew est introuvable ou inutilisable sur ce Mac, aucun paquet Homebrew n’est donc dans la sauvegarde. Cette app seule n’installe pas Homebrew.";
 "companions.includes" = "Fourni avec : %1$@ (installés en même temps)";
+"app.fromTap" = "Du tap %1$@ (une source de paquets hors de la collection propre à Homebrew) : autorise-le dans la sélection de restauration sur le nouveau Mac.";

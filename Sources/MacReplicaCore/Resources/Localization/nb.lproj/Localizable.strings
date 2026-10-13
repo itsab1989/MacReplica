@@ -1471,3 +1471,4 @@
 "frontEnd.homebrew.other" = "Et grafisk grensesnitt for Homebrew. Å gjenopprette det gjenoppretter verken Homebrew eller pakkene dine – de gjenopprettes med Homebrew (%1$d pakker i denne sikkerhetskopien).";
 "frontEnd.homebrew.missing" = "Et grafisk grensesnitt for Homebrew – men Homebrew ble ikke funnet eller kunne ikke brukes på denne Macen, så ingen Homebrew-pakker er i sikkerhetskopien. Denne appen alene installerer ikke Homebrew.";
 "companions.includes" = "Følger med: %1$@ (installeres sammen med den)";
+"app.fromTap" = "Fra tapen %1$@ (en pakkekilde utenfor Homebrews egen samling): tillat den i gjenopprettingsvalget på den nye Macen.";

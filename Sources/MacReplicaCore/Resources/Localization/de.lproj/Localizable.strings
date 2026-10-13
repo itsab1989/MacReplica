@@ -1471,3 +1471,4 @@
 "frontEnd.homebrew.other" = "Eine grafische Oberfläche für Homebrew. Sie wiederherzustellen stellt weder Homebrew noch deine Pakete wieder her – die werden mit Homebrew wiederhergestellt (%1$d Pakete in diesem Backup).";
 "frontEnd.homebrew.missing" = "Eine grafische Oberfläche für Homebrew – Homebrew wurde auf diesem Mac aber nicht gefunden oder war nicht nutzbar, daher sind keine Homebrew-Pakete im Backup. Diese App allein installiert Homebrew nicht.";
 "companions.includes" = "Gehört dazu: %1$@ (wird mit installiert)";
+"app.fromTap" = "Aus dem Tap %1$@ (eine Paketquelle außerhalb von Homebrews eigener Sammlung): Erlaube ihn auf dem neuen Mac in der Auswahl für die Wiederherstellung.";

@@ -159,6 +159,7 @@ struct InventoryResultsView: View {
                             .padding(.top, 6)
                         }
                         .accessibilityIdentifier("results.showApps")
+                        .onAppear { if model.stagingExpandLists { showApps = true } }
                     }
                 }
                 .padding(.horizontal, 28)
@@ -499,6 +500,10 @@ struct AppRelationNotes: View {
             if !companions.isEmpty {
                 Text(l.companionsText(companions)).foregroundStyle(.secondary)
                     .accessibilityIdentifier("app.companions.\(app.id)")
+            }
+            if case .homebrewCask(let token) = app.restoreMethod, let tap = BrewTapRecord.tapName(ofToken: token) {
+                Text(l.t("app.fromTap", tap)).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("app.fromTap.\(app.id)")
             }
             if let note = app.homebrewNote {
                 Text(l.homebrewNoteText(note)).foregroundStyle(.orange)
