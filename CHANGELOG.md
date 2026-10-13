@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-10-13
+
 ### Added
 - **Tools** – a fourth option on the start screen with three tools for this Mac. Each tool shows what it finds,
   asks before changing anything, checks the real result afterwards and keeps a short history (docs/TOOLS.md).
@@ -277,7 +279,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/itsab1989/MacReplica/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/itsab1989/MacReplica/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/itsab1989/MacReplica/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/itsab1989/MacReplica/compare/v1.0.1...v1.0.2
