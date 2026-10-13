@@ -26,6 +26,18 @@ public enum VendorTaps {
                   evidence: "https://github.com/itsab1989/homebrew-chromiq"),
     ]
 
+    /// Taps of the backup that MacReplica's own list documents for an app in it: they start allowed in the restore
+    /// selection (the user can still switch them off). Only with the documented address – a backup that names the tap
+    /// with another remote is treated like any third-party tap and stays off.
+    public static func defaultEnabledTaps(_ manifest: Manifest) -> Set<String> {
+        Set(manifest.brewTaps.compactMap { record -> String? in
+            let name = record.name.lowercased()
+            guard let vendor = all.first(where: { $0.tap == name }) else { return nil }
+            guard record.remote == nil || record.remote?.lowercased() == vendor.remote.lowercased() else { return nil }
+            return name
+        })
+    }
+
     public static func tap(for app: AppRecord) -> VendorTap? {
         guard let identifier = app.bundleIdentifier?.lowercased() else { return nil }
         return all.first { $0.bundleIdentifiers.contains { $0.lowercased() == identifier } }
