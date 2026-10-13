@@ -1897,3 +1897,5 @@
 "tools.corners.confirm.default" = "Se eliminan ambos ajustes para que las apps vuelvan a usar las esquinas de macOS.";
 "tools.corners.confirm.common" = "Esto usa un ajuste no documentado (experimental). Solo afecta a tu cuenta de usuario, no se necesita contraseña de administrador y MacReplica guarda el valor anterior para «Restaurar el anterior». Vuelve a abrir las apps para ver el cambio.";
 "tools.updates.deferral.profileGone" = "El perfil de MacReplica ya no está y no hay ningún aplazamiento activo.";
+"tools.gatekeeper.profile.ours" = "el perfil de MacReplica (instalado por ti)";
+"tools.gatekeeper.byOwnProfile.message" = "Desactivaste la comprobación de apps con el perfil de MacReplica. macOS abre cualquier app sin comprobarla, también las dañinas. «Volver a activar la comprobación de apps» te guía para eliminarlo.";

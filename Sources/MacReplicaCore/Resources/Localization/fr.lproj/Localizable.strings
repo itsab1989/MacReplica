@@ -1897,3 +1897,5 @@
 "tools.corners.confirm.default" = "Les deux réglages sont supprimés, les apps utilisent à nouveau les coins de macOS.";
 "tools.corners.confirm.common" = "Cela utilise un réglage non documenté (expérimental). Seul ton compte utilisateur est concerné, aucun mot de passe administrateur n’est nécessaire, et MacReplica garde la valeur précédente pour « Restaurer la valeur précédente ». Rouvre les apps pour voir le changement.";
 "tools.updates.deferral.profileGone" = "Le profil de MacReplica a disparu et aucun report n’est actif.";
+"tools.gatekeeper.profile.ours" = "le profil de MacReplica (installé par toi)";
+"tools.gatekeeper.byOwnProfile.message" = "Tu as désactivé la vérification des apps avec le profil de MacReplica. macOS ouvre toute app sans la vérifier, y compris les nuisibles. « Réactiver la vérification des apps » te guide pour le supprimer.";

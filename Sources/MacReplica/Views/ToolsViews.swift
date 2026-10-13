@@ -166,9 +166,11 @@ struct GatekeeperStatusView: View {
                          color: status.assessments == .enabled ? .green : (status.assessments == .disabled ? .orange : .secondary),
                          label: l.t("tools.gatekeeper.state"), value: l.t("tools.gatekeeper.assessments.\(status.assessments.rawValue)"),
                          id: "tools.gatekeeper.assessments")
+            let ours = model.isInstalled(.gatekeeperOff)
             if status.profile != .none {
                 ToolStateRow(symbol: "doc.badge.gearshape", color: .orange, label: l.t("tools.gatekeeper.profile"),
-                             value: l.t("tools.gatekeeper.profile.\(status.profile.rawValue)"), id: "tools.gatekeeper.profile")
+                             value: l.t(ours ? "tools.gatekeeper.profile.ours" : "tools.gatekeeper.profile.\(status.profile.rawValue)"),
+                             id: "tools.gatekeeper.profile")
             }
             ToolStateRow(symbol: "building.2", color: .secondary, label: l.t("tools.gatekeeper.enrollment"),
                          value: l.t("tools.gatekeeper.enrollment.\(status.enrollment.rawValue)"))
@@ -177,6 +179,9 @@ struct GatekeeperStatusView: View {
             switch status.summary {
             case .normal:
                 NoticeView(style: .success, title: l.t("tools.gatekeeper.normal.title"), message: l.t("tools.gatekeeper.normal.message"))
+            case .disabledByProfile where ours:
+                // MacReplica's own profile: “Turn app checking back on” below removes it.
+                NoticeView(style: .warning, title: l.t("tools.gatekeeper.byProfile.title"), message: l.t("tools.gatekeeper.byOwnProfile.message"))
             case .disabledByProfile:
                 NoticeView(style: .warning, title: l.t("tools.gatekeeper.byProfile.title"), message: l.t("tools.gatekeeper.byProfile.message"))
                 Button(l.t("tools.gatekeeper.openDeviceManagement")) { model.openDeviceManagementSettings() }

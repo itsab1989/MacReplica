@@ -1897,3 +1897,5 @@
 "tools.corners.confirm.default" = "Entrambe le impostazioni vengono rimosse, così le app usano di nuovo gli angoli di macOS.";
 "tools.corners.confirm.common" = "Si usa un’impostazione non documentata (sperimentale). Riguarda solo il tuo account utente, non serve la password di amministratore e MacReplica ricorda il valore precedente per «Ripristina il precedente». Riapri le app per vedere la modifica.";
 "tools.updates.deferral.profileGone" = "Il profilo di MacReplica è stato rimosso e nessun rinvio è attivo.";
+"tools.gatekeeper.profile.ours" = "il profilo di MacReplica (installato da te)";
+"tools.gatekeeper.byOwnProfile.message" = "Hai disattivato il controllo delle app con il profilo di MacReplica. macOS apre ogni app senza controllarla, anche quelle dannose. «Riattiva il controllo delle app» ti guida a rimuoverlo.";

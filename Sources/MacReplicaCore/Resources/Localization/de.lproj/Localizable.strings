@@ -1897,3 +1897,5 @@
 "tools.corners.confirm.default" = "Beide Einstellungen werden entfernt, damit Apps wieder die Ecken von macOS nutzen.";
 "tools.corners.confirm.common" = "Dafür wird eine nicht dokumentierte Einstellung genutzt (experimentell). Nur dein Benutzerkonto ist betroffen, es ist kein Administratorpasswort nötig, und MacReplica merkt sich den vorherigen Wert für „Vorherigen Wert wiederherstellen“. Öffne Apps neu, um die Änderung zu sehen.";
 "tools.updates.deferral.profileGone" = "Das Profil von MacReplica ist entfernt und kein Aufschub ist aktiv.";
+"tools.gatekeeper.profile.ours" = "das Profil von MacReplica (von dir installiert)";
+"tools.gatekeeper.byOwnProfile.message" = "Du hast die App-Prüfung mit dem Profil von MacReplica ausgeschaltet. macOS öffnet jede App ungeprüft, auch schädliche. „App-Prüfung wieder einschalten“ führt dich zum Entfernen.";

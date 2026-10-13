@@ -1897,3 +1897,5 @@
 "tools.corners.confirm.default" = "Begge innstillingene fjernes, så apper bruker macOS’ egne hjørner igjen.";
 "tools.corners.confirm.common" = "Dette bruker en udokumentert innstilling (eksperimentelt). Bare brukerkontoen din påvirkes, det trengs ikke administratorpassord, og MacReplica husker den forrige verdien for «Gjenopprett forrige». Åpne apper på nytt for å se endringen.";
 "tools.updates.deferral.profileGone" = "Profilen fra MacReplica er borte og ingen utsettelse er aktiv.";
+"tools.gatekeeper.profile.ours" = "profilen fra MacReplica (installert av deg)";
+"tools.gatekeeper.byOwnProfile.message" = "Du slo av appsjekk med profilen fra MacReplica. macOS åpner alle apper uten å sjekke dem, også skadelige. «Slå på appsjekk igjen» viser deg hvordan du fjerner den.";

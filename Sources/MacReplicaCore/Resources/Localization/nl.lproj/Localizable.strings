@@ -1897,3 +1897,5 @@
 "tools.corners.confirm.default" = "Beide instellingen worden verwijderd, zodat apps weer de hoeken van macOS gebruiken.";
 "tools.corners.confirm.common" = "Hiervoor wordt een ongedocumenteerde instelling gebruikt (experimenteel). Alleen je gebruikersaccount wordt beïnvloed, er is geen beheerderswachtwoord nodig, en MacReplica onthoudt de vorige waarde voor ‘Vorige terugzetten’. Open apps opnieuw om de wijziging te zien.";
 "tools.updates.deferral.profileGone" = "Het profiel van MacReplica is weg en er is geen uitstel actief.";
+"tools.gatekeeper.profile.ours" = "het profiel van MacReplica (door jou geïnstalleerd)";
+"tools.gatekeeper.byOwnProfile.message" = "Je hebt de app-controle uitgezet met het profiel van MacReplica. macOS opent elke app zonder controle, ook schadelijke. ‘App-controle weer aanzetten’ helpt je het te verwijderen.";

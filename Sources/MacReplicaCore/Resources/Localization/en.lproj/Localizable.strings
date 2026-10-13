@@ -1899,3 +1899,5 @@
 "tools.corners.confirm.default" = "Both settings are removed, so apps use macOS's own corners again.";
 "tools.corners.confirm.common" = "This uses an undocumented setting (experimental). Only your user account is affected, no administrator password is needed, and MacReplica keeps the previous value for “Restore previous”. Reopen apps to see the change.";
 "tools.updates.deferral.profileGone" = "MacReplica's profile is gone and no postponement is active.";
+"tools.gatekeeper.profile.ours" = "MacReplica's profile (installed by you)";
+"tools.gatekeeper.byOwnProfile.message" = "You turned app checking off with MacReplica's profile. macOS opens every app without checking it, including harmful ones. “Turn app checking back on” guides you to remove it.";
