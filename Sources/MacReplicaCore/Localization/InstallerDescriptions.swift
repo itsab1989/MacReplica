@@ -132,3 +132,29 @@ extension Localizer {
         bootstrapSummary(app) + "\n" + t("bootstrap.readme", app.path, MacReplicaLinks.releases.absoluteString)
     }
 }
+
+/// Notes about how an app relates to Homebrew and to other apps.
+extension Localizer {
+    /// Why Homebrew cannot reinstall the app, and what MacReplica does instead.
+    public func homebrewNoteText(_ note: HomebrewNote) -> String {
+        let reason = note.availability.reason.map { has("cask.reason.\($0)") ? t("cask.reason.\($0)") : $0 }
+        switch note.availability.state {
+        case .removed:
+            return t("cask.removed", note.token)
+        case .disabled:
+            let date = note.availability.date ?? "–"
+            return t("cask.disabled", note.token, date, reason ?? t("cask.reason.unknown"))
+        case .deprecated, .available:
+            return t("cask.deprecated", note.token)
+        }
+    }
+
+    /// For Cakebrew and other front ends: restoring the app does not restore the package manager or its packages.
+    public func frontEndText(_ frontEnd: PackageManagerFrontEnd, manifest: Manifest) -> String {
+        guard manifest.homebrew != nil else { return t("frontEnd.homebrew.missing") }
+        let packages = manifest.brewFormulae.filter(\.installedOnRequest).count + manifest.brewCasks.count
+        return p("frontEnd.homebrew", packages)
+    }
+
+    public func companionsText(_ names: [String]) -> String { t("companions.includes", names.joined(separator: ", ")) }
+}

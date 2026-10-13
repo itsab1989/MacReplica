@@ -177,13 +177,15 @@ struct TapSection: View {
         let l = model.l
         let taps = (model.manifest?.brewTaps ?? []).filter { !$0.isBuiltIn }
         if !taps.isEmpty, model.selection.components.contains(.brewFormulae) || model.selection.components.contains(.brewCasks) {
+            let plan = model.currentPlan()
             VStack(alignment: .leading, spacing: 6) {
-                Text(l.t("taps.title")).font(.headline)
+                LabelWithHelp(label: l.t("taps.title"), help: l.t("taps.help"), id: "help.taps", font: .headline)
                 Text(l.t("taps.message"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 ForEach(taps) { tap in
+                    let dependents = plan?.items.filter { $0.dependsOn.contains("tap:\(tap.name.lowercased())") }.map(\.title) ?? []
                     Toggle(isOn: Binding(
                         get: { model.selection.enabledTaps.contains(tap.name.lowercased()) },
                         set: { on in
@@ -194,9 +196,21 @@ struct TapSection: View {
                             if let remote = tap.remote {
                                 Text(remote).font(.caption).foregroundStyle(.secondary)
                             }
+                            if !dependents.isEmpty {
+                                Text(l.t("taps.neededFor", dependents.joined(separator: ", ")))
+                                    .font(.caption)
+                                    .foregroundStyle(model.selection.enabledTaps.contains(tap.name.lowercased()) ? Color.secondary : Color.orange)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .accessibilityIdentifier("tap.neededFor.\(tap.name)")
+                            }
+                            if let apps = tap.suggestedFor, !apps.isEmpty {
+                                Text(l.t("taps.suggested", apps.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                     .toggleStyle(.checkbox)
+                    .accessibilityIdentifier("tap.\(tap.name)")
                 }
             }
         }

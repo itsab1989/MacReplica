@@ -149,7 +149,9 @@ struct InventoryResultsView: View {
                     if let apps = manifest?.applications, !apps.isEmpty {
                         DisclosureGroup(l.t("results.showApps"), isExpanded: $showApps) {
                             VStack(spacing: 0) {
-                                ForEach(apps) { app in
+                                // Companion apps (e.g. DisplayCAL's 3D LUT Maker) are listed with their main app.
+                                let ids = Set(apps.map(\.id))
+                                ForEach(apps.filter { $0.companionOf.map { !ids.contains($0) } ?? true }) { app in
                                     AppRow(app: app)
                                     Divider()
                                 }
@@ -386,6 +388,7 @@ struct AppRow: View {
                         .font(.caption).foregroundStyle(.orange)
                         .lineLimit(1).truncationMode(.middle)
                 }
+                AppRelationNotes(app: app)
             }
             Spacer()
             Text(l.methodText(app.restoreMethod))
@@ -479,5 +482,34 @@ struct BackupSetupCard: View {
                 }
             }
         }
+    }
+}
+
+/// Companion apps, why Homebrew cannot reinstall the app, and what a package-manager front end does not restore.
+struct AppRelationNotes: View {
+    @EnvironmentObject var model: AppModel
+    var app: AppRecord
+    var manifest: Manifest? = nil
+
+    var body: some View {
+        let l = model.l
+        let manifest = manifest ?? model.inventory?.manifest ?? model.manifest
+        let companions = (manifest?.applications ?? []).filter { $0.companionOf == app.id }.map(\.name)
+        Group {
+            if !companions.isEmpty {
+                Text(l.companionsText(companions)).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("app.companions.\(app.id)")
+            }
+            if let note = app.homebrewNote {
+                Text(l.homebrewNoteText(note)).foregroundStyle(.orange)
+                    .accessibilityIdentifier("app.homebrewNote.\(app.id)")
+            }
+            if let frontEnd = PackageManagerFrontEnds.frontEnd(for: app), let manifest {
+                Text(l.frontEndText(frontEnd, manifest: manifest)).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("app.frontEnd.\(app.id)")
+            }
+        }
+        .font(.caption)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

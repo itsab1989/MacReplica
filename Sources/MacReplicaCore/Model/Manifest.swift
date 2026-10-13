@@ -345,6 +345,11 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
     /// Installers the user keeps for this app, in the order they are run (e.g. the installer, then an
     /// activation package). See `InstallerArchive`.
     public var ownInstallers: [InstallerArchive]? = nil
+    /// A Homebrew cask exists (or existed) for the app but cannot install it any more (disabled or removed).
+    public var homebrewNote: HomebrewNote? = nil
+    /// The app comes with another app (`AppRecord.id` of the main app), e.g. DisplayCAL's 3D LUT Maker: installing the
+    /// main app's installer or cask brings it back, so it is not a separate step.
+    public var companionOf: String? = nil
 
     public struct OtherCopy: Codable, Equatable, Hashable, Sendable {
         public var path: String
@@ -385,7 +390,7 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
         case minimumSystemVersion, source, restoreMethod, candidates, homepage, channel, channelEvidence, updateFeed, teamIdentifier
         // Written since 1.0.5: before, these were left out of manifest.json, so installers copied into a backup
         // were not offered on the new Mac.
-        case otherCopies, ownInstallers
+        case otherCopies, ownInstallers, homebrewNote, companionOf
     }
 
     public init(from decoder: Decoder) throws {
@@ -408,6 +413,8 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
         teamIdentifier = try c.decodeIfPresent(String.self, forKey: .teamIdentifier)
         otherCopies = try? c.decodeIfPresent([OtherCopy].self, forKey: .otherCopies)
         ownInstallers = try? c.decodeIfPresent([InstallerArchive].self, forKey: .ownInstallers)
+        homebrewNote = try? c.decodeIfPresent(HomebrewNote.self, forKey: .homebrewNote)
+        companionOf = try c.decodeIfPresent(String.self, forKey: .companionOf)
     }
 
     /// True when MacReplica found possible Homebrew packages but none was certain enough
@@ -455,12 +462,59 @@ public struct BrewCaskRecord: Codable, Equatable, Identifiable, Sendable {
     public var tap: String?
     /// The `.app` bundles this cask installs, used to link casks and applications.
     public var appArtifacts: [String]
+    /// Whether Homebrew can still install the cask (nil in backups of 1.0.4 and earlier: assumed available).
+    public var availability: CaskAvailability?
 
-    public init(token: String, version: String, tap: String? = nil, appArtifacts: [String] = []) {
+    public init(token: String, version: String, tap: String? = nil, appArtifacts: [String] = [], availability: CaskAvailability? = nil) {
         self.token = token
         self.version = version
         self.tap = tap
         self.appArtifacts = appArtifacts
+        self.availability = availability
+    }
+
+    /// `brew install --cask` can install it on the new Mac.
+    public var isInstallable: Bool { availability?.isInstallable ?? true }
+}
+
+/// Whether Homebrew can still install a cask, and why not.
+public struct CaskAvailability: Codable, Equatable, Hashable, Sendable {
+    public enum State: String, Codable, Sendable {
+        case available
+        /// Still installable, but scheduled to be disabled (Homebrew's `deprecate!`).
+        case deprecated
+        /// No longer installable (Homebrew's `disable!`), e.g. because it fails the macOS Gatekeeper check.
+        case disabled
+        /// Removed from Homebrew altogether: an installed copy still works, it cannot be installed again.
+        case removed
+
+        public init(from decoder: Decoder) throws {
+            self = State(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .available
+        }
+    }
+
+    public var state: State
+    /// Homebrew's reason, e.g. `fails_gatekeeper_check`, `discontinued`, `unmaintained`.
+    public var reason: String?
+    /// The date Homebrew disabled (or will disable) it, `YYYY-MM-DD`.
+    public var date: String?
+
+    public init(state: State, reason: String? = nil, date: String? = nil) {
+        self.state = state
+        self.reason = reason
+        self.date = date
+    }
+
+    public var isInstallable: Bool { state == .available || state == .deprecated }
+}
+
+/// Why an app is not restored with Homebrew although Homebrew knows it (shown to the user, kept in the manifest).
+public struct HomebrewNote: Codable, Equatable, Hashable, Sendable {
+    public var token: String
+    public var availability: CaskAvailability
+    public init(token: String, availability: CaskAvailability) {
+        self.token = token
+        self.availability = availability
     }
 }
 
@@ -468,10 +522,21 @@ public struct BrewTapRecord: Codable, Equatable, Identifiable, Sendable {
     public var id: String { name }
     public var name: String
     public var remote: String?
+    /// Casks the tap offers (full tokens, `user/tap/token`), used to find packages for apps installed without Homebrew.
+    public var caskTokens: [String]?
+    /// Set for a tap MacReplica suggests because the app's developer documents it (not tapped on the old Mac).
+    public var suggestedFor: [String]?
 
-    public init(name: String, remote: String? = nil) {
+    public init(name: String, remote: String? = nil, caskTokens: [String]? = nil) {
         self.name = name
         self.remote = remote
+        self.caskTokens = caskTokens
+    }
+
+    /// The tap of a full cask or formula token `user/tap/token`, nil for packages of Homebrew's own taps.
+    public static func tapName(ofToken token: String) -> String? {
+        let parts = token.split(separator: "/")
+        return parts.count == 3 ? parts[0...1].joined(separator: "/") : nil
     }
 
     /// Official taps that Homebrew provides out of the box and that never need tapping.

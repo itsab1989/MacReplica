@@ -204,6 +204,7 @@ public struct InventoryService: Sendable {
         var snapshot: HomebrewSnapshot?
         var packages = InstalledHomebrewPackages(formulae: [], casks: [])
         var taps: [BrewTapRecord] = []
+        var tapCasks: [CaskInfo] = []
         switch await homebrew.locate() {
         case .notInstalled:
             warnings.append(.homebrewNotInstalled)
@@ -217,11 +218,14 @@ public struct InventoryService: Sendable {
             do {
                 packages = try await homebrew.installedPackages(brew)
                 taps = (try? await homebrew.taps(brew)) ?? []
+                // Casks of the third-party taps on this Mac, so apps installed from a vendor's DMG are matched too.
+                tapCasks = await homebrew.tapCasks(brew, tokens: taps.flatMap { $0.caskTokens ?? [] })
             } catch {
                 warnings.append(.homebrewListFailed)
             }
         }
         Self.linkCasks(packages.casks, to: &apps)
+        Self.linkCompanions(&apps, casks: packages.casks)
 
         // Apps whose origin is still unknown may come from an installer package.
         for index in apps.indices where apps[index].source == .unknown {
@@ -275,12 +279,16 @@ public struct InventoryService: Sendable {
         progress(InventoryProgress(phase: .matching, fraction: 0.55, detail: nil))
         if apps.contains(where: { $0.restoreMethod == .manual && $0.source != .appStore }) {
             do {
-                let matcher = Matcher(catalog: try await catalogProvider.loadCatalog())
+                var catalog = try await catalogProvider.loadCatalog()
+                catalog.casks += tapCasks
+                let matcher = Matcher(catalog: catalog)
                 Self.applyMatches(matcher, to: &apps)
             } catch {
                 warnings.append(.catalogUnavailable)
+                if !tapCasks.isEmpty { Self.applyMatches(Matcher(catalog: CaskCatalog(casks: tapCasks)), to: &apps) }
             }
         }
+        Self.applyVendorTaps(to: &apps, taps: &taps)
 
         // 5. Python (70 – 80 %)
         progress(InventoryProgress(phase: .python, fraction: 0.7, detail: nil))
@@ -403,12 +411,47 @@ public struct InventoryService: Sendable {
         return result
     }
 
+    /// Apps that come with another app: in the same folder of an application folder (a suite folder such as
+    /// `/Applications/DisplayCAL/`) with a bundle identifier that extends the main app's (`net.displaycal.DisplayCAL` →
+    /// `net.displaycal.DisplayCAL-3DLUT-maker`), or installed by the same cask as the cask's first app. Apps that are
+    /// merely from the same developer are not grouped.
+    static func linkCompanions(_ apps: inout [AppRecord], casks: [BrewCaskRecord]) {
+        var bySuite: [String: [Int]] = [:]
+        for index in apps.indices { if let folder = apps[index].suiteFolderName { bySuite[folder, default: []].append(index) } }
+        for (_, members) in bySuite where members.count > 1 {
+            let identified = members.filter { apps[$0].bundleIdentifier != nil }
+            guard let main = identified.first(where: { candidate in
+                let prefix = apps[candidate].bundleIdentifier!.lowercased()
+                return identified.contains { $0 != candidate && apps[$0].bundleIdentifier!.lowercased().hasPrefix(prefix) }
+            }) else { continue }
+            let prefix = apps[main].bundleIdentifier!.lowercased()
+            for member in identified where member != main && apps[member].bundleIdentifier!.lowercased().hasPrefix(prefix) {
+                apps[member].companionOf = apps[main].id
+            }
+        }
+        for cask in casks where cask.appArtifacts.count > 1 {
+            guard let main = apps.firstIndex(where: { $0.bundleFileName.caseInsensitiveCompare(cask.appArtifacts[0]) == .orderedSame }) else { continue }
+            for artifact in cask.appArtifacts.dropFirst() {
+                for index in apps.indices where index != main && apps[index].bundleFileName.caseInsensitiveCompare(artifact) == .orderedSame
+                    && apps[index].companionOf == nil {
+                    apps[index].companionOf = apps[main].id
+                }
+            }
+        }
+    }
+
     /// Marks apps that an installed cask provides.
     static func linkCasks(_ casks: [BrewCaskRecord], to apps: inout [AppRecord]) {
         for cask in casks {
             for artifact in cask.appArtifacts {
                 for index in apps.indices where apps[index].bundleFileName.caseInsensitiveCompare(artifact) == .orderedSame {
                     apps[index].source = .homebrewCask(token: cask.token)
+                    // A cask Homebrew disabled or removed cannot install the app again: the app gets the official
+                    // download route instead, with the reason (e.g. Cakebrew, removed from Homebrew in 2025).
+                    guard cask.isInstallable else {
+                        apps[index].homebrewNote = cask.availability.map { HomebrewNote(token: cask.token, availability: $0) }
+                        continue
+                    }
                     apps[index].restoreMethod = .homebrewCask(token: cask.token)
                     // The cask token names the channel exactly (`firefox@nightly`); restoring the same cask reproduces it.
                     if let channel = ChannelDetector.channel(caskToken: cask.token) {
@@ -421,7 +464,7 @@ public struct InventoryService: Sendable {
     }
 
     static func applyMatches(_ matcher: Matcher, to apps: inout [AppRecord]) {
-        for index in apps.indices where apps[index].restoreMethod == .manual && apps[index].source != .appStore {
+        for index in apps.indices where apps[index].restoreMethod == .manual && apps[index].source != .appStore && apps[index].companionOf == nil {
             switch matcher.match(apps[index]) {
             case .unique(let candidate):
                 apps[index].restoreMethod = candidate.restoreMethod
@@ -435,7 +478,33 @@ public struct InventoryService: Sendable {
                     apps[index].restoreMethod = .officialDownload(url: homepage)
                 }
             case .none:
-                break
+                // Homebrew knows the app, but its cask was disabled: say why it is not used.
+                if apps[index].homebrewNote == nil, let cask = matcher.disabledCask(for: apps[index]) {
+                    apps[index].homebrewNote = HomebrewNote(token: cask.token, availability: CaskAvailability(state: .disabled, reason: cask.disableReason,
+                                                                                                             date: cask.disableDate))
+                    if let homepage = cask.homepage, Self.isWebURL(homepage) {
+                        apps[index].homepage = apps[index].homepage ?? homepage
+                    }
+                }
+            }
+        }
+    }
+
+    /// Apps whose developer documents their own Homebrew tap (and that no other package matched): restored with that
+    /// tap's cask, in the same channel (stable or beta) as on this Mac. The tap is recorded so the user can allow it.
+    static func applyVendorTaps(to apps: inout [AppRecord], taps: inout [BrewTapRecord]) {
+        for index in apps.indices where apps[index].source != .appStore {
+            guard let vendor = VendorTaps.tap(for: apps[index]) else { continue }
+            if case .homebrewCask = apps[index].restoreMethod { continue }
+            let token = vendor.fullToken(for: apps[index].channel?.isPrerelease == true ? .beta : .stable)
+            apps[index].restoreMethod = .homebrewCask(token: token)
+            apps[index].candidates = []
+            if let tapIndex = taps.firstIndex(where: { $0.name.lowercased() == vendor.tap }) {
+                taps[tapIndex].suggestedFor = (taps[tapIndex].suggestedFor ?? []) + [apps[index].name]
+            } else {
+                var record = BrewTapRecord(name: vendor.tap, remote: vendor.remote)
+                record.suggestedFor = [apps[index].name]
+                taps.append(record)
             }
         }
     }

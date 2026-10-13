@@ -72,7 +72,8 @@ public struct RestorePlanner: Sendable {
         }
 
         if components.contains(.brewCasks) {
-            for cask in manifest.brewCasks {
+            // Casks Homebrew can no longer install are restored like any other app without a package (official download).
+            for cask in manifest.brewCasks where cask.isInstallable {
                 let app = appsByToken[cask.token]
                 let names = cask.appArtifacts.isEmpty ? (app.map { [$0.bundleFileName] } ?? []) : cask.appArtifacts
                 casks.append(RestoreItem(
@@ -85,8 +86,12 @@ public struct RestorePlanner: Sendable {
         }
 
         if components.contains(.applications) {
+            let installableCasks = Set(manifest.brewCasks.filter(\.isInstallable).map(\.token))
+            let appIDs = Set(manifest.applications.map(\.id))
             for app in manifest.applications {
-                if case .homebrewCask = app.source { continue }
+                // A companion app comes back with its main app (same installer, suite folder or cask).
+                if let main = app.companionOf, appIDs.contains(main) { continue }
+                if case .homebrewCask(let token) = app.source, installableCasks.contains(token) || app.homebrewNote == nil { continue }
                 if app.source == .appStore || app.restoreMethod.category == .appStore { continue }
                 var method = app.restoreMethod
                 if let decision = selection.matchDecisions[app.path] {
@@ -103,7 +108,7 @@ public struct RestorePlanner: Sendable {
                         id: "cask:\(token)", kind: .cask, title: app.name, identifier: token,
                         originalVersion: app.version, bundleIdentifier: app.bundleIdentifier,
                         appBundleNames: [app.bundleFileName], architectures: app.architectures,
-                        dependsOn: [RestoreItem.homebrewID], component: .applications))
+                        dependsOn: [RestoreItem.homebrewID] + tapDependency(for: BrewTapRecord.tapName(ofToken: token)), component: .applications))
                     caskTokens.insert(token)
                 case .homebrewFormula(let name):
                     formulae.append(RestoreItem(

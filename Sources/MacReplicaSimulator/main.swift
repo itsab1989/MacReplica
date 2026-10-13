@@ -33,6 +33,7 @@ func usage() -> Never {
            MacReplicaSimulator displays <folder> same-mac|other-mac|external-unplugged
            MacReplicaSimulator creative <folder>
            MacReplicaSimulator workflow <folder>
+           MacReplicaSimulator beta-feedback <folder>
            MacReplicaSimulator launchpad <folder>
            MacReplicaSimulator install-resolve <folder> <version>
            MacReplicaSimulator launch-photoshop <folder> <folder name>
@@ -205,6 +206,9 @@ do {
     case "workflow":
         try root.addWorkflowAppData()
         print("Added Krita, GIMP, Inkscape, Scribus, Office, Mail, Cryptomator, DisplayCAL and other app data")
+    case "beta-feedback":
+        try root.addBetaFeedbackApps()
+        print("Added Cakebrew (cask removed), the DisplayCAL suite (cask disabled), ChromIQ (vendor tap) and Tap Tool (tapped tap)")
     case "launchpad":
         // A Launchpad with the sample apps on one page and a folder (the simulated Dock is never signalled).
         let apps = ["com.example.nimbusnotes", "com.example.pixelforge", "org.example.orbit", "com.example.terminalplus", "com.example.ledgerlite", "com.example.quillwriter", "com.example.studiomixer"]

@@ -103,6 +103,9 @@ struct GuidedAppRow: View {
                 Spacer()
                 GuidedStatusView(item: item)
             }
+            if let app = item.app {
+                AppRelationNotes(app: app).padding(.leading, 22)
+            }
             if offers.count > 1 {
                 HStack {
                     Text(l.t("guided.source")).font(.caption).foregroundStyle(.secondary)

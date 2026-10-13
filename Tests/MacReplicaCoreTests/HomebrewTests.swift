@@ -102,8 +102,9 @@ struct HomebrewTests {
         #expect(parsed.formulae.map(\.name) == ["example/tools/tool", "git", "openssl@3"])
         #expect(parsed.formulae.first { $0.name == "git" }?.version == "2.46.0")
         #expect(parsed.formulae.first { $0.name == "openssl@3" }?.installedOnRequest == false)
-        #expect(parsed.casks == [BrewCaskRecord(token: "example-editor", version: "1.2", tap: "homebrew/cask", appArtifacts: ["Example Editor.app"]),
-                                 BrewCaskRecord(token: "font-x", version: "2.0", tap: nil, appArtifacts: [])])
+        #expect(parsed.casks == [BrewCaskRecord(token: "example-editor", version: "1.2", tap: "homebrew/cask", appArtifacts: ["Example Editor.app"],
+                                                availability: CaskAvailability(state: .available)),
+                                 BrewCaskRecord(token: "font-x", version: "2.0", tap: nil, appArtifacts: [], availability: CaskAvailability(state: .available))])
         #expect(throws: HomebrewError.unexpectedOutput("brew info JSON")) { try HomebrewClient.parseInstalled(Data("[]".utf8)) }
     }
 

@@ -197,6 +197,16 @@ enum FakeTools {
         exit 0 ;;
       info)
         if [ -f "$S/scan-delay" ]; then sleep "$(cat "$S/scan-delay")"; fi
+        # Definitions of casks from third-party taps: brew info --json=v2 --cask user/tap/token …
+        if [ "${2:-}" = "--json=v2" ] && [ "${3:-}" = "--cask" ]; then
+          shift 3; printf '{"formulae":[],"casks":['; first=1
+          for t in "$@"; do
+            f="$S/brew/tap-casks/$(echo "$t" | sed 's#/#__#g').json"
+            [ -f "$f" ] || { echo "Error: Cask '$t' is unavailable" >&2; exit 1; }
+            [ $first = 1 ] || printf ','; first=0; cat "$f"
+          done
+          printf ']}\n'; exit 0
+        fi
         printf '{"formulae":['
         first=1
         for f in "$S"/brew/formulae/*; do
@@ -219,7 +229,14 @@ enum FakeTools {
           [ -n "$app" ] && artifacts="[{\"app\":[\"$app\"]}]"
           [ $first = 1 ] || printf ','
           first=0
-          printf '{"token":"%s","full_token":"%s","tap":"homebrew/cask","installed":"%s","artifacts":%s}' "$t" "$t" "$v" "$artifacts"
+          # A cask Homebrew removed or disabled since it was installed (state file: removed, or disabled:reason:date).
+          state=""; [ -f "$S/brew/cask-state/$t" ] && state="$(cat "$S/brew/cask-state/$t")"
+          case "$state" in
+            removed) printf '{"token":"%s","full_token":"%s","tap":null,"url":"","installed":"%s","artifacts":%s}' "$t" "$t" "$v" "$artifacts" ;;
+            disabled:*) reason="$(echo "$state" | cut -d: -f2)"; date="$(echo "$state" | cut -d: -f3)"
+              printf '{"token":"%s","full_token":"%s","tap":"homebrew/cask","url":"https://example.com/x.dmg","disabled":true,"disable_reason":"%s","disable_date":"%s","installed":"%s","artifacts":%s}' "$t" "$t" "$reason" "$date" "$v" "$artifacts" ;;
+            *) printf '{"token":"%s","full_token":"%s","tap":"homebrew/cask","url":"https://example.com/x.dmg","installed":"%s","artifacts":%s}' "$t" "$t" "$v" "$artifacts" ;;
+          esac
         done
         printf ']}\n'
         exit 0 ;;
@@ -231,7 +248,10 @@ enum FakeTools {
           n="$(basename "$f" | sed 's#__#/#')"; r="$(cat "$f")"
           [ $first = 1 ] || printf ','
           first=0
-          printf '{"name":"%s","remote":"%s","installed":true}' "$n" "$r"
+          tokens=""; for c in "$S"/brew/tap-casks/"$(basename "$f")"__*.json; do
+            [ -e "$c" ] || continue; tok="$(basename "$c" .json | sed 's#__#/#g')"; tokens="$tokens${tokens:+,}\"$tok\""
+          done
+          printf '{"name":"%s","remote":"%s","installed":true,"cask_tokens":[%s]}' "$n" "$r" "$tokens"
         done
         printf ']\n'
         exit 0 ;;
@@ -304,6 +324,10 @@ enum FakeTools {
         fi
         spec="$S/brew/available/casks/$name.json"
         [ -f "$spec" ] || { echo "Error: Cask '$name' is unavailable: No Cask with this name exists." >&2; exit 1; }
+        case "$(cat "$S/brew/cask-state/$name" 2>/dev/null)" in
+          removed) echo "Error: Cask '$name' is unavailable: No Cask with this name exists." >&2; exit 1 ;;
+          disabled:*) echo "Error: $name has been disabled because it does not pass the macOS Gatekeeper check!" >&2; exit 1 ;;
+        esac
         version="$(json_value "$spec" version)"; app="$(json_value "$spec" app)"; bid="$(json_value "$spec" bundle_id)"
         prefix="$(cd "$(dirname "$0")/.." && pwd)"
         case "$name" in

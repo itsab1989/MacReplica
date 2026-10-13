@@ -93,6 +93,21 @@ public struct Matcher: Sendable {
         return outcome
     }
 
+    /// A disabled cask that installs exactly this app (bundle identifier, or app bundle name plus name/token): used only
+    /// to explain why Homebrew cannot reinstall it, never to install.
+    public func disabledCask(for app: AppRecord) -> CaskInfo? {
+        let bundle = app.bundleIdentifier?.lowercased()
+        return catalog.casks.first { cask in
+            guard cask.disabled else { return false }
+            if let bundle, cask.bundleIdentifiers.contains(bundle) { return true }
+            let artifact = cask.appArtifacts.contains { $0.caseInsensitiveCompare(app.bundleFileName) == .orderedSame }
+            let token = cask.token == Self.slug(app.name)
+            let name = cask.names.contains { Self.normalize($0) == Self.normalize(app.name) }
+            // Two independent signals. Casks that install a package (DisplayCAL) name no app, so token and name must agree.
+            return [artifact, token, name].filter { $0 }.count >= 2
+        }
+    }
+
     static func decide(_ candidates: [MatchCandidate]) -> MatchOutcome {
         guard let best = candidates.first else { return .none }
         let confident = candidates.filter(isConfident)
