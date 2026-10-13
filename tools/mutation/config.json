@@ -108,7 +108,8 @@
         "SecurityTests",
         "RestoreExecutionTests",
         "SessionAndPrivilegeEdgeTests",
-        "ToolsCornerPluginTests"
+        "ToolsCornerPluginTests",
+        "ToolsCornerEdgeTests"
       ],
       "area": "Security"
     },
@@ -468,7 +469,8 @@
         "HomebrewAvailabilityTests",
         "OwnInstallerTests",
         "PrinterTests",
-        "ApplicationLocatorTests"
+        "ApplicationLocatorTests",
+        "ToolsCornerEdgeTests"
       ],
       "area": "Installed apps"
     },
@@ -521,14 +523,16 @@
       "file": "Tools/WindowCornersTool.swift",
       "tests": [
         "ToolsWindowCornersTests",
-        "ToolsCornerPluginTests"
+        "ToolsCornerPluginTests",
+        "ToolsCornerEdgeTests"
       ],
       "area": "Tools"
     },
     {
       "file": "Tools/CornerPlugin.swift",
       "tests": [
-        "ToolsCornerPluginTests"
+        "ToolsCornerPluginTests",
+        "ToolsCornerEdgeTests"
       ],
       "area": "Tools"
     }
@@ -847,6 +851,30 @@
       "pattern": "\\.sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
       "operator": "< → <=",
       "reason": "Names in one folder are unique, so < and <= sort them identically (equivalent mutant)."
+    },
+    {
+      "file": "Matching/Matcher.swift",
+      "pattern": "lhs\\.score != rhs\\.score \\? lhs\\.score > rhs\\.score : lhs\\.token < rhs\\.token",
+      "operator": "> → >=",
+      "reason": "Reached only for different scores, so > and >= agree (equivalent mutant)."
+    },
+    {
+      "file": "Matching/Matcher.swift",
+      "pattern": "lhs\\.score != rhs\\.score \\? lhs\\.score > rhs\\.score : lhs\\.token < rhs\\.token",
+      "operator": "< → <=",
+      "reason": "Cask tokens are unique, so < and <= order them identically (equivalent mutant)."
+    },
+    {
+      "file": "Tools/CornerPlugin.swift",
+      "pattern": "sysctlbyname\\(\"kern\\.osversion\", nil, &size, nil, 0\\) == 0, size > 0",
+      "operator": "> → >=",
+      "reason": "The build string always has a length; a size of 0 does not occur (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PrivilegedExecutor.swift",
+      "pattern": "set i to i \\+ wordCount \\+ 1",
+      "operator": "+ 1 → - 1",
+      "reason": "AppleScript text inside a string literal, run only with a real administrator prompt; the argument layout it reads is tested in PrivilegedExecutorTests."
     }
   ]
 }

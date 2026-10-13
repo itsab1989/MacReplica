@@ -105,3 +105,72 @@ struct ToolsEdgeTests {
         #expect(await InstalledProfiles.read(layout: .live(), runner: Listing()) == ["com.example.x"])
     }
 }
+
+@Suite("Tools: corner edge cases")
+struct ToolsCornerEdgeTests {
+    @Test func zeroIsMacOSsOwnRadius() {
+        #expect(CornerSetting(stored: "0") == .system)
+        #expect(CornerSetting(stored: 0.0) == .system)
+        #expect(CornerSetting(stored: "1") == .radius(1))
+        #expect(CornerSetting(stored: 0.6) == .radius(1))
+    }
+
+    @Test func defaultAndPluginNeedLookAtEverySurface() {
+        #expect(CornerConfiguration().isSystemDefault)
+        #expect(!CornerConfiguration(roundedButtons: true).isSystemDefault)
+        #expect(!CornerConfiguration(classicMenus: true).isSystemDefault)
+        #expect(!CornerConfiguration(radii: [.windows: .radius(5)]).isSystemDefault)
+        #expect(CornerConfiguration(roundedButtons: true).needsPlugin, "the button shape alone needs the plugin")
+        #expect(CornerConfiguration(radii: [.toolbars: .radius(5)]).needsPlugin)
+        #expect(!CornerConfiguration(radii: [.windows: .radius(5), .utilityPanels: .radius(5)], classicMenus: true).needsPlugin)
+        #expect(!CornerConfiguration(radii: [.menus: .system]).needsPlugin)
+    }
+
+    @Test func buttonSwitchIsReadAsBooleanOrNumber() throws {
+        let (tool, store, folder) = ToolsWindowCornersTests.tool()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        #expect(!tool.state().roundedButtons)
+        try store.set("MacReplicaRoundedButtons", 1)
+        #expect(tool.state().roundedButtons)
+        try store.set("MacReplicaRoundedButtons", 0)
+        #expect(!tool.state().roundedButtons)
+        try store.set("MacReplicaRoundedButtons", true)
+        #expect(tool.state().roundedButtons)
+        try store.set("MacReplicaRoundedButtons", false)
+        #expect(!tool.state().roundedButtons)
+    }
+
+    @Test func pluginNeedsBothFilesEverywhere() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let app = folder.appendingPathComponent("MacReplica.app")
+        let bundled = app.appendingPathComponent("Contents/Library/CornerPlugin")
+        try FileManager.default.createDirectory(at: bundled, withIntermediateDirectories: true)
+        try Data("dylib".utf8).write(to: bundled.appendingPathComponent(CornerPlugin.dylibName))
+        #expect(CornerPlugin.bundled(in: app) == nil, "without its blacklist the plugin is never offered")
+        var layout = SystemLayout.live()
+        layout.ammoniaTweaks = folder.appendingPathComponent("ammonia/core/tweaks")
+        try FileManager.default.createDirectory(at: layout.ammoniaTweaks, withIntermediateDirectories: true)
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: []), baseEnvironment: [:])
+        var status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
+        #expect(!status.installed && !status.current)
+        try Data("dylib".utf8).write(to: layout.ammoniaTweaks.appendingPathComponent(CornerPlugin.dylibName))
+        status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
+        #expect(!status.installed, "a plugin without its blacklist does not count as installed")
+        #expect(!status.current)
+    }
+
+    @Test func removalRefusesPathsWithParentSteps() {
+        #expect(!PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/etc/../private/var/ammonia/core/tweaks/MacReplicaCorners.dylib")))
+        #expect(PrivilegedOperation.isRemovablePlugin(URL(fileURLWithPath: "/private/var/ammonia/core/tweaks/MacReplicaCorners.dylib")))
+    }
+
+    @Test func locatorLooksAtMostOneFolderDownByName() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try ApplicationLocatorTests.app("Deep/Er/X.app", id: "com.x", in: root)
+        try ApplicationLocatorTests.app("Suite/Y.app", id: "com.y", in: root)
+        #expect(ApplicationLocator.find(names: ["Deep/Er/X.app"], bundleIdentifier: nil, in: [root]) == nil)
+        #expect(ApplicationLocator.find(names: ["Suite/Y.app"], bundleIdentifier: nil, in: [root]) != nil)
+    }
+}

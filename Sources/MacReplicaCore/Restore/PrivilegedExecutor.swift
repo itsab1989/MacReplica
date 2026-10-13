@@ -39,8 +39,8 @@ public enum PrivilegedOperation: Equatable, Sendable {
 extension PrivilegedOperation {
     /// Only `MacReplicaCorners.dylib` and its `.blacklist` directly inside a folder ending in `ammonia/core/tweaks`.
     public static func isRemovablePlugin(_ url: URL) -> Bool {
-        let path = url.standardizedFileURL.path
-        guard !path.contains("/../") else { return false }
+        // The path as given: parent steps are refused outright (standardizing would hide them).
+        guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
         return url.deletingLastPathComponent().path.hasSuffix("/ammonia/core/tweaks")
             && CornerPlugin.fileNames.contains(url.lastPathComponent)
     }
