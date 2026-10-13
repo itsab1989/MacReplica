@@ -251,7 +251,9 @@ struct BackupSavedView: View {
                         NoticeView(style: .success, title: l.t("saved.verified"), message: l.t("saved.message"))
                         CompletenessNotice(manifest: outcome.manifest)
                         if let app = outcome.manifest.bootstrapApp {
-                            NoticeView(style: app.isUniversal ? .info : .warning, title: l.bootstrapSummary(app), message: l.t("bootstrap.saved.message"))
+                            let runsHere = app.runs(on: outcome.manifest.architecture)
+                            NoticeView(style: app.isUniversal ? .info : .warning, title: l.bootstrapSummary(app),
+                                       message: runsHere ? l.t("bootstrap.saved.message") : l.t("bootstrap.notThisMac"))
                                 .accessibilityIdentifier("saved.bootstrap")
                         } else {
                             NoticeView(style: .warning, title: l.t("bootstrap.missing"), message: l.t("bootstrap.missing.message", MacReplicaLinks.releases.absoluteString))
@@ -299,6 +301,9 @@ struct BackupSavedView: View {
             }
         } buttons: {
             if let url = model.savedBackup {
+                Button(l.t("saved.reinstallGuide")) { model.open(url.appendingPathComponent(BackupWriter.reinstallGuidePath)) }
+                    .help(l.t("saved.reinstallGuide.help"))
+                    .accessibilityIdentifier("saved.reinstallGuide")
                 Button(l.t("saved.openInstructions")) { model.open(url.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html")) }
                     .accessibilityIdentifier("saved.instructions")
                 Button(l.t("saved.openReport")) { model.open(url.appendingPathComponent("reports/inventory.html")) }

@@ -66,6 +66,8 @@ public struct ReportBuilder: Sendable {
         h3 { font-size: 15px; margin: 20px 0 4px; }
         pre { background: var(--card); border-radius: 8px; padding: 10px 12px; overflow-x: auto; }
         li { margin: 3px 0; }
+        @media print { body { padding: 0; font-size: 11px; } h1 { font-size: 20px; } h2 { font-size: 14px; margin: 12px 0 4px; page-break-after: avoid; }
+          a { color: inherit; } a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9px; color: var(--muted); } footer { margin-top: 12px; } }
         </style>
         </head>
         <body><main>

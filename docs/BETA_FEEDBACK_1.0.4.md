@@ -111,3 +111,16 @@ bundle identifiers), ChromIQ installed from its DMG, and an app from a tap set u
   (formula and cask lists identical before and after; Homebrew's automatic `autoremove` had removed the unused
   dependency `openssl@3` during the clean-up – it was reinstalled and marked as a dependency again).
 - Tests: `HomebrewAvailabilityTests` (7, including a restore run that fails without the B17 fix), `HomebrewTests`.
+
+### V6 – Printable macOS reinstall guide (item 15) — **Verified** (real app, simulated Intel T2 Mac; Safari rendering) / content from Apple documentation, the reinstall itself **Not verified**
+- Simulated MacBook Pro 2019 (`MacBookPro16,1`, Intel, macOS 14.8.4). Completion screen → “Reinstall Guide” opened
+  `restore/REINSTALL_MACOS.html` in Safari: “Intel Mac with the Apple T2 Security Chip · now macOS 14.8.4”, Command-R /
+  Option-Command-R / Shift-Option-Command-R with Apple's wording, Startup Security Utility for USB installers, Erase
+  All Content and Settings (T2 + macOS 12+), Disk Utility steps, first start, MacReplica from the backup, Apple links.
+  Apple silicon and Intel without T2 get their own steps (tests). It does not claim which macOS versions the Mac can
+  install; it links Apple's compatibility pages.
+- Found on screen and fixed: with an arm64-only build in the backup of an Intel Mac, the guide showed the copy in
+  green; it is now a red warning (“It does not run on this Mac's processor …”). Release builds are universal (the
+  release workflow refuses an app without both slices); with the universal build the guide and the completion screen
+  say “runs on Apple silicon and Intel”.
+- Tests: `ReinstallGuideTests` (5). The reinstall procedure itself was not carried out (it would erase a Mac).

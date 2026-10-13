@@ -26,6 +26,8 @@ public struct SimulationEnvironment: Sendable {
         public var homebrewPackage: String
         public var architecture: CPUArchitecture
         public var macosVersion: String
+        /// The simulated Mac's model identifier (e.g. `MacBookPro16,1`); nil uses this Mac's.
+        public var modelIdentifier: String?
 
         public init(home: String, applicationFolders: [String], userFonts: String, systemFonts: String, userColorProfiles: String,
                     systemColorProfiles: String, homebrewPrefixes: [String], xcodeSelect: String, pkgutil: String, mdls: String,

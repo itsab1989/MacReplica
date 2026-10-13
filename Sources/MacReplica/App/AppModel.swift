@@ -335,9 +335,10 @@ final class AppModel: ObservableObject {
     func startInventory() {
         screen = .scanning
         inventoryProgress = InventoryProgress(phase: .applications, fraction: 0, detail: nil)
-        let service = InventoryService(layout: services.layout, runner: services.runner, catalogProvider: services.catalogProvider,
+        var service = InventoryService(layout: services.layout, runner: services.runner, catalogProvider: services.catalogProvider,
                                        macOSVersion: services.macOSVersion, architecture: services.architecture,
                                        pythonSearchFolders: pythonSearchFolders)
+        service.modelIdentifier = services.modelIdentifier
         appLog.info("Inventory started", component: .inventory)
         let model = self
         task = Task { [weak self] in

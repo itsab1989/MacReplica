@@ -163,6 +163,7 @@ public struct InventoryService: Sendable {
     public var architecture: CPUArchitecture
     /// Extra folders to search for Python environments.
     public var pythonSearchFolders: [URL]
+    public var modelIdentifier: String? = SystemInfo.modelIdentifier
 
     public init(layout: SystemLayout, runner: CommandRunning, catalogProvider: CatalogProviding,
                 macOSVersion: String = SystemInfo.macOSVersion, architecture: CPUArchitecture = SystemInfo.currentArchitecture,
@@ -333,6 +334,7 @@ public struct InventoryService: Sendable {
             developer: developer,
             toolchains: toolchains)
         manifest.macreplicaBuild = SystemInfo.buildNumber
+        manifest.modelIdentifier = modelIdentifier
         if apps.contains(where: OfficeActivation.isOfficeApp) { manifest.officeActivation = OfficeActivation.detect(layout: layout) }
         // Display profile assignments (read-only); identifiers only as salted hashes.
         let displayManager = layout.displayColorManager

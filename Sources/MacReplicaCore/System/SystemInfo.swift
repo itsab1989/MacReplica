@@ -27,6 +27,15 @@ public enum SystemInfo {
     public static var appVersion: String { MacReplicaVersion.current }
 
     /// The build number written into the app bundle by `scripts/build-app.sh`, or "dev" for development builds.
+    /// The model identifier, e.g. `MacBookPro16,1` or `Mac15,9` (`hw.model`).
+    public static var modelIdentifier: String? {
+        var size = 0
+        guard sysctlbyname("hw.model", nil, &size, nil, 0) == 0, size > 0 else { return nil }
+        var value = [CChar](repeating: 0, count: size)
+        guard sysctlbyname("hw.model", &value, &size, nil, 0) == 0 else { return nil }
+        return String(cString: value)
+    }
+
     public static var buildNumber: String {
         guard Bundle.main.bundleIdentifier == "io.github.itsab1989.MacReplica",
               let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String, !build.isEmpty else { return "dev" }

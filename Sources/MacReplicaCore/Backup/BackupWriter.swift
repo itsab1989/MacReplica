@@ -100,6 +100,7 @@ public struct BackupWriter: Sendable {
     }
 
     public static let checksumsPath = "checksums/SHA256SUMS"
+    public static let reinstallGuidePath = "restore/REINSTALL_MACOS.html"
 
     public static func folderName(for date: Date) -> String {
         let formatter = DateFormatter()
@@ -213,6 +214,9 @@ public struct BackupWriter: Sendable {
             try writeText(builder.manualInstallationsReport(manifest), to: root.appendingPathComponent("reports/manual_installations.html"))
             try writeText(builder.restoreInstructions(manifest, folderName: root.lastPathComponent),
                           to: root.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html"))
+            let profile = MacProfile(architecture: manifest.architecture, modelIdentifier: manifest.modelIdentifier, macOSVersion: manifest.macosVersion)
+            try writeText(builder.reinstallGuide(profile: profile, manifest: manifest, backupFolderName: root.lastPathComponent),
+                          to: root.appendingPathComponent(Self.reinstallGuidePath))
             var readme = localizer.t("backup.readme", root.lastPathComponent)
             if let app = manifest.bootstrapApp { readme = localizer.bootstrapReadme(app) + "\n\n" + readme }
             try writeText(readme, to: root.appendingPathComponent("README.txt"))

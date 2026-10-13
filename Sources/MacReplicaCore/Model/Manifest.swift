@@ -57,6 +57,8 @@ public struct Manifest: Codable, Equatable, Sendable {
     public var bootstrapApp: BootstrapAppRecord?
     /// How Microsoft Office was activated on the old Mac, as far as MacReplica can tell (no licence data is read or kept).
     public var officeActivation: OfficeActivation?
+    /// The old Mac's model identifier (e.g. `MacBookPro16,1`), for the reinstall guide.
+    public var modelIdentifier: String?
 
     public init(
         manifestVersion: Int = Manifest.currentVersion,
@@ -109,7 +111,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         case manifestVersion, macreplicaVersion, macreplicaBuild, createdAt, macosVersion, architecture, homebrew
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
         case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
-        case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp, officeActivation
+        case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp, officeActivation, modelIdentifier
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -147,6 +149,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         launchpadLayout = try? c.decodeIfPresent(LaunchpadLayout.self, forKey: .launchpadLayout)
         bootstrapApp = try? c.decodeIfPresent(BootstrapAppRecord.self, forKey: .bootstrapApp)
         officeActivation = try? c.decodeIfPresent(OfficeActivation.self, forKey: .officeActivation)
+        modelIdentifier = try c.decodeIfPresent(String.self, forKey: .modelIdentifier)
     }
 }
 
