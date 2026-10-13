@@ -13,9 +13,17 @@ public struct BackupSelectionPreset: Codable, Equatable, Sendable {
     public struct OwnInstaller: Codable, Equatable, Sendable {
         public var path: String
         public var include: Bool
-        public init(path: String, include: Bool) {
+        /// The user marked the file as containing a licence.
+        public var licence: Bool?
+        /// The user confirmed using this unverified installer – valid only for exactly this file (`sha256`).
+        public var approvedUnverified: Bool?
+        public var sha256: String?
+        public init(path: String, include: Bool, licence: Bool? = nil, approvedUnverified: Bool? = nil, sha256: String? = nil) {
             self.path = path
             self.include = include
+            self.licence = licence
+            self.approvedUnverified = approvedUnverified
+            self.sha256 = sha256
         }
     }
 

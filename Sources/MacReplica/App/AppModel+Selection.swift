@@ -26,7 +26,9 @@ extension AppModel {
             matchChoices: matchChoices,
             personalFolders: personal.filter { !excludedApplicationData.contains($0.id) }.map(\.displayPath),
             ownInstallers: ownInstallerFiles.mapValues { files in
-                files.map { BackupSelectionPreset.OwnInstaller(path: layout.displayPath($0.url), include: $0.include) }
+                files.map { BackupSelectionPreset.OwnInstaller(path: layout.displayPath($0.source ?? $0.url), include: $0.include,
+                                                               licence: $0.archive.containsLicence ? true : nil,
+                                                               approvedUnverified: $0.archive.userApprovedUnverified ? true : nil, sha256: $0.archive.sha256) }
             },
             destination: (destination ?? backupDestination).map { layout.displayPath($0) })
     }
@@ -125,14 +127,26 @@ extension AppModel {
     func restoreOwnInstallers(_ saved: [String: [BackupSelectionPreset.OwnInstaller]]) {
         let layout = services.layout
         for (appID, entries) in saved where inventory?.manifest.applications.contains(where: { $0.id == appID }) == true {
-            let existing = Set((ownInstallerFiles[appID] ?? []).map(\.url.path))
-            let wanted = entries.map { (layout.resolve(displayPath: $0.path), $0.include) }
+            let existing = Set((ownInstallerFiles[appID] ?? []).map { ($0.source ?? $0.url).path })
+            let wanted = entries.map { (layout.resolve(displayPath: $0.path), $0) }
                 .filter { FileManager.default.fileExists(atPath: $0.0.path) && !existing.contains($0.0.path) }
             guard !wanted.isEmpty else { continue }
-            let include = Dictionary(wanted.map { ($0.0.path, $0.1) }, uniquingKeysWith: { first, _ in first })
-            inspectOwnInstallers(wanted.map(\.0)) { [weak self] found in
+            let saved = Dictionary(wanted.map { ($0.0.path, $0.1) }, uniquingKeysWith: { first, _ in first })
+            inspectOwnInstallers(wanted.map(\.0)) { [weak self] selections in
                 guard let self else { return }
-                self.ownInstallerFiles[appID, default: []] += found.map { OwnInstallerFile(archive: $0.0, url: $0.1, include: include[$0.1.path] ?? true) }
+                for selection in selections {
+                    guard case .success(let inspected) = selection.result else {
+                        if case .failure(let error) = selection.result { self.ownInstallerProblems[appID, default: []].append(self.problem(selection.source, error)) }
+                        continue
+                    }
+                    var archive = inspected.archive
+                    let entry = saved[selection.source.path]
+                    archive.containsLicence = entry?.licence ?? false
+                    // A confirmation counts only for the very file it was given for.
+                    archive.userApprovedUnverified = entry?.approvedUnverified == true && entry?.sha256 == archive.sha256
+                    self.ownInstallerFiles[appID, default: []].append(OwnInstallerFile(archive: archive, url: inspected.file,
+                                                                                      include: entry?.include ?? true, source: selection.source))
+                }
                 self.applyOwnInstallers(appID)
             }
         }

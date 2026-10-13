@@ -90,16 +90,24 @@ struct InventoryResultsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(l.t("ownInstaller.section.title")).font(.headline)
+                        LabelWithHelp(label: l.t("ownInstaller.section.title"), help: l.t("ownInstaller.section.help"),
+                                      id: "help.ownInstaller.section", font: .headline)
                         Text(l.t("ownInstaller.section.message")).foregroundStyle(.secondary).font(.callout)
                             .fixedSize(horizontal: false, vertical: true)
                         HStack {
                             let count = model.ownInstallerFiles.values.reduce(0) { $0 + $1.count }
                             if count > 0 { Text(l.p("ownInstaller.section.count", count)).font(.callout) }
                             Spacer()
+                            if model.inspectingInstallers {
+                                ProgressView().controlSize(.small)
+                                Text(l.t("ownInstaller.inspecting")).font(.caption).foregroundStyle(.secondary)
+                            }
                             Button(l.t("ownInstaller.folder.choose")) { model.scanInstallerFolder() }
                                 .disabled(model.inspectingInstallers)
                                 .accessibilityIdentifier("ownInstaller.folder")
+                        }
+                        ForEach(model.ownInstallerProblems[""] ?? []) { problem in
+                            InstallerProblemRow(appID: "", problem: problem)
                         }
                     }
 
@@ -194,7 +202,8 @@ struct MatchDecisionRow: View {
     }
 }
 
-/// "Use my installer …" and the installers the user chose for an app (offline restore source).
+/// "Use my installer …" and the installers the user chose for an app (offline restore source). Every chosen file is
+/// shown with what it is, whether it will be used and what happens with it; files that cannot be used are listed with the reason.
 struct OwnInstallerControls: View {
     @EnvironmentObject var model: AppModel
     var app: AppRecord
@@ -202,42 +211,128 @@ struct OwnInstallerControls: View {
     var body: some View {
         let l = model.l
         let current = model.inventory?.manifest.applications.first { $0.id == app.id } ?? app
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             ForEach(model.ownInstallerFiles[app.id] ?? [], id: \.archive.id) { file in
-                let archive = file.archive
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: archive.matchesDeveloper(of: current) ? "checkmark.seal" : "exclamationmark.triangle")
-                        .foregroundStyle(archive.matchesDeveloper(of: current) ? .green : .orange)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(archive.fileName).font(.callout).lineLimit(1).truncationMode(.middle)
-                        Text([archive.version.map { l.t("common.version", $0) }, archive.signer ?? archive.teamIdentifier.map { l.t("ownInstaller.team", $0) },
-                              l.fileSize(archive.size)].compactMap { $0 }.joined(separator: " · "))
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                        if !archive.matchesDeveloper(of: current) {
-                            Text(l.t("ownInstaller.untrusted")).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    Spacer()
-                    Toggle(l.t("ownInstaller.licence"), isOn: Binding(get: { archive.containsLicence },
-                                                                      set: { model.setOwnInstaller(app.id, archive.id, licence: $0) }))
-                        .toggleStyle(.checkbox).font(.caption)
-                        .help(l.t("ownInstaller.licence.help"))
-                    Toggle(l.t("ownInstaller.include"), isOn: Binding(get: { file.include },
-                                                                      set: { model.setOwnInstaller(app.id, archive.id, include: $0) }))
-                        .toggleStyle(.checkbox).font(.caption)
-                        .accessibilityIdentifier("ownInstaller.include.\(archive.id)")
-                    Button { model.removeOwnInstaller(app.id, archive.id) } label: { Image(systemName: "minus.circle") }
-                        .buttonStyle(.borderless).help(l.t("ownInstaller.remove")).accessibilityLabel(l.t("ownInstaller.remove"))
-                }
+                OwnInstallerRow(appID: app.id, app: current, file: file)
             }
-            HStack {
+            ForEach(model.ownInstallerProblems[app.id] ?? []) { problem in
+                InstallerProblemRow(appID: app.id, problem: problem)
+            }
+            HStack(spacing: 6) {
                 Spacer()
-                if model.inspectingInstallers { ProgressView().controlSize(.small) }
+                if model.inspectingInstallers {
+                    ProgressView().controlSize(.small)
+                    Text(l.t("ownInstaller.inspecting")).font(.caption).foregroundStyle(.secondary)
+                }
                 Button(l.t("ownInstaller.add")) { model.chooseOwnInstallers(for: app.id) }
                     .controlSize(.small)
+                    .disabled(model.inspectingInstallers)
                     .accessibilityIdentifier("ownInstaller.add.\(app.id)")
+                HelpButton(text: l.t("ownInstaller.add.help"), title: l.t("ownInstaller.add"), id: "help.ownInstaller.add.\(app.id)")
             }
         }
+    }
+}
+
+/// One installer the user chose: identity, contents, source, status and what happens on the new Mac.
+struct OwnInstallerRow: View {
+    @EnvironmentObject var model: AppModel
+    var appID: String
+    var app: AppRecord
+    var file: OwnInstallerFile
+
+    var body: some View {
+        let l = model.l
+        let archive = file.archive
+        let description = l.installerDescription(archive, for: app)
+        let color: Color = description.style == .ok ? .green : (description.style == .attention ? .orange : .red)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: description.style == .ok ? "checkmark.seal" : (description.style == .attention ? "exclamationmark.triangle" : "xmark.octagon"))
+                    .foregroundStyle(color)
+                Text(archive.fileName).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
+                    .accessibilityIdentifier("ownInstaller.name.\(archive.id)")
+                Text(l.fileSize(archive.size)).font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button { model.removeOwnInstaller(appID, archive.id) } label: { Image(systemName: "minus.circle") }
+                    .buttonStyle(.borderless).help(l.t("ownInstaller.remove")).accessibilityLabel(l.t("ownInstaller.remove"))
+                    .accessibilityIdentifier("ownInstaller.remove.\(archive.id)")
+            }
+            Group {
+                Text(description.summary).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("ownInstaller.summary.\(archive.id)")
+                Text(l.t("ownInstaller.source", model.displayPath(file.source ?? file.url))).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
+                Text(description.status).foregroundStyle(color)
+                    .accessibilityIdentifier("ownInstaller.status.\(archive.id)")
+                if let next = description.nextAction {
+                    Text(l.t("ownInstaller.next", next)).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("ownInstaller.next.\(archive.id)")
+                }
+                if !(file.include || archive.mustBeIncluded) {
+                    Text(l.t("ownInstaller.notInBackup")).foregroundStyle(.orange)
+                }
+            }
+            .font(.caption)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, 22)
+            HStack(spacing: 14) {
+                HStack(spacing: 2) {
+                    Toggle(l.t("ownInstaller.include"), isOn: Binding(get: { file.include || archive.mustBeIncluded },
+                                                                      set: { model.setOwnInstaller(appID, archive.id, include: $0) }))
+                        .toggleStyle(.checkbox)
+                        .disabled(archive.mustBeIncluded)
+                        .accessibilityIdentifier("ownInstaller.include.\(archive.id)")
+                    HelpButton(text: l.t(archive.mustBeIncluded ? "ownInstaller.include.helpApp" : "ownInstaller.include.help"),
+                               title: l.t("ownInstaller.include"), id: "help.ownInstaller.include.\(archive.id)")
+                }
+                HStack(spacing: 2) {
+                    Toggle(l.t("ownInstaller.licence"), isOn: Binding(get: { archive.containsLicence },
+                                                                      set: { model.setOwnInstaller(appID, archive.id, licence: $0) }))
+                        .toggleStyle(.checkbox)
+                        .accessibilityIdentifier("ownInstaller.licence.\(archive.id)")
+                    HelpButton(text: l.t("ownInstaller.licence.help"), title: l.t("ownInstaller.licence"), id: "help.ownInstaller.licence.\(archive.id)")
+                }
+                if description.canApproveUnverified {
+                    HStack(spacing: 2) {
+                        Toggle(l.t("ownInstaller.approve"), isOn: Binding(get: { archive.userApprovedUnverified },
+                                                                          set: { model.setOwnInstaller(appID, archive.id, approveUnverified: $0) }))
+                            .toggleStyle(.checkbox)
+                            .accessibilityIdentifier("ownInstaller.approve.\(archive.id)")
+                        HelpButton(text: l.t("ownInstaller.approve.help"), title: l.t("ownInstaller.approve"), id: "help.ownInstaller.approve.\(archive.id)")
+                    }
+                }
+            }
+            .font(.caption)
+            .padding(.leading, 22)
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+    }
+}
+
+/// A chosen file that cannot be used, with the reason.
+struct InstallerProblemRow: View {
+    @EnvironmentObject var model: AppModel
+    var appID: String
+    var problem: InstallerProblem
+
+    var body: some View {
+        let l = model.l
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(l.t("ownInstaller.problem.title", problem.fileName)).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
+                Text(l.installerProblemText(problem.error)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("ownInstaller.problem.\(problem.fileName)")
+                Text(problem.path).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            }
+            Spacer()
+            Button(l.t("ownInstaller.problem.dismiss")) { model.dismissInstallerProblem(appID, problem.id) }
+                .controlSize(.small)
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color.red.opacity(0.06)))
     }
 }
 

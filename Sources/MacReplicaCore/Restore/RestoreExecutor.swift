@@ -171,29 +171,10 @@ struct Inspector: Sendable {
         return []
     }
 
-    /// The installed `.app` matching the item, checked by bundle name and, when known, bundle identifier.
+    /// The installed `.app` matching the item, checked by bundle name and, when known, bundle identifier (also in a
+    /// suite folder one level down).
     func installedApp(for item: RestoreItem) -> URL? {
-        for folder in layout.applicationFolders {
-            for name in item.appBundleNames {
-                guard PathSafety.isSafeRelativePath(name), !name.contains("/") else { continue }
-                let url = folder.appendingPathComponent(name)
-                guard let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any] else { continue }
-                if let expected = item.bundleIdentifier {
-                    if (info["CFBundleIdentifier"] as? String)?.lowercased() == expected.lowercased() { return url }
-                } else {
-                    return url
-                }
-            }
-            // Without a known bundle name, search by bundle identifier.
-            if item.appBundleNames.isEmpty, let expected = item.bundleIdentifier?.lowercased(),
-               let items = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) {
-                for url in items where url.pathExtension == "app" {
-                    let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
-                    if (info?["CFBundleIdentifier"] as? String)?.lowercased() == expected { return url }
-                }
-            }
-        }
-        return nil
+        ApplicationLocator.find(names: item.appBundleNames, bundleIdentifier: item.bundleIdentifier, in: layout.applicationFolders)
     }
 
     func installedVersion(ofApp url: URL) -> String? {

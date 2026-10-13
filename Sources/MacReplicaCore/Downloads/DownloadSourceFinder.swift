@@ -101,6 +101,7 @@ public struct DownloadSourceFinder: Sendable {
         if let website = app.homepage ?? caskMatch(app)?.homepage, Self.isWebsite(website) {
             offers.append(DownloadOffer(id: "website", itemID: itemID, kind: .vendorWebsite, url: website))
         }
+        offers = offers.map { var offer = $0; offer.suiteFolderName = app.suiteFolderName; return offer }
         return Self.markRecommended(offers, originalChannel: app.channel)
     }
 

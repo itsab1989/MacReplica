@@ -69,6 +69,8 @@ final class AppModel: ObservableObject {
     /// The user's own installers per app (kept across a new scan) and whether they go into the backup.
     @Published var ownInstallerFiles: [String: [OwnInstallerFile]] = [:]
     @Published var inspectingInstallers = false
+    /// Files the user chose that cannot be used, per app (`""` for a scanned installer folder): always shown with the reason.
+    @Published var ownInstallerProblems: [String: [InstallerProblem]] = [:]
     @Published var notice: ProblemInfo?
     @Published var includeGitSettings = true
     @Published var includeGitEmail = false
@@ -1147,8 +1149,19 @@ enum AdminPasswordDialog {
 /// One of the user's own installers for an app, chosen on the scan results screen.
 struct OwnInstallerFile: Equatable {
     var archive: InstallerArchive
+    /// The file copied into the backup (for an app bundle: its zip).
     var url: URL
     var include: Bool
+    /// What the user chose (the file itself, or the app bundle).
+    var source: URL? = nil
+}
+
+/// A chosen file that cannot be used, with the reason (shown until the user dismisses it).
+struct InstallerProblem: Equatable, Identifiable {
+    var id: String { path }
+    var fileName: String
+    var path: String
+    var error: InstallerInspectionError
 }
 
 extension AppModel {
@@ -1158,14 +1171,35 @@ extension AppModel {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = true
+        // App bundles are chosen as files (not opened as folders).
+        panel.treatsFilePackagesAsDirectories = false
         panel.message = l.t("ownInstaller.choose.message")
         panel.prompt = l.t("ownInstaller.choose")
         guard panel.runModal() == .OK else { return }
-        inspectOwnInstallers(panel.urls) { [weak self] found in
+        addOwnInstallers(panel.urls, for: appID)
+    }
+
+    /// Inspects the chosen files for one app; each one appears either as an installer or as a problem with its reason.
+    func addOwnInstallers(_ urls: [URL], for appID: String) {
+        ownInstallerProblems[appID] = nil
+        inspectOwnInstallers(urls) { [weak self] selections in
             guard let self else { return }
-            self.ownInstallerFiles[appID, default: []] += found.map { OwnInstallerFile(archive: $0.0, url: $0.1, include: true) }
+            for selection in selections {
+                switch selection.result {
+                case .success(let inspected):
+                    if self.ownInstallerFiles[appID]?.contains(where: { $0.archive.sha256 == inspected.archive.sha256 }) == true { continue }
+                    self.ownInstallerFiles[appID, default: []].append(OwnInstallerFile(archive: inspected.archive, url: inspected.file, include: true,
+                                                                                      source: selection.source))
+                case .failure(let error):
+                    self.ownInstallerProblems[appID, default: []].append(self.problem(selection.source, error))
+                }
+            }
             self.applyOwnInstallers(appID)
         }
+    }
+
+    func problem(_ url: URL, _ error: InstallerInspectionError) -> InstallerProblem {
+        InstallerProblem(fileName: url.lastPathComponent, path: services.layout.displayPath(url), error: error)
     }
 
     /// Lets the user pick a folder of installers (e.g. on an external drive); they are matched to the apps by bundle identifier.
@@ -1177,45 +1211,64 @@ extension AppModel {
         panel.message = l.t("ownInstaller.folder.message")
         panel.prompt = l.t("ownInstaller.folder.choose")
         guard panel.runModal() == .OK, let folder = panel.url else { return }
+        scanInstallerFolder(folder)
+    }
+
+    func scanInstallerFolder(_ folder: URL) {
         var files: [URL] = []
         if let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey],
                                                            options: [.skipsHiddenFiles, .skipsPackageDescendants]) {
             while let url = enumerator.nextObject() as? URL {
                 if enumerator.level > 3 { enumerator.skipDescendants(); continue }
-                if InstallerArchiveInspector.supportedExtensions.contains(url.pathExtension.lowercased()) { files.append(url) }
+                // App bundles in an installer folder are not picked up automatically (they may be large); choose them for an app.
+                let ext = url.pathExtension.lowercased()
+                if ext != "app", InstallerArchiveInspector.supportedExtensions.contains(ext) { files.append(url) }
             }
         }
-        inspectOwnInstallers(files) { [weak self] found in
+        ownInstallerProblems[""] = nil
+        inspectOwnInstallers(files) { [weak self] selections in
             guard let self, let apps = self.inventory?.manifest.applications else { return }
             var unmatched = 0
-            for (archive, url) in found {
-                guard let id = archive.bundleIdentifier?.lowercased(),
-                      let app = apps.first(where: { $0.bundleIdentifier?.lowercased() == id }) else { unmatched += 1; continue }
+            var matched = 0
+            for selection in selections {
+                guard case .success(let inspected) = selection.result else {
+                    if case .failure(let error) = selection.result { self.ownInstallerProblems["", default: []].append(self.problem(selection.source, error)) }
+                    continue
+                }
+                let archive = inspected.archive
+                let identifiers = Set(([archive.bundleIdentifier] + archive.containedApps.map(\.bundleIdentifier)).compactMap { $0?.lowercased() })
+                guard let app = apps.first(where: { $0.bundleIdentifier.map { identifiers.contains($0.lowercased()) } ?? false }) else { unmatched += 1; continue }
+                matched += 1
                 if self.ownInstallerFiles[app.id]?.contains(where: { $0.archive.sha256 == archive.sha256 }) == true { continue }
-                self.ownInstallerFiles[app.id, default: []].append(OwnInstallerFile(archive: archive, url: url, include: true))
+                self.ownInstallerFiles[app.id, default: []].append(OwnInstallerFile(archive: archive, url: inspected.file, include: true, source: selection.source))
                 self.applyOwnInstallers(app.id)
             }
-            self.appLog.info("Installer folder: \(found.count) installers, \(found.count - unmatched) matched to apps", component: .inventory)
-            if unmatched > 0 {
-                self.notice = ProblemInfo(title: self.l.t("ownInstaller.folder.title"), message: self.l.p("ownInstaller.folder.unmatched", unmatched), detail: nil)
-            }
+            self.appLog.info("Installer folder: \(selections.count) files, \(matched) matched to apps, \(unmatched) unmatched", component: .inventory)
+            self.notice = ProblemInfo(title: self.l.t("ownInstaller.folder.title"),
+                                      message: self.l.p("ownInstaller.folder.matched", matched) + (unmatched > 0 ? " " + self.l.p("ownInstaller.folder.unmatched", unmatched) : "")
+                                        + ((self.ownInstallerProblems[""] ?? []).isEmpty ? "" : " " + self.l.p("ownInstaller.folder.problems", self.ownInstallerProblems[""]?.count ?? 0)),
+                                      detail: nil)
         }
     }
 
-    func inspectOwnInstallers(_ urls: [URL], completion: @escaping @MainActor ([(InstallerArchive, URL)]) -> Void) {
-        guard !urls.isEmpty else { return }
+    func inspectOwnInstallers(_ urls: [URL], completion: @escaping @MainActor ([InstallerSelection]) -> Void) {
+        guard !urls.isEmpty else {
+            completion([])
+            return
+        }
         inspectingInstallers = true
         let inspector = InstallerArchiveInspector(layout: services.layout, runner: services.runner)
         let work = services.layout.caches.appendingPathComponent("InstallerInspection")
+        let bundles = services.layout.caches.appendingPathComponent("InstallerBundles")
         let log = appLog
         Task { [weak self] in
-            var found: [(InstallerArchive, URL)] = []
+            var found: [InstallerSelection] = []
             for url in urls {
-                do {
-                    found.append((try await inspector.inspect(url, workFolder: work), url))
-                } catch {
+                let selection = await inspector.select(url, workFolder: work, bundleStore: bundles)
+                if case .failure(let error) = selection.result {
                     log.warning("Installer not usable: \(url.lastPathComponent) (\(error))", component: .inventory)
                 }
+                found.append(selection)
             }
             try? FileManager.default.removeItem(at: work)
             self?.inspectingInstallers = false
@@ -1223,10 +1276,11 @@ extension AppModel {
         }
     }
 
-    func setOwnInstaller(_ appID: String, _ archiveID: String, include: Bool? = nil, licence: Bool? = nil) {
+    func setOwnInstaller(_ appID: String, _ archiveID: String, include: Bool? = nil, licence: Bool? = nil, approveUnverified: Bool? = nil) {
         guard var files = ownInstallerFiles[appID], let index = files.firstIndex(where: { $0.archive.id == archiveID }) else { return }
-        if let include { files[index].include = include }
+        if let include { files[index].include = include || files[index].archive.mustBeIncluded }
         if let licence { files[index].archive.containsLicence = licence }
+        if let approveUnverified { files[index].archive.userApprovedUnverified = approveUnverified }
         ownInstallerFiles[appID] = files
         applyOwnInstallers(appID)
     }
@@ -1236,8 +1290,12 @@ extension AppModel {
         applyOwnInstallers(appID)
     }
 
+    func dismissInstallerProblem(_ appID: String, _ problemID: String) {
+        ownInstallerProblems[appID]?.removeAll { $0.id == problemID }
+    }
+
     func applyOwnInstallers(_ appID: String) {
-        inventory?.attachInstallers((ownInstallerFiles[appID] ?? []).map { ($0.archive, $0.url, $0.include) }, toApp: appID)
+        inventory?.attachInstallers((ownInstallerFiles[appID] ?? []).map { ($0.archive, $0.url, $0.include || $0.archive.mustBeIncluded) }, toApp: appID)
     }
 
     func reapplyOwnInstallers() {

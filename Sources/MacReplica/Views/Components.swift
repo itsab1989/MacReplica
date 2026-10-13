@@ -219,3 +219,54 @@ struct AppIconView: View {
 /// full Xcode. Using the property wrapper through this alias keeps the app
 /// buildable with the Command Line Tools alone and behaves exactly like `@State`.
 typealias ViewState = SwiftUI.State
+
+/// Visible help for a control: a “?” button that shows the explanation in a popover when clicked.
+///
+/// Hover tooltips alone were easy to miss (they need the pointer to rest on the control while the window is active,
+/// and nothing shows that they exist). The same text is also the tooltip and the accessibility hint, so it is
+/// reachable with the mouse, the keyboard and VoiceOver.
+struct HelpButton: View {
+    @EnvironmentObject var model: AppModel
+    var text: String
+    var title: String? = nil
+    /// Accessibility identifier, e.g. `help.ownInstaller.include`.
+    var id: String? = nil
+    @ViewState private var shown = false
+
+    var body: some View {
+        Button { shown.toggle() } label: {
+            Image(systemName: "questionmark.circle")
+                .imageScale(.medium)
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.secondary)
+        .help(text)
+        .accessibilityLabel(title.map { model.l.t("help.button.named", $0) } ?? model.l.t("help.button"))
+        .accessibilityHint(text)
+        .accessibilityIdentifier(id ?? "help")
+        .popover(isPresented: $shown, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 6) {
+                if let title { Text(title).font(.headline) }
+                Text(text).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier((id ?? "help") + ".text")
+            }
+            .padding(14)
+            .frame(width: 340, alignment: .leading)
+        }
+    }
+}
+
+/// A label followed by its help button, for section headings and options.
+struct LabelWithHelp: View {
+    var label: String
+    var help: String
+    var id: String? = nil
+    var font: Font = .body
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(label).font(font)
+            HelpButton(text: help, title: label, id: id)
+        }
+    }
+}

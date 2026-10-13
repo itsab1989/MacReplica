@@ -215,6 +215,7 @@ extension Localizer {
             return missing.isEmpty ? p("note.vaultsRegistered", found) : p("note.vaultsRegistered", found) + " " + t("note.vaultsMissing", missing.joined(separator: ", "))
         case .additionalPackageOpened(let name): return t("note.additionalPackageOpened", name)
         case .additionalPackageNotInstalled(let name): return t("note.additionalPackageNotInstalled", name)
+        case .approveInPrivacyAndSecurity(let app): return t("note.approveInPrivacyAndSecurity", app)
         }
     }
 
@@ -417,6 +418,11 @@ extension Localizer {
     }
 
     public func backupIssueText(_ reason: BackupIssue.Reason) -> String { t("backupIssue.\(reason.rawValue)") }
+
+    /// The precise reason when one was recorded, else the general one.
+    public func backupIssueText(_ issue: BackupIssue) -> String {
+        issue.detail.map { t("backupIssue.detail.\($0.rawValue)") } ?? backupIssueText(issue.reason)
+    }
 
     public func manualHint(for app: AppRecord) -> String {
         if app.source == .appStore || app.restoreMethod.category == .appStore { return t("manual.hint.appStore") }

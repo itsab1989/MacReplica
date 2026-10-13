@@ -30,7 +30,7 @@ extension ReportBuilder {
         } else {
             body += "<p class=\"warn\">\(HTML.escape(l.p("guide.partial", manifest.backupGaps.count)))</p><ul>"
             for issue in manifest.backupGaps.prefix(50) {
-                body += "<li><code>\(HTML.escape(issue.path))</code> — \(HTML.escape(l.t("backupIssue.\(issue.reason.rawValue)")))</li>"
+                body += "<li><code>\(HTML.escape(issue.path))</code> — \(HTML.escape(l.backupIssueText(issue)))</li>"
             }
             body += "</ul>"
         }

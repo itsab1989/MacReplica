@@ -388,6 +388,9 @@ public enum ResultNote: Codable, Equatable, Sendable {
     /// confirmed by the user; MacReplica cannot check a licence itself.
     case additionalPackageOpened(name: String)
     case additionalPackageNotInstalled(name: String)
+    /// Installed from an installer whose developer macOS cannot verify (the user confirmed it): macOS blocks the
+    /// first start until the user allows it in System Settings › Privacy & Security › Open Anyway.
+    case approveInPrivacyAndSecurity(app: String)
 }
 
 public struct RestoreSummary: Equatable, Sendable {

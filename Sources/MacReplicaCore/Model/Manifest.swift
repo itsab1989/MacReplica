@@ -413,6 +413,13 @@ public struct AppRecord: Codable, Equatable, Hashable, Identifiable, Sendable {
         restoreMethod.category != .homebrew && restoreMethod.category != .appStore && !candidates.isEmpty
     }
 
+    /// The folder of an application folder the app was in, e.g. `DisplayCAL` for `/Applications/DisplayCAL/DisplayCAL.app`.
+    public var suiteFolderName: String? {
+        let parent = (path as NSString).deletingLastPathComponent
+        guard ((parent as NSString).deletingLastPathComponent as NSString).lastPathComponent == "Applications" else { return nil }
+        return (parent as NSString).lastPathComponent
+    }
+
     /// The `.app` file name, e.g. `Example Editor.app`.
     public var bundleFileName: String {
         (path as NSString).lastPathComponent
@@ -501,13 +508,32 @@ public enum FileDomain: String, Codable, Sendable, CaseIterable {
 public struct BackupIssue: Codable, Equatable, Sendable {
     /// `notDownloaded`: an iCloud file whose contents are not on the Mac (reading it would download it).
     public enum Reason: String, Codable, Sendable { case unreadable, refusedSensitive, tooLarge, changedDuringBackup, notDownloaded }
+    /// A more precise reason, added in 1.0.5. Kept apart from `reason` so that MacReplica 1.0.4, which only knows the
+    /// reasons above, still reads the backup (it shows the general reason).
+    public enum Detail: String, Codable, Sendable {
+        /// The file was there during the scan but no longer when the backup was saved (deleted or moved).
+        case missing
+        /// The name cannot be stored safely in a backup (e.g. it starts with `~`), so the file was left out.
+        case unsupportedName
+    }
     /// Display path (home written as `~`).
     public var path: String
     public var reason: Reason
+    public var detail: Detail?
 
-    public init(path: String, reason: Reason) {
+    public init(path: String, reason: Reason, detail: Detail? = nil) {
         self.path = path
         self.reason = reason
+        self.detail = detail
+    }
+
+    private enum CodingKeys: String, CodingKey { case path, reason, detail }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        path = try c.decode(String.self, forKey: .path)
+        reason = (try? c.decode(Reason.self, forKey: .reason)) ?? .unreadable
+        detail = try? c.decodeIfPresent(Detail.self, forKey: .detail)
     }
 }
 

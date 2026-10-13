@@ -257,7 +257,7 @@ struct BackupSavedView: View {
                                     HStack(alignment: .firstTextBaseline) {
                                         Text(issue.path).font(.caption.monospaced()).lineLimit(1).truncationMode(.middle)
                                         Spacer()
-                                        Text(l.backupIssueText(issue.reason)).font(.caption).foregroundStyle(.secondary)
+                                        Text(l.backupIssueText(issue)).font(.caption).foregroundStyle(.secondary)
                                     }
                                 }
                                 if outcome.manifest.backupGaps.count > 8 {

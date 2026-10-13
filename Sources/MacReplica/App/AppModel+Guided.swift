@@ -221,15 +221,8 @@ extension AppModel {
 
     /// The installed version of an app the item describes, or nil if it is not installed.
     nonisolated static func installedVersion(of item: RestoreItem, layout: SystemLayout) -> String?? {
-        for folder in layout.applicationFolders {
-            for name in item.appBundleNames where !name.contains("/") {
-                let info = NSDictionary(contentsOf: folder.appendingPathComponent(name).appendingPathComponent("Contents/Info.plist")) as? [String: Any]
-                guard let info else { continue }
-                if let expected = item.bundleIdentifier, (info["CFBundleIdentifier"] as? String)?.lowercased() != expected.lowercased() { continue }
-                return .some(info["CFBundleShortVersionString"] as? String)
-            }
-        }
-        return nil
+        guard let app = ApplicationLocator.find(names: item.appBundleNames, bundleIdentifier: item.bundleIdentifier, in: layout.applicationFolders) else { return nil }
+        return .some(ApplicationLocator.version(of: app))
     }
 
     func copyToPasteboard(_ text: String) {

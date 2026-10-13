@@ -125,10 +125,10 @@ public struct BackupWriter: Sendable {
             var failed = Set<String>()
             for (index, file) in files.enumerated() {
                 progress(BackupProgress(fraction: Double(index) / Double(max(files.count, 1)) * 0.85, currentFile: file.record.fileName))
-                if let reason = try copy(file, into: root) {
+                if let issue = try copy(file, into: root) {
                     failed.insert(file.record.backupPath)
-                    manifest.backupIssues.append(BackupIssue(path: file.record.originalPath, reason: reason))
-                    log.warning("Not included (\(reason.rawValue)): \(file.record.originalPath)", component: .backup)
+                    manifest.backupIssues.append(issue)
+                    log.warning("Not included (\(issue.detail?.rawValue ?? issue.reason.rawValue)): \(file.record.originalPath)", component: .backup)
                 }
             }
             manifest.fonts.removeAll { failed.contains($0.backupPath) }
@@ -210,13 +210,23 @@ public struct BackupWriter: Sendable {
         try Data(text.utf8).write(to: url, options: .atomic)
     }
 
-    /// Copies one file. Returns a reason if the file could not be included.
-    private func copy(_ file: ScannedFile, into root: URL) throws -> BackupIssue.Reason? {
-        guard let destination = PathSafety.resolve(file.record.backupPath, inside: root) else {
-            throw BackupError.copyFailed(file.record.backupPath)
+    /// Copies one file. Returns the issue if the file could not be included.
+    ///
+    /// The names are checked with the same rules the verifier and the restore use: a file whose name the backup cannot
+    /// hold (for example one starting with `~`) is left out and reported here, so it can never make the verification
+    /// of the whole backup fail afterwards.
+    private func copy(_ file: ScannedFile, into root: URL) throws -> BackupIssue? {
+        let original = file.record.originalPath
+        guard PathSafety.isSafeRelativePath(file.record.relativePath),
+              let destination = PathSafety.resolve(file.record.backupPath, inside: root) else {
+            return BackupIssue(path: original, reason: .unreadable, detail: .unsupportedName)
         }
+        // Files with prepared contents (home folder replaced by a placeholder) were read during the scan.
+        guard file.contents != nil || FileManager.default.fileExists(atPath: file.url.path) else {
+            return BackupIssue(path: original, reason: .unreadable, detail: .missing)
+        }
+        guard file.contents != nil || FileManager.default.isReadableFile(atPath: file.url.path) else { return BackupIssue(path: original, reason: .unreadable) }
         try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-        guard FileManager.default.isReadableFile(atPath: file.url.path) else { return .unreadable }
         do {
             if let contents = file.contents {
                 try contents.write(to: destination)
@@ -224,12 +234,13 @@ public struct BackupWriter: Sendable {
                 try FileManager.default.copyItem(at: file.url, to: destination)
             }
         } catch {
-            return .unreadable
+            let gone = !FileManager.default.fileExists(atPath: file.url.path)
+            return BackupIssue(path: original, reason: .unreadable, detail: gone ? .missing : nil)
         }
         // The copy must match the checksum recorded during the scan.
         guard (try? Hashing.sha256Hex(ofFile: destination)) == file.record.sha256 else {
             try? FileManager.default.removeItem(at: destination)
-            return .changedDuringBackup
+            return BackupIssue(path: original, reason: .changedDuringBackup)
         }
         return nil
     }

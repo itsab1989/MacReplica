@@ -174,6 +174,10 @@ public struct AppDataScanner: Sendable {
         return Data(expression.stringByReplacingMatches(in: text, range: range, withTemplate: template).utf8)
     }
 
+    /// Microsoft Office's owner files: `~$` plus the document's name, created while a document is open and removed when
+    /// it is closed. They hold only the name of the user who has the document open.
+    static func isTemporaryLockFile(_ name: String) -> Bool { name.hasPrefix("~$") }
+
     static func isRefusedFile(_ name: String) -> Bool {
         refusedFilePatterns.contains { name.range(of: $0, options: .regularExpression) != nil }
     }
@@ -211,6 +215,8 @@ public struct AppDataScanner: Sendable {
             guard let values = try? url.resourceValues(forKeys: Set(keys)) else { continue }
             if values.isSymbolicLink == true { continue }
             guard values.isRegularFile == true, url.lastPathComponent != ".DS_Store" else { continue }
+            // Temporary files that only exist while a document is open (Microsoft Office's owner files `~$Name.docx`).
+            if Self.isTemporaryLockFile(url.lastPathComponent) { continue }
             guard let fileRelative = FileScanner.relativePath(of: url, below: base) else { continue }
             // Finder's translations of folder names, not user data.
             if fileRelative.split(separator: "/").contains(".localized") { continue }

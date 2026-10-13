@@ -6,6 +6,9 @@ import Foundation
 public enum PreparedDownload: Equatable, Sendable {
     /// A verified application bundle, ready to be copied into the Applications folder.
     case application(bundle: URL, mountPoint: URL?)
+    /// A folder of apps that belong together (a suite such as DisplayCAL with its companion apps), installed as a whole
+    /// into the Applications folder; `mainApp` was checked like a single application.
+    case suite(folder: URL, mainApp: URL, mountPoint: URL?)
     /// A signed installer package; the user completes it in Installer.
     case package(URL, teamIdentifier: String?)
     /// Opened in Finder for the user, e.g. a disk image with a license agreement that must be accepted there.
@@ -87,9 +90,9 @@ public struct DownloadInstaller: Sendable {
             let result = try await runner.run(Command(executable: layout.ditto, arguments: ["-x", "-k", file.path, folder.path],
                                                       environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 600))
             guard result.succeeded else { throw DownloadError.extractionFailed(layout.redact(result.combinedOutput)) }
-            if let app = Self.findApplication(in: folder) {
+            if let app = Self.application(in: folder, bundleIdentifier: offer.expectedBundleIdentifier, depth: 2) {
                 try checkApplication(app, offer: offer)
-                return .application(bundle: app, mountPoint: nil)
+                return Self.prepared(app, container: folder, mountPoint: nil)
             }
             if let package = Self.find(extension: "pkg", in: folder) { return try await preparePackage(package, offer: offer) }
             throw DownloadError.noApplicationFound
@@ -117,9 +120,9 @@ public struct DownloadInstaller: Sendable {
             throw DownloadError.extractionFailed("hdiutil attach failed: " + layout.redact(String(attach.stderr.prefix(200))))
         }
         do {
-            if let app = Self.findApplication(in: mountPoint, depth: 1) {
+            if let app = Self.application(in: mountPoint, bundleIdentifier: offer.expectedBundleIdentifier, depth: 1) {
                 try checkApplication(app, offer: offer)
-                return .application(bundle: app, mountPoint: mountPoint)
+                return Self.prepared(app, container: mountPoint, mountPoint: mountPoint)
             }
             if let package = Self.find(extension: "pkg", in: mountPoint, depth: 1) {
                 // The package must stay readable after the image is detached, so it is copied out first.
@@ -139,7 +142,12 @@ public struct DownloadInstaller: Sendable {
         let result = try await runner.run(Command(executable: layout.pkgutil, arguments: ["--check-signature", file.path],
                                                   environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 120))
         let (signed, team) = Self.parsePackageSignature(result.stdout)
-        guard result.succeeded, signed else { throw DownloadError.untrustedPackage("no trusted signature") }
+        guard result.succeeded, signed else {
+            // The user confirmed this unverified installer on the old Mac: it is shown in Finder, where macOS asks
+            // them to approve it. MacReplica never opens an unsigned package itself.
+            if offer.developerUnverified == true, result.stdout.contains("Status:") { return .openInFinder(file, reason: .untrustedPackage("no trusted signature")) }
+            throw DownloadError.untrustedPackage("no trusted signature")
+        }
         if let expected = offer.expectedTeamIdentifier, team != expected { throw DownloadError.wrongDeveloper(expected: expected, actual: team) }
         return .package(file, teamIdentifier: team)
     }
@@ -229,12 +237,30 @@ public struct DownloadInstaller: Sendable {
         return destination
     }
 
+    /// Copies a verified suite folder into the Applications folder under `name` (the folder name on the old Mac), keeping
+    /// every app's quarantine flag. An existing folder of that name is never replaced.
+    public func installSuite(_ folder: URL, named name: String?, source: String) throws -> URL {
+        guard let applications = layout.applicationFolders.first else { throw DownloadError.applicationsFolderNotWritable }
+        let folderName = name.flatMap { PathSafety.isSafeRelativePath($0) && !$0.contains("/") ? $0 : nil } ?? folder.lastPathComponent
+        let destination = applications.appendingPathComponent(folderName)
+        guard !FileManager.default.fileExists(atPath: destination.path) else { throw DownloadError.alreadyInstalled }
+        guard FileManager.default.isWritableFile(atPath: applications.path) else { throw DownloadError.applicationsFolderNotWritable }
+        try FileManager.default.copyItem(at: folder, to: destination)
+        for app in InstallerArchiveInspector.applications(in: destination) { try Self.quarantine(app, source: source) }
+        return destination
+    }
+
     // MARK: Parsing helpers
 
+    /// `hdiutil imageinfo -plist` reports the licence agreement under `Properties` (seen on macOS 14 and 27 with the
+    /// OnyX and SuperDuper! images); older output had it at the top level. Without this, `hdiutil attach` waits for an
+    /// answer nobody gives and ends with "attach canceled".
     static func hasLicenseAgreement(imageInfo plist: String) -> Bool {
-        guard let data = plist.data(using: .utf8),
+        let start = plist.range(of: "<?xml")?.lowerBound ?? plist.startIndex
+        guard let data = String(plist[start...]).data(using: .utf8),
               let object = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return false }
-        return object["Software License Agreement"] as? Bool ?? false
+        let properties = object["Properties"] as? [String: Any] ?? [:]
+        return (object["Software License Agreement"] as? Bool ?? false) || (properties["Software License Agreement"] as? Bool ?? false)
     }
 
     static func mountPoint(fromAttachOutput plist: String) -> URL? {
@@ -263,6 +289,26 @@ public struct DownloadInstaller: Sendable {
     }
 
     static func findApplication(in folder: URL, depth: Int = 2) -> URL? { find(extension: "app", in: folder, depth: depth) }
+
+    /// The app with the expected bundle identifier, at the top of `folder` or in a suite folder one level down; without
+    /// an expected identifier, the first app (as before: `depth` 1 for disk images, 2 for archives).
+    static func application(in folder: URL, bundleIdentifier: String?, depth: Int) -> URL? {
+        guard let expected = bundleIdentifier?.lowercased() else { return findApplication(in: folder, depth: depth) }
+        return InstallerArchiveInspector.applications(in: folder).first { app in
+            ((NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist")) as? [String: Any])?["CFBundleIdentifier"] as? String)?
+                .lowercased() == expected
+        }
+    }
+
+    /// A single app, or – when the app sits in a folder with further apps inside the container – that whole folder.
+    static func prepared(_ app: URL, container: URL, mountPoint: URL?) -> PreparedDownload {
+        let parent = app.deletingLastPathComponent()
+        if parent.standardizedFileURL.path != container.standardizedFileURL.path,
+           InstallerArchiveInspector.applications(in: parent).filter({ $0.deletingLastPathComponent().standardizedFileURL == parent.standardizedFileURL }).count > 1 {
+            return .suite(folder: parent, mainApp: app, mountPoint: mountPoint)
+        }
+        return .application(bundle: app, mountPoint: mountPoint)
+    }
 
     static func find(extension ext: String, in folder: URL, depth: Int = 2) -> URL? {
         let items = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.isSymbolicLinkKey])) ?? [])
