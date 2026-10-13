@@ -515,26 +515,35 @@ public struct BackupIssue: Codable, Equatable, Sendable {
         case missing
         /// The name cannot be stored safely in a backup (e.g. it starts with `~`), so the file was left out.
         case unsupportedName
+        /// A password database an app remembers (KeePassXC) that is outside the folders chosen for the backup.
+        case rememberedByApp
     }
     /// Display path (home written as `~`).
     public var path: String
     public var reason: Reason
     public var detail: Detail?
+    /// For files left out because they look like a secret: what they appear to be (from the name and file format only).
+    public var sensitive: SensitiveClassification?
 
-    public init(path: String, reason: Reason, detail: Detail? = nil) {
+    public init(path: String, reason: Reason, detail: Detail? = nil, sensitive: SensitiveClassification? = nil) {
         self.path = path
         self.reason = reason
         self.detail = detail
+        self.sensitive = sensitive
     }
 
-    private enum CodingKeys: String, CodingKey { case path, reason, detail }
+    private enum CodingKeys: String, CodingKey { case path, reason, detail, sensitive }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         path = try c.decode(String.self, forKey: .path)
         reason = (try? c.decode(Reason.self, forKey: .reason)) ?? .unreadable
         detail = try? c.decodeIfPresent(Detail.self, forKey: .detail)
+        sensitive = try? c.decodeIfPresent(SensitiveClassification.self, forKey: .sensitive)
     }
+
+    /// The file name (the last path component), shown first in lists.
+    public var fileName: String { (path as NSString).lastPathComponent }
 }
 
 /// A font or ICC profile file stored in the backup.

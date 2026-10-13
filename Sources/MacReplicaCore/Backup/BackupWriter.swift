@@ -13,6 +13,15 @@ public enum BackupError: Error, Equatable, Sendable {
     case verificationFailed(String)
 }
 
+/// How complete a saved backup is. A backup that could not be saved at all is not a `BackupOutcome` (it is removed).
+public enum BackupCompleteness: String, Sendable {
+    case complete
+    /// Everything selected is in it, except files MacReplica leaves out on purpose because they look like secrets.
+    case completeWithIntentionalExclusions
+    /// Some selected items could not be included (unreadable, removed, changed while copying, only in iCloud …).
+    case partial
+}
+
 /// The result of writing a backup.
 public struct BackupOutcome: Sendable, Equatable {
     public var url: URL
@@ -29,6 +38,18 @@ extension Manifest {
     public var backupGaps: [BackupIssue] { backupIssues.filter { $0.reason != .refusedSensitive } }
     /// Files left out on purpose because they look like passwords, keys or cookies.
     public var excludedSensitiveFiles: [BackupIssue] { backupIssues.filter { $0.reason == .refusedSensitive } }
+
+    /// Files that look like a secret and are in the backup because the user explicitly asked for them.
+    public var sensitiveFilesIncludedOnRequest: [FileRecord] {
+        applicationData.flatMap(\.files).filter { $0.metadata[AppDataScanner.includedOnRequestKey] != nil }
+    }
+
+    /// How complete the backup is: what was selected is all there; or all there except files left out on purpose
+    /// (they look like secrets); or some selected items are missing.
+    public var completeness: BackupCompleteness {
+        if !backupGaps.isEmpty { return .partial }
+        return excludedSensitiveFiles.isEmpty ? .complete : .completeWithIntentionalExclusions
+    }
 
     /// Every file stored in the backup that has a recorded checksum.
     public var allFileRecords: [FileRecord] {

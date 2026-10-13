@@ -79,3 +79,42 @@ extension Localizer {
         }
     }
 }
+
+/// Texts for files left out of a backup and for how complete a backup is.
+extension Localizer {
+    public func sensitiveKindText(_ kind: SensitiveKind) -> String { t("sensitive.kind.\(kind.rawValue)") }
+    public func sensitiveAdvice(_ kind: SensitiveKind) -> String { t("sensitive.advice.\(kind.rawValue)") }
+    public func confidenceText(_ confidence: ClassificationConfidence) -> String { t("sensitive.confidence.\(confidence.rawValue)") }
+
+    /// "Looks like: encrypted KeePass database (KDBX 4.1) · recognised by its file format"
+    public func sensitiveDescription(_ issue: BackupIssue, header: KeePassHeader? = nil) -> String {
+        guard let classification = issue.sensitive else { return t("backupIssue.refusedSensitive") }
+        var kind = sensitiveKindText(classification.kind)
+        if let header { kind += " (\(header.format))" }
+        return t("sensitive.looksLike", kind) + " · " + confidenceText(classification.confidence)
+    }
+
+    /// Why the file was left out and what the user can do.
+    public func sensitiveExplanation(_ issue: BackupIssue) -> String {
+        var parts: [String] = []
+        if issue.detail == .rememberedByApp { parts.append(t("sensitive.rememberedByApp")) }
+        parts.append(issue.sensitive.map { sensitiveAdvice($0.kind) } ?? t("sensitive.advice.nameSuggestsSecret"))
+        return parts.joined(separator: " ")
+    }
+
+    public func completenessTitle(_ manifest: Manifest) -> String {
+        switch manifest.completeness {
+        case .complete: return t("completeness.complete")
+        case .completeWithIntentionalExclusions: return p("completeness.withExclusions", manifest.excludedSensitiveFiles.count)
+        case .partial: return p("completeness.partial", manifest.backupGaps.count)
+        }
+    }
+
+    public func completenessMessage(_ manifest: Manifest) -> String {
+        switch manifest.completeness {
+        case .complete: return t("completeness.complete.message")
+        case .completeWithIntentionalExclusions: return t("completeness.withExclusions.message")
+        case .partial: return t("completeness.partial.message")
+        }
+    }
+}

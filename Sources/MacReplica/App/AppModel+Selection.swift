@@ -14,7 +14,7 @@ extension AppModel {
         let toolchains = manifest?.toolchains.map(\.provider.rawValue) ?? []
         let environments = manifest?.python.environments.map(\.id) ?? []
         let personal = manifest?.applicationData.filter(\.isPersonal) ?? []
-        return BackupSelectionPreset(
+        var preset = BackupSelectionPreset(
             applications: BackupSelectionPreset.choices(ids: apps, excluded: excludedApplications),
             files: BackupSelectionPreset.choices(ids: files, excluded: excludedBackupFiles),
             applicationData: BackupSelectionPreset.choices(ids: data, excluded: excludedApplicationData),
@@ -31,6 +31,8 @@ extension AppModel {
                                                                approvedUnverified: $0.archive.userApprovedUnverified ? true : nil, sha256: $0.archive.sha256) }
             },
             destination: (destination ?? backupDestination).map { layout.displayPath($0) })
+        preset.includedOnRequest = includedOnRequest.isEmpty ? nil : includedOnRequest.sorted()
+        return preset
     }
 
     /// Applies a saved selection to the current scan. Items that did not exist when it was saved keep their default.
@@ -65,6 +67,9 @@ extension AppModel {
             .filter { FileManager.default.fileExists(atPath: $0.path) }
         addPersonalFolders(folders)
         restoreOwnInstallers(preset.ownInstallers)
+        // Files the user had included on purpose; applied again once their folders are scanned (also after own folders load).
+        includedOnRequest = Set(preset.includedOnRequest ?? [])
+        reapplySensitiveIncludes()
         if let destination = preset.destination.map({ layout.resolve(displayPath: $0) }), FileManager.default.fileExists(atPath: destination.path) {
             backupDestination = destination
         }

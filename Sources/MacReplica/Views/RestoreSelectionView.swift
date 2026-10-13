@@ -19,6 +19,15 @@ struct RestoreSelectionView: View {
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    if let manifest = model.manifest {
+                        CompletenessNotice(manifest: manifest)
+                        if manifest.completeness != .complete || !manifest.sensitiveFilesIncludedOnRequest.isEmpty {
+                            DisclosureGroup(l.t("notInBackup.show")) {
+                                NotInBackupView(manifest: manifest, editable: false, onThisMac: false).padding(.top, 6)
+                            }
+                            .accessibilityIdentifier("restore.notInBackup")
+                        }
+                    }
                     warnings
 
                     Card {

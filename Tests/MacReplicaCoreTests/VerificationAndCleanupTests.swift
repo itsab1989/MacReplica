@@ -96,7 +96,7 @@ struct VerificationTests {
         #expect(report.isIntact)
         #expect(report.manifest?.backupIssues.count == 2)
         let guide = try String(contentsOf: outcome.url.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html"), encoding: .utf8)
-        #expect(guide.contains("2 items could not be included"))
+        #expect(guide.contains("Partial: 2 selected files are missing"))
         #expect(outcome.totalSize > 0 && outcome.fileCount > 10)
     }
 

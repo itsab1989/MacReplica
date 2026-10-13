@@ -34,6 +34,7 @@ struct ScanningView: View {
 struct InventoryResultsView: View {
     @EnvironmentObject var model: AppModel
     @ViewState private var showApps = false
+    @ViewState private var showNotInBackup = true
 
     var body: some View {
         let l = model.l
@@ -74,6 +75,17 @@ struct InventoryResultsView: View {
                        let notice = l.homebrewSupportNotice(macOSVersion: model.services.macOSVersion, architecture: model.services.architecture, beforeErasing: true) {
                         NoticeView(style: .warning, title: notice.title, message: notice.message)
                             .accessibilityIdentifier("homebrewSupport")
+                    }
+
+                    if let manifest = model.inventory?.manifest,
+                       !manifest.backupIssues.isEmpty || !manifest.sensitiveFilesIncludedOnRequest.isEmpty {
+                        DisclosureGroup(isExpanded: $showNotInBackup) {
+                            NotInBackupView(manifest: manifest, editable: true, onThisMac: true).padding(.top, 6)
+                        } label: {
+                            LabelWithHelp(label: l.p("notInBackup.title", manifest.backupIssues.count), help: l.t("notInBackup.help"),
+                                          id: "help.notInBackup", font: .headline)
+                        }
+                        .accessibilityIdentifier("results.notInBackup")
                     }
 
                     ForEach(Array((model.inventory?.warnings ?? []).enumerated()), id: \.offset) { _, warning in

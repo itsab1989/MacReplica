@@ -364,6 +364,12 @@ public struct InventoryService: Sendable {
                                                                 status: AccessProbe.status(of: detected.folder)))
             }
         }
+        // Password databases KeePassXC remembers are listed (never included by themselves), so nobody erases the old Mac
+        // believing they are in the backup.
+        for database in result.rememberedPasswordDatabases(layout: layout) {
+            result.manifest.backupIssues.append(BackupIssue(path: layout.displayPath(database), reason: .refusedSensitive, detail: .rememberedByApp,
+                                                            sensitive: SensitiveFileClassifier.classify(database)))
+        }
         progress(InventoryProgress(phase: .colorProfiles, fraction: 1, detail: nil))
         return result
     }
@@ -481,5 +487,78 @@ public struct InventoryService: Sendable {
             }
         }
         return nil
+    }
+}
+
+/// Files left out because they look like secrets, included again at the user's explicit request (and left out again).
+extension InventoryResult {
+    public enum IncludeOnRequestError: Error, Equatable, Sendable {
+        /// Keychains and browser data are never copied.
+        case notAllowed
+        /// The file is no longer there or cannot be read.
+        case unreadable
+        /// The file is not in a folder MacReplica may back up (outside the home folder, or in `~/Library` outside a provider folder).
+        case outsideSelectedFolders
+    }
+
+    /// Includes a file that was left out as sensitive, exactly as it is (an encrypted database stays encrypted).
+    /// The file is added to the folder it was found in; a file outside the chosen folders (e.g. a KeePass database
+    /// KeePassXC remembers) is added as one of "Your own folders" with only this file.
+    public mutating func includeOnRequest(_ path: String, layout: SystemLayout) throws {
+        let url = layout.resolve(displayPath: path)
+        guard let classification = SensitiveFileClassifier.classify(url) else { throw IncludeOnRequestError.unreadable }
+        guard classification.kind.canBeIncludedOnRequest else { throw IncludeOnRequestError.notAllowed }
+        guard FileManager.default.isReadableFile(atPath: url.path),
+              let sha = try? Hashing.sha256Hex(ofFile: url),
+              let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]) else { throw IncludeOnRequestError.unreadable }
+        if let index = manifest.applicationData.indices
+            .filter({ path.hasPrefix(manifest.applicationData[$0].displayPath + "/") })
+            .max(by: { manifest.applicationData[$0].displayPath.count < manifest.applicationData[$1].displayPath.count }) {
+            let folder = manifest.applicationData[index]
+            let relative = String(path.dropFirst(folder.displayPath.count + 1))
+            guard PathSafety.isSafeRelativePath(relative), !folder.files.contains(where: { $0.relativePath == relative }) else { return }
+            var record = FileRecord(fileName: url.lastPathComponent, domain: folder.effectiveScope == .home ? .user : .system, relativePath: relative,
+                                    originalPath: path, backupPath: "application-data/\(folder.id)/\(relative)", sha256: sha,
+                                    size: Int64(values.fileSize ?? 0), modifiedAt: values.contentModificationDate)
+            record.metadata[AppDataScanner.includedOnRequestKey] = classification.kind.rawValue
+            manifest.applicationData[index].files.append(record)
+            extraFiles.append(ScannedFile(url: url, record: record))
+            manifest.backupIssues.removeAll { $0.path == path && $0.reason == .refusedSensitive }
+            return
+        }
+        let parent = url.deletingLastPathComponent()
+        guard let scan = try? AppDataScanner(layout: layout).scanPersonal(parent, onlyFiles: [url.lastPathComponent],
+                                                                          includeSensitive: [url.lastPathComponent]) else {
+            throw IncludeOnRequestError.outsideSelectedFolders
+        }
+        // A folder that already holds other files of the user keeps them; this adds only the one file.
+        addApplicationData(scan.folder, files: scan.files, issues: [])
+        manifest.backupIssues.removeAll { $0.path == path && $0.reason == .refusedSensitive }
+    }
+
+    /// Leaves a file out again that was included on request; it is listed as left out (sensitive) as before.
+    public mutating func excludeAgain(_ path: String, layout: SystemLayout) {
+        for index in manifest.applicationData.indices {
+            guard let record = manifest.applicationData[index].files.first(where: { $0.originalPath == path }),
+                  record.metadata[AppDataScanner.includedOnRequestKey] != nil else { continue }
+            manifest.applicationData[index].files.removeAll { $0.originalPath == path }
+            extraFiles.removeAll { $0.record.backupPath == record.backupPath }
+            let classification = SensitiveFileClassifier.classify(layout.resolve(displayPath: path))
+            manifest.backupIssues.append(BackupIssue(path: path, reason: .refusedSensitive, sensitive: classification))
+        }
+        // A folder that only existed for this file is removed.
+        let empty = manifest.applicationData.filter { $0.isPersonal && $0.files.isEmpty }.map(\.id)
+        for id in empty { removeApplicationData(id: id) }
+    }
+
+    /// KeePass databases KeePassXC remembers that are neither in the backup nor already listed as left out: offered
+    /// to the user, never included by themselves.
+    public func rememberedPasswordDatabases(layout: SystemLayout) -> [URL] {
+        let listed = Set(manifest.backupIssues.map(\.path))
+        let included = Set(manifest.applicationData.flatMap(\.files).map(\.originalPath))
+        return KeePassXCLocations.rememberedDatabases(layout: layout).filter {
+            let path = layout.displayPath($0)
+            return !listed.contains(path) && !included.contains(path)
+        }
     }
 }

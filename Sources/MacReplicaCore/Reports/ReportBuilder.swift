@@ -126,6 +126,8 @@ public struct ReportBuilder: Sendable {
         body += card(counts.colorProfiles, l.t("component.colorProfiles"))
         body += "</div>"
         body += homebrewSupportNote(manifest)
+        body += "<h2>\(HTML.escape(l.t("notInBackup.reportTitle")))</h2>"
+        body += notInBackupSection(manifest)
 
         body += "<h2>\(HTML.escape(l.t("component.applications")))</h2>"
         body += table(

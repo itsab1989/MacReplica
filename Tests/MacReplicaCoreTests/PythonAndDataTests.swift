@@ -353,7 +353,7 @@ struct PackageAndDiagnosticsTests {
         #expect(!sums.contains("logs/"))
         let guide = try String(contentsOf: backup.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html"), encoding: .utf8)
         for text in ["On the old Mac", "On the new Mac", "Moving the backup", "Python environments", "python@3.12", "-m venv",
-                     "export PIP_REQUIRE_VIRTUALENV", "Everything that was selected is in this backup"] {
+                     "export PIP_REQUIRE_VIRTUALENV", "Complete: everything you selected is in the backup."] {
             #expect(guide.contains(text), "\(text)")
         }
         #expect(!guide.contains("sk-synthetic"))

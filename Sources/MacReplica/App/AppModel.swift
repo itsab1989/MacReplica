@@ -71,6 +71,8 @@ final class AppModel: ObservableObject {
     @Published var inspectingInstallers = false
     /// Files the user chose that cannot be used, per app (`""` for a scanned installer folder): always shown with the reason.
     @Published var ownInstallerProblems: [String: [InstallerProblem]] = [:]
+    /// Files left out as sensitive that the user explicitly included (display paths), applied again after rescans.
+    @Published var includedOnRequest: Set<String> = []
     @Published var notice: ProblemInfo?
     @Published var includeGitSettings = true
     @Published var includeGitEmail = false
@@ -476,6 +478,7 @@ final class AppModel: ObservableObject {
                     switch outcome {
                     case .success(let scan):
                         self.inventory?.addApplicationData(scan.folder, files: scan.files, issues: scan.issues)
+                        self.reapplySensitiveIncludes()
                         self.appLog.info("Added own folder with \(scan.files.count) files, \(scan.issues.count) left out", component: .applicationData)
                     case .failure(let error):
                         let message: String
@@ -1175,6 +1178,11 @@ extension AppModel {
         panel.treatsFilePackagesAsDirectories = false
         panel.message = l.t("ownInstaller.choose.message")
         panel.prompt = l.t("ownInstaller.choose")
+        // Staging only (simulated Mac): the files come from the simulation's defaults instead of the panel.
+        if services.simulationRoot != nil, defaults.bool(forKey: "stagingSkipPanels"), let paths = defaults.stringArray(forKey: "stagingInstallerFiles") {
+            addOwnInstallers(paths.map { URL(fileURLWithPath: $0) }, for: appID)
+            return
+        }
         guard panel.runModal() == .OK else { return }
         addOwnInstallers(panel.urls, for: appID)
     }
@@ -1210,6 +1218,10 @@ extension AppModel {
         panel.allowsMultipleSelection = false
         panel.message = l.t("ownInstaller.folder.message")
         panel.prompt = l.t("ownInstaller.folder.choose")
+        if services.simulationRoot != nil, defaults.bool(forKey: "stagingSkipPanels"), let path = defaults.string(forKey: "stagingInstallerFolder") {
+            scanInstallerFolder(URL(fileURLWithPath: path))
+            return
+        }
         guard panel.runModal() == .OK, let folder = panel.url else { return }
         scanInstallerFolder(folder)
     }
@@ -1300,5 +1312,51 @@ extension AppModel {
 
     func reapplyOwnInstallers() {
         for appID in ownInstallerFiles.keys { applyOwnInstallers(appID) }
+    }
+}
+
+/// Files left out because they look like secrets: shown with what they are, included only on explicit request.
+extension AppModel {
+    /// Asks once per file, with what including it means, then adds it to the backup unchanged.
+    func includeSensitiveFile(_ issue: BackupIssue) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = l.t("sensitive.include.title", issue.fileName)
+        alert.informativeText = l.t("sensitive.include.message") + (issue.sensitive?.kind == .keePassKeyFile ? "\n\n" + l.t("sensitive.include.keyFile") : "")
+        alert.addButton(withTitle: l.t("sensitive.include.confirm"))
+        alert.addButton(withTitle: l.t("common.cancel"))
+        let staged = services.simulationRoot != nil && defaults.bool(forKey: "stagingSkipPanels")
+        guard staged || alert.runModal() == .alertFirstButtonReturn else { return }
+        do {
+            try inventory?.includeOnRequest(issue.path, layout: services.layout)
+            includedOnRequest.insert(issue.path)
+            appLog.info("Included on request: one \(issue.sensitive?.kind.rawValue ?? "sensitive") file", component: .applicationData)
+        } catch {
+            appLog.warning("Could not include a sensitive file: \(error)", component: .applicationData)
+            notice = ProblemInfo(title: l.t("sensitive.include.failed"), message: l.t("sensitive.include.failed.message"), detail: nil)
+        }
+    }
+
+    func excludeSensitiveFileAgain(_ path: String) {
+        inventory?.excludeAgain(path, layout: services.layout)
+        includedOnRequest.remove(path)
+    }
+
+    /// After a folder was scanned again its files are left out as before; the user's choices are applied again.
+    func reapplySensitiveIncludes() {
+        for path in includedOnRequest where inventory?.manifest.excludedSensitiveFiles.contains(where: { $0.path == path }) == true {
+            try? inventory?.includeOnRequest(path, layout: services.layout)
+        }
+    }
+
+    /// Shows the file in Finder on this Mac (only the owner sees it; nothing is read).
+    func revealFile(_ displayPath: String) {
+        let url = services.layout.resolve(displayPath: displayPath)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    func fileExists(_ displayPath: String) -> Bool {
+        FileManager.default.fileExists(atPath: services.layout.resolve(displayPath: displayPath).path)
     }
 }

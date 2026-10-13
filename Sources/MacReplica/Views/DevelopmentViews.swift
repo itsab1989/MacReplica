@@ -123,7 +123,7 @@ struct ApplicationDataSection: View {
             }
             let refused = (model.inventory?.manifest.backupIssues ?? []).filter { $0.reason == .refusedSensitive }
             if !refused.isEmpty {
-                Text(l.p("appData.refused", refused.count))
+                Text(l.p("appData.refused", refused.count) + " " + l.t("appData.refused.where"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -248,25 +248,13 @@ struct BackupSavedView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if let outcome {
-                        if outcome.isComplete {
-                            NoticeView(style: .success, title: l.t("saved.verified"), message: l.t("saved.message"))
-                        } else {
-                            NoticeView(style: .warning, title: l.p("saved.partial", outcome.manifest.backupGaps.count), message: l.t("saved.partialMessage"))
+                        NoticeView(style: .success, title: l.t("saved.verified"), message: l.t("saved.message"))
+                        CompletenessNotice(manifest: outcome.manifest)
+                        if outcome.manifest.completeness != .complete || !outcome.manifest.sensitiveFilesIncludedOnRequest.isEmpty {
                             Card {
-                                ForEach(Array(outcome.manifest.backupGaps.prefix(8).enumerated()), id: \.offset) { _, issue in
-                                    HStack(alignment: .firstTextBaseline) {
-                                        Text(issue.path).font(.caption.monospaced()).lineLimit(1).truncationMode(.middle)
-                                        Spacer()
-                                        Text(l.backupIssueText(issue)).font(.caption).foregroundStyle(.secondary)
-                                    }
-                                }
-                                if outcome.manifest.backupGaps.count > 8 {
-                                    Text(l.t("saved.moreIssues", outcome.manifest.backupGaps.count - 8)).font(.caption).foregroundStyle(.secondary)
-                                }
+                                NotInBackupView(manifest: outcome.manifest, editable: false, onThisMac: true)
                             }
-                        }
-                        if !outcome.manifest.excludedSensitiveFiles.isEmpty {
-                            NoticeView(style: .info, title: l.p("appData.refused", outcome.manifest.excludedSensitiveFiles.count))
+                            .accessibilityIdentifier("saved.notInBackup")
                         }
                         Card {
                             Text(l.t("saved.location")).font(.caption).foregroundStyle(.secondary)

@@ -25,18 +25,7 @@ extension ReportBuilder {
         body += card(counts.colorProfiles, l.t("component.colorProfiles"))
         body += "</div>"
         body += homebrewSupportNote(manifest)
-        if manifest.backupGaps.isEmpty {
-            body += "<p class=\"ok\">\(HTML.escape(l.t("guide.complete")))</p>"
-        } else {
-            body += "<p class=\"warn\">\(HTML.escape(l.p("guide.partial", manifest.backupGaps.count)))</p><ul>"
-            for issue in manifest.backupGaps.prefix(50) {
-                body += "<li><code>\(HTML.escape(issue.path))</code> — \(HTML.escape(l.backupIssueText(issue)))</li>"
-            }
-            body += "</ul>"
-        }
-        if !manifest.excludedSensitiveFiles.isEmpty {
-            body += "<p class=\"muted\">\(HTML.escape(l.p("appData.refused", manifest.excludedSensitiveFiles.count)))</p>"
-        }
+        body += notInBackupSection(manifest)
 
         body += h2("guide.oldMac.title")
         body += list(["guide.oldMac.1", "guide.oldMac.2", "guide.oldMac.3", "guide.oldMac.4", "guide.oldMac.5", "guide.oldMac.6"])
@@ -174,5 +163,38 @@ extension ReportBuilder {
 
         return page(title: l.t("guide.title"), subtitle: l.t("report.subtitle", l.date(manifest.createdAt), manifest.macosVersion,
                                                               l.architectureText(manifest.architecture)), body: body)
+    }
+
+    /// How complete the backup is and every file that is not in it (or only at the user's request), with the reason and
+    /// what to do. Paths and file names only – never contents.
+    func notInBackupSection(_ manifest: Manifest) -> String {
+        let l = localizer
+        var body = "<p class=\"\(manifest.completeness == .partial ? "warn" : "ok")\"><b>\(HTML.escape(l.completenessTitle(manifest)))</b> "
+            + HTML.escape(l.completenessMessage(manifest)) + "</p>"
+        if !manifest.backupGaps.isEmpty {
+            body += "<p><b>\(HTML.escape(l.p("notInBackup.gaps", manifest.backupGaps.count)))</b></p><ul>"
+            for issue in manifest.backupGaps.prefix(200) {
+                body += "<li><code>\(HTML.escape(issue.path))</code> — \(HTML.escape(l.backupIssueText(issue)))</li>"
+            }
+            body += "</ul>"
+        }
+        if !manifest.excludedSensitiveFiles.isEmpty {
+            body += "<p><b>\(HTML.escape(l.p("notInBackup.sensitive", manifest.excludedSensitiveFiles.count)))</b></p><ul>"
+            for issue in manifest.excludedSensitiveFiles.prefix(200) {
+                body += "<li><code>\(HTML.escape(issue.path))</code> — \(HTML.escape(l.sensitiveDescription(issue))). "
+                    + "\(HTML.escape(l.sensitiveExplanation(issue)))</li>"
+            }
+            body += "</ul>"
+        }
+        let included = manifest.sensitiveFilesIncludedOnRequest
+        if !included.isEmpty {
+            body += "<p><b>\(HTML.escape(l.p("notInBackup.included", included.count)))</b></p><ul>"
+            for record in included {
+                let kind = record.metadata[AppDataScanner.includedOnRequestKey].flatMap(SensitiveKind.init(rawValue:))
+                body += "<li><code>\(HTML.escape(record.originalPath))</code>" + (kind.map { " — " + HTML.escape(l.t("sensitive.includedAs", l.sensitiveKindText($0))) } ?? "") + "</li>"
+            }
+            body += "</ul>"
+        }
+        return body
     }
 }
