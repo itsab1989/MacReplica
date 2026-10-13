@@ -69,13 +69,17 @@ MacReplica is a native macOS app. You do not need the Terminal.
 | **App data** | Settings, presets, templates and resources of supported apps, each marked *Fully supported*, *Check in the app* or *Experimental* | Copied back after checks, into the right app version; caches, databases, licences and passwords are never included |
 | **Your own folders** *(optional)* | Folders of your home folder you add (documents, pictures, projects), each on its own, no size limit | Copied back to the same place; existing files are kept unless you choose otherwise |
 | **Launchpad** | Pages, folders with their names and the order of the apps (macOS 13–15) | Arranged last, once the apps are installed (macOS 13–15; a reference in the report on macOS 26 and later) |
-| **Your installers** *(optional)* | Installers you keep (`.pkg`, `.dmg`, `.zip`, e.g. Office LTSC with its activation package) — optionally copied into the backup | Used offline, only if checksum and developer still match |
+| **Your installers** *(optional)* | Installers you keep (`.pkg`, `.dmg`, `.zip`, or the `.app` itself, e.g. Office LTSC with its activation package) — each shown with what is inside and whether it will be used; optionally copied into the backup | Used offline, only if the checksum matches and the developer is verified – or, for apps without a Developer ID, after you confirmed it |
+| **macOS settings** | Dock and hot corners, Finder, keyboard, trackpad and mouse, language and region, appearance, screenshots, menu bar clock; optionally keyboard shortcuts and input sources | Applied through macOS and read back; from an older macOS only where the meaning is stable |
+| **Printers and scanners** | Each printer's name, connection, model and driver (PPD for reference), scanner drivers | Guided: you add each printer (with the manufacturer's driver where needed), MacReplica checks it is there |
+| **MacReplica itself** | A verified copy of MacReplica (Apple silicon and Intel) in every backup, plus a printable reinstall guide for this Mac | Start the restore from the backup – no download needed |
 | **Fonts and ICC profiles** | Each file individually selectable, with its identity | Compared with what the new Mac already has before anything is copied |
 | **Git settings** | Name, aliases and preferences (email only if you choose) | Written to `~/.gitconfig` |
 | **Credentials** *(optional)* | Only if you opt in per provider — encrypted with your passphrase | Restored only with the passphrase |
 
-MacReplica does **not** clone your disk, copy whole Library folders, move system settings, or
-migrate logins stored in the Keychain.
+MacReplica does **not** clone your disk, copy whole Library folders or preference files, copy drivers or system
+databases, or migrate logins stored in the Keychain. Everything it leaves out is listed with the reason – check that
+list (“What is not in this backup”) before you erase the old Mac.
 
 ## How it works
 
@@ -402,6 +406,15 @@ More in [Troubleshooting](docs/TROUBLESHOOTING.md).
   [docs/DEVELOPER_ENVIRONMENTS.md](docs/DEVELOPER_ENVIRONMENTS.md#verified-and-what-is-not).
 - **Download verification needs a vendor signature, a Homebrew checksum or the original Team ID**;
   anything else is only offered as the vendor's website.
+- **macOS settings** are limited to the listed categories; Accessibility, privacy permissions, wallpaper, login
+  items, default apps and per-Mac settings are not transferred (they are listed with the reason). Keyboard shortcuts
+  and input sources are offered by default only on the same major macOS version.
+- **Printers are set up by you**, guided: drivers and the printing system's own settings are never copied, and
+  whether a printer prints can only be tested with it switched on.
+- **Passwords**: files that look like secrets are left out unless you include them; KeePass databases stay encrypted.
+  Keychain passwords move with iCloud Keychain or the Passwords app – MacReplica explains how.
+- **Microsoft Office** LTSC 2021 and 2024 cannot be told apart; a volume licence is never copied (run your licence
+  package again).
 - Fonts in apps that are already running appear after the app is reopened.
 - Printer-driver colour profiles come back by reinstalling the printer driver.
 - Releases are not signed with a Developer ID or notarized (see [Installation](#installation)).

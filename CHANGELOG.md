@@ -7,6 +7,60 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **A backup could be removed completely** when Word (or another Office app) was open: its temporary lock file
+  `~$Normal.dotm` made the final check fail. Office lock files are skipped now, and a file whose name a backup
+  cannot hold is left out with a reason instead of failing the backup.
+- **Installers you chose with “Use my installer …” were not written into the backup's manifest** (since 1.0.2):
+  copied into the backup, they were still not offered on the new Mac. They are now, and every new field of a backup is
+  checked to survive writing and reading.
+- Disk images with a licence agreement (OnyX, SuperDuper!, Krita, Murus …) were reported as unreadable; they are
+  recognised and opened in Finder on the new Mac so you can accept the licence.
+- Casks from third-party taps (for example ChromIQ's) were reported as failed after a successful installation.
+- Cakebrew and other apps whose Homebrew cask was **removed or disabled** were promised as “restorable with Homebrew”
+  and failed on the new Mac. They now get the developer's download or your installer, with Homebrew's reason
+  (DisplayCAL: disabled on 2026-09-01 because it does not pass Apple's Gatekeeper check).
+- Files removed between scanning and saving are reported as “no longer there” instead of “unreadable”.
+- Keynote presentations (`.key`) were left out as if they were keys.
+- The restore screen called every backup “complete”.
+
+### Added
+- **What is not in the backup, and why**: every file left out is listed with its path, what it appears to be (an
+  encrypted KeePass database, a key file, a private key, a certificate …, from its name and format only – contents are
+  never read) and what to do – on the selection screen, after saving, on the new Mac and in the reports. A file that
+  looks like a secret can be included on request (keychains and browser logins never). Backups are *complete*,
+  *complete except files left out on purpose* or *partial*.
+- **KeePassXC**: its settings, and the databases KeePassXC remembers are listed so you can include them (they stay
+  encrypted; key files are never included without a warning that this removes their protection).
+- **MacReplica in every backup**: a verified, universal copy of MacReplica is put next to the README, so the restore
+  can start on a freshly installed Mac without a download.
+- **Printable macOS reinstall guide** for the Mac the backup was made on: Intel (with or without T2) or Apple silicon,
+  the right startup keys or options, erase and install steps, first start, Apple's support pages.
+- **macOS settings**: Dock and hot corners, Finder, keyboard, trackpad and mouse, language and region, appearance,
+  screenshots, menu bar clock, and (optionally) keyboard shortcuts and input sources – applied through macOS and read
+  back on the new Mac; settings from an older macOS only where their meaning is stable. What is never transferred
+  (Accessibility, privacy permissions, wallpaper …) is listed with the reason.
+- **Printers and scanners**: each printer's name, connection, model and driver (and its PPD for reference) and the
+  scanner drivers; on the new Mac MacReplica guides you to add them (manufacturer's driver first where needed) and
+  checks that they are there.
+- **Your installers**: every chosen file shows what it is, what is inside (app, version, processors, signature), where
+  it is, whether it will be used and what happens on the new Mac – or why it cannot be used. Apps (`.app`) can be
+  chosen directly. Installers without a Developer ID (DisplayCAL, ChromIQ …) can be used after you confirm it; the
+  checksum is still checked and macOS still asks you to approve the app. Suites such as DisplayCAL with its companion
+  apps are installed as their folder.
+- **Homebrew**: casks of the taps on the old Mac and the developer's own tap (ChromIQ) are found; the restore screen
+  says which apps need each tap. Companion apps (DisplayCAL's 3D LUT Maker …) are installed with their main app.
+  Cakebrew and Applite are shown as Homebrew front ends – restoring them restores no packages.
+- **Versions**: each source says which version it installs compared with the old Mac; a beta is never switched to
+  stable (or the other way round) without your choice.
+- **Microsoft Office**: whether Office used a volume licence (Office LTSC) or a sign-in, and what that means on the
+  new Mac; the Office packages in the match choice are explained.
+- **VueScan**: settings and saved option sets in `~/Pictures/VueScan`.
+- **Keychain passwords**: Apple's supported ways to move them (iCloud Keychain, the Passwords app, `.p12` for
+  certificates) – nothing is copied.
+- Visible help (**?** buttons with an explanation) next to the options; hover help alone was easy to miss.
+- New choices are kept in the saved selection.
+
 ## [1.0.4] - 2026-10-04
 
 ### Added

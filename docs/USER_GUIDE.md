@@ -43,11 +43,19 @@
    - **Your own folders** — optional: add folders of your home folder (documents, pictures, projects), each
      on its own and without a size limit. Not the home folder as a whole or `~/Library`. Files that are only in
      iCloud are left out and listed. MacReplica checks that the destination has enough free space;
+   - **Not in this backup** — every file that will not be in the backup: files that look like passwords or keys
+     (left out on purpose, each with what it appears to be and what to do; **Include …** adds one, unchanged), and
+     files that could not be read. **Show in Finder** shows the file. Read this before you erase the Mac;
    - **Your installers (offline)** — installers you keep (for example Office LTSC with its activation package,
-     or a tablet driver, on an external drive): choose them for the app (**Use my installer …**) or add a
-     folder. Tick *In backup* to copy them into it (and *Contains my licence* for activation packages: they stay
-     private to your backup). On the new Mac they are used without internet,
-     only if checksum and developer still match;
+     or a tablet driver, on an external drive): choose them for the app (**Use my installer …**, also an `.app`)
+     or add a folder. Each file shows what it is, what is inside, where it is, whether it will be used and what
+     happens on the new Mac – or why it cannot be used. *Copy into backup* stores the installer itself in the
+     backup; *Contains a licence or activation* marks licence files as private (no licence is read). Installers
+     without a Developer ID (for example DisplayCAL) are used only after you tick *Use this unverified installer*;
+     macOS then asks you to allow the app on its first start (System Settings › Privacy & Security › Open Anyway);
+   - **Printers & Scanners** — your printers and scanner drivers, with connection and driver;
+   - **macOS settings** — Dock, Finder, keyboard, trackpad, language and more, by category, and what is not
+     transferred and why;
    - **Credentials** — off unless you choose a provider and set a passphrase;
    - **Sign in again** — services that need a new login on the new Mac;
    - locations macOS did not let MacReplica read;
@@ -60,7 +68,9 @@
    recorded automatically. If App Store apps could not be identified, MacReplica says so and offers to install
    the helper tool `mas`, which can look them up.
 3. Click **Save Backup** (or **Save Backup …** if no location is chosen yet). MacReplica creates a folder named
-   `MacReplica-Backup-<date>-<time>`, verifies it and shows its size, location and contents.
+   `MacReplica-Backup-<date>-<time>`, verifies it and shows its size, location, contents and how complete it is.
+   The folder also contains a copy of MacReplica itself and **REINSTALL_MACOS.html** – click **Reinstall Guide**
+   and print it before you erase the Mac.
 4. Copy that folder to the new Mac (or keep it on the external drive).
 
 ## 2. Restore on the new Mac
