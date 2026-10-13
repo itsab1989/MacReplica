@@ -16,6 +16,7 @@ struct ToolsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text(l.t("tools.intro")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     GatekeeperToolCard()
+                    UpdatesToolCard()
                     if !model.tools.history.isEmpty { ToolHistoryView() }
                 }
                 .padding(.horizontal, 28)
@@ -259,6 +260,162 @@ struct AppSecurityReportView: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
+    }
+}
+
+// MARK: Update preferences
+
+struct UpdatesToolCard: View {
+    @EnvironmentObject var model: AppModel
+    @ViewState private var confirm: PendingUpdateChange?
+
+    var body: some View {
+        let l = model.l
+        let status = model.tools.updates
+        let env = model.tools.environment
+        ToolCard(id: "updates", symbol: "arrow.triangle.2.circlepath", title: l.t("tools.updates.title"), summary: l.t("tools.updates.summary"),
+                 help: l.t("tools.updates.help"), capability: status?.capability) {
+            if let settings = status?.settings {
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(UpdateSettings.Item.allCases, id: \.self) { item in
+                        let on = settings.value(item)
+                        ToolStateRow(symbol: on ? "checkmark.circle.fill" : "circle", color: on ? .green : .secondary,
+                                     label: l.t("tools.updates.item.\(item.rawValue)"), value: l.t(on ? "tools.on" : "tools.off"),
+                                     id: "tools.updates.state.\(item.rawValue)")
+                    }
+                    if let store = settings.appStoreAutoUpdate {
+                        ToolStateRow(symbol: "bag", color: .secondary, label: l.t("tools.updates.appStore"), value: l.t(store ? "tools.on" : "tools.off"))
+                    }
+                }
+                if settings.securityUpdatesOff {
+                    NoticeView(style: .warning, title: l.t("tools.updates.securityOff.title"), message: l.t("tools.updates.securityOff.message"))
+                        .accessibilityIdentifier("tools.updates.securityOff")
+                }
+            } else if status != nil {
+                NoticeView(style: .info, title: l.t("tools.updates.unreadable"))
+            }
+            if status?.managed == true {
+                NoticeView(style: .info, title: l.t("tools.updates.managed.title"), message: l.t("tools.updates.managed.message"))
+            }
+            SupportStatusView()
+            Divider()
+            LabelWithHelp(label: l.t("tools.updates.stay.title"), help: l.t("tools.updates.stay.help"), id: "help.tools.updates.stay",
+                          font: .subheadline.weight(.semibold))
+            Text(l.t("tools.updates.stay.message")).font(.callout).fixedSize(horizontal: false, vertical: true)
+            Text(l.t("tools.updates.deferral.\(MajorUpgradeDeferral.forVersion(env).rawValue)"))
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("tools.updates.deferral")
+            if let settings = status?.settings, status?.managed == false {
+                if let pending = model.tools.pendingUpdateChange {
+                    PendingUpdateView(pending: pending, current: settings)
+                } else {
+                    HStack {
+                        if !settings.differences(to: .recommended).isEmpty {
+                            Button(l.t("tools.updates.applyRecommended")) {
+                                confirm = PendingUpdateChange(change: "updates.apply.recommended", before: settings, target: .recommended)
+                            }
+                            .accessibilityIdentifier("tools.updates.applyRecommended")
+                        } else {
+                            Label(l.t("tools.updates.isRecommended"), systemImage: "checkmark.seal.fill").foregroundStyle(.green)
+                                .accessibilityIdentifier("tools.updates.isRecommended")
+                        }
+                        if let revert = model.revertibleUpdateChange, revert.previous != settings {
+                            Button(l.t("tools.updates.revert")) {
+                                confirm = PendingUpdateChange(change: "updates.revert", before: settings, target: revert.previous)
+                            }
+                            .accessibilityIdentifier("tools.updates.revert")
+                        }
+                        Spacer()
+                        Button(l.t("tools.updates.openSettings")) { model.openSoftwareUpdateSettings() }
+                            .accessibilityIdentifier("tools.updates.openSettings")
+                    }
+                }
+            }
+            if let outcome = model.tools.updateOutcome {
+                NoticeView(style: outcome.verification == .verified ? .success : .warning,
+                           title: l.t("tools.verification.title.\(outcome.verification.rawValue)"), message: outcome.stateAfter)
+                    .accessibilityIdentifier("tools.updates.outcome.\(outcome.verification.rawValue)")
+            }
+            ToolLimitations(id: "updates", lines: [l.t("tools.updates.limit.noWrite"), l.t("tools.updates.limit.badge"),
+                                                   l.t("tools.updates.limit.updateAll"), l.t("tools.updates.limit.bsi"),
+                                                   l.t("tools.updates.limit.endOfSupport")])
+        }
+        .alert(l.t("tools.updates.confirm.title"), isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } }),
+               presenting: confirm) { change in
+            Button(l.t("tools.updates.confirm.go")) { model.beginUpdateChange(change.change, target: change.target) }
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: { change in
+            Text(UpdateChangeText.steps(change, l: l) + "\n\n" + l.t("tools.updates.confirm.message"))
+        }
+    }
+}
+
+enum UpdateChangeText {
+    /// “Turn on: …”, “Turn off: …” for the switches that differ.
+    static func steps(_ change: PendingUpdateChange, l: Localizer) -> String {
+        let diff = change.before.differences(to: change.target)
+        let on = diff.filter { change.target.value($0) }.map { l.t("tools.updates.item.\($0.rawValue)") }
+        let off = diff.filter { !change.target.value($0) }.map { l.t("tools.updates.item.\($0.rawValue)") }
+        var lines: [String] = []
+        if !on.isEmpty { lines.append(l.t("tools.updates.turnOn", on.joined(separator: ", "))) }
+        if !off.isEmpty { lines.append(l.t("tools.updates.turnOff", off.joined(separator: ", "))) }
+        return lines.joined(separator: "\n")
+    }
+}
+
+struct PendingUpdateView: View {
+    @EnvironmentObject var model: AppModel
+    var pending: PendingUpdateChange
+    var current: UpdateSettings
+
+    var body: some View {
+        let l = model.l
+        VStack(alignment: .leading, spacing: 6) {
+            Text(l.t("tools.updates.pending.steps")).font(.callout).fixedSize(horizontal: false, vertical: true)
+            Text(UpdateChangeText.steps(PendingUpdateChange(change: pending.change, before: current, target: pending.target), l: l))
+                .font(.callout.weight(.medium)).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("tools.updates.pending.list")
+            HStack {
+                Button(l.t("tools.updates.openSettings")) { model.openSoftwareUpdateSettings() }
+                Button(l.t("tools.updates.pending.check")) { model.finishUpdateChange() }
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("tools.updates.pending.check")
+                Spacer()
+                Button(l.t("common.cancel")) { model.cancelUpdateChange() }
+                    .accessibilityIdentifier("tools.updates.pending.cancel")
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.08)))
+    }
+}
+
+struct SupportStatusView: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        VStack(alignment: .leading, spacing: 5) {
+            if let support = model.tools.support {
+                let style: NoticeView.Style = support.support == .likelyEnded ? .warning : (support.support == .unknown ? .info : .success)
+                NoticeView(style: style, title: l.t("tools.updates.support.\(support.support.rawValue).title", support.installedVersion),
+                           message: l.t("tools.updates.support.\(support.support.rawValue).message"))
+                    .accessibilityIdentifier("tools.updates.support.\(support.support.rawValue)")
+                if support.updateAvailable, let latest = support.latestForThisMajor {
+                    Label(l.t("tools.updates.support.updateAvailable", latest), systemImage: "arrow.down.circle")
+                        .font(.callout).foregroundStyle(.orange)
+                        .accessibilityIdentifier("tools.updates.support.updateAvailable")
+                }
+            }
+            HStack {
+                Button(l.t("tools.updates.support.check")) { model.checkMacOSSupport() }
+                    .controlSize(.small)
+                    .disabled(model.tools.checkingSupport)
+                    .accessibilityIdentifier("tools.updates.support.check")
+                if model.tools.checkingSupport { ProgressView().controlSize(.small) }
+                HelpButton(text: l.t("tools.updates.support.help"), title: l.t("tools.updates.support.check"), id: "help.tools.updates.support")
+            }
+        }
     }
 }
 

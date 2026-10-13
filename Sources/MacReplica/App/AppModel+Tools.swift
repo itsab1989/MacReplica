@@ -13,6 +13,22 @@ struct ToolsState {
     /// After “Open the app” for a blocked app: the app MacReplica waits for the user to approve.
     var awaitingApproval: URL?
     var history: [ToolHistoryEntry] = []
+
+    var updates: UpdatePreferencesStatus?
+    var support: MacOSSupportStatus?
+    var checkingSupport = false
+    /// A change the user is making in System Settings, waiting for “check again”.
+    var pendingUpdateChange: PendingUpdateChange?
+    /// The last checked result of an update change.
+    var updateOutcome: ToolOutcome?
+}
+
+/// The user changes the Software Update switches in System Settings (macOS asks for the administrator password
+/// there); MacReplica remembers what was asked for and what was set before, and checks afterwards.
+struct PendingUpdateChange: Equatable {
+    var change: String
+    var before: UpdateSettings
+    var target: UpdateSettings
 }
 
 extension AppModel {
@@ -27,6 +43,79 @@ extension AppModel {
         tools.history = toolHistory.entries()
         screen = .tools
         refreshGatekeeper()
+        refreshUpdates()
+    }
+
+    // MARK: Update preferences
+
+    var updateInspector: UpdatePreferencesInspector {
+        var folder: URL? = nil
+        if let root = services.simulationRoot { folder = root.appendingPathComponent("Library/Preferences") }
+        return UpdatePreferencesInspector(layout: services.layout, runner: services.runner, preferencesFolder: folder)
+    }
+
+    func refreshUpdates() {
+        let status = updateInspector.status()
+        tools.updates = status
+        appLog.info("Tools: Software Update \(status.settings?.historyText ?? "unreadable"), managed \(status.managed)", component: .tools)
+    }
+
+    /// Asks Apple's servers which macOS versions this Mac can install (read-only).
+    func checkMacOSSupport() {
+        tools.checkingSupport = true
+        Task {
+            let support = await updateInspector.supportStatus(installedVersion: tools.environment.macOSVersion)
+            tools.support = support
+            tools.checkingSupport = false
+            appLog.info("Tools: macOS support \(support.support.rawValue), latest for this major \(support.latestForThisMajor ?? "?")", component: .tools)
+        }
+    }
+
+    /// Starts a guided change: remembers the current switches, opens Software Update settings.
+    func beginUpdateChange(_ change: String, target: UpdateSettings) {
+        refreshUpdates()
+        guard let before = tools.updates?.settings else { return }
+        tools.updateOutcome = nil
+        tools.pendingUpdateChange = PendingUpdateChange(change: change, before: before, target: target)
+        openSoftwareUpdateSettings()
+    }
+
+    /// The previous state of the last change MacReplica guided, if it was not undone yet.
+    var revertibleUpdateChange: (entry: ToolHistoryEntry, previous: UpdateSettings)? {
+        guard let entry = toolHistory.lastRevertibleChange(tool: "updates"), let text = entry.previousState,
+              let previous = UpdateSettings(historyText: text) else { return nil }
+        return (entry, previous)
+    }
+
+    /// Reads the switches again and records what really changed.
+    func finishUpdateChange() {
+        guard let pending = tools.pendingUpdateChange else { return }
+        refreshUpdates()
+        guard let after = tools.updates?.settings else {
+            tools.updateOutcome = ToolOutcome(verification: .notVerified, stateAfter: l.t("tools.updates.unreadable"))
+            return
+        }
+        let missing = after.differences(to: pending.target)
+        let changed = after != pending.before
+        let verification: ToolVerification = missing.isEmpty ? .verified : .failed
+        let result: ToolHistoryEntry.Result = missing.isEmpty ? .succeeded : (changed ? .partial : .failed)
+        tools.updateOutcome = ToolOutcome(verification: verification,
+                                          stateAfter: missing.isEmpty ? l.t("tools.updates.outcome.done")
+                                                                      : l.t("tools.updates.outcome.missing", missing.map { l.t("tools.updates.item.\($0.rawValue)") }.joined(separator: ", ")))
+        tools.pendingUpdateChange = missing.isEmpty ? nil : pending
+        if changed || missing.isEmpty {
+            record(ToolHistoryEntry(tool: "updates", change: pending.change, previousState: pending.before.historyText, resultingState: after.historyText,
+                                    macOSVersion: tools.environment.macOSVersion, result: result, verification: verification,
+                                    revertAvailable: pending.change != "updates.revert" && changed))
+        }
+    }
+
+    func cancelUpdateChange() {
+        tools.pendingUpdateChange = nil
+    }
+
+    func openSoftwareUpdateSettings() {
+        if let url = URL(string: UpdateSettingsLinks.softwareUpdate) { NSWorkspace.shared.open(url) }
     }
 
     func refreshGatekeeper() {
