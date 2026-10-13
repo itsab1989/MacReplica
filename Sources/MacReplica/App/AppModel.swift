@@ -17,6 +17,7 @@ enum Screen: Equatable {
     case verifying
     case verificationResult
     case problem
+    case tools
 }
 
 /// A friendly explanation for something that stopped a whole workflow.
@@ -50,6 +51,8 @@ final class AppModel: ObservableObject {
     @Published var language: AppLanguage
     @Published private(set) var l: Localizer
     @Published var screen: Screen = .home
+    /// The Tools section (Gatekeeper, updates, window corners); see AppModel+Tools.
+    @Published var tools = ToolsState()
     @Published var problem: ProblemInfo?
 
     // Inventory
