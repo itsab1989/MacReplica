@@ -152,6 +152,20 @@ struct ToolsCornerPluginTests {
         #expect(CornerPlugin.currentBuild()?.isEmpty == false)
     }
 
+    @Test func statusFallsBackToTheSipArgumentWhenCsrutilCannotBeRead() async throws {
+        // A runner whose csrutil cannot be read: status must fall back to the sip value it was given.
+        var layout = SystemLayout.live()
+        layout.csrutil = "/nonexistent/csrutil"
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: []), baseEnvironment: [:])
+        let app = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let disabled = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
+        #expect(disabled.debuggingAllowed == true)
+        let enabled = await CornerPlugin.status(layout: layout, runner: runner, sip: .enabled, appBundle: app, build: "26A434")
+        #expect(enabled.debuggingAllowed == false)
+        let unknown = await CornerPlugin.status(layout: layout, runner: runner, sip: .unknown, appBundle: app, build: "26A434")
+        #expect(unknown.debuggingAllowed == nil)
+    }
+
     @Test func testedBuildsMatchThePluginSource() throws {
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Extras/CornerPlugin/MacReplicaCorners.m")

@@ -33,6 +33,17 @@ struct PluginLoaderTests {
         #expect((try? FileManager.default.contentsOfDirectory(atPath: badRoot.appendingPathComponent("work").path))?.isEmpty ?? true)
     }
 
+    @Test func downloadCreatesAWorkFolderWhoseParentDoesNotExistYet() async throws {
+        let good = Data("playground".utf8)
+        let pinned = PluginLoader.Release(version: "t", url: PluginLoader.release.url, sha256: Hashing.sha256Hex(of: good), size: Int64(good.count))
+        let root = try Self.transportRoot(for: good)
+        defer { try? FileManager.default.removeItem(at: root) }
+        // A nested work path whose intermediate folders do not exist: the download must still create them.
+        let work = root.appendingPathComponent("a/b/c/work")
+        let file = try await PluginLoader.downloadVerifiedPackage(pinned, transport: LocalDownloadTransport(root: root), work: work)
+        #expect(FileManager.default.fileExists(atPath: file.path))
+    }
+
     @Test func productionReleaseChecksumIsPinnedAndWellFormed() {
         #expect(PluginLoader.release.sha256.count == 64)
         #expect(PluginLoader.release.sha256.allSatisfy { $0.isHexDigit })

@@ -7,6 +7,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-10-14
+
+### Added
+- **Window corners:** an example preview (the eye next to each surface) shows the element at the default vs. the
+  reduced corner, so you see what a change does before applying it.
+- **Window corners – one-click plugin setup.** The advanced plugin (menus, popovers, Quick Look, toolbar groups and
+  capsule buttons) now uses **Plugin Playground**, a maintained open-source tweak loader, instead of the archived
+  Ammonia. It needs System Integrity Protection only partly off (debugging allowed) — still your step, MacReplica
+  never changes SIP — and no boot argument. **Set up automatically** downloads the pinned, checksum-verified loader,
+  installs it and the plugin with one administrator prompt and opens Plugin Playground to enable; **Undo setup**
+  removes the plugin and uninstalls the loader. It falls back to the manual steps if the download or checksum fails.
+- **Gatekeeper:** the single-app check can now open the app or remove and restore its quarantine mark (one app, after
+  a warning, with the exact mark kept for an exact undo).
+
+### Changed
+- **ChromIQ (and other developer taps MacReplica documents) restore through Homebrew automatically:** the tap now
+  starts enabled in the restore selection — but only when the backup names it with its known address — so the app is
+  installed without the tap being left switched off. Verified end to end against the real Homebrew.
+- Rewrote the Gatekeeper and macOS-update help so it describes the profile, quarantine and deferral options MacReplica
+  now offers, instead of saying it never touches them.
+
 ## [1.0.5] - 2026-10-13
 
 ### Added
@@ -281,7 +302,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/itsab1989/MacReplica/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/itsab1989/MacReplica/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/itsab1989/MacReplica/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/itsab1989/MacReplica/compare/v1.0.2...v1.0.3
