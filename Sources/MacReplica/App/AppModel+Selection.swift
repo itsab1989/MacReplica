@@ -31,7 +31,8 @@ extension AppModel {
                                                                approvedUnverified: $0.archive.userApprovedUnverified ? true : nil, sha256: $0.archive.sha256) }
             },
             destination: (destination ?? backupDestination).map { layout.displayPath($0) })
-        preset.includedOnRequest = includedOnRequest.isEmpty ? nil : includedOnRequest.sorted()
+        let credentialPaths = Set(inventory?.credentialSelection.map(\.originalPath) ?? []).union(includedOnRequest)
+        preset.includedOnRequest = credentialPaths.isEmpty ? nil : credentialPaths.sorted()
         preset.includePrinters = includePrinters
         preset.settings = BackupSelectionPreset.choices(ids: SettingsCatalog.categories.map(\.id), excluded: excludedSettings)
         return preset

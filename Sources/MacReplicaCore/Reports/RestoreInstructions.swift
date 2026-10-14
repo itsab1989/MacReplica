@@ -149,7 +149,8 @@ extension ReportBuilder {
             body += "<p><b>\(HTML.escape(l.t("guidance.manual.title")))</b></p><ul>"
             body += manualServices.map { "<li><b>\(HTML.escape(l.guidanceName($0)))</b>: \(HTML.escape(l.t("guidance.manual.\($0.id)")))</li>" }.joined() + "</ul>"
         }
-        if manifest.credentials.isEmpty {
+        body += credentialReadinessSection(manifest)
+        if manifest.credentials.isEmpty && manifest.credentialItems.isEmpty {
             body += "<p class=\"muted\">\(HTML.escape(l.t("guide.accounts.noCredentials")))</p>"
         } else {
             for record in manifest.credentials {

@@ -235,16 +235,15 @@ struct CredentialTests {
 
         // Default: no credentials anywhere.
         let plain = try writer.write(result, into: try sandbox.folder("plain"), log: log)
-        #expect(plain.manifest.credentials.isEmpty)
+        #expect(plain.manifest.credentials.isEmpty && plain.manifest.credentialItems.isEmpty)
         #expect(!FileManager.default.fileExists(atPath: plain.url.appendingPathComponent("credentials").path))
 
         // Explicit opt-in.
         let passphrase = "synthetic test passphrase"
         let outcome = try writer.write(result, into: try sandbox.folder("secure"), log: log,
-                                       credentials: CredentialExportRequest(providerIDs: ["ssh"], passphrase: passphrase))
-        let record = try #require(outcome.manifest.credentials.first)
-        #expect(record.vaultPath == "credentials/ssh.macreplica-vault")
-        #expect(record.items == ["config", "id_ed25519", "id_ed25519.pub", "known_hosts"])
+                                       credentials: CredentialExportRequest(providerIDs: ["ssh"], passphrase: passphrase, recoveryKey: try RecoveryKey.generate()))
+        #expect(outcome.manifest.credentialItems.map(\.fileName) == ["config", "id_ed25519", "id_ed25519.pub", "known_hosts"])
+        #expect(outcome.manifest.credentialItems.allSatisfy { $0.provider == "ssh" && $0.isPreserved })
         // No secret and no passphrase in plain files, reports or logs.
         for path in BackupWriter.allFiles(in: outcome.url) where !path.hasPrefix("credentials/") {
             let text = (try? String(contentsOf: outcome.url.appendingPathComponent(path), encoding: .utf8)) ?? ""
@@ -256,37 +255,39 @@ struct CredentialTests {
 
         // Not part of a default restore, but offered so the user can switch it on.
         #expect(!RestoreSelection().components.contains(.credentials))
-        #expect(RestorePlanner().candidateItems(manifest: outcome.manifest, selection: RestoreSelection()).contains { $0.id == "credential:ssh" })
-        #expect(!RestorePlanner().plan(manifest: outcome.manifest, selection: RestoreSelection()).items.contains { $0.kind == .credential })
+        let keyID = "credentialFile:" + (outcome.manifest.credentialItems.first { $0.fileName == "id_ed25519" }?.id ?? "")
+        #expect(RestorePlanner().candidateItems(manifest: outcome.manifest, selection: RestoreSelection()).contains { $0.id == keyID })
+        #expect(!RestorePlanner().plan(manifest: outcome.manifest, selection: RestoreSelection()).items.contains { $0.kind == .credentialFile })
 
         let (fresh, target) = try TestEnvironment.freshMac(sandbox)
         let selection = RestoreSelection(components: [.credentials])
         let plan = RestorePlanner().plan(manifest: outcome.manifest, selection: selection)
-        #expect(plan.items.map(\.id) == ["credential:ssh"])
-        func restore(_ passphrase: String?, _ selection: RestoreSelection = RestoreSelection(components: [.credentials])) async -> ItemResult? {
+        #expect(plan.items.count == 4)
+        let keys = try Data(contentsOf: outcome.url.appendingPathComponent(CredentialStore.keysPath))
+        #expect(throws: CredentialStoreError.wrongSecret) { try CredentialKeyring.unlock(keyFile: keys, with: .passphrase("wrong passphrase value")) }
+        let keyring = try CredentialKeyring.unlock(keyFile: keys, with: .passphrase(passphrase))
+        func restore(_ keyring: CredentialKeyring?, _ selection: RestoreSelection = RestoreSelection(components: [.credentials])) async -> ItemResult? {
             var environment = TestEnvironment.restoreEnvironment(target)
-            environment.credentialPassphrase = passphrase
+            environment.credentialKeyring = keyring
             return await RestoreExecutor(environment: environment, backupRoot: outcome.url, sessionStore: nil)
                 .run(plan: plan, session: RestoreSession(backupPath: "", selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
-                .results["credential:ssh"]
+                .results[keyID]
         }
         #expect(await restore(nil)?.outcome == .skipped(.passphraseNotProvided))
-        #expect(await restore("wrong passphrase value")?.outcome.label == "failed(credentialCannotBeOpened)")
-        #expect(!FileManager.default.fileExists(atPath: fresh.url.appendingPathComponent("home/.ssh").path), "nothing written on failure")
-        #expect(await restore(passphrase)?.outcome == .succeeded)
+        #expect(!FileManager.default.fileExists(atPath: fresh.url.appendingPathComponent("home/.ssh").path), "nothing written without the key")
+        #expect(await restore(keyring)?.outcome == .succeeded)
         let key = fresh.url.appendingPathComponent("home/.ssh/id_ed25519")
         #expect(try String(contentsOf: key, encoding: .utf8).contains("synthetic-test-key-not-real"))
         #expect((try FileManager.default.attributesOfItem(atPath: key.path)[.posixPermissions] as? Int) == 0o600)
         #expect((try FileManager.default.attributesOfItem(atPath: key.deletingLastPathComponent().path)[.posixPermissions] as? Int) == 0o700)
-        #expect(await restore(passphrase)?.outcome == .alreadyPresent)
+        #expect(await restore(keyring)?.outcome == .alreadyPresent)
         // An existing, different key is kept unless the user chose to replace.
         try Data("another key".utf8).write(to: key)
-        let kept = await restore(passphrase)
-        #expect(kept?.notes == [.applicationDataCopied(copied: 0, identical: 3, kept: 1)])
+        #expect(await restore(keyring)?.outcome == .skipped(.keptExisting))
         #expect(try String(contentsOf: key, encoding: .utf8) == "another key")
         var replace = selection
         replace.conflictResolution = .replace
-        #expect(await restore(passphrase, replace)?.outcome == .succeeded)
+        #expect(await restore(keyring, replace)?.outcome == .succeeded)
         #expect(try String(contentsOf: key, encoding: .utf8).contains("synthetic-test-key-not-real"))
     }
 

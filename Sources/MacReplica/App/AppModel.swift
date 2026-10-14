@@ -81,7 +81,19 @@ final class AppModel: ObservableObject {
     @Published var includeGitEmail = false
     /// Credential providers the user explicitly switched on (always empty by default).
     @Published var selectedCredentialProviders = Set<String>()
+    /// The encryption of the credential part of the backup: kept in memory only until the backup is written.
     var credentialPassphrase: String?
+    var credentialRecoveryKey: RecoveryKey?
+    /// The sheet that sets up the encryption (passphrase, recovery key).
+    @Published var credentialSetupPending = false
+    /// A save that waits for the encryption to be set up or for the user's decision about undecided credentials.
+    var pendingCredentialSave: URL?
+    /// What happened when credential files were added (only shown when something was not added or is a duplicate).
+    @Published var credentialAddReport: CredentialAddReport?
+    /// Before saving: credential files were found that the user neither added nor left out.
+    @Published var undecidedCredentialsWarning = false
+    var undecidedCredentialsConfirmed = false
+    @Published var expandCredentials = false
     /// Application data folders the user switched off (compatibility-sensitive ones start off).
     @Published var excludedApplicationData = Set<String>()
     /// Fonts and profiles the user left out of the backup (`InventoryResult.selectionID`).
@@ -110,12 +122,17 @@ final class AppModel: ObservableObject {
     /// Passphrase for restoring encrypted credentials; requested right before the restore.
     @Published var askForRestorePassphrase = false
     var restorePassphrase: String?
+    /// The opened credential store of the backup being restored (1.0.7 and later); memory only.
+    var restoreKeyring: CredentialKeyring?
+    /// Shown in the passphrase sheet: wrong passphrase or recovery key, or a malformed recovery key.
+    @Published var restoreSecretError: String?
     /// An interrupted restore that continues once the passphrase was asked again.
     private var pendingResume: RestoreSession?
 
-    /// `nil` means the user chose to skip the credentials.
+    /// `nil` means the user chose to skip the credentials (unless the store was already unlocked with the recovery key).
     func restorePassphraseEntered(_ passphrase: String?) {
         askForRestorePassphrase = false
+        restoreSecretError = nil
         if let session = pendingResume {
             pendingResume = nil
             // Without a passphrase the credential steps are recorded as skipped, nothing else changes.
@@ -123,12 +140,14 @@ final class AppModel: ObservableObject {
             resumeRestore(session, askForPassphrase: false)
             return
         }
-        if let passphrase { restorePassphrase = passphrase } else { selection.components.remove(.credentials) }
-        startRestore()
+        if let passphrase { restorePassphrase = passphrase } else if restoreKeyring == nil { selection.components.remove(.credentials) }
+        // Checked again with the credentials unlocked, so a credential that differs from a file on this Mac gets a decision.
+        requestRestoreStart()
     }
 
     func cancelRestorePassphrase() {
         askForRestorePassphrase = false
+        restoreSecretError = nil
         if pendingResume != nil {
             pendingResume = nil
             screen = .home
@@ -280,6 +299,9 @@ final class AppModel: ObservableObject {
         pythonSearchFolders = []
         selectedCredentialProviders = []
         credentialPassphrase = nil
+        credentialRecoveryKey = nil
+        pendingCredentialSave = nil
+        undecidedCredentialsConfirmed = false
         excludedApplicationData = []
         excludedBackupFiles = []
         excludedToolchains = []
@@ -606,11 +628,13 @@ final class AppModel: ObservableObject {
     }
 
     func saveBackup(into parent: URL) {
-        guard let inventory = preparedInventory() else { return }
+        guard credentialChecksBeforeSaving(into: parent), let inventory = preparedInventory() else { return }
         // The selection goes next to the backup, so the next backup can start from it.
         try? currentSelectionPreset(destination: parent).write(to: parent.appendingPathComponent(BackupSelectionPreset.fileName))
-        let credentials = selectedCredentialProviders.isEmpty ? nil
-            : credentialPassphrase.map { CredentialExportRequest(providerIDs: selectedCredentialProviders.sorted(), passphrase: $0) }
+        var credentials: CredentialExportRequest?
+        if credentialsWanted, let passphrase = credentialPassphrase, let recoveryKey = credentialRecoveryKey {
+            credentials = CredentialExportRequest(providerIDs: selectedCredentialProviders.sorted(), passphrase: passphrase, recoveryKey: recoveryKey)
+        }
         screen = .savingBackup
         backupProgress = 0
         let writer = BackupWriter(layout: services.layout, localizer: l)
@@ -642,8 +666,10 @@ final class AppModel: ObservableObject {
                     guard let self else { return }
                     self.savedBackup = outcome.url
                     self.backupOutcome = outcome
-                    // The passphrase is not kept once the vault is written.
+                    // The passphrase and recovery key are not kept once the store is written.
                     self.credentialPassphrase = nil
+                    self.credentialRecoveryKey = nil
+                    self.undecidedCredentialsConfirmed = false
                     self.defaults.set(outcome.url.path, forKey: "lastBackup")
                     self.appLog.info("Backup saved (\(outcome.fileCount) files, complete: \(outcome.isComplete))", component: .backup)
                     self.screen = .backupSaved
@@ -695,6 +721,8 @@ final class AppModel: ObservableObject {
     enum BackupPurpose { case restore, verify }
 
     func openBackupForRestore(_ url: URL, resuming: RestoreSession? = nil, reviewing: Bool = false) {
+        // A key opened for another backup never opens this one; it is asked for again.
+        if url != backupURL { restorePassphrase = nil; restoreKeyring = nil }
         screen = .verifying
         verificationProgress = 0
         let verifier = BackupVerifier(layout: services.layout)
@@ -791,6 +819,7 @@ final class AppModel: ObservableObject {
             homebrewSource: services.homebrewSource, localizer: l, log: log, targetArchitecture: services.architecture,
             askpassPath: services.askpassPath)
         environment.credentialPassphrase = restorePassphrase
+        environment.credentialKeyring = restoreKeyring
         environment.macOSVersion = services.macOSVersion
         // The simulated Dock never lists newly installed apps by itself.
         if services.layout.isSimulation { environment.launchpadSettleTimeout = 2 }
@@ -855,6 +884,11 @@ final class AppModel: ObservableObject {
 
     /// Checks for conflicts and administrator needs, then starts the restore or asks first.
     func requestRestoreStart() {
+        // Credentials are unlocked first: only then can the check find which ones would conflict with files on this Mac.
+        if selection.components.contains(.credentials), backupHasCredentials, !credentialsUnlocked {
+            askForRestorePassphrase = true
+            return
+        }
         guard let plan = currentPlan(), let executor = makeExecutor(log: LogStore(fileURL: nil, homeDirectory: services.layout.homeDirectory)) else { return }
         self.plan = plan
         let selection = self.selection
@@ -899,7 +933,7 @@ final class AppModel: ObservableObject {
 
     func startRestore() {
         adminNotice = nil
-        if selection.components.contains(.credentials), !(manifest?.credentials.isEmpty ?? true), restorePassphrase == nil {
+        if selection.components.contains(.credentials), backupHasCredentials, !credentialsUnlocked {
             askForRestorePassphrase = true
             return
         }
@@ -989,8 +1023,8 @@ final class AppModel: ObservableObject {
         }
         selection = session.selection
         // The passphrase is never stored, so it is asked again if credentials are still to be restored.
-        let credentialsPending = session.itemIDs.contains { $0.hasPrefix("credential:") && session.results[$0] == nil }
-        if session.selection.components.contains(.credentials), credentialsPending, !manifest.credentials.isEmpty, restorePassphrase == nil, askForPassphrase {
+        let credentialsPending = session.itemIDs.contains { ($0.hasPrefix("credential:") || $0.hasPrefix("credentialFile:")) && session.results[$0] == nil }
+        if session.selection.components.contains(.credentials), credentialsPending, backupHasCredentials, !credentialsUnlocked, askForPassphrase {
             pendingResume = session
             askForRestorePassphrase = true
             return
@@ -1024,6 +1058,7 @@ final class AppModel: ObservableObject {
         guard let session = unfinishedSession else { return }
         try? services.sessionStore.remove(id: session.id)
         restorePassphrase = nil
+        restoreKeyring = nil
         unfinishedSession = services.sessionStore.unfinishedSession()
     }
 
@@ -1336,38 +1371,23 @@ extension AppModel {
     }
 }
 
-/// Files left out because they look like secrets: shown with what they are, included only on explicit request.
+/// Files left out because they look like secrets: shown with what they are, added to the encrypted backup on request.
 extension AppModel {
-    /// Asks once per file, with what including it means, then adds it to the backup unchanged.
-    func includeSensitiveFile(_ issue: BackupIssue) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = l.t("sensitive.include.title", issue.fileName)
-        alert.informativeText = l.t("sensitive.include.message") + (issue.sensitive?.kind == .keePassKeyFile ? "\n\n" + l.t("sensitive.include.keyFile") : "")
-        alert.addButton(withTitle: l.t("sensitive.include.confirm"))
-        alert.addButton(withTitle: l.t("common.cancel"))
-        let staged = services.simulationRoot != nil && defaults.bool(forKey: "stagingSkipPanels")
-        guard staged || alert.runModal() == .alertFirstButtonReturn else { return }
-        do {
-            try inventory?.includeOnRequest(issue.path, layout: services.layout)
-            includedOnRequest.insert(issue.path)
-            appLog.info("Included on request: one \(issue.sensitive?.kind.rawValue ?? "sensitive") file", component: .applicationData)
-        } catch {
-            appLog.warning("Could not include a sensitive file: \(error)", component: .applicationData)
-            notice = ProblemInfo(title: l.t("sensitive.include.failed"), message: l.t("sensitive.include.failed.message"), detail: nil)
-        }
-    }
+    func includeSensitiveFile(_ issue: BackupIssue) { addDetectedCredential(issue) }
 
     func excludeSensitiveFileAgain(_ path: String) {
-        inventory?.excludeAgain(path, layout: services.layout)
-        includedOnRequest.remove(path)
+        guard let item = inventory?.credentialSelection.first(where: { $0.originalPath == path }) else { return }
+        removeCredential(item)
     }
 
-    /// After a folder was scanned again its files are left out as before; the user's choices are applied again.
+    /// After a folder was scanned again (or a saved selection was loaded) the user's credential choices are applied again.
     func reapplySensitiveIncludes() {
-        for path in includedOnRequest where inventory?.manifest.excludedSensitiveFiles.contains(where: { $0.path == path }) == true {
-            try? inventory?.includeOnRequest(path, layout: services.layout)
-        }
+        let selected = Set(inventory?.credentialSelection.map(\.originalPath) ?? [])
+        let missing = includedOnRequest.subtracting(selected).map { services.layout.resolve(displayPath: $0) }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+        guard !missing.isEmpty, var current = inventory else { return }
+        current.addCredentialFiles(missing, layout: services.layout)
+        inventory = current
     }
 
     /// Shows the file in Finder on this Mac (only the owner sees it; nothing is read).

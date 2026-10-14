@@ -75,7 +75,7 @@ MacReplica is a native macOS app. You do not need the Terminal.
 | **MacReplica itself** | A verified copy of MacReplica (Apple silicon and Intel) in every backup, plus a printable reinstall guide for this Mac | Start the restore from the backup – no download needed |
 | **Fonts and ICC profiles** | Each file individually selectable, with its identity | Compared with what the new Mac already has before anything is copied |
 | **Git settings** | Name, aliases and preferences (email only if you choose) | Written to `~/.gitconfig` |
-| **Credentials** *(optional)* | Only if you opt in per provider — encrypted with your passphrase | Restored only with the passphrase |
+| **Passwords, keys and credentials** *(optional)* | Any number of key files, password databases and credential files you add, from anywhere — each encrypted and verified | Restored only with your passphrase or recovery key, with a decision for every conflict |
 
 MacReplica does **not** clone your disk, copy whole Library folders or preference files, copy drivers or system
 databases, or migrate logins stored in the Keychain. Everything it leaves out is listed with the reason – check that
@@ -175,7 +175,7 @@ update, download the new disk image and replace the app.
 1. Click **Create Backup**. MacReplica scans the Mac; nothing is changed.
 2. Review the results (**What do you want to take with you?**): confirm Homebrew packages for apps
    MacReplica was not sure about, and choose fonts, colour profiles, Python environments and app
-   data. Credentials are off unless you opt in.
+   data. Passwords, keys and credentials are in the backup only if you add them (always encrypted).
 3. Under **Backup location**, choose a folder — ideally on an external drive or in a cloud folder — and check the
    free space shown there; then click **Save Backup**. **Save Selection …** keeps your choices for the next backup.
    MacReplica copies the selected files, compares each copy with the original and shows where the
@@ -330,7 +330,7 @@ profiles). The rules and the research behind them are in
   and shows for each item what would happen and why. You can export it as a report.
 - A restore saves its progress after every step. If MacReplica is stopped, quit or crashes, the
   start screen offers **Continue** (same choices, finished steps are not repeated), **Review …**
-  (change what has not been restored yet) or **Discard**. An encryption passphrase for credentials is
+  (change what has not been restored yet) or **Discard**. The passphrase or recovery key for credentials is
   never stored and is asked for again.
 
 ## Permissions, security and privacy
@@ -354,11 +354,12 @@ case you want to grant access.
 - Every file in a backup has a SHA-256 checksum; damaged files are reported and not restored.
 - Existing files are never overwritten silently; replaced files are kept. MacReplica only deletes
   folders it created itself and marked as its own.
-- **Credentials** are never collected by default. There is no scanning for secrets. If you opt in
-  to a credential provider (SSH keys, AWS, Git credentials, npm, Kubernetes, Terraform), those files
-  are encrypted in the backup with AES-256-GCM using a key derived from your passphrase
-  (PBKDF2-HMAC-SHA256, 600,000 iterations). Passwords, tokens, cookies, browser data and the Keychain
-  are never copied.
+- **Credentials** are never collected by default. Files that look like keys or password databases are
+  recognised by name and header only and listed; you decide for each. What you add is encrypted per file
+  (AES-256-GCM; the key is protected by your passphrase via PBKDF2-HMAC-SHA256, 600,000 iterations, and by a
+  recovery key), checked after encrypting, and never written in plain text. Keychains, passkeys, cookies and
+  browser password stores are never copied; MacReplica shows the supported way to move them. Details:
+  [docs/CREDENTIALS.md](docs/CREDENTIALS.md).
 
 **Privacy.** Your backup stays where you save it — MacReplica uploads nothing. It has no analytics.
 It makes three kinds of network requests itself: Homebrew's public cask list (during the scan, to

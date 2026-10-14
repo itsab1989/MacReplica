@@ -62,12 +62,15 @@ struct SensitiveFilesTests {
         try inventory.includeOnRequest("~/Documents/Vault/Family.kdbx", layout: source.layout)
         #expect(inventory.manifest.excludedSensitiveFiles.map(\.fileName) == ["Family.keyx"], "the key file stays left out")
         let outcome = try BackupWriter(layout: source.layout, localizer: TestEnvironment.english)
-            .write(inventory, into: try sandbox.folder("backups"), log: LogStore(fileURL: nil, homeDirectory: source.layout.homeDirectory))
+            .write(inventory, into: try sandbox.folder("backups"), log: LogStore(fileURL: nil, homeDirectory: source.layout.homeDirectory),
+                   credentials: CredentialExportRequest(providerIDs: [], passphrase: "synthetic test passphrase", recoveryKey: try RecoveryKey.generate()))
         let manifest = try ManifestIO.read(from: outcome.url)
-        let included = try #require(manifest.sensitiveFilesIncludedOnRequest.first)
-        #expect(included.fileName == "Family.kdbx" && included.metadata[AppDataScanner.includedOnRequestKey] == "passwordDatabase")
-        let copy = try #require(PathSafety.resolve(included.backupPath, inside: outcome.url))
-        #expect(try Data(contentsOf: copy) == Self.kdbx, "copied unchanged")
+        // 1.0.7: included on request means encrypted, never a plain copy among the folder's files.
+        #expect(manifest.sensitiveFilesIncludedOnRequest.isEmpty)
+        let included = try #require(manifest.credentialItems.first)
+        #expect(included.fileName == "Family.kdbx" && included.kind == .passwordDatabase && included.isPreserved)
+        let stored = try Data(contentsOf: outcome.url.appendingPathComponent(try #require(included.encryptedPath)))
+        #expect(stored.range(of: Self.kdbx.suffix(32)) == nil, "not stored in plain text")
         #expect(BackupVerifier(layout: source.layout).verify(backupAt: outcome.url).isIntact)
         #expect(manifest.completeness == .completeWithIntentionalExclusions && outcome.isComplete)
         // The report and the restore instructions name the file, the reason and the advice – never contents.
@@ -75,13 +78,14 @@ struct SensitiveFilesTests {
         let guide = try String(contentsOf: outcome.url.appendingPathComponent("restore/RESTORE_INSTRUCTIONS.html"), encoding: .utf8)
         for text in [report, guide] {
             #expect(text.contains("~/Documents/Vault/Family.keyx") && text.contains("KeePass key file") && text.contains("second factor"))
-            #expect(text.contains("Included at your request (encrypted KeePass password database)"))
+            #expect(text.contains("~/Documents/Vault/Family.kdbx") && text.contains("Encrypted and verified"))
         }
 
-        // Leaving it out again restores the earlier state.
+        // Taking it out again lists it as left out, by the user.
         inventory.excludeAgain("~/Documents/Vault/Family.kdbx", layout: source.layout)
         #expect(Set(inventory.manifest.excludedSensitiveFiles.map(\.fileName)) == ["Family.kdbx", "Family.keyx"])
-        #expect(inventory.manifest.sensitiveFilesIncludedOnRequest.isEmpty)
+        #expect(inventory.manifest.credentialsLeftOutByUser.map(\.fileName) == ["Family.kdbx"])
+        #expect(inventory.credentialSelection.isEmpty)
         #expect(!inventory.extraFiles.contains { $0.record.fileName == "Family.kdbx" })
         // Keychains are never included.
         let keychain = try Self.write(Data(), "Documents/Vault/old.keychain-db", in: root)
@@ -104,10 +108,10 @@ struct SensitiveFilesTests {
         #expect(inventory.manifest.applicationData.contains { $0.profile?.provider == "keepassxc" }, "its settings are offered")
         #expect(KeePassXCLocations.splitList("a, \"b, c\", d") == ["a", " b, c", " d"])
 
-        // Included on request: a folder with only this file, restored to where it was.
+        // Included on request: an encrypted credential item, restored to where it was.
         try inventory.includeOnRequest("~/Sync/Passwords.kdbx", layout: source.layout)
-        let folder = try #require(inventory.manifest.applicationData.first { $0.isPersonal && $0.files.map(\.fileName) == ["Passwords.kdbx"] })
-        #expect(folder.displayPath == "~/Sync")
+        #expect(inventory.credentialSelection.map(\.originalPath) == ["~/Sync/Passwords.kdbx"])
+        #expect(!inventory.manifest.applicationData.contains { $0.isPersonal })
         #expect(inventory.manifest.excludedSensitiveFiles.filter { $0.detail == .rememberedByApp }.isEmpty)
         _ = database
     }

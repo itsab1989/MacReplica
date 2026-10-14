@@ -244,8 +244,10 @@ struct FileCredentialProviderTests {
         let passphrase = "synthetic provider passphrase"
         let outcome = try BackupWriter(layout: source.layout, localizer: TestEnvironment.english)
             .write(result, into: try sandbox.folder("out"), log: LogStore(fileURL: nil, homeDirectory: source.layout.homeDirectory),
-                   credentials: CredentialExportRequest(providerIDs: ["aws", "npm"], passphrase: passphrase))
-        #expect(outcome.manifest.credentials.map(\.provider) == ["aws", "npm"])
+                   credentials: CredentialExportRequest(providerIDs: ["aws", "npm"], passphrase: passphrase, recoveryKey: try RecoveryKey.generate()))
+        #expect(outcome.manifest.credentials.isEmpty, "1.0.7 writes the encrypted store, not version 1 vaults")
+        #expect(outcome.manifest.credentialItems.map(\.provider) == ["aws", "aws", "npm"])
+        #expect(outcome.manifest.credentialItems.map(\.homeRelativePath) == [".aws/credentials", ".aws/config", ".npmrc"])
         for path in BackupWriter.allFiles(in: outcome.url) where !path.hasPrefix("credentials/") {
             let text = (try? String(contentsOf: outcome.url.appendingPathComponent(path), encoding: .utf8)) ?? ""
             #expect(!text.contains("synthetic-secret") && !text.contains("synthetic-npm-token") && !text.contains(passphrase), "\(path)")
@@ -253,13 +255,13 @@ struct FileCredentialProviderTests {
         let (fresh, target) = try TestEnvironment.freshMac(sandbox)
         let selection = RestoreSelection(components: [.credentials])
         let plan = RestorePlanner().plan(manifest: outcome.manifest, selection: selection)
-        #expect(plan.items.map(\.id) == ["credential:aws", "credential:npm"])
+        #expect(plan.items.map(\.id) == outcome.manifest.credentialItems.map { "credentialFile:\($0.id)" })
         var environment = TestEnvironment.restoreEnvironment(target)
-        environment.credentialPassphrase = passphrase
+        environment.credentialKeyring = try CredentialKeyring.unlock(
+            keyFile: Data(contentsOf: outcome.url.appendingPathComponent(CredentialStore.keysPath)), with: .passphrase(passphrase))
         let session = await RestoreExecutor(environment: environment, backupRoot: outcome.url, sessionStore: nil)
             .run(plan: plan, session: RestoreSession(backupPath: "", selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
-        #expect(session.results["credential:aws"]?.outcome == .succeeded)
-        #expect(session.results["credential:npm"]?.outcome == .succeeded)
+        #expect(session.results.count == 3 && session.results.values.allSatisfy { $0.outcome == .succeeded })
         let credentials = fresh.url.appendingPathComponent("home/.aws/credentials")
         #expect(try String(contentsOf: credentials, encoding: .utf8).contains("synthetic-secret"))
         #expect((try FileManager.default.attributesOfItem(atPath: credentials.path)[.posixPermissions] as? Int).map { $0 & 0o077 } == 0,

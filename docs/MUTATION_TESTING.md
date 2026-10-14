@@ -34,6 +34,17 @@ python3 tools/mutation/mutate.py --merge r0 r1 r2 r3 r4 r5 --report merged --che
 
 ## Results
 
+**2026-10-14 (1.0.7, unreleased: encrypted credential store and multi-item selection):** 6 modules. The four new ones (`CredentialStore`, `CredentialItems`, `CredentialBackup`, `CredentialRestore`) reach **100 %** (154 of 154 valid mutants killed, 10 equivalent mutants excluded with reasons). The changed `Credentials.swift` and `SensitiveFiles.swift` also reach 100 %. Three rounds: round 2 left CredentialItems at 76 %, CredentialBackup at 52.9 % and CredentialRestore at 77.8 %. The fixes: an unused field and an unused equality were removed, the error→reason mappings became testable functions, and tests were added (1PUX format, undoing one of two decisions, unclassified issues, a remembered database not offered again, a file chosen by hand and through its provider, absolute restore locations, passphrase and header-length boundaries, a tighter record bound).
+
+| Module | Killed | Survived | Invalid | Excluded | Score | Threshold | Result |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Credentials/CredentialStore.swift` | 48 | 0 | 2 | 5 | 100.0 % | 80 % | ✅ |
+| `Credentials/CredentialItems.swift` | 79 | 0 | 4 | 4 | 100.0 % | 80 % | ✅ |
+| `Backup/CredentialBackup.swift` | 10 | 0 | 2 | 0 | 100.0 % | 80 % | ✅ |
+| `Restore/CredentialRestore.swift` | 17 | 0 | 1 | 1 | 100.0 % | 80 % | ✅ |
+| `Credentials/Credentials.swift` (re-test of survivors) | 2 | 0 | 0 | 1 | 100.0 % | 80 % | ✅ |
+| `Inventory/SensitiveFiles.swift` (re-test of survivors) | 1 | 0 | 0 | 0 | 100.0 % | 80 % | ✅ |
+
 **2026-10-14 (MacReplica 1.0.6: corner example overlay + Plugin Playground one-click loader):** the new/changed loader
 modules all reach 100 %, every module at or above threshold. Suites `PluginLoaderTests`, `ToolsCornerPluginTests`,
 `ToolsCornerEdgeTests` cover the pinned download + checksum, the readiness states, the `csrutil` parsing and SIP

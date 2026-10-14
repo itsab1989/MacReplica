@@ -37,6 +37,9 @@ public struct RestoreEnvironment: Sendable {
     public var commandLineToolsTimeout: TimeInterval
     /// Passphrase for encrypted credentials, entered by the user for this restore only. Never stored or logged.
     public var credentialPassphrase: String?
+    /// The opened credential store of the backup (1.0.7 and later), unlocked with the passphrase or recovery key the
+    /// user entered for this restore. Held in memory only.
+    public var credentialKeyring: CredentialKeyring?
     /// Reports whether an app with this bundle identifier is running. Providers whose
     /// app must be closed are not restored while it runs.
     public var isApplicationRunning: @Sendable (String) -> Bool = { _ in false }
@@ -304,6 +307,8 @@ struct Inspector: Sendable {
             return predictGitConfiguration(item)
         case .credential:
             return environment.credentialPassphrase == nil ? .willSkip(.passphraseNotProvided) : .willCopy
+        case .credentialFile:
+            return predictCredentialFile(item)
         case .toolchainStep:
             return predictToolchain(item)
         case .manualApp:
@@ -556,6 +561,8 @@ public final class RestoreExecutor: Sendable {
                 return restoreGitConfiguration(item, inspector: inspector, session: session)
             case .credential:
                 return restoreCredential(item, inspector: inspector, session: session, onEvent: onEvent)
+            case .credentialFile:
+                return restoreCredentialFile(item, inspector: inspector, session: session, onEvent: onEvent)
             case .toolchainStep:
                 return try await restoreToolchainStep(item, inspector: inspector, context: context, onEvent: onEvent)
             case .manualApp:

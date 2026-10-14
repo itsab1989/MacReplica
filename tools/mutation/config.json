@@ -125,9 +125,12 @@
     {
       "file": "Credentials/Credentials.swift",
       "tests": [
+        "CredentialEdgeTests",
+        "CredentialPreservationTests",
         "CredentialTests",
+        "DataRestoreEdgeTests",
         "FileCredentialProviderTests",
-        "CredentialEdgeTests"
+        "ProviderCatalogTests"
       ],
       "area": "Security: credential encryption"
     },
@@ -420,8 +423,9 @@
     {
       "file": "Inventory/SensitiveFiles.swift",
       "tests": [
-        "SensitiveFilesTests",
-        "SensitiveFilesEdgeTests"
+        "CredentialPreservationTests",
+        "SensitiveFilesEdgeTests",
+        "SensitiveFilesTests"
       ],
       "area": "Sensitive files"
     },
@@ -544,6 +548,41 @@
         "PluginLoaderTests"
       ],
       "area": "Tools"
+    },
+    {
+      "file": "Credentials/CredentialStore.swift",
+      "tests": [
+        "CredentialPreservationTests"
+      ],
+      "area": "Security: credential store encryption (1.0.7)"
+    },
+    {
+      "file": "Credentials/CredentialItems.swift",
+      "tests": [
+        "CredentialPreservationTests",
+        "SensitiveFilesTests",
+        "CredentialTests"
+      ],
+      "area": "Credential selection, policy and manifest records"
+    },
+    {
+      "file": "Backup/CredentialBackup.swift",
+      "tests": [
+        "CredentialPreservationTests",
+        "CredentialTests",
+        "ProviderCatalogTests",
+        "SensitiveFilesTests"
+      ],
+      "area": "Credential backup: per-item encryption and outcome records"
+    },
+    {
+      "file": "Restore/CredentialRestore.swift",
+      "tests": [
+        "CredentialPreservationTests",
+        "CredentialTests",
+        "ProviderCatalogTests"
+      ],
+      "area": "Credential restore: conflicts, verification, alternate location"
     }
   ],
   "exclusions": [
@@ -902,6 +941,64 @@
       "pattern": "components\\.user != nil \\|\\| components\\.password != nil",
       "operator": "!= → ==",
       "reason": "URLComponents reports `:password@` with an empty (not missing) user, so a password never appears without a user: equivalent mutant (credentials removal is tested)."
+    },
+    {
+      "file": "Backup/CredentialBackup.swift",
+      "pattern": "log\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Restore/CredentialRestore.swift",
+      "pattern": "log\\.(info|warning|error)",
+      "reason": "Log-only lines."
+    },
+    {
+      "file": "Credentials/Credentials.swift",
+      "pattern": "all\\.first \\{ \\$0\\.id == id \\}",
+      "operator": "first → last",
+      "reason": "Provider IDs are unique (checked by ProviderCatalogTests), so the first and the last match are the same provider (equivalent mutant)."
+    },
+    {
+      "file": "Credentials/CredentialStore.swift",
+      "pattern": "file\\.slots\\.first\\(where: \\{ \\$0\\.kind == kind \\}\\)",
+      "operator": "first → last",
+      "reason": "A key file has exactly one slot per unlock method, and every slot is authenticated by AES-GCM; first and last are the same slot (equivalent mutant)."
+    },
+    {
+      "file": "Credentials/CredentialStore.swift",
+      "pattern": "guard recordLength >= 16, recordLength <= header\\.recordSize \\+ 16",
+      "operator": ">= → >",
+      "reason": "A 16-byte record (empty ciphertext + tag) is never written and is rejected by AES-GCM authentication either way (equivalent mutant)."
+    },
+    {
+      "file": "Credentials/CredentialStore.swift",
+      "pattern": "guard headerLength > 0, headerLength < 4096",
+      "operator": "> → >=",
+      "reason": "FileHandle.read(upToCount: 0) returns nil, so a zero header length is refused by the following read either way (equivalent mutant)."
+    },
+    {
+      "file": "Credentials/CredentialItems.swift",
+      "pattern": "var isDirectory: ObjCBool = false",
+      "operator": "false → true",
+      "reason": "Only read after fileExists returned true, which always sets it (equivalent mutant)."
+    },
+    {
+      "file": "Restore/CredentialRestore.swift",
+      "pattern": "var isDirectory: ObjCBool = false",
+      "operator": "false → true",
+      "reason": "Only read after fileExists returned true, which always sets it (equivalent mutant)."
+    },
+    {
+      "file": "Credentials/CredentialItems.swift",
+      "pattern": "credentialSelection\\.first\\(where: \\{ \\$0\\.id == id \\}\\)",
+      "operator": "first → last",
+      "reason": "Item IDs are unique in the selection (one per real file), so first and last are the same item (equivalent mutant)."
+    },
+    {
+      "file": "Credentials/CredentialItems.swift",
+      "pattern": "\\$0\\.path == item\\.originalPath && \\$0\\.reason == \\.refusedSensitive",
+      "operator": "== → !=",
+      "reason": "Before a backup is written, the only issues a selected credential's path can have are sensitive-file issues; the reason test only guards against future issue kinds (equivalent mutant)."
     }
   ]
 }

@@ -96,6 +96,8 @@ public enum ManifestIO {
         1: { $0 },
         // 2 → 3: likewise (no home-folder placeholders, no Launchpad layout, no own installers or other copies).
         2: { $0 },
+        // 3 → 4: no encrypted credential items.
+        3: { $0 },
     ]
 
     public static func read(from backupRoot: URL) throws -> Manifest {

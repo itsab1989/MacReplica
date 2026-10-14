@@ -4,6 +4,9 @@
 //   ax-press <app name> <identifier> --exists exit 0 if it exists
 //   ax-press <app name> --ids <prefix>       print identifiers starting with prefix (and their titles/values)
 //   ax-press <app name> <identifier> --help   print the element's hover text (AXHelp)
+//   ax-press <app name> <identifier> --value  print the element's value (e.g. a text shown for copying)
+//   ax-press <app name> <identifier> --set <text>  set a text field's value through accessibility (no keystrokes)
+//   ax-press <app name> <identifier> --scroll scroll the element into view (AXScrollToVisible)
 import AppKit
 import ApplicationServices
 
@@ -45,6 +48,17 @@ _ = walk(root) { element in
 }
 guard let element = found else { exit(1) }
 if args.contains("--exists") { exit(0) }
+if args.contains("--value") {
+    print(attribute(element, kAXValueAttribute).map { "\($0)" } ?? (attribute(element, kAXDescriptionAttribute) as? String) ?? "")
+    exit(0)
+}
+if let index = args.firstIndex(of: "--set"), index + 1 < args.count {
+    AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+    exit(AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, args[index + 1] as CFString) == .success ? 0 : 4)
+}
+if args.contains("--scroll") {
+    exit(AXUIElementPerformAction(element, "AXScrollToVisible" as CFString) == .success ? 0 : 5)
+}
 if args.contains("--help") {
     print((attribute(element, kAXHelpAttribute) as? String) ?? "")
     exit(0)

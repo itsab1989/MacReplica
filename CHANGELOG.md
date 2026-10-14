@@ -7,6 +7,40 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Keys and password databases: any number, from anywhere.** After one key or database had been included, further
+  ones could not be added: including a file outside the chosen folders created a hidden one-file folder, and a later
+  **Include …** into that folder silently did nothing. Files in the home folder itself, in iCloud Drive or on another
+  drive could not be included at all, and deselecting one folder could make another folder's credential files
+  disappear from "Not in this backup". Credentials are now independent items. Add any number from any place, with
+  duplicates (also through links) recognised. Nothing a user chose or decided ever disappears from the lists.
+- Credential files that were included used to be copied into the backup **unencrypted**. They are now always
+  encrypted.
+
+### Added
+- **Passwords, keys and credentials** section: **Add Keys or Password Files …** (several files and folders at once),
+  **Add Encrypted** / **Leave Out** for every credential file found, and what cannot be copied as a file (keychains,
+  browser password stores). **Needs a step by you** shows the supported route for passkeys, iCloud Keychain, Chrome,
+  Edge, Brave, Firefox, 1Password and Bitwarden. Before saving, credential files nobody decided on are shown once
+  more.
+- **Encrypted credential store** (manifest version 4): every item encrypted on its own (AES-256-GCM in 64 KiB
+  records). The key is protected by your passphrase (PBKDF2-HMAC-SHA256, 600,000 iterations) **and a recovery key**
+  shown once. Each item is decrypted and compared before it counts as preserved. The manifest records every item's
+  status, format, prerequisites and the reason when it could not be preserved, never contents or plain hashes.
+  Backups without credentials stay version 3.
+- **Credential restore**: passphrase or recovery key, checked in the sheet. Asked before the pre-restore check, so a
+  credential that differs from this Mac's file gets a decision (keep this Mac's version, keep both, replace, skip).
+  Each item is verified after writing (same bytes, same format), and the result says what you still need (master
+  password, key passphrase). A file whose drive is not connected goes to `~/MacReplica Restored Credentials`.
+- Recognises more credential files: SSH/PGP private keys saved under any name without an extension (from the first
+  line), Password Safe `.psafe3`, 1Password exports (`.1pux`, `.1pif`) and recovery codes or emergency kits.
+- Reports and restore instructions include a **Passwords, keys and credentials** readiness section.
+- [docs/CREDENTIALS.md](docs/CREDENTIALS.md): policy per category, encryption format, recovery, sources.
+
+### Changed
+- The SSH, AWS, Git, npm, Kubernetes and Terraform providers now write into the same encrypted store (one passphrase
+  and recovery key for everything). Version 1 vaults of older backups are still restored.
+
 ## [1.0.6] - 2026-10-14
 
 ### Added

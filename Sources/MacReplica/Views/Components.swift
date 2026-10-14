@@ -180,7 +180,7 @@ enum Symbols {
         case .pythonEnvironment: return "chevron.left.forwardslash.chevron.right"
         case .applicationData: return "folder"
         case .gitConfiguration: return "wrench.and.screwdriver"
-        case .credential: return "key"
+        case .credential, .credentialFile: return "key"
         case .toolchainStep: return "hammer"
         case .manualApp: return "arrow.down.circle"
         case .displayProfile: return "display"

@@ -34,6 +34,7 @@ struct RestoreSelectionView: View {
                             .accessibilityIdentifier("restore.notInBackup")
                             .onAppear { if model.stagingExpandLists { showNotInBackup = true } }
                         }
+                        CredentialReadinessCard(manifest: manifest)
                     }
                     warnings
 
@@ -665,7 +666,10 @@ struct ConflictSheet: View {
     }
 
     static func choices(_ entry: DryRunEntry) -> [ConflictResolution] {
-        entry.fileAssessment?.conflictChoices(kind: entry.item.kind) ?? [.keepExisting, .replace, .skip]
+        // A credential that differs from the file on this Mac: keep this Mac's, restore it next to it, replace (the existing
+        // file is kept in MacReplica's folder) or skip.
+        if entry.item.kind == .credentialFile { return [.keepExisting, .keepBoth, .replace, .skip] }
+        return entry.fileAssessment?.conflictChoices(kind: entry.item.kind) ?? [.keepExisting, .replace, .skip]
     }
 
     static func defaultChoice(_ entry: DryRunEntry) -> ConflictResolution {
@@ -691,7 +695,8 @@ struct ConflictSheet: View {
                             Image(systemName: Symbols.kind(entry.item.kind)).foregroundStyle(.secondary).frame(width: 18)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(l.itemTitle(entry.item))
-                                Text(entry.fileAssessment.map { l.fileStatusDetail($0, kind: entry.item.kind) }
+                                Text(entry.item.kind == .credentialFile ? entry.item.identifier
+                                     : entry.fileAssessment.map { l.fileStatusDetail($0, kind: entry.item.kind) }
                                      ?? (entry.item.file.map { $0.domain == .user ? l.t("location.user") : l.t("location.system") } ?? ""))
                                     .font(.caption).foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -704,6 +709,7 @@ struct ConflictSheet: View {
                             }
                             .labelsHidden()
                             .frame(width: 210)
+                            .accessibilityIdentifier("conflict.choice.\(entry.item.title)")
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
