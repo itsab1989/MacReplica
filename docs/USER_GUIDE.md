@@ -44,8 +44,8 @@
      on its own and without a size limit. Not the home folder as a whole or `~/Library`. Files that are only in
      iCloud are left out and listed. MacReplica checks that the destination has enough free space;
    - **Not in this backup** — every file that will not be in the backup: files that look like passwords or keys
-     (left out on purpose, each with what it appears to be and what to do; **Include …** adds one, unchanged), and
-     files that could not be read. **Show in Finder** shows the file. Read this before you erase the Mac;
+     (not in the backup until you decide, each with what it appears to be and what to do; **Add Encrypted** adds it
+     to the encrypted part), and files that could not be read. **Show in Finder** shows the file. Read this before you erase the Mac;
    - **Your installers (offline)** — installers you keep (for example Office LTSC with its activation package,
      or a tablet driver, on an external drive): choose them for the app (**Use my installer …**, also an `.app`)
      or add a folder. Each file shows what it is, what is inside, where it is, whether it will be used and what
@@ -56,7 +56,14 @@
    - **Printers & Scanners** — your printers and scanner drivers, with connection and driver;
    - **macOS settings** — Dock, Finder, keyboard, trackpad, language and more, by category, and what is not
      transferred and why;
-   - **Credentials** — off unless you choose a provider and set a passphrase;
+   - **Passwords, keys and credentials** — **Add Keys or Password Files …** adds any number of key files, password
+     databases and folders containing them, from any folder or drive (several at once). Files found in your chosen
+     folders are listed with **Add Encrypted** / **Leave Out**. The first time, you set a passphrase and MacReplica
+     shows a **recovery key** – store it away from this Mac; either one opens the credentials, losing both loses them.
+     Everything here is stored only encrypted and checked after encrypting. Keychains, passkeys and browser password
+     stores cannot be moved as files: the section names the supported way for each (sync, export, sign-in). If
+     credential files were found but not decided on, **Save Backup** asks once more. See
+     [CREDENTIALS.md](CREDENTIALS.md);
    - **Sign in again** — services that need a new login on the new Mac;
    - locations macOS did not let MacReplica read;
    - under **Show apps**, every app with a checkbox (untick apps you do not want in the backup) and a
@@ -82,7 +89,9 @@
    - Untick whole areas or click **Choose Individual Items …** to untick single items, see details
      (version on this Mac, format, origin) and decide conflicts.
    - Allow third-party Homebrew sources (taps) only if you trust them.
-   - **Credentials** can only be restored with the passphrase you set on the old Mac.
+   - **Credentials** are restored only if you switch them on, with the passphrase or the recovery key from the old Mac
+     (asked before the check, so files that differ from this Mac's get a decision: keep this Mac's version, keep both,
+     replace, or skip).
 3. Click **Preview (Dry Run)** to see exactly what will happen, or **Start Restore**.
 4. If something already exists in a different version or with the same name, MacReplica asks:
    *Keep this Mac's version*, *Replace with backup*, *Keep both* (where safe) or *Skip*. For application
@@ -192,7 +201,7 @@ MacReplica-Backup-2026-10-02-1852/
 ├── icc_profiles/{user,system}/…       selected ICC profiles
 ├── development/python/<env>/          requirements.txt and project files per environment
 ├── application-data/<id>/…            selected app data (one folder per data location)
-├── credentials/<provider>.macreplica-vault   only if you opted in (encrypted)
+├── credentials/keys.json, items/*.mrcred   only if you added credentials (encrypted per item)
 ├── restore/RESTORE_INSTRUCTIONS.html  step-by-step guide, also for manual restoring
 ├── reports/inventory.html, manual_installations.html
 ├── checksums/SHA256SUMS               checksum of every file

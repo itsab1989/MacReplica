@@ -348,6 +348,7 @@ struct BackupSavedView: View {
                             }
                             .accessibilityElement(children: .contain).accessibilityIdentifier("saved.notInBackup")
                         }
+                        CredentialReadinessCard(manifest: outcome.manifest)
                         Card {
                             Text(l.t("saved.location")).font(.caption).foregroundStyle(.secondary)
                             Text(model.displayPath(outcome.url))
@@ -446,69 +447,6 @@ struct DeveloperSettingsSection: View {
     }
 }
 
-/// Credentials & accounts: opt-in encrypted credentials per provider, and the services
-/// that will ask for a new sign-in. Collapsed, and nothing selected, by default.
-struct CredentialsSection: View {
-    @EnvironmentObject var model: AppModel
-    @ViewState private var expanded = false
-    @ViewState private var pendingProvider: String?
-
-    var body: some View {
-        let l = model.l
-        let detected = model.detectedCredentials
-        let guidance = model.inventory?.manifest.guidance ?? []
-        DisclosureGroup(isExpanded: $expanded) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(l.t("credentials.section.message"))
-                        .font(.callout).foregroundStyle(.secondary)
-                    HelpButton(text: l.t("credentials.help"), title: l.t("component.credentials"), id: "help.credentials")
-                }
-                    .fixedSize(horizontal: false, vertical: true)
-                if detected.isEmpty {
-                    Text(l.t("credentials.none")).foregroundStyle(.secondary)
-                }
-                ForEach(detected, id: \.provider.id) { entry in
-                    Toggle(isOn: Binding(
-                        get: { model.selectedCredentialProviders.contains(entry.provider.id) },
-                        set: { on in
-                            if !on {
-                                model.selectedCredentialProviders.remove(entry.provider.id)
-                                if model.selectedCredentialProviders.isEmpty { model.credentialPassphrase = nil }
-                            } else if model.credentialPassphrase == nil {
-                                pendingProvider = entry.provider.id
-                            } else {
-                                model.selectedCredentialProviders.insert(entry.provider.id)
-                            }
-                        })) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(l.t(entry.provider.titleKey))
-                            Text(entry.items.joined(separator: ", ")).font(.caption.monospaced()).foregroundStyle(.secondary)
-                            Text(l.t(entry.provider.riskKey)).font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .toggleStyle(.checkbox)
-                    .accessibilityIdentifier("credentials.\(entry.provider.id)")
-                }
-                if !model.selectedCredentialProviders.isEmpty {
-                    Label(l.t("credentials.enabled"), systemImage: "lock.fill").font(.caption).foregroundStyle(.orange)
-                }
-                if !guidance.isEmpty {
-                    GuidanceList(records: guidance)
-                }
-            }
-            .padding(.top, 6)
-        } label: {
-            // The identifier sits on the label so it is not inherited by the controls inside.
-            Text(l.t("credentials.section.title")).accessibilityIdentifier("credentials.section")
-        }
-        .sheet(isPresented: Binding(get: { pendingProvider != nil }, set: { if !$0 { pendingProvider = nil } })) {
-            CredentialOptInSheet(providerID: pendingProvider ?? "")
-        }
-    }
-}
-
 /// Services that need a new sign-in, or their own export, on the new Mac.
 struct GuidanceList: View {
     @EnvironmentObject var model: AppModel
@@ -535,53 +473,6 @@ struct GuidanceList: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-struct CredentialOptInSheet: View {
-    @EnvironmentObject var model: AppModel
-    @Environment(\.dismiss) private var dismiss
-    var providerID: String
-    @ViewState private var passphrase = ""
-    @ViewState private var confirmation = ""
-    @ViewState private var understood = false
-
-    var valid: Bool {
-        passphrase.count >= CredentialVault.minimumPassphraseLength && passphrase == confirmation && understood
-    }
-
-    var body: some View {
-        let l = model.l
-        VStack(alignment: .leading, spacing: 12) {
-            Text(l.t("credentials.optIn.title")).font(.title3.weight(.semibold))
-            NoticeView(style: .warning, title: l.t("credentials.optIn.warningTitle"), message: l.t("credentials.optIn.warning"))
-            if let provider = CredentialProviders.provider(id: providerID) {
-                Text(l.t(provider.descriptionKey)).fixedSize(horizontal: false, vertical: true)
-            }
-            Text(l.t("credentials.optIn.storage")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            SecureField(l.t("credentials.passphrase"), text: $passphrase).textFieldStyle(.roundedBorder)
-                .accessibilityIdentifier("credentials.passphrase")
-            SecureField(l.t("credentials.passphraseConfirm"), text: $confirmation).textFieldStyle(.roundedBorder)
-                .accessibilityIdentifier("credentials.passphraseConfirm")
-            Text(l.t("credentials.passphraseRules", CredentialVault.minimumPassphraseLength))
-                .font(.caption).foregroundStyle(passphrase.isEmpty || passphrase.count >= CredentialVault.minimumPassphraseLength ? Color.secondary : Color.orange)
-            Toggle(l.t("credentials.optIn.understood"), isOn: $understood).toggleStyle(.checkbox)
-                .accessibilityIdentifier("credentials.understood")
-            HStack {
-                Spacer()
-                Button(l.t("common.cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(l.t("credentials.optIn.enable")) {
-                    model.credentialPassphrase = passphrase
-                    model.selectedCredentialProviders.insert(providerID)
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!valid)
-                .accessibilityIdentifier("credentials.enable")
-            }
-        }
-        .padding(20)
-        .frame(width: 520)
     }
 }
 
@@ -618,31 +509,6 @@ struct LocationsSection: View {
                 .padding(.top, 4)
             }
         }
-    }
-}
-
-/// Asks for the vault passphrase right before restoring credentials.
-struct RestorePassphraseSheet: View {
-    @EnvironmentObject var model: AppModel
-    @ViewState private var passphrase = ""
-
-    var body: some View {
-        let l = model.l
-        VStack(alignment: .leading, spacing: 12) {
-            Text(l.t("credentials.restore.title")).font(.title3.weight(.semibold))
-            Text(l.t("credentials.restore.message")).fixedSize(horizontal: false, vertical: true)
-            SecureField(l.t("credentials.passphrase"), text: $passphrase).textFieldStyle(.roundedBorder)
-            HStack {
-                Button(l.t("credentials.restore.skip")) { model.restorePassphraseEntered(nil) }
-                Spacer()
-                Button(l.t("common.cancel")) { model.cancelRestorePassphrase() }.keyboardShortcut(.cancelAction)
-                Button(l.t("common.continue")) { model.restorePassphraseEntered(passphrase) }
-                .keyboardShortcut(.defaultAction)
-                .disabled(passphrase.isEmpty)
-            }
-        }
-        .padding(20)
-        .frame(width: 480)
     }
 }
 

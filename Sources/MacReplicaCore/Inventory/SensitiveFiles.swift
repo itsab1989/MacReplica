@@ -21,6 +21,10 @@ public enum SensitiveKind: String, Codable, Sendable, CaseIterable {
     case secretsFile
     /// The name suggests a secret ("token", "secret", "credential", "password"); the contents were not checked.
     case nameSuggestsSecret
+    /// An unencrypted export of a password manager (1Password `.1pux`/`.1pif`): every password in plain text.
+    case passwordManagerExport
+    /// Recovery codes, a recovery key or an emergency kit (e.g. `github-recovery-codes.txt`, "Emergency Kit").
+    case recoveryMaterial
 
     /// MacReplica may include the file when the user explicitly asks for it. Keychains and browser data are never
     /// copied: they do not work on another Mac (or contain live sessions), and there are supported ways to move them.
@@ -63,6 +67,12 @@ public enum SensitiveFileClassifier {
         switch ext {
         case "kdbx", "kdb":
             return SensitiveClassification(kind: .passwordDatabase, confidence: KeePassHeader.read(url) != nil ? .high : .medium)
+        case "psafe3":
+            // Password Safe V3 databases start with the tag `PWS3`.
+            let isPasswordSafe = header(4).map { $0 == Data("PWS3".utf8) } ?? false
+            return SensitiveClassification(kind: .passwordDatabase, confidence: isPasswordSafe ? .high : .medium)
+        case "1pux", "1pif":
+            return SensitiveClassification(kind: .passwordManagerExport, confidence: .high)
         case "keyx":
             return SensitiveClassification(kind: .keePassKeyFile, confidence: .high)
         case "key":
@@ -91,11 +101,19 @@ public enum SensitiveFileClassifier {
         if name.range(of: #"^id_(rsa|dsa|ecdsa|ed25519)"#, options: .regularExpression) != nil {
             return SensitiveClassification(kind: .privateKey, confidence: name.hasSuffix(".pub") ? .low : .high)
         }
+        // Keys are often saved without an extension under any name (`deploy_ed25519`, `github`): the first line tells.
+        if ext.isEmpty, let start = header(64).map({ String(decoding: $0, as: UTF8.self) }), start.hasPrefix("-----BEGIN ") {
+            if start.contains("PRIVATE KEY-----") { return SensitiveClassification(kind: .privateKey, confidence: .high) }
+            if start.contains("PGP PRIVATE KEY BLOCK") { return SensitiveClassification(kind: .pgpKey, confidence: .high) }
+        }
         if lower.range(of: #"^(cookies|login data|web data)(-journal)?$"#, options: .regularExpression) != nil {
             return SensitiveClassification(kind: .browserData, confidence: .high)
         }
         if name == ".netrc" || name.range(of: #"^\.env(\..*)?$"#, options: .regularExpression) != nil {
             return SensitiveClassification(kind: .secretsFile, confidence: .high)
+        }
+        if lower.range(of: #"(recovery[ _-]?(key|codes?)|backup[ _-]?codes|emergency[ _-]?kit)"#, options: .regularExpression) != nil {
+            return SensitiveClassification(kind: .recoveryMaterial, confidence: .medium)
         }
         if lower.range(of: #"(token|secret|credential|password)s?(\.|$)"#, options: .regularExpression) != nil {
             return SensitiveClassification(kind: .nameSuggestsSecret, confidence: .low)

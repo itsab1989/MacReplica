@@ -81,12 +81,15 @@ extension Manifest {
 /// The user's explicit request to include encrypted credentials.
 public struct CredentialExportRequest: Sendable {
     public var providerIDs: [String]
-    /// Held in memory only for writing the vault; never stored or logged.
+    /// Held in memory only for writing the store; never stored or logged.
     public var passphrase: String
+    /// Shown to the user once before the backup; a second way to open the store. Never stored.
+    public var recoveryKey: RecoveryKey
 
-    public init(providerIDs: [String], passphrase: String) {
+    public init(providerIDs: [String], passphrase: String, recoveryKey: RecoveryKey) {
         self.providerIDs = providerIDs
         self.passphrase = passphrase
+        self.recoveryKey = recoveryKey
     }
 }
 
@@ -115,6 +118,7 @@ public struct BackupWriter: Sendable {
     /// The files plus a margin for the manifest, checksums and reports.
     static func estimatedSize(of inventory: InventoryResult, selfCopy: URL? = nil) -> Int64 {
         let files = (inventory.fonts + inventory.colorProfiles + inventory.extraFiles).reduce(Int64(0)) { $0 + $1.record.size }
+            + inventory.credentialSelection.reduce(Int64(0)) { $0 + $1.size }
         return files + files / 100 + 50_000_000 + (selfCopy.map(BootstrapApp.size(of:)) ?? 0)
     }
 
@@ -182,21 +186,12 @@ public struct BackupWriter: Sendable {
                 try Data(environment.requirementsText(header: header).utf8).write(to: url, options: .atomic)
             }
 
-            // 3. Encrypted credentials, only on explicit request, kept apart in credentials/.
+            // 3. Credentials: only what the user chose, each file encrypted on its own in credentials/ (never in plain text).
             manifest.credentials = []
-            if let credentials {
-                for id in credentials.providerIDs {
-                    guard let provider = CredentialProviders.provider(id: id) else { continue }
-                    let files = try provider.export(layout: layout)
-                    guard !files.isEmpty else { continue }
-                    let vault = try CredentialVault.seal(files, passphrase: credentials.passphrase)
-                    let path = "credentials/\(id).macreplica-vault"
-                    try FileManager.default.createDirectory(at: root.appendingPathComponent("credentials"), withIntermediateDirectories: true)
-                    try vault.write(to: root.appendingPathComponent(path), options: .atomic)
-                    manifest.credentials.append(CredentialRecord(provider: id, items: files.map(\.name), vaultPath: path))
-                    log.info("Encrypted \(files.count) \(id) credential files", component: .permissions)
-                }
-            }
+            manifest.credentialItems = []
+            manifest.credentialStore = nil
+            try writeCredentials(inventory, request: credentials, into: root, manifest: &manifest, log: log)
+            manifest.manifestVersion = manifest.credentialItems.isEmpty ? Manifest.versionWithoutCredentialItems : Manifest.currentVersion
 
             // 4. A copy of MacReplica itself, to start the restore on the new Mac without a download. A problem with it
             //    is logged and shown; it never stops the backup of the user's data.

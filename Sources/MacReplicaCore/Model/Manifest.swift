@@ -16,8 +16,14 @@ import Foundation
 /// folder (`homePlaceholder`), data in `/Users/Shared` (`usersShared` scope), the Launchpad layout and the
 /// user's own installers. MacReplica 1.0.1 would write the placeholder into the files as it is, so it
 /// refuses version 3 backups.
+///
+/// Version 4 (MacReplica 1.0.7) adds encrypted credential items (`credentialItems`, `credentialStore`). MacReplica 1.0.6
+/// would neither show nor restore them and so make the user believe the backup had no credentials; it refuses version 4.
+/// A backup without credential items is still written as version 3, which 1.0.6 reads as before.
 public struct Manifest: Codable, Equatable, Sendable {
-    public static let currentVersion = 3
+    public static let currentVersion = 4
+    /// The version a backup without encrypted credential items is written as.
+    public static let versionWithoutCredentialItems = 3
 
     public var manifestVersion: Int
     public var macreplicaVersion: String
@@ -40,7 +46,11 @@ public struct Manifest: Codable, Equatable, Sendable {
     /// Which locations were scanned, missing, or not readable.
     public var locations: [LocationAccess]
     public var developer: DeveloperSettings
+    /// Version 1 credential vaults (MacReplica 1.0.0–1.0.6), one per provider; still restored.
     public var credentials: [CredentialRecord]
+    /// The encrypted credential store (1.0.7 and later) and every item in it, with its status.
+    public var credentialStore: CredentialStoreRecord?
+    public var credentialItems: [CredentialItemRecord] = []
     /// Detected services that need a new sign-in or a manual export on the new Mac.
     public var guidance: [GuidanceRecord]
     /// How many fonts and profiles were found and how many the user chose to back up.
@@ -118,6 +128,7 @@ public struct Manifest: Codable, Equatable, Sendable {
         case applications, brewFormulae, brewCasks, brewTaps, masApps, fonts, iccProfiles
         case python, applicationData, backupIssues, locations, developer, credentials, guidance, backupSelection, toolchains
         case hardwareKeys, displayProfiles, launchpadLayout, bootstrapApp, officeActivation, modelIdentifier, printers, scannerDrivers, settings
+        case credentialStore, credentialItems
     }
 
     // Collections are decoded leniently: a missing list is treated as empty so
@@ -145,6 +156,8 @@ public struct Manifest: Codable, Equatable, Sendable {
         locations = try c.decodeIfPresent([LocationAccess].self, forKey: .locations) ?? []
         developer = try c.decodeIfPresent(DeveloperSettings.self, forKey: .developer) ?? DeveloperSettings()
         credentials = try c.decodeIfPresent([CredentialRecord].self, forKey: .credentials) ?? []
+        credentialStore = try c.decodeIfPresent(CredentialStoreRecord.self, forKey: .credentialStore)
+        credentialItems = try c.decodeIfPresent([CredentialItemRecord].self, forKey: .credentialItems) ?? []
         guidance = try c.decodeIfPresent([GuidanceRecord].self, forKey: .guidance) ?? []
         backupSelection = try c.decodeIfPresent(BackupSelectionSummary.self, forKey: .backupSelection)
         // Providers added by later versions are dropped instead of failing the whole manifest.
@@ -628,6 +641,8 @@ public struct BackupIssue: Codable, Equatable, Sendable {
         case unsupportedName
         /// A password database an app remembers (KeePassXC) that is outside the folders chosen for the backup.
         case rememberedByApp
+        /// A credential file the user decided to leave out (1.0.7).
+        case leftOutByUser
     }
     /// Display path (home written as `~`).
     public var path: String

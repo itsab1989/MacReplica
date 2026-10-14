@@ -89,7 +89,7 @@ extension Localizer {
         case .pythonEnvironment: return t("kind.pythonEnvironment")
         case .applicationData: return t("kind.applicationData")
         case .gitConfiguration: return t("kind.gitConfiguration")
-        case .credential: return t("kind.credential")
+        case .credential, .credentialFile: return t("kind.credential")
         case .toolchainStep: return t("kind.toolchainStep")
         case .manualApp: return t("kind.manualApp")
         case .displayProfile: return t("kind.displayProfile")
@@ -226,6 +226,10 @@ extension Localizer {
         case .settingsNotKept(let keys): return t("note.settingsNotKept", keys.joined(separator: ", "))
         case .settingsDifferentType(let keys): return t("note.settingsDifferentType", keys.joined(separator: ", "))
         case .logoutRequired: return t("note.logoutRequired")
+        case .credentialVerified(let format):
+            return format.map { t("note.credentialVerifiedFormat", $0) } ?? t("note.credentialVerified")
+        case .credentialNeeds(let needs): return needs.map { t("credential.needs.\($0.rawValue)") }.joined(separator: " ")
+        case .restoredToAlternateLocation(let path): return t("note.restoredToAlternateLocation", path)
         }
     }
 

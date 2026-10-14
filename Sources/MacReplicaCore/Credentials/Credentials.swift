@@ -18,6 +18,8 @@ public protocol CredentialProvider: Sendable {
     func export(layout: SystemLayout) throws -> [CredentialFile]
     /// Where a restored file belongs.
     func destination(for file: CredentialFile, layout: SystemLayout) -> URL?
+    /// The file on this Mac behind a name `detect` returned.
+    func sourceURL(for name: String, layout: SystemLayout) -> URL?
 }
 
 /// One file inside an encrypted credential vault.
@@ -51,6 +53,9 @@ public enum CredentialError: Error, Equatable, Sendable {
     case keyDerivationFailed
 }
 
+/// Version 1 vaults (MacReplica 1.0.0–1.0.6): one per provider. Still opened when restoring an older backup; new
+/// backups use `CredentialStore`.
+///
 /// Encrypts credential exports with established, Apple-provided cryptography:
 /// PBKDF2-HMAC-SHA256 (CommonCrypto) derives a 256-bit key from the user's
 /// passphrase, and AES-256-GCM (CryptoKit) encrypts and authenticates the data.
@@ -156,6 +161,13 @@ public struct SSHKeyProvider: CredentialProvider {
         guard Self.isIncluded(file.name), PathSafety.isSafeRelativePath(file.name), !file.name.contains("/") else { return nil }
         return folder(layout).appendingPathComponent(file.name)
     }
+
+    public func sourceURL(for name: String, layout: SystemLayout) -> URL? {
+        guard Self.isIncluded(name), PathSafety.isSafeRelativePath(name), !name.contains("/") else { return nil }
+        let url = folder(layout).appendingPathComponent(name)
+        let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        return values?.isRegularFile == true && values?.isSymbolicLink != true ? url : nil
+    }
 }
 
 /// A credential stored as a few well-known files with long-lived, portable secrets
@@ -199,6 +211,10 @@ public struct FileCredentialProvider: CredentialProvider {
     public func destination(for file: CredentialFile, layout: SystemLayout) -> URL? {
         guard files.contains(file.name), PathSafety.isSafeRelativePath(file.name) else { return nil }
         return layout.homeDirectory.appendingPathComponent(file.name)
+    }
+
+    public func sourceURL(for name: String, layout: SystemLayout) -> URL? {
+        detect(layout: layout).contains(name) ? layout.homeDirectory.appendingPathComponent(name) : nil
     }
 }
 

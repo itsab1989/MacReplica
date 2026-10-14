@@ -679,6 +679,19 @@ public enum GuidanceCatalog {
         // the Passwords app's export and import. Every Mac with a user keychain gets this note.
         manual("keychainPasswords", "Passwords in the keychain", paths: ["Library/Keychains"],
                url: "https://support.apple.com/guide/keychain-access/import-and-export-keychain-items-kyca35961/mac"),
+        // Credentials that are managed by macOS, a browser or a password manager: never copied as files (encrypted with a
+        // key of this Mac, bound to a device, or only usable with the account). Researched 2026-10-14, see docs/CREDENTIALS.md.
+        manual("passkeys", "Passkeys", paths: ["Library/Keychains"], url: "https://support.apple.com/guide/passwords/passkeys-mchl4af65d1a/mac"),
+        manual("chromePasswords", "Google Chrome passwords and passkeys", ids: ["com.google.Chrome"],
+               url: "https://support.google.com/chrome/answer/13068232"),
+        manual("edgePasswords", "Microsoft Edge passwords", ids: ["com.microsoft.edgemac"],
+               url: "https://support.microsoft.com/en-us/edge/export-passwords-in-microsoft-edge"),
+        manual("bravePasswords", "Brave passwords", ids: ["com.brave.Browser"],
+               url: "https://support.brave.app/hc/en-us/articles/360018185951-How-do-I-use-the-built-in-password-manager"),
+        manual("firefoxPasswords", "Firefox passwords", ids: ["org.mozilla.firefox"], paths: ["Library/Application Support/Firefox/Profiles"],
+               url: "https://support.mozilla.org/en-US/kb/profiles-where-firefox-stores-user-data"),
+        reauth("onePassword", "1Password", ids: ["com.1password.1password", "com.agilebits.onepassword7"], url: "https://support.1password.com/emergency-kit/"),
+        reauth("bitwarden", "Bitwarden", ids: ["com.bitwarden.desktop"], url: "https://bitwarden.com/help/export-your-data/"),
         manual("officeActivation", "Microsoft Office sign-in or activation",
                ids: ["com.microsoft.Word", "com.microsoft.Excel", "com.microsoft.Powerpoint", "com.microsoft.Outlook", "com.microsoft.onenote.mac"],
                url: "https://support.microsoft.com/en-us/office/activate-office-5bd38f38-db92-448b-a982-ad170b1e187e"),
@@ -686,6 +699,10 @@ public enum GuidanceCatalog {
                ids: ["com.blackmagic-design.DaVinciResolve", "com.blackmagic-design.DaVinciResolveLite"],
                url: "https://documents.blackmagicdesign.com/UserManuals/DaVinci_Resolve_20_Reference_Manual.pdf"),
     ]
+
+    /// Entries about passwords, passkeys and other credentials: shown in the credential section and its readiness report.
+    public static let credentialIDs: Set<String> = ["keychainPasswords", "passkeys", "chromePasswords", "edgePasswords", "bravePasswords",
+                                                    "firefoxPasswords", "onePassword", "bitwarden"]
 
     static func reauth(_ id: String, _ name: String, ids: [String] = [], paths: [String] = [], url: String) -> MigrationGuidance {
         MigrationGuidance(id: id, name: name, kind: .reauthenticationRequired, bundleIdentifiers: ids, paths: paths,

@@ -210,6 +210,8 @@ struct RestoreProgressView: View {
 struct RestoreSummaryView: View {
     @EnvironmentObject var model: AppModel
 
+    @ViewState private var showNotes = false
+
     var body: some View {
         let l = model.l
         let plan = model.plan
@@ -287,7 +289,7 @@ struct RestoreSummaryView: View {
                         ForEach(manual) { app in ManualAppRow(app: app) }
                     }
                     if !notes.isEmpty {
-                        DisclosureGroup(l.p("summary.notesHeading", notes.count)) {
+                        DisclosureGroup(l.p("summary.notesHeading", notes.count), isExpanded: $showNotes) {
                             ForEach(notes, id: \.0.id) { item, result in
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(l.itemTitle(item))
@@ -299,6 +301,7 @@ struct RestoreSummaryView: View {
                                 .padding(.vertical, 2)
                             }
                         }
+                        .onAppear { if model.stagingExpandLists { showNotes = true } }
                     }
                     if let guidance = model.manifest?.guidance, !guidance.isEmpty {
                         GuidanceList(records: guidance)

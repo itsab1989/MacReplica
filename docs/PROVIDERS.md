@@ -109,14 +109,16 @@ Sources: KeePassXC `src/core/Config.cpp` (AppDataLocation / CacheLocation), Qt `
 manual pages vuesc27 and vuesc36, the `vuescan` cask's zap list.
 
 **Password databases** are never part of a provider. Files that look like secrets are classified from name and file
-format only (KDBX signature, PEM header, Keynote zip) and listed; the user can include one explicitly. KeePassXC's
-remembered databases (`LastDatabases`, `LastOpenedDatabases`, `LastActiveDatabase`) are listed even when they are
-outside the chosen folders. Keychains and browser login data are never included.
+format only (KDBX signature, `PWS3`, PEM/OpenSSH/OpenPGP header, Keynote zip) and listed; the user adds any number of
+them to the encrypted credential store (1.0.7; see [CREDENTIALS.md](CREDENTIALS.md)). KeePassXC's remembered
+databases (`LastDatabases`, `LastOpenedDatabases`, `LastActiveDatabase`) are listed even when they are outside the
+chosen folders. Keychains and browser login data are never included.
 
 ## Credential providers (opt-in, encrypted, never selected by default)
 
-All use the same vault (AES-256-GCM, key from PBKDF2-HMAC-SHA256, 600 000 iterations; passphrase never stored).
-Restored files get owner-only permissions; parent folders `0700`.
+Since 1.0.7 their files go into the same encrypted credential store as files the user adds (one encrypted item per
+file; see [CREDENTIALS.md](CREDENTIALS.md)); version 1 vaults of older backups are still restored. Restored secret
+files get owner-only permissions, public keys and `known_hosts` up to `0644`; new parent folders `0700`.
 
 | Provider | Files (relative to `~/`) | Why it is portable | Not handled | Sources |
 |---|---|---|---|---|

@@ -48,8 +48,8 @@ struct NotInBackupView: View {
                         ? KeePassHeader.read(model.services.layout.resolve(displayPath: issue.path)) : nil
                     IssueRow(symbol: "lock.fill", color: .secondary, title: issue.fileName, path: issue.path,
                              lines: [l.sensitiveDescription(issue, header: header), l.sensitiveExplanation(issue)], onThisMac: onThisMac) {
-                        if editable, issue.sensitive?.kind.canBeIncludedOnRequest ?? true {
-                            Button(l.t("sensitive.include.button")) { model.includeSensitiveFile(issue) }
+                        if editable, issue.sensitive.map({ CredentialPolicy.isCopyable($0.kind) }) ?? true, issue.detail != .leftOutByUser {
+                            Button(l.t("credential.addOne")) { model.includeSensitiveFile(issue) }
                                 .controlSize(.small)
                                 .accessibilityIdentifier("sensitive.include.\(issue.fileName)")
                         }
@@ -103,8 +103,10 @@ struct IssueRow<Actions: View>: View {
             Image(systemName: symbol).foregroundStyle(color)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
-                Text(path).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                    .textSelection(.enabled)
+                if !path.isEmpty {
+                    Text(path).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                        .textSelection(.enabled)
+                }
                 ForEach(lines.filter { !$0.isEmpty }, id: \.self) { line in
                     Text(line).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }

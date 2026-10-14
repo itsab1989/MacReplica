@@ -271,6 +271,13 @@ public struct RestorePlanner: Sendable {
                 applicationData.append(RestoreItem(id: "credential:\(record.provider)", kind: .credential, title: record.provider.uppercased(),
                                                    identifier: record.vaultPath, component: .credentials))
             }
+            // Only items that are really in the backup (encrypted and verified when it was made).
+            for record in manifest.credentialItems where record.isPreserved {
+                var item = RestoreItem(id: "credentialFile:\(record.id)", kind: .credentialFile, title: record.fileName,
+                                       identifier: record.originalPath, component: .credentials)
+                item.credentialItem = record
+                applicationData.append(item)
+            }
         }
         if components.contains(.applicationData) {
             for folder in manifest.applicationData where !folder.isPersonal {

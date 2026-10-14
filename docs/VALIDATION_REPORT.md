@@ -1,5 +1,52 @@
 # MacReplica – validation report
 
+## Addendum 2026-10-14 (1.0.7, unreleased): passwords, keys and credentials
+
+Request: multi-selection of keys and password databases was broken in 1.0.5, credential files were treated as
+something to skip, and nothing should give a false impression that credentials are safe. Policy, design and sources:
+[CREDENTIALS.md](CREDENTIALS.md).
+
+**Root cause (reproduced in a test before the fix).** *Include …* on a file outside the chosen folders created a hidden
+one-file own folder. Choosing that folder later produced a second folder with the same path, and the next *Include …*
+returned silently at a `guard … else { return }`. Files in the home folder itself, iCloud Drive and other volumes could
+not be included at all, and `removeApplicationData` dropped other folders' credential issues. Included files were
+copied unencrypted. Fixed by independent, encrypted credential items (details in CREDENTIALS.md).
+
+| Area | What was checked | How | Result |
+|---|---|---|---|
+| Several items from one folder (the reported bug) | `Work.kdbx`, then `Family.kdbx` and its key file from `~/Sync` | **real app, simulated Mac** (screenshots 01–03) + `severalItemsFromOneFolderAndFromAnywhereCanBeAdded` | all three selected, "3 encrypted · 1 needs a decision" |
+| Items from several places at once | picker with the `Keys` and `Certs` folders and a database on a simulated external volume; iCloud Drive and home-folder databases | real app + `pickerAddsFilesAndFoldersWithoutDuplicatesLoopsOrUnrelatedFiles` | 12 items; key files named without `id_` recognised; `.pub` companions added; nothing unrelated added |
+| Duplicates, same contents, links, loops | same file twice and through a link; two identical keys in different folders; a link back to the folder | automated | one item per file; identical contents kept as two items and reported; no loop |
+| Refusals are explained | keychain chosen directly, file already selected, missing, unreadable (mode 000), browser `Login Data`, folder without credentials | real app (German, screenshot 13) + automated | each listed with its reason; nothing silently dropped |
+| Decisions are recorded | *Leave Out*, *Undo*, *Remove* | real app (Norwegian, screenshot 14) + automated | "left out by you" in the UI, report and manifest |
+| Warning before an unsafe save | an undecided iCloud database | real app (screenshot 04) | sheet lists it; *Review* / *Save Without Them* |
+| Encryption | round trip 0 B…3 × 64 KiB + 17; tamper at magic, header, records, tag and final record; truncation at and between records; appended byte; other item ID; other backup's key; zero-length and oversized header; oversized record | automated (`CredentialPreservationTests`) | every change refused (`itemDamaged`) |
+| Key handling | passphrase and recovery-key unlock, wrong passphrase, wrong or malformed key, weakened iteration count, changed key fingerprint, 11- vs 12-character passphrase | automated + real app (wrong passphrase refused in the sheet, screenshot 06; recovery key typed in lower case with spaces, screenshot 07) | as designed |
+| No secrets outside the encryption | every file of the backup, manifest, reports and logs on both Macs, for passphrase, recovery key, PEM/PGP markers, entry passwords, recovery codes, plain SHA-256 of every source file | scripted scan of the real backup + automated | no hits (the only PEM-marker hits are string constants inside the copied MacReplica binary) |
+| Failure is never success | source deleted before saving; no encryption set up | automated | item `failed (missing)` / `noEncryptionKey`, backup *partial*, other items still preserved |
+| Restore into an empty Mac | 13 and 17 items | real app ×3 (passphrase, and recovery key) + automated | all files byte-identical; secret files `0600`, public `0644`, new folders `0700`; no partial files |
+| Conflicts | a different `~/Sync/Work.kdbx` already on the new Mac; an identical key | real app: decision sheet (screenshot 08), *keep this Mac's version* (first run) and *keep both* (second run) + automated (*replace*: old file kept in *Replaced Files*) | identical → already present; different → only with the chosen decision; existing file never changed without it |
+| Idempotent and interrupted restores | second run; leftover partial file from an interrupted run | real app + automated | second run changes nothing; leftover replaced; damaged item fails alone |
+| Missing volume | database from a volume that is not connected | real app + automated | restored to `~/MacReplica Restored Credentials/<id>/`, result says so |
+| **Real applications** | restored files opened with **KeePassXC 2.7.12** (`keepassxc-cli ls/db-info`: with password, with password + key file, refused without key file or with a wrong password), **OpenSSH** (`ssh-keygen -y`: unencrypted key, key with its own passphrase, wrong passphrase refused; both match their `.pub`), **LibreSSL** (`x509`, key ↔ certificate modulus, PKCS #12 with its password), **GnuPG** (secret key imports, fingerprint equals the original) | real tools, synthetic credentials | all open as on the old Mac (`validation/credentials/real-app-verification.txt`) |
+| Localization | new texts in en, de, nb, es, fr, it, nl | automated (completeness, placeholders, every case) + real app in en, de, nb | complete |
+| Regression | full suite | `scripts/test.sh` | 621 tests in 106 suites pass |
+
+**Simulated, not real:** the old and new Macs are simulated home folders (MacReplica's simulation mode); the "external
+volume" is a folder outside the home folder that was removed before the restore. Keychain items, passkeys and browser
+password stores are not moved by MacReplica by design, so there is nothing to test beyond the guidance texts and
+detection (`~/Library/Keychains`, installed apps). Browsers and password managers other than KeePassXC were not
+installed. KeePassXC was installed with Homebrew into a scratch folder and removed afterwards (snapshot compared).
+
+**Mutation testing:** 6 modules. The four new ones (`CredentialStore`, `CredentialItems`, `CredentialBackup`, `CredentialRestore`) reach **100 %** (154 of 154 valid mutants killed, 10 equivalent mutants excluded with reasons). The changed `Credentials.swift` and `SensitiveFiles.swift` also reach 100 %. Three rounds: round 2 left CredentialItems at 76 %, CredentialBackup at 52.9 % and CredentialRestore at 77.8 %. The fixes: an unused field and an unused equality were removed, the error→reason mappings became testable functions, and tests were added (1PUX format, undoing one of two decisions, unclassified issues, a remembered database not offered again, a file chosen by hand and through its provider, absolute restore locations, passphrase and header-length boundaries, a tighter record bound).
+
+**Found and fixed during validation** (beyond the reported bug): credential conflicts were never shown because the
+pre-restore check ran before the passphrase was known (now asked first); SSH keys saved without an `id_` name were
+not recognised; `.pub` files were labelled as private keys; a stale "outside the chosen folders" note; a blank line
+for guidance rows; "key file file" and a key file said to need "its key file".
+
+Evidence: `~/Desktop/MacReplica-Staging/screenshots/credentials/` (01–16), `~/Desktop/MacReplica-Staging/validation/credentials/`.
+
 ## Addendum 2026-10-04 (after 1.0.3): Homebrew support notice, disk-image retry
 
 - **Homebrew support tiers** (docs.brew.sh/Support-Tiers, as of 2026-10-04): Tier 1 = Apple silicon with macOS 15,

@@ -130,6 +130,8 @@ public struct ReportBuilder: Sendable {
         body += homebrewSupportNote(manifest)
         body += "<h2>\(HTML.escape(l.t("notInBackup.reportTitle")))</h2>"
         body += notInBackupSection(manifest)
+        body += "<h2>\(HTML.escape(l.t("credential.report.title")))</h2>"
+        body += credentialReadinessSection(manifest)
 
         body += "<h2>\(HTML.escape(l.t("component.applications")))</h2>"
         body += table(

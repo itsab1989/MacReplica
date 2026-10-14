@@ -46,6 +46,8 @@ public enum RestoreItemKind: String, Codable, Sendable {
     case applicationData
     case gitConfiguration
     case credential
+    /// One item of the encrypted credential store (1.0.7 and later).
+    case credentialFile
     /// A runtime, global package or environment of a version or package manager.
     case toolchainStep
     /// An application without automatic installation: guided download and installation.
@@ -72,7 +74,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .font, .colorProfile: return 0.3
         case .pythonEnvironment: return 90
         case .applicationData: return 5
-        case .gitConfiguration, .credential: return 1
+        case .gitConfiguration, .credential, .credentialFile: return 1
         case .toolchainStep: return 60
         case .manualApp, .displayProfile, .printer: return 1
         case .systemSetting: return 3
@@ -89,7 +91,7 @@ public enum RestoreItemKind: String, Codable, Sendable {
         case .font, .colorProfile: return .restore
         case .pythonEnvironment: return .python
         case .applicationData, .gitConfiguration: return .applicationData
-        case .credential: return .permissions
+        case .credential, .credentialFile: return .permissions
         case .toolchainStep: return .developerTools
         case .manualApp: return .downloads
         case .displayProfile, .launchpadLayout, .printer, .systemSetting: return .restore
@@ -131,6 +133,8 @@ public struct RestoreItem: Codable, Equatable, Hashable, Identifiable, Sendable 
     public var printer: PrinterRecord?
     public var scannerDriver: ScannerDriverRecord?
     public var settings: SettingsRecord?
+    /// For `credentialFile`: the item as recorded in the manifest (no secrets).
+    public var credentialItem: CredentialItemRecord?
 
     public init(id: String, kind: RestoreItemKind, title: String, identifier: String, originalVersion: String? = nil,
                 bundleIdentifier: String? = nil, appBundleNames: [String] = [], tapRemote: String? = nil, file: FileRecord? = nil,
@@ -403,6 +407,12 @@ public enum ResultNote: Codable, Equatable, Sendable {
     /// Installed from an installer whose developer macOS cannot verify (the user confirmed it): macOS blocks the
     /// first start until the user allows it in System Settings › Privacy & Security › Open Anyway.
     case approveInPrivacyAndSecurity(app: String)
+    /// A credential was decrypted, written and checked: the same bytes as on the old Mac and the recorded format.
+    case credentialVerified(format: String?)
+    /// What the user still needs to use the credential (MacReplica cannot check this for them).
+    case credentialNeeds([CredentialPrerequisite])
+    /// Its original place does not exist on this Mac (e.g. a drive that is not connected); restored here instead.
+    case restoredToAlternateLocation(path: String)
     /// macOS settings applied and read back.
     case settingsApplied(count: Int)
     /// Written but not kept by this macOS (it may no longer use them).
