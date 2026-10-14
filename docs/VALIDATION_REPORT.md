@@ -1,6 +1,6 @@
 # MacReplica – validation report
 
-## Addendum 2026-10-14 (1.0.7, unreleased): passwords, keys and credentials
+## Addendum 2026-10-14 (1.0.7): passwords, keys and credentials
 
 Request: multi-selection of keys and password databases was broken in 1.0.5, credential files were treated as
 something to skip, and nothing should give a false impression that credentials are safe. Policy, design and sources:
