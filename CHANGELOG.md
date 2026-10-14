@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-10-15
+
 ### Fixed
 - **Keys and password databases: any number, from anywhere.** After one key or database had been included, further
   ones could not be added: including a file outside the chosen folders created a hidden one-file folder, and a later
@@ -336,7 +338,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.0.7...HEAD
+[1.0.7]: https://github.com/itsab1989/MacReplica/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/itsab1989/MacReplica/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/itsab1989/MacReplica/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/itsab1989/MacReplica/compare/v1.0.3...v1.0.4
