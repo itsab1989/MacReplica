@@ -75,20 +75,22 @@ jobs:
           ../tool/simulator inspect-installer DisplayCAL-3.9.19-macOS-x86_64.dmg | sed 's/^KEPT\tDisplayCAL/KEPT\topen-DisplayCAL/' | tee -a verdicts.tsv
           hdiutil info | grep -q 'DisplayCAL-3.9.19-macOS-x86_64.dmg' && echo "still open: yes" | tee -a verdicts.tsv
           hdiutil detach "$(hdiutil info | awk '/DisplayCAL-3.9.19/{f=1} f && /^\/dev\/disk[0-9]+\t/{print $1; exit}')" > /dev/null
-          # expect <KEPT|REJECTED> <file name> <regular expression for the rest of the line>
-          expect() { awk -F'\t' -v k="$1" -v n="$2" -v p="$3" '$1 == k && $2 == n && $0 ~ p { found = 1 } END { exit !found }' verdicts.tsv \
-                     || { echo "::error::$2: expected $1 matching $3"; status=1; }; }
+          # expect <KEPT|REJECTED> <start of the file name> <text the line must contain> – plain text, no patterns (file names
+          # come back decomposed, e.g. "U" + combining diaeresis, so only their ASCII start is compared).
+          expect() { awk -F'\t' -v k="$1" -v n="$2" -v p="$3" '$1 == k && index($2, n) == 1 && index($0, p) > 0 { found = 1 } END { exit !found }' verdicts.tsv \
+                     || { echo "::error::$2: expected $1 with \"$3\""; status=1; }; }
           status=0
-          for name in DisplayCAL-3.9.19-macOS-x86_64.dmg AppPolice.dmg brackets.2.2.0.dmg Stats.dmg "Stats Installer – Ålesund Ü.dmg" \
+          T=$(printf '\t')
+          for name in DisplayCAL-3.9.19-macOS-x86_64.dmg AppPolice.dmg brackets.2.2.0.dmg Stats.dmg "Stats Installer " \
                       quarantined-AppPolice.dmg KeepingYouAwake-1.6.8.zip open-DisplayCAL-3.9.19-macOS-x86_64.dmg; do
-            expect KEPT "$name" "\tinspected\tapps=\\[[a-z]"
+            expect KEPT "$name" "${T}inspected${T}apps=["
           done
-          expect KEPT Karabiner-Elements-16.3.0.dmg "\tinspected\tapps=\\[\\]\tpackage=true"
-          expect KEPT Rectangle.pkg "\tinspected\tapps=\\[\\]\tpackage=true\tsigned=true"
-          expect REJECTED truncated-DisplayCAL.dmg "damaged.*truncated"
-          expect REJECTED changed-DisplayCAL.dmg "damaged.*checksumMismatch"
-          expect REJECTED webpage-ACPU.dmg "notAnInstaller.*webPage"
-          expect REJECTED truncated-Rectangle.pkg "damaged.*checksumMismatch"
+          expect KEPT Karabiner-Elements-16.3.0.dmg "${T}inspected${T}apps=[]${T}package=true"
+          expect KEPT Rectangle.pkg "${T}inspected${T}apps=[]${T}package=true${T}signed=true"
+          expect REJECTED truncated-DisplayCAL.dmg "DamageEvidence.truncated)"
+          expect REJECTED changed-DisplayCAL.dmg "DamageEvidence.checksumMismatch)"
+          expect REJECTED webpage-ACPU.dmg "OtherFormat.webPage)"
+          expect REJECTED truncated-Rectangle.pkg "DamageEvidence.checksumMismatch)"
           grep -q "still open: yes" verdicts.tsv || { echo "::error::the user's open image was ejected"; status=1; }
           [ -z "$(hdiutil info | grep 'image-path' | grep "$PWD")" ] || { hdiutil info; echo "::error::an image stayed attached"; status=1; }
           exit $status

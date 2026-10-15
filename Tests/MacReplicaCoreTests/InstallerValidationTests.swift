@@ -175,6 +175,8 @@ struct InstallerValidationTests {
         try input.fileHandleForWriting.close()
         process.waitUntilExit()
         try #require(process.terminationStatus == 0)
+        // `hdiutil create -encryption -srcfolder` can leave the new image attached ("write once"); it is detached first.
+        await Self.detachAll(dmg)
         let archive = try await inspector.inspect(dmg, workFolder: work)
         #expect(archive.contentsLimit == .encrypted)
         #expect(!runner.commands.contains { $0.executable.hasSuffix("hdiutil") }, "hdiutil would wait for the password in a dialog")
