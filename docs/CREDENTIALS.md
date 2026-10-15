@@ -103,6 +103,11 @@ passphrase plus a recovery key, and explains this in the setup sheet. Storing th
 would not help once this Mac is erased. iCloud Keychain (synchronizable items) needs a provisioning profile, which an
 app distributed outside the App Store with ad-hoc or Developer ID signing does not have.
 
+One exception elsewhere in MacReplica, for a different purpose: when Homebrew needs `sudo` during a restore, MacReplica
+does ask for the administrator password in its own window, because Homebrew's `sudo` has no other way to receive it
+from an app (see [SECURITY.md](../SECURITY.md)). That password is only checked with `sudo` and handed to Homebrew for
+that restore; it never protects or unlocks credentials, and it is never stored.
+
 ### Recovery
 
 - Either the **passphrase** or the **recovery key** opens the credentials. Both are needed only in the sense that
