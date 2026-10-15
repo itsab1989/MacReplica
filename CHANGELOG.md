@@ -25,6 +25,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   could no longer be mounted. Every inspection now has a folder of its own.
 - An installer package that `pkgutil` reports as **invalid** (cut short or changed) was accepted as “not signed”.
   It is now reported as damaged.
+- The guided installation said *“Homebrew's checksum of the file”* for your own installer. It now says that the
+  checksum recorded on the old Mac is checked.
 
 ### Added
 - Clear reasons when an installer is not used: **incomplete** (its end is missing), **damaged** (its checksum does

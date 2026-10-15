@@ -2133,3 +2133,5 @@
 "ownInstaller.status.limit.notUnpacked" = "Het archief is volledig, maar kon op deze Mac niet worden uitgepakt (te weinig ruimte of beveiligd?), dus MacReplica kan er niet in kijken en de ontwikkelaar niet controleren. Het wordt ongewijzigd bewaard.";
 "ownInstaller.next.finder" = "MacReplica opent het in de Finder zodat jij de app installeert; daarna controleert het of de app er is.";
 "ownInstaller.details" = "Details: %1$@";
+"trust.ownInstaller" = "Gecontroleerd vóór de installatie: de checksum die op de oude Mac is vastgelegd, de ontwikkelaar en de app.";
+"trust.ownInstaller.unverified" = "Gecontroleerd vóór de installatie: de checksum die op de oude Mac is vastgelegd – het is precies het bestand dat je hebt bevestigd. De ontwikkelaar kan niet worden geverifieerd.";

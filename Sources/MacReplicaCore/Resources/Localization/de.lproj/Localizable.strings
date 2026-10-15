@@ -2133,3 +2133,5 @@
 "ownInstaller.status.limit.notUnpacked" = "Das Archiv ist vollständig, ließ sich auf diesem Mac aber nicht entpacken (zu wenig Platz oder geschützt?), daher kann MacReplica weder hineinsehen noch den Entwickler prüfen. Es wird unverändert übernommen.";
 "ownInstaller.next.finder" = "MacReplica öffnet es im Finder, damit du die App installierst; danach prüft es, ob die App da ist.";
 "ownInstaller.details" = "Details: %1$@";
+"trust.ownInstaller" = "Vor der Installation geprüft: die auf dem alten Mac erfasste Prüfsumme, der Entwickler und die App.";
+"trust.ownInstaller.unverified" = "Vor der Installation geprüft: die auf dem alten Mac erfasste Prüfsumme – es ist genau die Datei, die du bestätigt hast. Ihr Entwickler lässt sich nicht überprüfen.";

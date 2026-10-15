@@ -516,6 +516,21 @@ struct InstallerEvidenceTests {
         #expect(l.installerDescription(image, for: app).summary == "Disk image · protected by a password, contents not checked · not signed with a Developer ID")
     }
 
+    @Test func ownInstallersSayWhatTheyAreCheckedAgainst() {
+        let l = TestEnvironment.english
+        var offer = DownloadOffer(id: "own:a", itemID: "manual:x", kind: .ownInstaller, url: "file:///x.dmg", trust: .checksum)
+        #expect(l.offerChecksText(offer).contains("recorded on the old Mac") && !l.offerChecksText(offer).contains("Homebrew"))
+        #expect(l.offerChecksText(offer).contains("developer"))
+        offer.developerUnverified = true
+        #expect(l.offerChecksText(offer).contains("recorded on the old Mac") && l.offerChecksText(offer).contains("cannot be verified"))
+        let cask = DownloadOffer(id: "cask:a", itemID: "manual:x", kind: .homebrewCask, url: "https://example.com/x.dmg", trust: .checksum)
+        #expect(l.offerChecksText(cask) == l.trustText(.checksum))
+        for language in AppLanguage.allCases {
+            let localized = Localizer(language: language)
+            for key in ["trust.ownInstaller", "trust.ownInstaller.unverified"] { #expect(localized.t(key) != key, "\(language) \(key)") }
+        }
+    }
+
     @Test func attachmentListIsReadForThisImageOnly() {
         let plist = """
         <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

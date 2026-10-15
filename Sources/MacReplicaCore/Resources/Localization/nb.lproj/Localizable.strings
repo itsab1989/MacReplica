@@ -2133,3 +2133,5 @@
 "ownInstaller.status.limit.notUnpacked" = "Arkivet er fullstendig, men kunne ikke pakkes ut på denne Macen (for lite plass, eller beskyttet?), så MacReplica kan verken se inni det eller kontrollere utvikleren. Det tas med uendret.";
 "ownInstaller.next.finder" = "MacReplica åpner det i Finder slik at du kan installere appen; deretter kontrollerer det at appen er der.";
 "ownInstaller.details" = "Detaljer: %1$@";
+"trust.ownInstaller" = "Kontrollert før installasjonen: sjekksummen som ble registrert på den gamle Macen, utvikleren og appen.";
+"trust.ownInstaller.unverified" = "Kontrollert før installasjonen: sjekksummen som ble registrert på den gamle Macen – det er nøyaktig filen du bekreftet. Utvikleren kan ikke bekreftes.";

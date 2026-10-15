@@ -2135,3 +2135,5 @@
 "ownInstaller.status.limit.notUnpacked" = "The archive is complete, but it could not be unpacked on this Mac (too little space, or protected?), so MacReplica cannot look inside or check the developer. It is kept unchanged.";
 "ownInstaller.next.finder" = "MacReplica opens it in Finder for you to install the app; it then checks that the app is there.";
 "ownInstaller.details" = "Details: %1$@";
+"trust.ownInstaller" = "Checked before installing: the checksum recorded on the old Mac, the developer and the app.";
+"trust.ownInstaller.unverified" = "Checked before installing: the checksum recorded on the old Mac – it is exactly the file you confirmed. Its developer cannot be verified.";

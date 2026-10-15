@@ -2133,3 +2133,5 @@
 "ownInstaller.status.limit.notUnpacked" = "L’archive est complète, mais n’a pas pu être décompressée sur ce Mac (manque d’espace ou protection ?) : MacReplica ne peut ni regarder dedans ni vérifier le développeur. Elle est conservée telle quelle.";
 "ownInstaller.next.finder" = "MacReplica l’ouvre dans le Finder pour que vous installiez l’app ; il vérifie ensuite que l’app est bien là.";
 "ownInstaller.details" = "Détails : %1$@";
+"trust.ownInstaller" = "Vérifié avant l’installation : la somme de contrôle enregistrée sur l’ancien Mac, le développeur et l’app.";
+"trust.ownInstaller.unverified" = "Vérifié avant l’installation : la somme de contrôle enregistrée sur l’ancien Mac – c’est exactement le fichier que vous avez confirmé. Son développeur ne peut pas être vérifié.";

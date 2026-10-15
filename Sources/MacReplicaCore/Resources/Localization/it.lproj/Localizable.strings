@@ -2133,3 +2133,5 @@
 "ownInstaller.status.limit.notUnpacked" = "L’archivio è completo, ma non è stato possibile estrarlo su questo Mac (poco spazio o protetto?), quindi MacReplica non può guardarci dentro né verificare lo sviluppatore. Viene conservato invariato.";
 "ownInstaller.next.finder" = "MacReplica lo apre nel Finder perché tu installi l’app; poi verifica che l’app ci sia.";
 "ownInstaller.details" = "Dettagli: %1$@";
+"trust.ownInstaller" = "Verificato prima dell’installazione: il checksum registrato sul Mac precedente, lo sviluppatore e l’app.";
+"trust.ownInstaller.unverified" = "Verificato prima dell’installazione: il checksum registrato sul Mac precedente – è esattamente il file che hai confermato. Lo sviluppatore non può essere verificato.";

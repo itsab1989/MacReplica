@@ -1,5 +1,48 @@
 # MacReplica – validation report
 
+## Addendum 2026-10-15 (1.1.0): working disk images reported as damaged
+
+Report (beta tester, 1.0.7, Intel MacBook Pro, macOS Sonoma, installers on an external drive): DisplayCAL 3.9.19 – which
+he had just installed from –, AppPolice and Adobe Color Printer Utility showed *“The file cannot be opened: it is
+damaged, incomplete (an interrupted download?) or encrypted”*; Brackets from the same folder worked. Model, sources and
+the step table: [INSTALLER_VALIDATION.md](INSTALLER_VALIDATION.md).
+
+**Root cause.** `InstallerArchiveInspector` mapped every failure of `hdiutil imageinfo` and `hdiutil attach` to
+`.damaged`. `hdiutil` exits with 1 for every failure and prints its reason in the user's language (also with
+`LANG=en_US`), so nothing distinguished damage from an image that is open, a mount folder that vanished, an image
+without a mountable file system, or an encrypted one. Reproduced on this Mac with real files: an intact image
+(`hdiutil verify`: VALID) without a mountable file system shows the tester's exact message in the 1.0.7 inspection
+on screen; `hdiutil attach` into a removed folder fails with the same “no mountable file systems”; an
+encrypted image makes `imageinfo` wait for a password dialog until the 120-second limit; an image already open made
+the retry force-eject the user's volume. The tester's own trigger could not be determined (his drive and log were not
+available; 1.0.7 did not log `hdiutil`'s message): his three files, downloaded from their official sources (DisplayCAL
+from GitHub, SHA-256 matching the published digest; ACPU from Adobe's help page; AppPolice from GitHub) are intact, and
+1.0.7's exact commands succeed on them on macOS 14.8, 15.7 (Apple silicon, Intel), 26.6 and 27.0 with Gatekeeper on, with
+and without the quarantine flag (CI run 38729271450), and from APFS, HFS+, exFAT, FAT32 and read-only volumes on
+macOS 27. Not tested: a physical USB drive (none attached here).
+
+**Fix.** Damage needs proof (the file's bytes – directory missing or past the end, zip without end record – or the
+image's own checksum via `hdiutil verify`, or `pkgutil`'s “package is invalid”); everything else keeps the intact file
+with a `contentsLimit` and the tools' words (`inspectionNote`), used after the user confirms it and opened in Finder on
+the new Mac if needed. Images already open are read in place and never ejected; attachments of others are never
+detached; every inspection has its own folder; encrypted images are never handed to `hdiutil`. Not weakened:
+checksums, developer checks and the user's confirmation for unverified installers are unchanged; truncated packages,
+accepted as “not signed” before, are now rejected.
+
+| Evidence | Result |
+|---|---|
+| Unit and integration tests (`InstallerEvidenceTests`, `InstallerValidationTests`, real `hdiutil`/`pkgutil`/`ditto`) | all pass; full suite 636+ tests pass locally, CI macOS + Intel green (PR #13) |
+| Real installers, this Mac (macOS 27.0.1, `MacReplicaSimulator inspect-installer`) | 14 official files (DisplayCAL, ACPU, AppPolice, Brackets [UDBZ], Karabiner-Elements [ULMO, dmg with pkg], macFUSE, IINA, Rectangle dmg+pkg, Stats, XQuartz pkg, SwiftBar zip, KeepingYouAwake zip, a copy named with spaces and non-ASCII letters) all kept and inspected; digests verified where published; independent `hdiutil verify` VALID, `pkgutil` signed, `unzip -t` OK |
+| Negative files | bit-flipped DisplayCAL → damaged (checksum); cut at 60 MB → incomplete; web page as .dmg → not an installer; empty → not an installer; cut-short pkg → damaged; encrypted → kept, no `hdiutil`; raw UDRW and LZFSE images → kept |
+| Real installers workflow (CI run 38737472965) | macOS 14.8, 15.7, 26.6, 15.7 Intel: every expected verdict, DisplayCAL already open stays open, nothing left attached |
+| On screen, 1.0.7 vs 1.1.0 (simulated Mac, files on an exFAT “Backup” volume) | 1.0.7: intact image, interrupted download and saved error page all “damaged, incomplete … or encrypted”; 1.1.0: kept with reason and details / incomplete / not an installer; DisplayCAL read while open in Finder (volume stays), ACPU inspected, encrypted image kept without a password dialog |
+| Backup and restore | installers recorded with reasons, copies match SHA-256; on a fresh simulated Mac DisplayCAL's own installer verified by checksum → without Rosetta “Not compatible with this Mac”, with Rosetta the DisplayCAL suite 3.9.19 installed, quarantined, nothing left attached |
+
+Found on the way: the guided installation said “Homebrew's checksum of the file” for the user's own installer; it now
+names the checksum recorded on the old Mac (and, for a confirmed unverified installer, that its developer cannot be
+verified). Known, not changed here: in macFUSE's image MacReplica identifies the bundled uninstaller app instead of
+the package.
+
 ## Addendum 2026-10-14 (1.0.7): passwords, keys and credentials
 
 Request: multi-selection of keys and password databases was broken in 1.0.5, credential files were treated as

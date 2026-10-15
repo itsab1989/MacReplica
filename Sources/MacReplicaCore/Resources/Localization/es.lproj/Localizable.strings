@@ -2133,3 +2133,5 @@
 "ownInstaller.status.limit.notUnpacked" = "El archivo comprimido está completo, pero no se pudo descomprimir en este Mac (¿poco espacio o protegido?), así que MacReplica no puede ver su contenido ni comprobar el desarrollador. Se conserva sin cambios.";
 "ownInstaller.next.finder" = "MacReplica lo abre en el Finder para que instales la app; después comprueba que la app esté instalada.";
 "ownInstaller.details" = "Detalles: %1$@";
+"trust.ownInstaller" = "Comprobado antes de instalar: la suma de verificación registrada en el Mac anterior, el desarrollador y la app.";
+"trust.ownInstaller.unverified" = "Comprobado antes de instalar: la suma de verificación registrada en el Mac anterior; es exactamente el archivo que confirmaste. Su desarrollador no se puede verificar.";
