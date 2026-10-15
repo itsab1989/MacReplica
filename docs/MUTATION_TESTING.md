@@ -34,6 +34,25 @@ python3 tools/mutation/mutate.py --merge r0 r1 r2 r3 r4 r5 --report merged --che
 
 ## Results
 
+**2026-10-15 (1.1.0: installer validation – damage only with proof):** 4 modules. `DownloadInstaller.swift` was run
+only on its changed lines (new `--changed-since main` option), the others in full. Two rounds: the first left
+`InstallerArchive` at 80.8 %, `FileFormatEvidence` with 24 and `DownloadInstaller` with 10 survivors; tests were added
+for every signature and minimum length, packages inside disk images and package files without a package header,
+confirmed zip installers on the new Mac, and an image attached without a volume (detached by its whole disk). Remaining
+survivors: `InstallerArchive` – depth `± 1` (only names the mount folder), zip depth `<`/`<=` (a zip is only read at
+depth 0), first/last mount point and the single `1.` certificate line (one each in practice), and the pre-existing
+signature, main-app and executable paths that need real Developer-ID-signed apps (as in earlier runs);
+`DownloadInstaller` – `<`/`<=` when picking the shortest device name (the whole disk's name is always uniquely
+shortest). **Caution found on the way:** a mutant that inverts the image-path match makes the clean-up detach *other*
+disk images; the installer suites use real `hdiutil`, so run them only while no image of your own is attached.
+
+| Module | Killed | Survived | Invalid | Excluded | Score | Threshold | Result |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `Downloads/FileFormatEvidence.swift` (new) | 54 | 0 | 0 | 0 | 100.0 % | 80 % | ✅ |
+| `Localization/InstallerDescriptions.swift` | 27 | 0 | 2 | 1 | 100.0 % | 80 % | ✅ |
+| `Downloads/InstallerArchive.swift` | 98 | 10 | 4 | 6 | 90.7 % | 65 % | ✅ |
+| `Downloads/DownloadInstaller.swift` (changed lines) | 17 | 2 | 0 | 0 | 89.5 % | 80 % | ✅ |
+
 **2026-10-14 (1.0.7: encrypted credential store and multi-item selection):** 6 modules. The four new ones (`CredentialStore`, `CredentialItems`, `CredentialBackup`, `CredentialRestore`) reach **100 %** (154 of 154 valid mutants killed, 10 equivalent mutants excluded with reasons). The changed `Credentials.swift` and `SensitiveFiles.swift` also reach 100 %. Three rounds: round 2 left CredentialItems at 76 %, CredentialBackup at 52.9 % and CredentialRestore at 77.8 %. The fixes: an unused field and an unused equality were removed, the error→reason mappings became testable functions, and tests were added (1PUX format, undoing one of two decisions, unclassified issues, a remembered database not offered again, a file chosen by hand and through its provider, absolute restore locations, passphrase and header-length boundaries, a tighter record bound).
 
 | Module | Killed | Survived | Invalid | Excluded | Score | Threshold | Result |
