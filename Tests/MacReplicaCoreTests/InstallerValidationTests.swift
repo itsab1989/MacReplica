@@ -398,6 +398,60 @@ struct InstallerEvidenceTests {
         #expect(FileFormatEvidence.examine(udifFile) == .udifTruncated)
     }
 
+    /// Every signature, and files exactly as long as each check needs.
+    @Test func everySignatureAndEveryMinimumLength() throws {
+        func head(_ bytes: [UInt8], at offset: Int = 0, count: Int = 2048) -> Data {
+            var data = Data(count: count)
+            data.replaceSubrange(offset..<(offset + bytes.count), with: bytes)
+            return data
+        }
+        let trailer = Data(count: 512)
+        func classify(_ data: Data) -> FileFormatEvidence { FileFormatEvidence.classify(head: data, trailer: trailer, size: 1_000_000) }
+        #expect(classify(head(Array("sprs".utf8))) == .rawImage)
+        #expect(classify(head(Array("ER".utf8)) + Data()) == .unknown, "ER alone is no Apple partition map")
+        var apm = head(Array("ER".utf8))
+        apm.replaceSubrange(512..<514, with: Array("PM".utf8))
+        #expect(classify(apm) == .rawImage)
+        #expect(classify(head(Array("PM".utf8), at: 512)) == .unknown, "PM alone neither")
+        #expect(classify(head(Array("HX".utf8), at: 1024)) == .rawImage)
+        #expect(classify(head(Array("NXSB".utf8), at: 32)) == .rawImage)
+        for compressed in ["BZh9", "bvx2", "bvx-", "bvxn", "bvx1"] {
+            #expect(classify(Data(compressed.utf8) + Data(count: 100)) == .compressedImageWithoutDirectory, "\(compressed)")
+        }
+        #expect(classify(Data([0x5D, 0x00, 0x00, 0x80])) == .compressedImageWithoutDirectory, "LZMA")
+        #expect(classify(Data([0x5D, 0x00, 0x01])) == .unknown)
+        #expect(classify(Data([0x5D, 0x01, 0x00])) == .unknown)
+        #expect(classify(Data([0x78, 0x9C])) == .compressedImageWithoutDirectory, "two bytes are enough for zlib")
+        #expect(classify(Data([0x78, 0x5E])) == .compressedImageWithoutDirectory)
+        #expect(classify(Data([0x78, 0x02])) == .unknown)
+        #expect(classify(Data([0x77, 0xDA])) == .unknown)
+        #expect(classify(Data([0x5D, 0x00, 0x00])) == .compressedImageWithoutDirectory, "three bytes are enough for LZMA")
+        #expect(classify(head([0x55, 0xAA], at: 510, count: 512)) == .rawImage, "an MBR in exactly 512 bytes")
+        #expect(classify(head([0x55, 0xAB], at: 510, count: 512)) == .unknown)
+        #expect(classify(head([0x54, 0xAA], at: 510, count: 512)) == .unknown)
+        #expect(classify(Data("<HTML><body>".utf8)) == .otherFormat(.webPage))
+        #expect(classify(Data("<?xml version=\"1.0\"?><html xmlns=\"x\">".utf8)) == .otherFormat(.webPage))
+        #expect(classify(Data("<?xml version=\"1.0\"?><plist>".utf8)) == .unknown, "XML that is no web page")
+        #expect(classify(Data("<html".utf8).dropFirst()) == .unknown)
+
+        // The same at the edges of what `examine` reads from a file.
+        let sandbox = try Sandbox("evidence-lengths")
+        func file(_ data: Data, _ name: String) throws -> URL {
+            let url = sandbox.url.appendingPathComponent(name)
+            try data.write(to: url)
+            return url
+        }
+        var koly = Data(count: 512)
+        koly.replaceSubrange(0..<4, with: Array("koly".utf8))
+        #expect(FileFormatEvidence.examine(try file(koly, "only-directory.dmg")) == .udif(hasChecksum: false), "a 512-byte file is all directory")
+        var iso = Data(count: 32_774)
+        iso.replaceSubrange(32_769..<32_774, with: Array("CD001".utf8))
+        #expect(FileFormatEvidence.examine(try file(iso, "iso-minimum.dmg")) == .rawImage, "exactly long enough for the ISO 9660 mark")
+        let emptyZip = Data([0x50, 0x4B, 0x05, 0x06] + [UInt8](repeating: 0, count: 18))
+        #expect(ZipEvidence.hasCentralDirectory(try file(emptyZip, "empty.zip")) == true, "an empty zip is just its 22-byte end record")
+        #expect(ZipEvidence.hasCentralDirectory(try file(emptyZip.dropLast(), "short.zip")) == false)
+    }
+
     @Test func aSignedInstallerWithUnknownContentsIsStillVerified() {
         let app = AppRecord(name: "Tool", bundleIdentifier: "com.example.tool", path: "/Applications/Tool.app")
         var archive = InstallerArchive(id: "a", fileName: "Tool.pkg", kind: .pkg, size: 1, sha256: "a", teamIdentifier: "TEAMID1234",
@@ -413,6 +467,22 @@ struct InstallerEvidenceTests {
         var approved = package
         approved.userApprovedUnverified = true
         #expect(l.installerDescription(approved, for: app).nextAction?.contains("shows it in Finder") == true, "a package is shown in Finder, not opened")
+        // A package keeps the package texts; a licence agreement keeps its own text even with a reason recorded.
+        let unapprovedPackage = l.installerDescription(package, for: app)
+        #expect(unapprovedPackage.status.contains("could not read the installer's description") && unapprovedPackage.nextAction == nil)
+        var licence = InstallerArchive(id: "d", fileName: "Tool.dmg", kind: .dmg, size: 1, sha256: "d", originalPath: "/x", hasLicenseAgreement: true,
+                                       contentsLimit: .notMountable)
+        #expect(l.installerDescription(licence, for: app).status.contains("asks to accept a licence agreement"))
+        licence.userApprovedUnverified = true
+        #expect(l.installerDescription(licence, for: app).nextAction?.contains("accept the licence") == true)
+        // Contents read although a later step was limited (e.g. read from an image already open): app texts, not Finder.
+        var read = InstallerArchive(id: "e", fileName: "Tool.dmg", kind: .dmg, size: 1, sha256: "e", originalPath: "/x",
+                                    containedApps: [.init(name: "Tool", bundleIdentifier: "com.example.tool", version: "1", path: "Tool.app")],
+                                    userApprovedUnverified: true, contentsLimit: .timedOut)
+        #expect(l.installerDescription(read, for: app).nextAction?.contains("copies the app into Applications") == true)
+        read.contentsLimit = nil
+        read.containedApps = []
+        #expect(l.installerDescription(read, for: app).nextAction?.contains("opens it in Finder") == false)
         let image = InstallerArchive(id: "c", fileName: "Tool.dmg", kind: .dmg, size: 1, sha256: "c", originalPath: "/x", contentsLimit: .encrypted)
         #expect(l.installerDescription(image, for: app).summary == "Disk image · protected by a password, contents not checked · not signed with a Developer ID")
     }
