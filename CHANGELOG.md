@@ -7,6 +7,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Documentation
+- Checked against the 1.1.0 code: the README and SECURITY.md now list every server MacReplica contacts, say that the
+  backup is not encrypted apart from the contents of credentials, describe the administrator steps and the Homebrew
+  password exactly, and name which app-data categories were confirmed in the real apps. Corrected: Full Disk Access
+  (Troubleshooting), the restore defaults, the Tools' quarantine and plugin details (Apple silicon only), the
+  architecture overview, credential permissions, and the 1.0.5 changelog entry (it shipped with Ammonia; Plugin
+  Playground came in 1.0.6). New screenshots from 1.1.0, including Tools and your own installers.
+
 ## [1.1.0] - 2026-10-15
 
 ### Fixed
