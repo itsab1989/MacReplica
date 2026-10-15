@@ -379,8 +379,7 @@
     {
       "file": "Downloads/FileFormatEvidence.swift",
       "tests": [
-        "InstallerEvidenceTests",
-        "InstallerValidationTests"
+        "InstallerEvidenceTests"
       ],
       "area": "Own installers (offline)"
     },
