@@ -52,7 +52,11 @@
      happens on the new Mac – or why it cannot be used. *Copy into backup* stores the installer itself in the
      backup; *Contains a licence or activation* marks licence files as private (no licence is read). Installers
      without a Developer ID (for example DisplayCAL) are used only after you tick *Use this unverified installer*;
-     macOS then asks you to allow the app on its first start (System Settings › Privacy & Security › Open Anyway);
+     macOS then asks you to allow the app on its first start (System Settings › Privacy & Security › Open Anyway).
+     A file is only called *damaged* or *incomplete* when that is proven (its own checksum does not match, or its end
+     is missing). An intact installer MacReplica cannot look inside – password-protected, not opening on this Mac, or
+     with an unusual layout – is kept with the reason and a **Details** line, used after you confirm it, and opened in
+     Finder for you on the new Mac ([INSTALLER_VALIDATION.md](INSTALLER_VALIDATION.md));
    - **Printers & Scanners** — your printers and scanner drivers, with connection and driver;
    - **macOS settings** — Dock, Finder, keyboard, trackpad, language and more, by category, and what is not
      transferred and why;

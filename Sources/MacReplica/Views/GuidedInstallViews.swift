@@ -150,7 +150,7 @@ struct GuidedAppRow: View {
                     .accessibilityIdentifier("guided.version.\(item.id)")
             }
             if let chosen {
-                Text(chosen.kind == .appStore ? l.t("offer.appStore.hint") : chosen.kind == .vendorWebsite ? l.t("offer.website.hint") : l.trustText(chosen.trust))
+                Text(chosen.kind == .appStore ? l.t("offer.appStore.hint") : chosen.kind == .vendorWebsite ? l.t("offer.website.hint") : l.offerChecksText(chosen))
                     .font(.caption)
                     .foregroundStyle(chosen.isDownloadable || chosen.kind == .appStore || chosen.kind == .vendorWebsite ? Color.secondary : Color.orange)
                     .padding(.leading, 22)

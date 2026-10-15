@@ -1,0 +1,98 @@
+name: Real installers
+
+# Runs MacReplica's own installer inspection (behind "Use my installer …") on real, officially published installers
+# on every supported macOS, plus copies of them that are cut short, changed, quarantined or already open, and fails when
+# a verdict differs from the expected one. Beta feedback 1.0.7: working disk images were reported as damaged.
+# On demand (Actions › Real installers › Run workflow); it downloads about 400 MB per runner.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the inspection command (Apple silicon and Intel)
+        run: |
+          for arch in arm64 x86_64; do swift build -c release --arch $arch --product MacReplicaSimulator; done
+          mkdir tool
+          lipo -create -output tool/simulator "$(swift build -c release --arch arm64 --show-bin-path)/MacReplicaSimulator" \
+            "$(swift build -c release --arch x86_64 --show-bin-path)/MacReplicaSimulator"
+          # The texts and catalogs live in the resource bundle next to the executable.
+          cp -R "$(swift build -c release --arch arm64 --show-bin-path)/MacReplica_MacReplicaCore.bundle" tool/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: simulator
+          path: tool
+
+  inspect:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-26, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: simulator
+          path: tool
+      - name: Download and verify the official installers
+        run: |
+          chmod +x tool/simulator; sw_vers; uname -m; spctl --status || true
+          mkdir -p f && cd f
+          get() { curl -sSL -o "$1" "$3"; [ "$2" = "-" ] || echo "$2  $1" | shasum -a 256 -c -; }
+          get DisplayCAL-3.9.19-macOS-x86_64.dmg dc0ca1107c5cd8c3dc67562445a642057716550a582430f17609ce2f80d2d50b https://github.com/eoyilmaz/displaycal-py3/releases/download/3.9.19/DisplayCAL-3.9.19-macOS-x86_64.dmg
+          get AppPolice.dmg ed5a0830eb5a8cba63ab72d3c48dfd53a72d942d1a334d37b1e87c6b0fa087cf https://github.com/AppPolice/AppPolice/releases/download/v1.1/AppPolice.dmg
+          get brackets.2.2.0.dmg a8864dd5cc4591d885b0264e88ee2bc9a05962c29369b7c5c1f2f269c50fe1b5 https://github.com/brackets-cont/brackets/releases/download/v2.2.0/brackets.2.2.0.dmg
+          get Karabiner-Elements-16.3.0.dmg 19cce7bed3d48a722242ca683bd1bae406b6a87fed520728d1c91dee175b75e4 https://github.com/pqrs-org/Karabiner-Elements/releases/download/v16.3.0/Karabiner-Elements-16.3.0.dmg
+          get Rectangle.pkg 85cda907b51d55c5a200752b954cf38ef1cb2b578c5d58fb476e88c1e937b4f5 https://github.com/rxhanson/Rectangle/releases/download/v2.0.3/Rectangle.pkg
+          get Stats.dmg cfa3babb72aba49805c4160a450f370b1352b701116df89125f4868d9d83f777 https://github.com/exelban/stats/releases/download/v3.0.21/Stats.dmg
+          get KeepingYouAwake-1.6.8.zip 8001a149b4490c008fdac19898bce9902d516c4aa6412a7eb0f9a37443b15c6b https://github.com/newmarcel/KeepingYouAwake/releases/download/1.6.8/KeepingYouAwake-1.6.8.zip
+          # Variants: a name with spaces and non-ASCII letters, a browser's quarantine flag, cut short, changed, a web page.
+          cp Stats.dmg "Stats Installer – Ålesund Ü.dmg"
+          cp AppPolice.dmg quarantined-AppPolice.dmg
+          xattr -w com.apple.quarantine "0083;$(printf %x "$(date +%s)");Safari;$(uuidgen)" quarantined-AppPolice.dmg
+          head -c 60000000 DisplayCAL-3.9.19-macOS-x86_64.dmg > truncated-DisplayCAL.dmg
+          cp DisplayCAL-3.9.19-macOS-x86_64.dmg changed-DisplayCAL.dmg
+          printf '\377\377\377\377\377\377\377\377' | dd of=changed-DisplayCAL.dmg bs=1 seek=50000000 conv=notrunc 2>/dev/null
+          printf '<!DOCTYPE html><html><body>403 Forbidden</body></html>' > webpage-ACPU.dmg
+          head -c 400000 Rectangle.pkg > truncated-Rectangle.pkg
+      - name: Inspect and compare with the expected verdicts
+        run: |
+          cd f
+          ../tool/simulator inspect-installer DisplayCAL-3.9.19-macOS-x86_64.dmg AppPolice.dmg brackets.2.2.0.dmg Karabiner-Elements-16.3.0.dmg \
+            Rectangle.pkg Stats.dmg KeepingYouAwake-1.6.8.zip "Stats Installer – Ålesund Ü.dmg" quarantined-AppPolice.dmg \
+            truncated-DisplayCAL.dmg changed-DisplayCAL.dmg webpage-ACPU.dmg truncated-Rectangle.pkg | tee verdicts.tsv
+          # DisplayCAL already open (as after installing from it): read where it is, and it stays open.
+          hdiutil attach -nobrowse -readonly -noautoopen DisplayCAL-3.9.19-macOS-x86_64.dmg > /dev/null
+          ../tool/simulator inspect-installer DisplayCAL-3.9.19-macOS-x86_64.dmg | sed 's/^KEPT\tDisplayCAL/KEPT\topen-DisplayCAL/' | tee -a verdicts.tsv
+          hdiutil info | grep -q 'DisplayCAL-3.9.19-macOS-x86_64.dmg' && echo "still open: yes" | tee -a verdicts.tsv
+          hdiutil detach "$(hdiutil info | awk '/DisplayCAL-3.9.19/{f=1} f && /^\/dev\/disk[0-9]+\t/{print $1; exit}')" > /dev/null
+          # expect <KEPT|REJECTED> <start of the file name> <text the line must contain> – plain text, no patterns (file names
+          # come back decomposed, e.g. "U" + combining diaeresis, so only their ASCII start is compared).
+          expect() { awk -F'\t' -v k="$1" -v n="$2" -v p="$3" '$1 == k && index($2, n) == 1 && index($0, p) > 0 { found = 1 } END { exit !found }' verdicts.tsv \
+                     || { echo "::error::$2: expected $1 with \"$3\""; status=1; }; }
+          status=0
+          T=$(printf '\t')
+          for name in DisplayCAL-3.9.19-macOS-x86_64.dmg AppPolice.dmg brackets.2.2.0.dmg Stats.dmg "Stats Installer " \
+                      quarantined-AppPolice.dmg KeepingYouAwake-1.6.8.zip open-DisplayCAL-3.9.19-macOS-x86_64.dmg; do
+            expect KEPT "$name" "${T}inspected${T}apps=["
+          done
+          expect KEPT Karabiner-Elements-16.3.0.dmg "${T}inspected${T}apps=[]${T}package=true"
+          expect KEPT Rectangle.pkg "${T}inspected${T}apps=[]${T}package=true${T}signed=true"
+          expect REJECTED truncated-DisplayCAL.dmg "DamageEvidence.truncated)"
+          expect REJECTED changed-DisplayCAL.dmg "DamageEvidence.checksumMismatch)"
+          expect REJECTED webpage-ACPU.dmg "OtherFormat.webPage)"
+          expect REJECTED truncated-Rectangle.pkg "DamageEvidence.checksumMismatch)"
+          grep -q "still open: yes" verdicts.tsv || { echo "::error::the user's open image was ejected"; status=1; }
+          [ -z "$(hdiutil info | grep 'image-path' | grep "$PWD")" ] || { hdiutil info; echo "::error::an image stayed attached"; status=1; }
+          exit $status
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: verdicts-${{ matrix.os }}
+          path: f/verdicts.tsv

@@ -150,6 +150,13 @@ extension Localizer {
 
     public func trustText(_ trust: DownloadOffer.Trust) -> String { t("trust.\(trust.rawValue)") }
 
+    /// What is checked before an offer is installed. The user's own installer is checked against what was recorded on
+    /// the old Mac, not against Homebrew.
+    public func offerChecksText(_ offer: DownloadOffer) -> String {
+        guard offer.kind == .ownInstaller else { return trustText(offer.trust) }
+        return t(offer.developerUnverified == true ? "trust.ownInstaller.unverified" : "trust.ownInstaller")
+    }
+
     /// "Vendor update feed: Nightly 130.0a2 (recommended)".
     public func offerText(_ offer: DownloadOffer) -> String {
         let version = offer.version ?? ""

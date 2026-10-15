@@ -127,6 +127,16 @@ def generate_mutants(path):
     return lines, mutants
 
 
+def changed_lines(path, revision):
+    """Line numbers of `path` (as it is now) that were added or changed since `revision`."""
+    diff = subprocess.run(["git", "diff", "--unified=0", revision, "--", str(path)], cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    lines = set()
+    for match in re.finditer(r"^@@ -\S+ \+(\d+)(?:,(\d+))? @@", diff, re.M):
+        start, count = int(match.group(1)), int(match.group(2) or "1")
+        lines.update(range(start, start + count))
+    return lines
+
+
 def run(command, timeout):
     # Tests run against mutated code may not clean up after themselves (a mutant can break the
     # clean-up code, a hanging test is killed), so they get a temporary folder of their own.
@@ -150,6 +160,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--files", nargs="*", help="limit to these files (relative to Sources/MacReplicaCore)")
     parser.add_argument("--max-per-file", type=int, default=0, help="sample at most N mutants per file (0 = all)")
+    parser.add_argument("--changed-since", metavar="REF",
+                        help="only mutate lines added or changed since this git revision (e.g. main), for partly changed files")
     parser.add_argument("--report", default=str(ROOT / ".build" / "mutation"), help="report folder")
     parser.add_argument("--check", action="store_true", help="fail if a module is below its threshold")
     parser.add_argument("--seed", type=int, default=20261002)
@@ -227,6 +239,9 @@ def main():
             path = CORE / module["file"]
             original = path.read_text()
             lines, mutants = generate_mutants(path)
+            if args.changed_since:
+                changed = changed_lines(path, args.changed_since)
+                mutants = [m for m in mutants if m["line"] in changed]
             if args.max_per_file and len(mutants) > args.max_per_file:
                 mutants = sorted(rng.sample(mutants, args.max_per_file), key=lambda m: (m["line"], m["start"]))
             if args.only_survivors:

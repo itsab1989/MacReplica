@@ -1221,6 +1221,8 @@ struct InstallerProblem: Equatable, Identifiable {
     var fileName: String
     var path: String
     var error: InstallerInspectionError
+    /// What was checked (tool, exit status, message), shown as a details line.
+    var note: String? = nil
 }
 
 extension AppModel {
@@ -1255,15 +1257,15 @@ extension AppModel {
                     self.ownInstallerFiles[appID, default: []].append(OwnInstallerFile(archive: inspected.archive, url: inspected.file, include: true,
                                                                                       source: selection.source))
                 case .failure(let error):
-                    self.ownInstallerProblems[appID, default: []].append(self.problem(selection.source, error))
+                    self.ownInstallerProblems[appID, default: []].append(self.problem(selection.source, error, note: selection.note))
                 }
             }
             self.applyOwnInstallers(appID)
         }
     }
 
-    func problem(_ url: URL, _ error: InstallerInspectionError) -> InstallerProblem {
-        InstallerProblem(fileName: url.lastPathComponent, path: services.layout.displayPath(url), error: error)
+    func problem(_ url: URL, _ error: InstallerInspectionError, note: String? = nil) -> InstallerProblem {
+        InstallerProblem(fileName: url.lastPathComponent, path: services.layout.displayPath(url), error: error, note: note)
     }
 
     /// Lets the user pick a folder of installers (e.g. on an external drive); they are matched to the apps by bundle identifier.
@@ -1300,7 +1302,9 @@ extension AppModel {
             var matched = 0
             for selection in selections {
                 guard case .success(let inspected) = selection.result else {
-                    if case .failure(let error) = selection.result { self.ownInstallerProblems["", default: []].append(self.problem(selection.source, error)) }
+                    if case .failure(let error) = selection.result {
+                        self.ownInstallerProblems["", default: []].append(self.problem(selection.source, error, note: selection.note))
+                    }
                     continue
                 }
                 let archive = inspected.archive
@@ -1326,15 +1330,22 @@ extension AppModel {
         }
         inspectingInstallers = true
         let inspector = InstallerArchiveInspector(layout: services.layout, runner: services.runner)
-        let work = services.layout.caches.appendingPathComponent("InstallerInspection")
+        // A work folder of this run only: removing it can never pull the folder from under another inspection.
+        let work = services.layout.caches.appendingPathComponent("InstallerInspection").appendingPathComponent(UUID().uuidString)
         let bundles = services.layout.caches.appendingPathComponent("InstallerBundles")
         let log = appLog
         Task { [weak self] in
             var found: [InstallerSelection] = []
             for url in urls {
                 let selection = await inspector.select(url, workFolder: work, bundleStore: bundles)
-                if case .failure(let error) = selection.result {
-                    log.warning("Installer not usable: \(url.lastPathComponent) (\(error))", component: .inventory)
+                switch selection.result {
+                case .failure(let error):
+                    log.warning("Installer not usable: \(url.lastPathComponent) (\(error))" + (selection.note.map { " – \($0)" } ?? ""), component: .inventory)
+                case .success(let inspected) where inspected.archive.contentsLimit != nil:
+                    log.info("Installer kept, contents not checked: \(url.lastPathComponent) (\(inspected.archive.contentsLimit!.rawValue))"
+                             + (inspected.archive.inspectionNote.map { " – \($0)" } ?? ""), component: .inventory)
+                case .success:
+                    break
                 }
                 found.append(selection)
             }

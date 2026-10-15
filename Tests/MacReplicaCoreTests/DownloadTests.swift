@@ -287,19 +287,24 @@ struct DownloadQueueTests {
 @Suite("Download verification and installation")
 struct DownloadInstallerTests {
     /// A scripted `hdiutil`: `attach` fails `attachFailures` times ("resource temporarily unavailable"), `detach`
-    /// fails `detachFailures` times; `info -plist` lists the image twice (another image and the one in question).
+    /// fails `detachFailures` times; `info -plist` lists another image and – once an attach was tried, or from the
+    /// start when `openedByUser` – the one in question (as `/dev/disk9`; the user's own attachment is `/dev/disk8`).
     final class ScriptedDiskImages: @unchecked Sendable {
         let lock = NSLock()
         var attachFailures: Int
         var detachFailures: Int
-        init(attachFailures: Int = 0, detachFailures: Int = 0) {
+        let openedByUser: Bool
+        var attempted = false
+        init(attachFailures: Int = 0, detachFailures: Int = 0, openedByUser: Bool = false) {
             self.attachFailures = attachFailures
             self.detachFailures = detachFailures
+            self.openedByUser = openedByUser
         }
         func answer(_ command: Command, image: String) -> CommandResult {
             lock.withLock {
                 switch command.arguments.first {
                 case "attach":
+                    attempted = true
                     if attachFailures > 0 { attachFailures -= 1; return CommandResult(exitCode: 1, stdout: "", stderr: "attach failed - Resource temporarily unavailable") }
                     return CommandResult(exitCode: 0, stdout: "<?xml version=\"1.0\"?><plist><dict><key>system-entities</key><array><dict><key>mount-point</key><string>/Volumes/A</string></dict></array></dict></plist>", stderr: "")
                 case "detach":
@@ -309,8 +314,8 @@ struct DownloadInstallerTests {
                     let plist = """
                     <?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>images</key><array>
                     <dict><key>image-path</key><string>/tmp/other.dmg</string><key>system-entities</key><array><dict><key>dev-entry</key><string>/dev/disk7</string></dict></array></dict>
-                    <dict><key>image-path</key><string>\(image)</string><key>system-entities</key><array>
-                      <dict><key>dev-entry</key><string>/dev/disk9s1</string></dict><dict><key>dev-entry</key><string>/dev/disk9</string></dict></array></dict>
+                    \(openedByUser ? "<dict><key>image-path</key><string>\(image)</string><key>system-entities</key><array><dict><key>dev-entry</key><string>/dev/disk8</string></dict></array></dict>" : "")
+                    \(attempted ? "<dict><key>image-path</key><string>\(image)</string><key>system-entities</key><array><dict><key>dev-entry</key><string>/dev/disk9s1</string></dict><dict><key>dev-entry</key><string>/dev/disk9</string></dict></array></dict>" : "")
                     </array></dict></plist>
                     """
                     return CommandResult(exitCode: 0, stdout: plist, stderr: "")
@@ -329,8 +334,8 @@ struct DownloadInstallerTests {
         var runner = ScriptedRunner { twice.answer($0, image: image) }
         let attached = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: "/usr/bin/hdiutil", environment: [:], pause: 1_000, arguments: attach)
         #expect(attached.succeeded)
-        #expect(runner.commands.map { $0.arguments.first } == ["attach", "info", "detach", "attach", "info", "detach", "attach"],
-                "an attachment a failed attempt may have left is detached before each retry")
+        #expect(runner.commands.map { $0.arguments.first } == ["info", "attach", "info", "detach", "attach", "info", "detach", "attach"],
+                "what is attached is noted first; an attachment a failed attempt may have left is detached before each retry")
         // Busy every time: five attempts, then only the attachments of this image are detached (by its whole-disk device).
         let always = ScriptedDiskImages(attachFailures: 99)
         runner = ScriptedRunner { always.answer($0, image: image) }
@@ -339,6 +344,12 @@ struct DownloadInstallerTests {
         #expect(runner.commands.filter { $0.arguments.first == "attach" }.count == 5)
         #expect(Set(runner.commands.filter { $0.arguments.first == "detach" }.map(\.arguments)) == [["detach", "/dev/disk9", "-force"]],
                 "only this image, never the other one")
+        // The user had the image open already: MacReplica's attempts are cleaned up, the user's attachment never.
+        let open = ScriptedDiskImages(attachFailures: 99, openedByUser: true)
+        runner = ScriptedRunner { open.answer($0, image: image) }
+        _ = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: "/usr/bin/hdiutil", environment: [:], pause: 1_000, arguments: attach)
+        let detached = Set(runner.commands.filter { $0.arguments.first == "detach" }.map { $0.arguments[1] })
+        #expect(detached == ["/dev/disk9"], "the user's /dev/disk8 stays attached")
 
         // Detach: busy once → a second, normal detach; busy twice → the third attempt forces it.
         let layout = toolchainLayout(try Sandbox("detach-retry"))

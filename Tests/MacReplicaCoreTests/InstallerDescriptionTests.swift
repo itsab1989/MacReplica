@@ -59,7 +59,7 @@ struct InstallerDescriptionTests {
     }
 
     @Test func problemsAreExplained() {
-        for (error, text) in [(InstallerInspectionError.unsupportedType, "not an installer"), (.unreadable, "cannot be read"), (.damaged, "damaged"),
+        for (error, text) in [(InstallerInspectionError.unsupportedType, "not an installer"), (.unreadable, "cannot be read"), (.damaged(.checksumMismatch), "damaged"),
                               (.nothingInside, "nothing MacReplica could install"), (.licenseAgreement, "licence agreement")] {
             #expect(Self.l.installerProblemText(error).contains(text), "\(error)")
         }
