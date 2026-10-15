@@ -21,12 +21,15 @@ jobs:
       - name: Build the inspection command (Apple silicon and Intel)
         run: |
           for arch in arm64 x86_64; do swift build -c release --arch $arch --product MacReplicaSimulator; done
-          lipo -create -output simulator "$(swift build -c release --arch arm64 --show-bin-path)/MacReplicaSimulator" \
+          mkdir tool
+          lipo -create -output tool/simulator "$(swift build -c release --arch arm64 --show-bin-path)/MacReplicaSimulator" \
             "$(swift build -c release --arch x86_64 --show-bin-path)/MacReplicaSimulator"
+          # The texts and catalogs live in the resource bundle next to the executable.
+          cp -R "$(swift build -c release --arch arm64 --show-bin-path)/MacReplica_MacReplicaCore.bundle" tool/
       - uses: actions/upload-artifact@v7
         with:
           name: simulator
-          path: simulator
+          path: tool
 
   inspect:
     needs: build
@@ -39,9 +42,10 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: simulator
+          path: tool
       - name: Download and verify the official installers
         run: |
-          chmod +x simulator; sw_vers; uname -m; spctl --status || true
+          chmod +x tool/simulator; sw_vers; uname -m; spctl --status || true
           mkdir -p f && cd f
           get() { curl -sSL -o "$1" "$3"; [ "$2" = "-" ] || echo "$2  $1" | shasum -a 256 -c -; }
           get DisplayCAL-3.9.19-macOS-x86_64.dmg dc0ca1107c5cd8c3dc67562445a642057716550a582430f17609ce2f80d2d50b https://github.com/eoyilmaz/displaycal-py3/releases/download/3.9.19/DisplayCAL-3.9.19-macOS-x86_64.dmg
@@ -63,12 +67,12 @@ jobs:
       - name: Inspect and compare with the expected verdicts
         run: |
           cd f
-          ../simulator inspect-installer DisplayCAL-3.9.19-macOS-x86_64.dmg AppPolice.dmg brackets.2.2.0.dmg Karabiner-Elements-16.3.0.dmg \
+          ../tool/simulator inspect-installer DisplayCAL-3.9.19-macOS-x86_64.dmg AppPolice.dmg brackets.2.2.0.dmg Karabiner-Elements-16.3.0.dmg \
             Rectangle.pkg Stats.dmg KeepingYouAwake-1.6.8.zip "Stats Installer – Ålesund Ü.dmg" quarantined-AppPolice.dmg \
             truncated-DisplayCAL.dmg changed-DisplayCAL.dmg webpage-ACPU.dmg truncated-Rectangle.pkg | tee verdicts.tsv
           # DisplayCAL already open (as after installing from it): read where it is, and it stays open.
           hdiutil attach -nobrowse -readonly -noautoopen DisplayCAL-3.9.19-macOS-x86_64.dmg > /dev/null
-          ../simulator inspect-installer DisplayCAL-3.9.19-macOS-x86_64.dmg | sed 's/^KEPT\tDisplayCAL/KEPT\topen-DisplayCAL/' | tee -a verdicts.tsv
+          ../tool/simulator inspect-installer DisplayCAL-3.9.19-macOS-x86_64.dmg | sed 's/^KEPT\tDisplayCAL/KEPT\topen-DisplayCAL/' | tee -a verdicts.tsv
           hdiutil info | grep -q 'DisplayCAL-3.9.19-macOS-x86_64.dmg' && echo "still open: yes" | tee -a verdicts.tsv
           hdiutil detach "$(hdiutil info | awk '/DisplayCAL-3.9.19/{f=1} f && /^\/dev\/disk[0-9]+\t/{print $1; exit}')" > /dev/null
           # expect <KEPT|REJECTED> <file name> <regular expression for the rest of the line>
