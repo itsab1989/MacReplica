@@ -1,0 +1,45 @@
+name: Disk image probe
+
+# Temporary probe: runs MacReplica's exact hdiutil commands on real, officially published disk images, with and
+# without a browser's quarantine flag, on the macOS versions MacReplica supports.
+on:
+  push:
+    branches: [fix/dmg-false-damaged]
+    paths: [.github/workflows/dmg-probe.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-26, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Probe
+        run: |
+          sw_vers; uname -m; spctl --status || true; csrutil status || true
+          mkdir -p f && cd f
+          curl -sSL -o DisplayCAL-3.9.19-macOS-x86_64.dmg https://github.com/eoyilmaz/displaycal-py3/releases/download/3.9.19/DisplayCAL-3.9.19-macOS-x86_64.dmg
+          curl -sSL -o AppPolice.dmg https://github.com/AppPolice/AppPolice/releases/download/v1.1/AppPolice.dmg
+          curl -sSL -o brackets.2.2.0.dmg https://github.com/brackets-cont/brackets/releases/download/v2.2.0/brackets.2.2.0.dmg
+          shasum -a 256 *.dmg
+          probe() {
+            local label="$1" f="$2" m
+            m=$(mktemp -d)/mount-0; mkdir -p "$m"
+            hdiutil imageinfo -plist "$f" </dev/null >ii.out 2>ii.err; echo "[$label] imageinfo exit=$? $(grep -v WARNING ii.err | tr '\n' ' ')"
+            hdiutil attach -plist -nobrowse -readonly -noautoopen -mountrandom "$m" "$f" </dev/null >at.out 2>at.err; rc=$?
+            echo "[$label] attach exit=$rc $(grep -v WARNING at.err | tr '\n' ' ')"
+            mp=$(plutil -extract system-entities xml1 -o - at.out 2>/dev/null | grep -A1 mount-point | grep string | sed 's/.*<string>\(.*\)<\/string>/\1/')
+            [ -n "$mp" ] && { echo "[$label] mounted: $(ls "$mp" | tr '\n' ',')"; hdiutil detach "$mp" >/dev/null 2>&1 || hdiutil detach -force "$mp" >/dev/null 2>&1; }
+            hdiutil verify "$f" </dev/null >/dev/null 2>vf.err; echo "[$label] verify exit=$? $(grep -v WARNING vf.err | tail -1)"
+          }
+          for f in *.dmg; do
+            xattr -c "$f"; probe "plain $f" "$f"
+            cp "$f" "q-$f"; xattr -c "q-$f"
+            xattr -w com.apple.quarantine "0083;$(printf %x $(date +%s));Safari;$(uuidgen)" "q-$f"
+            probe "quarantined $f" "q-$f"
+            spctl -a -vvv -t open --context context:primary-signature "$f" 2>&1 | head -3 || true
+          done
