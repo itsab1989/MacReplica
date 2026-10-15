@@ -560,6 +560,44 @@ struct InstallerEvidenceTests {
         }
     }
 
+    /// An image that attaches without a volume (no file system macOS mounts) is detached again by its whole-disk
+    /// device – listed after its slice by `hdiutil` – and a confirmed own installer then goes to Finder.
+    @Test func imageAttachedWithoutVolumeIsDetachedByItsWholeDisk() async throws {
+        final class Scripted: CommandRunning, @unchecked Sendable {
+            let lock = NSLock()
+            var detached: [[String]] = []
+            func run(_ command: Command, onOutputLine: (@Sendable (String) -> Void)?) async throws -> CommandResult {
+                switch command.arguments.first {
+                case "imageinfo":
+                    return CommandResult(exitCode: 0, stdout: "<?xml version=\"1.0\"?><plist version=\"1.0\"><dict><key>Format</key><string>UDZO</string></dict></plist>", stderr: "")
+                case "attach":
+                    return CommandResult(exitCode: 0, stdout: """
+                    <?xml version="1.0"?><plist version="1.0"><dict><key>system-entities</key><array>
+                    <dict><key>dev-entry</key><string>/dev/disk9s1</string></dict><dict><key>dev-entry</key><string>/dev/disk9</string></dict>
+                    </array></dict></plist>
+                    """, stderr: "")
+                case "detach":
+                    lock.withLock { detached.append(command.arguments) }
+                    return CommandResult(exitCode: 0, stdout: "", stderr: "")
+                default:
+                    return CommandResult(exitCode: 0, stdout: "<?xml version=\"1.0\"?><plist version=\"1.0\"><dict><key>images</key><array/></dict></plist>", stderr: "")
+                }
+            }
+        }
+        let sandbox = try Sandbox("evidence-novolume")
+        let image = try sandbox.write("raw image bytes", to: "Blank.dmg")
+        let runner = Scripted()
+        var installer = DownloadInstaller(layout: toolchainLayout(sandbox), runner: runner, macOSVersion: "14.8", architecture: .arm64)
+        installer.retryPause = 1_000
+        var offer = DownloadOffer(id: "own:x", itemID: "manual:x", kind: .ownInstaller, url: image.absoluteString, trust: .checksum)
+        offer.developerUnverified = true
+        let prepared = try await installer.prepare(image, offer: offer, staging: sandbox.url.appendingPathComponent("staging"))
+        guard case .openInFinder(let shown, _) = prepared else { Issue.record("expected Finder, got \(prepared)"); return }
+        #expect(shown == image)
+        #expect(runner.lock.withLock { runner.detached } == [["detach", "/dev/disk9", "-force"]])
+        #expect(DownloadInstaller.devices(fromAttachOutput: "hdiutil: WARNING\n<?xml version=\"1.0\"?><plist version=\"1.0\"><dict><key>system-entities</key><array><dict><key>dev-entry</key><string>/dev/disk3s2</string></dict><dict><key>dev-entry</key><string>/dev/disk3</string></dict></array></dict></plist>") == ["/dev/disk3", "/dev/disk3s2"])
+    }
+
     @Test func attachmentListIsReadForThisImageOnly() {
         let plist = """
         <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
