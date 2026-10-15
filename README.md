@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/macreplica-start.png" alt="MacReplica start screen with Create Backup, Restore and Check Backup" width="720">
+  <img src="docs/images/macreplica-start.png" alt="MacReplica start screen with Create Backup, Restore, Check Backup and Tools" width="720">
 </p>
 
 Setting up a Mac from scratch is a good way to leave old clutter behind — but then you spend days
@@ -100,29 +100,27 @@ a new backup to restore less.
 
 ## Screenshots
 
-All screenshots show the real app with synthetic test data.
+All screenshots show MacReplica 1.1.0 with a simulated Mac and synthetic test data.
 
 | | |
 |:---:|:---:|
-| <img src="docs/images/macreplica-inventory.png" alt="Scan results: how each app will be restored, matches to confirm, fonts, profiles and Python" width="420"> | <img src="docs/images/macreplica-app-data.png" alt="Application data grouped by app, with warnings for data that may contain secrets or depend on the app version" width="420"> |
-| **Scan results** – how each app will come back | **App data** – per app, with clear warnings |
-| <img src="docs/images/macreplica-restore-selection.png" alt="Restore selection on the new Mac with status per area" width="420"> | <img src="docs/images/macreplica-restore-items.png" alt="Individual fonts and profiles with their status on the new Mac and decisions" width="420"> |
-| **Restore selection** – what to put onto this Mac | **Individual items** – status, details and decisions |
-| <img src="docs/images/macreplica-dry-run.png" alt="Preview listing what would be installed, what is already present and what needs a decision" width="420"> | <img src="docs/images/macreplica-progress.png" alt="Restore in progress with finished steps and time estimate" width="420"> |
-| **Preview (Dry Run)** – nothing is changed | **Restoring** – each step is checked |
-| <img src="docs/images/macreplica-restore-problems.png" alt="Summary with a failed App Store app and guidance to sign in and retry" width="420"> | <img src="docs/images/macreplica-restore-complete.png" alt="Restore complete with apps to install manually and services to sign in to" width="420"> |
-| **Problems are explained** – with a retry | **Done** – and what is left for you |
+| <img src="docs/images/macreplica-inventory.png" alt="Scan results: how each app will be restored, what else is included, the backup location and your installers" width="420"> | <img src="docs/images/macreplica-app-data.png" alt="Application data grouped by app, each with its support label, path and warnings for data that may contain secrets or depend on the app version" width="420"> |
+| **Scan results** – how each app will come back | **App data** – per app, with its support label and warnings |
+| <img src="docs/images/macreplica-own-installers.png" alt="Your installers for DisplayCAL: its disk image with the apps inside, and an intact image that could not be opened, kept with the reason and details" width="420"> | <img src="docs/images/macreplica-backup-saved.png" alt="Backup saved and checked, complete, with a copy of MacReplica for Apple silicon and Intel, location, size and the Reinstall Guide" width="420"> |
+| **Your installers** – what is inside, or why it could not be checked | **Backup saved** – checked, complete, with MacReplica inside |
+| <img src="docs/images/macreplica-restore-selection.png" alt="Restore selection on the new Mac with a checkbox and count per area" width="420"> | <img src="docs/images/macreplica-restore-items.png" alt="Individual items with matches to confirm and the status of each app and Homebrew package on the new Mac" width="420"> |
+| **Restore selection** – what to put onto this Mac | **Individual items** – status and decisions |
+| <img src="docs/images/macreplica-dry-run.png" alt="Preview listing what would be installed or copied, nothing changed" width="420"> | <img src="docs/images/macreplica-conflicts.png" alt="Dialog with fonts and a colour profile that already exist on the new Mac, each with a choice such as keep this Mac's version or keep both" width="420"> |
+| **Preview (Dry Run)** – nothing is changed | **Decisions** – nothing is overwritten without your choice |
+| <img src="docs/images/macreplica-restore-complete.png" alt="Summary with successful, failed, skipped and waiting counts, guided steps for an App Store app and developer tools, and notes per item" width="420"> | <img src="docs/images/macreplica-tools.png" alt="Tools: Gatekeeper state with a check for one app, and macOS update settings" width="420"> |
+| **Summary** – what worked and what is left for you | **Tools** – Gatekeeper, macOS updates, window corners |
 
 <details>
 <summary>More screenshots</summary>
 
 | | |
 |:---:|:---:|
-| <img src="docs/images/macreplica-backup-saved.png" alt="Backup saved and checked, with size, location and transfer instructions" width="420"> | <img src="docs/images/macreplica-conflicts.png" alt="Dialog asking how to handle files that already exist" width="420"> |
-| Backup saved and checked | Items that need a decision |
-| <img src="docs/images/macreplica-start-dark.png" alt="Start screen in dark mode" width="420"> | <img src="docs/images/macreplica-languages.png" alt="Language menu with seven languages" width="420"> |
-| Dark mode | Seven languages, switchable in the app |
-| <img src="docs/images/macreplica-settings.png" alt="Settings with language, logs, update options and support link" width="380"> | <img src="docs/images/macreplica-about.png" alt="About window with version, Ko-fi and GitHub links" width="300"> |
+| <img src="docs/images/macreplica-settings.png" alt="Settings with language, log files, update options, version and support link" width="380"> | <img src="docs/images/macreplica-about.png" alt="About window with version 1.1.0, macOS 13 or later on Apple silicon and Intel, Ko-fi and GitHub links" width="300"> |
 | Settings | About MacReplica |
 
 </details>
