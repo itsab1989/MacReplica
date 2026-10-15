@@ -41,7 +41,7 @@ Options considered: (A) one universal app, (B) separate Apple silicon and Intel 
 
 MacReplica ships **one universal disk image** (option A), because:
 
-- the universal app is small (about 5 MB as a disk image; one architecture would save roughly half),
+- the universal app is small (about 11 MB as a disk image for 1.1.0; one architecture would save roughly half),
   so there is no meaningful download cost;
 - users do not have to know which processor their Mac has, and a backup made on one kind of Mac is
   usually restored on another — the same download works on both;

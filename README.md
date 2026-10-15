@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/macreplica-start.png" alt="MacReplica start screen with Create Backup, Restore and Check Backup" width="720">
+  <img src="docs/images/macreplica-start.png" alt="MacReplica start screen with Create Backup, Restore, Check Backup and Tools" width="720">
 </p>
 
 Setting up a Mac from scratch is a good way to leave old clutter behind — but then you spend days
@@ -69,17 +69,18 @@ MacReplica is a native macOS app. You do not need the Terminal.
 | **App data** | Settings, presets, templates and resources of supported apps, each marked *Fully supported*, *Check in the app* or *Experimental* | Copied back after checks, into the right app version; caches, databases, licences and passwords are never included |
 | **Your own folders** *(optional)* | Folders of your home folder you add (documents, pictures, projects), each on its own, no size limit | Copied back to the same place; existing files are kept unless you choose otherwise |
 | **Launchpad** | Pages, folders with their names and the order of the apps (macOS 13–15) | Arranged last, once the apps are installed (macOS 13–15; a reference in the report on macOS 26 and later) |
-| **Your installers** *(optional)* | Installers you keep (`.pkg`, `.dmg`, `.zip`, or the `.app` itself, e.g. Office LTSC with its activation package) — each shown with what is inside and whether it will be used; optionally copied into the backup | Used offline, only if the checksum matches and the developer is verified – or, for apps without a Developer ID, after you confirmed it |
+| **Your installers** *(optional)* | Installers you keep (`.pkg`, `.dmg`, `.zip`, or the `.app` itself, e.g. Office LTSC with its activation package) — each shown with what is inside and whether it will be used; a file is only called damaged when that is proven, intact installers MacReplica cannot look inside are kept with the reason ([details](docs/INSTALLER_VALIDATION.md)); optionally copied into the backup | Used offline, only if the checksum matches and the developer is verified – or, for apps without a Developer ID or with contents MacReplica could not check, after you confirmed it (such an installer is opened in Finder for you if MacReplica cannot open it) |
 | **macOS settings** | Dock and hot corners, Finder, keyboard, trackpad and mouse, language and region, appearance, screenshots, menu bar clock; optionally keyboard shortcuts and input sources | Applied through macOS and read back; from an older macOS only where the meaning is stable |
 | **Printers and scanners** | Each printer's name, connection, model and driver (PPD for reference), scanner drivers | Guided: you add each printer (with the manufacturer's driver where needed), MacReplica checks it is there |
-| **MacReplica itself** | A verified copy of MacReplica (Apple silicon and Intel) in every backup, plus a printable reinstall guide for this Mac | Start the restore from the backup – no download needed |
-| **Fonts and ICC profiles** | Each file individually selectable, with its identity | Compared with what the new Mac already has before anything is copied |
+| **MacReplica itself** | A verified copy of MacReplica (Apple silicon and Intel) in the backup when it can be copied and checked (otherwise the backup says so), plus a printable reinstall guide for this Mac | Start the restore from the backup – no download needed |
+| **Fonts and ICC profiles** | Each file individually selectable, with its identity; which colour profile each display used | Compared with what the new Mac already has before anything is copied; a display's profile is assigned again to the same display once it is connected (a built-in display only on the same Mac) |
 | **Git settings** | Name, aliases and preferences (email only if you choose) | Written to `~/.gitconfig` |
-| **Passwords, keys and credentials** *(optional)* | Any number of key files, password databases and credential files you add, from anywhere — each encrypted and verified | Restored only with your passphrase or recovery key, with a decision for every conflict |
+| **Passwords, keys and credentials** *(optional)* | Any number of key files, password databases and credential files you add, from anywhere — the contents of each are encrypted and verified (names and paths stay readable) | Restored only with your passphrase or recovery key, with a decision for every conflict |
 
 MacReplica does **not** clone your disk, copy whole Library folders or preference files, copy drivers or system
 databases, or migrate logins stored in the Keychain. Everything it leaves out is listed with the reason – check that
-list (“What is not in this backup”) before you erase the old Mac.
+list (“Not in this backup”) and run **Check Backup** before you erase the old Mac. Apart from the credentials you add,
+the backup is **not encrypted**: store it where only you can read it (for example an encrypted external drive).
 
 ## How it works
 
@@ -99,29 +100,27 @@ a new backup to restore less.
 
 ## Screenshots
 
-All screenshots show the real app with synthetic test data.
+All screenshots show MacReplica 1.1.0 with a simulated Mac and synthetic test data.
 
 | | |
 |:---:|:---:|
-| <img src="docs/images/macreplica-inventory.png" alt="Scan results: how each app will be restored, matches to confirm, fonts, profiles and Python" width="420"> | <img src="docs/images/macreplica-app-data.png" alt="Application data grouped by app, with warnings for data that may contain secrets or depend on the app version" width="420"> |
-| **Scan results** – how each app will come back | **App data** – per app, with clear warnings |
-| <img src="docs/images/macreplica-restore-selection.png" alt="Restore selection on the new Mac with status per area" width="420"> | <img src="docs/images/macreplica-restore-items.png" alt="Individual fonts and profiles with their status on the new Mac and decisions" width="420"> |
-| **Restore selection** – what to put onto this Mac | **Individual items** – status, details and decisions |
-| <img src="docs/images/macreplica-dry-run.png" alt="Preview listing what would be installed, what is already present and what needs a decision" width="420"> | <img src="docs/images/macreplica-progress.png" alt="Restore in progress with finished steps and time estimate" width="420"> |
-| **Preview (Dry Run)** – nothing is changed | **Restoring** – each step is checked |
-| <img src="docs/images/macreplica-restore-problems.png" alt="Summary with a failed App Store app and guidance to sign in and retry" width="420"> | <img src="docs/images/macreplica-restore-complete.png" alt="Restore complete with apps to install manually and services to sign in to" width="420"> |
-| **Problems are explained** – with a retry | **Done** – and what is left for you |
+| <img src="docs/images/macreplica-inventory.png" alt="Scan results: how each app will be restored, what else is included, the backup location and your installers" width="420"> | <img src="docs/images/macreplica-app-data.png" alt="Application data grouped by app, each with its support label, path and warnings for data that may contain secrets or depend on the app version" width="420"> |
+| **Scan results** – how each app will come back | **App data** – per app, with its support label and warnings |
+| <img src="docs/images/macreplica-own-installers.png" alt="Your installers for DisplayCAL: its disk image with the apps inside, and an intact image that could not be opened, kept with the reason and details" width="420"> | <img src="docs/images/macreplica-backup-saved.png" alt="Backup saved and checked, complete, with a copy of MacReplica for Apple silicon and Intel, location, size and the Reinstall Guide" width="420"> |
+| **Your installers** – what is inside, or why it could not be checked | **Backup saved** – checked, complete, with MacReplica inside |
+| <img src="docs/images/macreplica-restore-selection.png" alt="Restore selection on the new Mac with a checkbox and count per area" width="420"> | <img src="docs/images/macreplica-restore-items.png" alt="Individual items with matches to confirm and the status of each app and Homebrew package on the new Mac" width="420"> |
+| **Restore selection** – what to put onto this Mac | **Individual items** – status and decisions |
+| <img src="docs/images/macreplica-dry-run.png" alt="Preview listing what would be installed or copied, nothing changed" width="420"> | <img src="docs/images/macreplica-conflicts.png" alt="Dialog with fonts and a colour profile that already exist on the new Mac, each with a choice such as keep this Mac's version or keep both" width="420"> |
+| **Preview (Dry Run)** – nothing is changed | **Decisions** – nothing is overwritten without your choice |
+| <img src="docs/images/macreplica-restore-complete.png" alt="Summary with successful, failed, skipped and waiting counts, guided steps for an App Store app and developer tools, and notes per item" width="420"> | <img src="docs/images/macreplica-tools.png" alt="Tools: Gatekeeper state with a check for one app, and macOS update settings" width="420"> |
+| **Summary** – what worked and what is left for you | **Tools** – Gatekeeper, macOS updates, window corners |
 
 <details>
 <summary>More screenshots</summary>
 
 | | |
 |:---:|:---:|
-| <img src="docs/images/macreplica-backup-saved.png" alt="Backup saved and checked, with size, location and transfer instructions" width="420"> | <img src="docs/images/macreplica-conflicts.png" alt="Dialog asking how to handle files that already exist" width="420"> |
-| Backup saved and checked | Items that need a decision |
-| <img src="docs/images/macreplica-start-dark.png" alt="Start screen in dark mode" width="420"> | <img src="docs/images/macreplica-languages.png" alt="Language menu with seven languages" width="420"> |
-| Dark mode | Seven languages, switchable in the app |
-| <img src="docs/images/macreplica-settings.png" alt="Settings with language, logs, update options and support link" width="380"> | <img src="docs/images/macreplica-about.png" alt="About window with version, Ko-fi and GitHub links" width="300"> |
+| <img src="docs/images/macreplica-settings.png" alt="Settings with language, log files, update options, version and support link" width="380"> | <img src="docs/images/macreplica-about.png" alt="About window with version 1.1.0, macOS 13 or later on Apple silicon and Intel, Ko-fi and GitHub links" width="300"> |
 | Settings | About MacReplica |
 
 </details>
@@ -175,7 +174,7 @@ update, download the new disk image and replace the app.
 1. Click **Create Backup**. MacReplica scans the Mac; nothing is changed.
 2. Review the results (**What do you want to take with you?**): confirm Homebrew packages for apps
    MacReplica was not sure about, and choose fonts, colour profiles, Python environments and app
-   data. Passwords, keys and credentials are in the backup only if you add them (always encrypted).
+   data. Passwords, keys and credentials are in the backup only if you add them (their contents are always encrypted).
 3. Under **Backup location**, choose a folder — ideally on an external drive or in a cloud folder — and check the
    free space shown there; then click **Save Backup**. **Save Selection …** keeps your choices for the next backup.
    MacReplica copies the selected files, compares each copy with the original and shows where the
@@ -188,7 +187,8 @@ update, download the new disk image and replace the app.
 1. Open MacReplica, click **Restore** and choose the backup folder. MacReplica checks the backup
    and then the new Mac.
 2. In **What do you want to put onto this Mac?** everything from the backup is selected except items
-   that are not recommended on this Mac. Leave out what you do not want; use
+   that are not recommended on this Mac and the encrypted credentials (tick them and enter the passphrase or recovery
+   key). Leave out what you do not want; use
    **Choose Individual Items …** for details and decisions.
 3. Click **Preview (Dry Run)** to see exactly what would happen, or **Start Restore**.
 4. If something needs administrator rights (Homebrew, packages with installers, shared folders),
@@ -206,7 +206,7 @@ finds, asks before changing anything and checks the real result afterwards ([det
   90 days (not possible on macOS 27).
 - **Window corners** (experimental, macOS 26.4 and later): less rounded app windows and panels, classic menus – one
   radius for everything or one per surface, with an example preview of each. Menus, popovers, Quick Look, toolbar
-  groups and capsule buttons only through an optional plugin loaded by Plugin Playground, which needs partial SIP
+  groups and capsule buttons only through an optional plugin (Apple silicon) loaded by Plugin Playground, which needs partial SIP
   (debugging allowed; behind warnings, with a one-click setup and undo; MacReplica never changes SIP itself).
 
 The backup folder also contains `restore/RESTORE_INSTRUCTIONS.html` — a readable guide with the
@@ -223,7 +223,8 @@ folder layout are in the [user guide](docs/USER_GUIDE.md).
   or name) confirms it. When several packages could fit, you choose (or install the app yourself).
 - On a new Mac without them, MacReplica installs the **Xcode Command Line Tools** (Apple's own
   installation dialog) and **Homebrew** from Homebrew's official signed installer package, after
-  checking its signature, Homebrew's team ID and its SHA-256 checksum.
+  checking its Developer ID Installer signature and Homebrew's team ID, and its SHA-256 checksum when GitHub
+  publishes one for the package.
 - Third-party Homebrew sources (*taps*) are only added if you allow them; on Homebrew 6 and later
   MacReplica then also trusts them (`brew trust --tap`), which Homebrew requires.
 - Formulae installed as development builds (`--HEAD`) come back as such; you can choose the stable
@@ -272,11 +273,15 @@ Visual Studio Code · Cursor · Sublime Text · JetBrains IDEs · Xcode · BBEdi
 kitty · WezTerm · Alacritty · Karabiner-Elements · Hammerspoon · Adobe Photoshop (and beta) · Camera Raw /
 Lightroom Classic presets · Capture One · DaVinci Resolve · Blender · After Effects · Motion · Logic Pro ·
 Krita · GIMP · Inkscape · Scribus · LibreOffice · Microsoft Word, Excel and PowerPoint · Apple Mail · Cryptomator ·
-DisplayCAL / ArgyllCMS · BenQ Palette Master Element · XP-Pen · Keyboard Maestro · Alfred
+DisplayCAL / ArgyllCMS · BenQ Palette Master Element · XP-Pen · VueScan · Final Cut Pro · KeePassXC (settings only) ·
+Adobe colour settings · Keyboard Maestro · Alfred
 
-Krita, GIMP, Inkscape, Scribus, LibreOffice, Cryptomator, DisplayCAL, Word's AutoCorrect, the Photoshop beta's settings and
-Resolve's LUTs and presets were confirmed inside the real apps (*Fully supported*); the others are tested with
-data in the documented layout (*Check in the app*, or *Experimental* where sources are thin).
+Some categories were confirmed inside the real apps (*Fully supported*): Krita resources and preferences, GIMP's
+profile, Inkscape preferences, templates and palettes, Scribus palettes and preferences, four LibreOffice categories
+(settings, templates, dictionaries, menus/toolbars/shortcuts), Cryptomator's vault list, DisplayCAL calibrations and
+settings, Word's AutoCorrect, panels and workspaces of the Photoshop beta, and Resolve's LUTs, keyboard presets and
+preferences. Everything else is tested with data in the documented layout (*Check in the app*, or *Experimental* where
+sources are thin) — the label is shown next to each item in the app.
 
 Caches, databases, logs and credential stores are never included. Data that can contain secrets or
 may not work with another app version is offered but not pre-selected. Apps that rewrite their data
@@ -340,32 +345,48 @@ only when a step needs them — installing the Command Line Tools or Homebrew, o
 profiles into the shared folders in `/Library` — using the standard macOS password dialog. Files for
 the shared folders are copied together after a single prompt. Homebrew packages with installers (for
 example some casks) need `sudo`: MacReplica asks once per restore in its own window, checks the password
-with macOS and hands it to Homebrew through a private, token-protected channel; it stays in memory until the
-restore ends and is never stored or logged. Full Disk Access is only needed for Mail and Microsoft Office
-data. If macOS does not allow it to read a location,
+with macOS and hands it to Homebrew through a private channel (a socket only your user can open, plus a one-time
+token); it stays in memory until the restore ends and is never stored or logged. While Homebrew runs, the programs
+it starts (for example a cask's installer script) could ask for it too – only allow taps you trust. Full Disk Access
+is only needed for Mail and Microsoft Office data. If macOS does not allow it to read a location,
 the scan reports that location as *no permission* and offers a button to the privacy settings, in
 case you want to grant access.
 
 **Security model.**
 - MacReplica only starts a fixed list of tools (Homebrew, `mas`, `xcode-select`, `pkgutil`,
   `installer`, Homebrew's Python, …) by their full path, never through a shell. Names and paths from
-  a backup are passed as plain arguments and are never interpreted as commands.
+  a backup are passed as plain arguments and are never interpreted as commands. Steps that need administrator
+  rights are the one exception: macOS runs them through AppleScript's `do shell script`, so MacReplica allows only a
+  fixed set of operations and quotes every argument (`quoted form of`).
 - Every path in a backup is checked before use: it must stay inside its expected folder.
 - Every file in a backup has a SHA-256 checksum; damaged files are reported and not restored.
 - Existing files are never overwritten silently; replaced files are kept. MacReplica only deletes
   folders it created itself and marked as its own.
 - **Credentials** are never collected by default. Files that look like keys or password databases are
-  recognised by name and header only and listed; you decide for each. What you add is encrypted per file
-  (AES-256-GCM; the key is protected by your passphrase via PBKDF2-HMAC-SHA256, 600,000 iterations, and by a
-  recovery key), checked after encrypting, and never written in plain text. Keychains, passkeys, cookies and
-  browser password stores are never copied; MacReplica shows the supported way to move them. Details:
-  [docs/CREDENTIALS.md](docs/CREDENTIALS.md).
+  recognised by name and header only and listed; you decide for each. The contents of what you add are encrypted
+  per file (AES-256-GCM; the key is protected by your passphrase via PBKDF2-HMAC-SHA256, 600,000 iterations, and by a
+  recovery key), checked after encrypting, and never written in plain text. File names, original paths, sizes and
+  formats stay readable in the backup's list of contents. Without the passphrase and the recovery key the contents
+  cannot be recovered. Keychains, passkeys, cookies and browser password stores are never copied; MacReplica shows
+  the supported way to move them. Details: [docs/CREDENTIALS.md](docs/CREDENTIALS.md).
+- **Everything else in the backup is stored as plain files**, as on the old Mac. Keep the backup on a drive only you
+  can read, and delete it when you no longer need it.
 
-**Privacy.** Your backup stays where you save it — MacReplica uploads nothing. It has no analytics.
-It makes three kinds of network requests itself: Homebrew's public cask list (during the scan, to
-match apps), the update check (only when you ask or enable it) and Homebrew's installer package
-(during a restore). Logs and reports write your home folder as `~` and contain no passwords or file
-contents.
+**Privacy.** Your backup stays where you save it — MacReplica uploads nothing and has no analytics of its own.
+It contacts these servers itself, and only for these purposes:
+
+| When | What | Where |
+|---|---|---|
+| Scan, only if some apps could not be matched | Homebrew's public package lists (cached for 24 hours) | formulae.brew.sh |
+| Restore, only if Homebrew is missing | Homebrew's latest release information and installer package | api.github.com, github.com |
+| Guided installation, when you click **Look Up Downloads** or download | The vendor's own update feed declared in the app, and the vendor download you choose | the vendor's servers |
+| **Check for Updates …** or the weekly check (off by default) | MacReplica's release list | api.github.com |
+| Tools, when you use them | The list of macOS installers (`softwareupdate`); the window-corner plugin's loader package on one-click setup | Apple; github.com |
+
+The tools MacReplica runs for a restore – Homebrew, `mas`, pip, uv, npm and others – download packages from their
+usual sources. Homebrew's own anonymous analytics stay as you configured Homebrew (MacReplica does not change them;
+`brew analytics off` turns them off). Logs and reports write your home folder as `~` and contain no passwords or
+file contents; they do contain app names, file names and paths outside your home folder.
 
 Details: [SECURITY.md](SECURITY.md) · [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md)
 
@@ -432,6 +453,10 @@ More in [Troubleshooting](docs/TROUBLESHOOTING.md).
 - Fonts in apps that are already running appear after the app is reopened.
 - Printer-driver colour profiles come back by reinstalling the printer driver.
 - Releases are not signed with a Developer ID or notarized (see [Installation](#installation)).
+- **The backup is not encrypted** except for the credentials you add (their contents only).
+- The **window-corner plugin** runs only on Apple silicon and only on the macOS builds it was tested on (currently
+  macOS 27.0.1, build 26A434); after a macOS update it stays inactive until a tested MacReplica version follows. The
+  window-corner setting itself works on Intel and Apple silicon with macOS 26.4 or later.
 - macOS 13 has not been tested yet. The Intel version was tested on GitHub's hosted Intel runner and
   under Rosetta, not on an Intel Mac at home.
 - Application data marked *Check in the app* or *Experimental* is tested with synthetic data that mirrors
@@ -459,7 +484,7 @@ published by GitHub Actions — see [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCE
 ## Testing
 
 ```sh
-scripts/test.sh                              # all tests (about 340, Swift Testing)
+scripts/test.sh                              # all tests (more than 600, Swift Testing)
 scripts/test.sh --filter FontConflictTests   # one suite
 ```
 
@@ -471,8 +496,8 @@ What was validated for developer tools and the guided installation is in
 [docs/RECOVERY_REPORT.md](docs/RECOVERY_REPORT.md).
 
 **Mutation testing** checks that the tests really catch mistakes in the critical modules (selection,
-conflict decisions, restore, verification, clean-up, credentials). The last full run killed 85.5 %
-of 712 mutants, with every module at or above its threshold. How to run it and the detailed results:
+conflict decisions, restore, verification, clean-up, credentials, installer validation). Each release runs it on
+the modules it changed; every module is at or above its threshold. How to run it and the results of every run:
 [docs/MUTATION_TESTING.md](docs/MUTATION_TESTING.md). More: [docs/TESTING.md](docs/TESTING.md).
 
 ## Contributing

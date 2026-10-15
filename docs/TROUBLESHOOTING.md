@@ -38,8 +38,10 @@ To check that the download is intact, compare `shasum -a 256 MacReplica-<version
 ## A location shows “no permission” in the scan
 
 macOS protects some folders (for example other apps' data). MacReplica does not ask for Full Disk
-Access; it reports these locations and continues. If you want them included, click the button next to
-the message to open *Privacy & Security* and grant access, then scan again — or continue without them.
+Access for the scan; it reports these locations and continues. If you want them included, click the button next to
+the message to open *Privacy & Security* and grant access, then scan again — or continue without them. Apple Mail and
+Microsoft Office data can only be read and restored with Full Disk Access for MacReplica; without it, those items
+wait and are listed as such.
 
 ## An App Store app is waiting for you
 

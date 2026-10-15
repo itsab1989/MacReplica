@@ -56,7 +56,7 @@ retried).
 | iTerm2 | `com.googlecode.iterm2` | `Library/Application Support/iTerm2/DynamicProfiles` | main preferences plist (cfprefsd cache; use iTerm2's Export/Import), Keychain items | Fixture-tested | [Dynamic Profiles](https://iterm2.com/documentation-dynamic-profiles.html) |
 | Adobe Photoshop (presets) | `com.adobe.Photoshop` | `Library/Application Support/Adobe/Adobe Photoshop <YYYY>/Presets/{Actions,Brushes,Styles,Gradients,Patterns,Color Swatches,Custom Shapes,Keyboard Shortcuts,Tools,Contours,Menu Customization,Custom Toolbars,Curves,Levels,…}` — may go into the version installed on the new Mac | AutoRecover, font caches, AddOnModules | Fixture-tested | [backup & restore](https://helpx.adobe.com/photoshop/desktop/get-started/settings-and-preferences/backup-and-restore-preferences.html), [migrate presets](https://helpx.adobe.com/photoshop/using/preset-migration.html) |
 | Adobe Photoshop (settings) | `com.adobe.Photoshop` | `Library/Preferences/Adobe Photoshop <YYYY> Settings/`: the ten Adobe-listed panel files (selected, may go into another version), `Color Settings.csf`; *not selected, same version only:* `WorkSpaces`, `WorkSpaces (Modified)`, `Workspace Prefs.psp`, new-document presets, `… Prefs.psp` | `MachinePrefs.psp`, `PluginCache.psp`, `FMCache.psp`, launch flags, GPU logs | Fixture-tested | as above |
-| Adobe Photoshop (Beta) (presets, settings) | `com.adobe.Photoshop` (same ID as the release) | the same, in `Adobe Photoshop (Beta)` / `Adobe Photoshop (Beta) Settings` — always restored into the beta's folders | as above | **Settings: verified** (panel contents, workspaces, document presets, preferences); presets: fixture-tested | [Photoshop beta](https://helpx.adobe.com/photoshop/desktop/whats-new/photoshop-desktop-beta-overview.html) |
+| Adobe Photoshop (Beta) (presets, settings) | `com.adobe.Photoshop` (same ID as the release) | the same, in `Adobe Photoshop (Beta)` / `Adobe Photoshop (Beta) Settings` — always restored into the beta's folders | as above | **Settings: verified** for panels and workspaces (in the real beta); the other settings files and the presets: fixture-tested | [Photoshop beta](https://helpx.adobe.com/photoshop/desktop/whats-new/photoshop-desktop-beta-overview.html) |
 | Adobe colour settings | Photoshop, Illustrator, InDesign, Lightroom | `Library/Application Support/Adobe/Color/{Settings,Proofing}` | — | Fixture-tested | preference file names KB |
 | Lightroom Classic / Camera Raw | `com.adobe.LightroomClassicCC7`, `com.adobe.Photoshop` | `Library/Application Support/Adobe/CameraRaw/{Settings,CameraProfiles,Defaults}` | catalogs (`.lrcat`), caches, logs, GPU/model data | Fixture-tested, **detection confirmed** | [file locations](https://helpx.adobe.com/lightroom-classic/desktop/kb/preference-file-and-other-file-locations.html), [raw defaults](https://helpx.adobe.com/camera-raw/kb/acr-raw-defaults.html) |
 | Capture One | `com.captureone.captureone16` | `Library/Application Support/Capture One/{Styles,Presets60,KeyboardShortcuts,Workspaces}` | ImageCore/CaptureCore, diagnostics, plug-in binaries, catalogs and sessions | Fixture-tested, **detection confirmed** | [moving styles & presets](https://support.captureone.com/hc/en-us/articles/27728350991261), [workspaces & presets](https://support.captureone.com/hc/en-us/articles/360002418657) |
@@ -135,14 +135,19 @@ Git **configuration** is handled separately (sanitized `~/.gitconfig`, default o
 
 GitHub CLI and GitLab CLI (Keychain by default), Docker (credential store), Google Cloud CLI, Azure CLI (MSAL cache),
 AWS IAM Identity Center (SSO), GitHub Desktop, Adobe Creative Cloud (activation limit), Microsoft 365, Dropbox,
-OneDrive, Google Drive, Slack, Microsoft Teams, Zoom, Things. Each entry in `GuidanceCatalog` cites its source.
+OneDrive, Google Drive, Slack, Microsoft Teams, Zoom, Things, 1Password and Bitwarden (sign in to the account; the vault
+syncs). Each entry in `GuidanceCatalog` cites its source.
 
 ## Manual migration (detected; the app's own export is recommended)
 
 Raycast (encrypted database; official `.rayconfig` export), BetterTouchTool (full backup/preset export), Hazel (rule
 export; file copy unreliable because of aliases), Rectangle (JSON export), Terminal (`.terminal` profile export), Affinity
 (per-panel export; internal formats undocumented), Adobe Premiere Pro (shortcuts in `~/Documents`, Sync Settings
-discontinued), DaVinci Resolve PowerGrades, render/project presets and project libraries (LUTs and keyboard/layout presets are restored).
+discontinued), DaVinci Resolve PowerGrades, render/project presets and project libraries (LUTs and keyboard/layout presets are restored),
+Synology Drive Client, Calibrite PROFILER / i1Profiler, BenQ Palette Master and the XP-Pen tablet driver (their parts
+that are not copied), Mail accounts, and Microsoft Office sign-in or activation. Passwords in the keychain, passkeys and
+the passwords of Chrome, Edge, Brave and Firefox are covered with their supported route (sync, export or sign-in) in
+[CREDENTIALS.md](CREDENTIALS.md).
 
 ## Investigated and rejected
 

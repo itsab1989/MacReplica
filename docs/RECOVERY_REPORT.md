@@ -56,7 +56,7 @@ end-to-end tests for guided App Store installs and manual apps.
 
 ### Mutation tests executed
 
-See [MUTATION_TESTING.md](MUTATION_TESTING.md#developer-tools-downloads-and-guided-installation).
+See [MUTATION_TESTING.md](MUTATION_TESTING.md#results) (the developer tools, downloads and guided installation runs).
 
 ### Simulation results
 

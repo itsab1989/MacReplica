@@ -69,6 +69,9 @@ Checks run in this order for every backed-up file:
 | 13 | Classic suitcase or PostScript Type 1 font | `legacyFormat` | not pre-selected, never opened; identical only if data and resource fork match | select to restore |
 | 14 | Not on this Mac | `ready` | restored | – |
 
+Classic suitcase and PostScript Type 1 fonts (row 13) are checked first, before rows 1–12: an exact copy on this Mac
+still counts as `identical`, everything else is `legacyFormat`. The other rows apply in the order shown.
+
 Custom display calibration profiles are restored as files like any other profile. Which display
 used which profile is a separate, optional item (next section).
 

@@ -45,12 +45,16 @@ services on background tasks and turns their results into screens.
 |---|---|
 | `System/SystemLayout` | Every path MacReplica reads or writes, and the allow-list of executables. The live layout points at the real Mac; a simulation layout points into a sandbox folder. Home paths are always displayed as `~`. |
 | `System/CommandRunner` | Runs allow-listed executables by absolute path with an explicit environment — never a shell. Output is drained on dedicated reader threads. |
-| `Restore/PrivilegedExecutor` | Runs a fixed set of operations (`mkdir`, `install`, `ditto`, `mv`, `installer`) with one administrator authentication; paths are validated and quoted by AppleScript itself. |
+| `Restore/PrivilegedExecutor` | Runs a fixed set of operations (`mkdir`, `install`, `ditto`, `mv`, `installer`, and `rm` only for an allow-list of the corner plugin's and its loader's own files) with one administrator authentication through AppleScript `do shell script … with administrator privileges`; paths are validated and every argument is quoted by AppleScript (`quoted form of`). |
+| `System/AdminPasswordBroker` + `MacReplicaAskpass` | The Homebrew `sudo` password for one restore: asked in MacReplica's window, checked with `sudo -S -k -v`, kept in memory and handed to the askpass helper over a socket only the user can open, with a one-time token. |
 | `Inventory/*` | Read-only scanning. Fonts and profiles carry their identity (`FontIdentity`, `ProfileIdentity`) and origin. |
 | `Matching/*` | Conservative app → Homebrew cask matching (bundle ID, app name, vendor evidence); ambiguous cases need a user decision. |
 | `Providers/*` | Catalog of application-data providers (`AppDataCatalog`), re-authentication / manual-migration guidance (`GuidanceCatalog`), generic detection. Knowledge about apps is data, not code. |
-| `Credentials/*` | `CredentialProvider` protocol, SSH and file-based providers, `CredentialVault` (PBKDF2 + AES-256-GCM). |
-| `Backup/*` | Writing the self-contained backup folder and verifying it (SHA-256 per file plus `SHA256SUMS`). |
+| `Credentials/*` | `CredentialProvider` protocol, SSH and file-based providers, credential items and `CredentialStore` (per-item AES-256-GCM in 64 KiB records; data key wrapped by PBKDF2 passphrase and recovery key). `CredentialVault` is kept only to restore 1.0.0–1.0.6 backups. See [CREDENTIALS.md](CREDENTIALS.md). |
+| `Backup/*` | Writing the self-contained backup folder and verifying it (SHA-256 per file plus `SHA256SUMS`), the encrypted credential store, the bootstrap copy of MacReplica and the reinstall guide. |
+| `Downloads/InstallerArchive`, `FileFormatEvidence` | The user's own installers: inspection without running anything; damage only on proof from the file's bytes or its own checksum ([INSTALLER_VALIDATION.md](INSTALLER_VALIDATION.md)). |
+| `Settings/*`, `Launchpad/*`, `ColorProfiles/*`, `Inventory/Printers` | macOS settings by category, the Launchpad layout (macOS 13–15), display profile assignments, printers and scanner drivers. |
+| `Tools/*` | The three Tools on the start screen: Gatekeeper and app security, macOS updates (configuration profiles), window corners and the optional corner plugin ([TOOLS.md](TOOLS.md)). |
 | `Restore/RestorePlanner` | Turns a manifest and a `RestoreSelection` into an ordered plan; `continuation(of:)` continues an interrupted session with a reviewed selection. |
 | `Restore/RestoreExecutor` + `Inspector` | Shared read-only checks (`predict`) for the selection screen, dry run and restore; the executor performs and verifies each step and never stops on a single failure. |
 | `Restore/FileConflictAnalyzer` | Destination-aware decisions for fonts and ICC profiles (see [FONTS_AND_PROFILES.md](FONTS_AND_PROFILES.md)). |
@@ -61,13 +65,18 @@ services on background tasks and turns their results into screens.
 
 ## Manifest
 
-`manifest.json` is versioned (`manifest_version`, currently 3; backups of MacReplica 1.0.0 (version 1) and 1.0.1 (version 2) are migrated on reading, and older versions refuse newer backups instead of restoring them wrongly), uses stable snake_case keys and is
-decoded leniently (missing sections become empty, unknown keys are ignored, newer major versions
-are refused with a clear message). It records the MacReplica version and build, macOS version and
+`manifest.json` is versioned (`manifest_version`, currently 4 for backups with encrypted credential items and 3
+otherwise; backups of MacReplica 1.0.0 (version 1) and 1.0.1 (version 2) are migrated on reading, and any version
+higher than the app knows is refused with a clear message instead of being restored wrongly), uses stable snake_case
+keys and is decoded leniently (missing sections become empty, unknown keys are ignored). Fields added without a
+version change are optional, for example `contents_limit` and `inspection_note` of an own installer (1.1.0): an older
+MacReplica ignores them and treats such an installer as unverified (used only if the user confirmed it); if it cannot
+open the installer, that step fails with the reason instead of opening it in Finder. It records the MacReplica version and build, macOS version and
 architecture of the old Mac, and for each item what is needed to restore it — never secrets.
 Fonts and profiles store original path, backup path, size, SHA-256, origin and identity; the
-selection made on the old Mac is summarized in `backup_selection`. An example is in
-[examples/manifest.json](examples/manifest.json).
+selection made on the old Mac is summarized in `backup_selection`. [examples/manifest.json](examples/manifest.json)
+is an older example (MacReplica 1.0.0, format version 2) that shows the basic structure; current backups have more
+sections (Launchpad, settings, printers, own installers, credential items).
 
 ## Restore selection
 

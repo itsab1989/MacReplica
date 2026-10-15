@@ -4,7 +4,7 @@ All tests use [Swift Testing](https://developer.apple.com/documentation/testing)
 Xcode Command Line Tools alone.
 
 ```sh
-scripts/test.sh                                  # everything (~340 tests, about half a minute)
+scripts/test.sh                                  # everything (more than 600 tests, a few minutes)
 scripts/test.sh --filter FontConflictTests       # one suite (struct name)
 scripts/test.sh --filter "Restore|DryRun"        # suites matching a pattern
 ```
@@ -47,7 +47,11 @@ Tests never read or change your own apps, fonts, profiles, Homebrew or settings:
 | Official download sources, download queue, verification and installation | `DownloadSourceTests`, `DownloadQueueTests`, `DownloadInstallerTests` |
 | Guided installation (sequence, user decisions, cancellation) | `GuidedInstallationTests` |
 | Application data and providers | `ApplicationDataTests`, `ProviderCatalogTests`, `ProviderTests`, `AppDataScannerEdgeTests` |
-| Credentials (vault, providers, opt-in) | `CredentialTests`, `FileCredentialProviderTests`, `CredentialEdgeTests` |
+| Credentials (encrypted store, providers, opt-in, preservation end to end) | `CredentialTests`, `CredentialPreservationTests`, `FileCredentialProviderTests`, `CredentialEdgeTests`, `SensitiveFilesTests` |
+| Your own installers (inspection, damage only with proof, real `hdiutil`) | `OwnInstallerTests`, `InstallerValidationTests`, `InstallerEvidenceTests`, `InstallerApprovalTests`, `InstallerDescriptionTests` |
+| Own folders, macOS settings, printers, Launchpad, display profiles | `PersonalFoldersTests`, `SystemSettingsTests`, `PrinterTests`, `LaunchpadTests`, `LaunchpadRestoreTests`, `DisplayProfileTests` |
+| MacReplica copy in the backup, reinstall guide, Homebrew administrator password | `BootstrapAppTests`, `ReinstallGuideTests`, `AdminPasswordTests` |
+| Tools: Gatekeeper, macOS updates, window corners and the corner plugin | `ToolsGatekeeperTests`, `ToolsUpdatesTests`, `ToolsProfilesTests`, `ToolsWindowCornersTests`, `ToolsCornerPluginTests`, `PluginLoaderTests` |
 | Restore planning and selection | `RestorePlannerTests`, `SelectionPlannerTests`, `TwoStageSelectionTests` |
 | Restore execution, dry run, resume | `RestoreExecutionTests`, `DryRunTests`, `ResumeTests`, `ExecutorPredictionTests`, `ExecutorEdgeTests` |
 | Font and profile conflict decisions | `FontConflictTests`, `ProfileConflictTests`, `FileDecisionRestoreTests`, `DestinationIndexTests` |
@@ -70,8 +74,9 @@ Tests never read or change your own apps, fonts, profiles, Homebrew or settings:
 ## Mutation testing
 
 [`tools/mutation/mutate.py`](../tools/mutation/mutate.py) mutates the critical modules one change at
-a time and checks that the covering tests fail. Method, current results (85.5 % of 712 mutants
-killed, every module at or above its threshold) and the list of remaining mutants are in
+a time and checks that the covering tests fail. Method, the results of every run (the first full run killed 85.5 %
+of 712 mutants; later runs cover the modules each release changed, every module at or above its threshold) and the
+list of remaining mutants are in
 [MUTATION_TESTING.md](MUTATION_TESTING.md). Run it in a copy of the repository — it edits source
 files temporarily.
 
