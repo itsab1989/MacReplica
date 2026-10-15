@@ -6,9 +6,6 @@ name: Real installers
 # On demand (Actions › Real installers › Run workflow); it downloads about 400 MB per runner.
 on:
   workflow_dispatch:
-  push:
-    branches: [fix/dmg-false-damaged]
-    paths: [.github/workflows/real-installers.yml, Sources/MacReplicaCore/Downloads/**]
 
 permissions:
   contents: read
