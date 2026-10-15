@@ -7,6 +7,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Working disk images were reported as damaged.** Installers chosen with **Use my installer …** – among them the
+  DisplayCAL installer a tester had just installed from – showed *“The file cannot be opened: it is damaged,
+  incomplete (an interrupted download?) or encrypted”*. MacReplica treated every failed `hdiutil` step as damage,
+  although `hdiutil` fails the same way (exit status 1, a translated message) when an image is already open, when
+  its mount folder disappears, when it has no file system macOS mounts, or when it is password-protected. Now only
+  proof counts: a file cut short, or an image whose own checksum `hdiutil verify` rejects. An intact installer that
+  MacReplica cannot open or recognise is **kept**, with the reason and the tools' own words under **Details**. It is
+  used after you confirm it, and on the new Mac it is opened in Finder for you if MacReplica cannot open it there.
+  See [docs/INSTALLER_VALIDATION.md](docs/INSTALLER_VALIDATION.md).
+- A disk image that was **already open** (for example in Finder after installing from it) was ejected without
+  asking. It is now read where it is open and left open; attachments of other programs are never detached.
+- Choosing an **encrypted** disk image made macOS ask for its password in a dialog behind MacReplica, and after two
+  minutes the image was called damaged. Encrypted images are recognised from the file itself and kept unopened.
+- Two inspections at the same time shared a work folder; the first one to finish removed it, and the other image
+  could no longer be mounted. Every inspection now has a folder of its own.
+- An installer package that `pkgutil` reports as **invalid** (cut short or changed) was accepted as “not signed”.
+  It is now reported as damaged.
+
+### Added
+- Clear reasons when an installer is not used: **incomplete** (its end is missing), **damaged** (its checksum does
+  not match), **not an installer** (for example a web page saved instead of the download, or an empty file), **not
+  recognised** (damage not proven, with what to try next) – each with a **Checked:** line naming the tool and its
+  result. English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
+- Kept installers whose contents MacReplica could not check say why: protected by a password, could not be opened on
+  this Mac, description could not be read, check did not finish, no app found where MacReplica looks, or could not be
+  unpacked here.
+- **Real installers** workflow: MacReplica's inspection on real, officially published installers (DisplayCAL,
+  AppPolice, Brackets, Karabiner-Elements, Rectangle, Stats, KeepingYouAwake) and damaged copies of them on macOS 14,
+  15, 26 and Intel. `MacReplicaSimulator inspect-installer` runs it locally.
+
 ## [1.0.7] - 2026-10-15
 
 ### Fixed

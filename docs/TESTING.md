@@ -82,6 +82,10 @@ files temporarily.
 check and a launch test, and a secret scan (gitleaks over the full history). A sampled, report-only mutation
 test runs weekly (its score is in the job summary). The release workflow additionally installs and launches the release disk image on
 macOS 14, 15 and 26 and on Intel before publishing ([RELEASE_PROCESS.md](RELEASE_PROCESS.md)).
+**Real installers** (`.github/workflows/real-installers.yml`, on demand) runs MacReplica's installer inspection on
+real, officially published installers and damaged copies of them on macOS 14, 15, 26 and Intel and fails on any
+unexpected verdict ([INSTALLER_VALIDATION.md](INSTALLER_VALIDATION.md)); `MacReplicaSimulator inspect-installer
+<file …>` runs the same inspection locally.
 
 The Command Line Tools ship Swift Testing for arm64 only, so on an Apple silicon Mac the suite cannot
 be built for x86_64 locally; the Intel app can still be launched under Rosetta with

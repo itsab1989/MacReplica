@@ -110,6 +110,24 @@ part of the restore, the passphrase is asked for again — it is never stored.
 Copy the whole backup folder again from the old Mac. **Check Backup** lists the affected files;
 damaged files are never restored, everything else can be.
 
+## An installer I chose is not used, or its contents were not checked
+
+Under **Your installers (offline)** every file says what MacReplica found; **Checked:** or **Details:** names the
+tool and what it reported.
+
+- **Incomplete** or **damaged**: proven from the file itself (its end is missing, or its own checksum does not
+  match). Download it again from the developer.
+- **Not an installer**: the file is something else with an installer's name, often a web page saved instead of the
+  download. Download it again.
+- **Not recognised**: macOS could not open it and MacReplica does not know its format; damage is *not* proven. Try
+  opening it in Finder; if it opens, choose the app inside it instead.
+- **Contents not checked** (kept): the file is intact, but MacReplica could not look inside – it is
+  password-protected, macOS did not open it on this Mac, the check did not finish (a slow or sleeping drive: choose
+  it again), or there is no app where MacReplica looks. Tick **Use this unverified installer** if you trust it; on
+  the new Mac it is opened in Finder for you.
+
+An installer that is open in Finder can be chosen; it stays open. See [INSTALLER_VALIDATION.md](INSTALLER_VALIDATION.md).
+
 ## The update check cannot reach GitHub
 
 Check the internet connection or try later. Nothing else depends on the update check.
