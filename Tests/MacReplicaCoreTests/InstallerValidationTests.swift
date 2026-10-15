@@ -164,6 +164,35 @@ struct InstallerValidationTests {
 
     // MARK: Damage is still found – and only with proof
 
+    /// Packages inside disk images (as in Karabiner-Elements' image), readable or not, and package files that are none.
+    @Test func packagesAreRecognisedInsideImagesAndBytesDecideForPackageFiles() async throws {
+        let (sandbox, inspector, runner, _, work) = try Self.setup("validate-packages")
+        let payload = try sandbox.write("x", to: "payload/file.txt").deletingLastPathComponent()
+        let folder = try sandbox.folder("withPackage")
+        try OwnInstallerTests.run("/usr/bin/pkgbuild", ["--root", payload.path, "--identifier", "com.example.driver", "--version", "1",
+                                                        "--install-location", "/tmp/x", folder.appendingPathComponent("Driver.pkg").path])
+        let image = sandbox.url.appendingPathComponent("Driver.dmg")
+        try await OwnInstallerTests.createImage(source: folder, name: "Driver", at: image)
+        let withPackage = try await inspector.inspect(image, workFolder: work)
+        #expect(withPackage.containsPackage && withPackage.contentsLimit == nil && withPackage.containedApps.isEmpty)
+        // A package header pkgutil cannot read: kept, and still recorded as a package.
+        let broken = try sandbox.folder("withBrokenPackage")
+        try (Data("xar!".utf8) + Data(repeating: 0x41, count: 2000)).write(to: broken.appendingPathComponent("Broken.pkg"))
+        let brokenImage = sandbox.url.appendingPathComponent("Broken.dmg")
+        try await OwnInstallerTests.createImage(source: broken, name: "Broken", at: brokenImage)
+        let unreadable = try await inspector.inspect(brokenImage, workFolder: work)
+        #expect(unreadable.containsPackage && unreadable.contentsLimit == .notReadable)
+        #expect(unreadable.inspectionNote?.hasPrefix("pkgutil --check-signature: exit") == true)
+        // A .pkg file without a package header: pkgutil is not even asked.
+        var noise = Data(count: 3001)
+        for index in noise.indices { noise[index] = UInt8(truncatingIfNeeded: index &* 31 &+ 7) }
+        let fake = sandbox.url.appendingPathComponent("Setup.pkg")
+        try noise.write(to: fake)
+        let before = runner.commands.count
+        #expect(try await Self.error(inspector, fake, work) == .notRecognised)
+        #expect(!runner.commands.dropFirst(before).contains { $0.executable.hasSuffix("pkgutil") })
+    }
+
     @Test func changedImageIsDamagedByItsOwnChecksum() async throws {
         let (sandbox, inspector, _, _, work) = try Self.setup("validate-bitflip")
         let dmg = try await OwnInstallerTests.diskImage(app: "Pen Driver", bundleID: "com.example.pen", version: "4.0.14", in: sandbox, name: "PenFlip")
