@@ -297,6 +297,35 @@ struct InstallerValidationTests {
         #expect(await !Self.isAttached(image))
     }
 
+    /// On the new Mac, a zip the user confirmed goes to Finder when MacReplica cannot unpack it or finds no app in it;
+    /// a verified own installer and every other kind of offer keep failing with the reason instead.
+    @Test func confirmedZipThatMacReplicaCannotUseGoesToFinder() async throws {
+        let (sandbox, _, _, layout, _) = try Self.setup("validate-restore-zip")
+        let installer = DownloadInstaller(layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]),
+                                          macOSVersion: "14.8", architecture: .x86_64)
+        let manual = try sandbox.write("Read me", to: "manual/Manual.txt").deletingLastPathComponent()
+        let noApp = sandbox.url.appendingPathComponent("Manual.zip")
+        try OwnInstallerTests.run("/usr/bin/ditto", ["-c", "-k", "--keepParent", manual.path, noApp.path])
+        // Bytes ditto cannot unpack (a half zip still unpacks from its local headers).
+        let cut = sandbox.url.appendingPathComponent("Cut.zip")
+        try Data(repeating: 0x42, count: 4096).write(to: cut)
+        func offer(_ kind: DownloadOffer.Kind, confirmed: Bool?, _ file: URL) -> DownloadOffer {
+            var offer = DownloadOffer(id: "x", itemID: "manual:x", kind: kind, url: file.absoluteString, trust: .checksum)
+            offer.developerUnverified = confirmed
+            return offer
+        }
+        var step = 0
+        func staging() -> URL { step += 1; return sandbox.url.appendingPathComponent("staging-\(step)") }
+        let finder = try await installer.prepare(noApp, offer: offer(.ownInstaller, confirmed: true, noApp), staging: staging())
+        #expect(finder == .openInFinder(noApp, reason: .noApplicationFound))
+        let unpacked = try await installer.prepare(cut, offer: offer(.ownInstaller, confirmed: true, cut), staging: staging())
+        guard case .openInFinder(let shown, .extractionFailed(let detail)) = unpacked else { Issue.record("expected Finder, got \(unpacked)"); return }
+        #expect(shown == cut && detail.hasPrefix("ditto -x: exit"))
+        for (kind, confirmed) in [(DownloadOffer.Kind.ownInstaller, nil), (.homebrewCask, true), (.vendorFeed, true)] as [(DownloadOffer.Kind, Bool?)] {
+            await #expect(throws: DownloadError.noApplicationFound) { try await installer.prepare(noApp, offer: offer(kind, confirmed: confirmed, noApp), staging: staging()) }
+            await #expect(throws: DownloadError.self) { try await installer.prepare(cut, offer: offer(kind, confirmed: confirmed, cut), staging: staging()) }
+        }
+    }
 }
 
 /// The parts of the validation that need no tool: the file's bytes, the record, the texts, `hdiutil info` and `pkgutil`
