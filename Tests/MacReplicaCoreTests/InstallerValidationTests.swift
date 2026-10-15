@@ -26,7 +26,9 @@ struct InstallerValidationTests {
         let sandbox = try Sandbox(name)
         let layout = toolchainLayout(sandbox)
         let runner = RecordingRunner(ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]))
-        return (sandbox, InstallerArchiveInspector(layout: layout, runner: runner), runner, layout, sandbox.url.appendingPathComponent("work"))
+        var inspector = InstallerArchiveInspector(layout: layout, runner: runner)
+        inspector.retryPause = 50_000_000
+        return (sandbox, inspector, runner, layout, sandbox.url.appendingPathComponent("work"))
     }
 
     static func hdiutil(_ arguments: [String]) async throws -> CommandResult {
@@ -47,51 +49,7 @@ struct InstallerValidationTests {
 
     static let app = AppRecord(name: "Pen Driver", bundleIdentifier: "com.example.pen", path: "/Applications/Pen Driver.app")
 
-    // MARK: The file's own bytes
 
-    @Test func evidenceComesFromTheFileItself() {
-        func trailer(dataOffset: UInt64 = 0, dataLength: UInt64, xmlOffset: UInt64, xmlLength: UInt64, checksumType: UInt32 = 2) -> Data {
-            var data = Data(count: 512)
-            data.replaceSubrange(0..<4, with: Array("koly".utf8))
-            func put64(_ value: UInt64, _ at: Int) { for i in 0..<8 { data[at + i] = UInt8((value >> (56 - 8 * UInt64(i))) & 0xFF) } }
-            func put32(_ value: UInt32, _ at: Int) { for i in 0..<4 { data[at + i] = UInt8((value >> (24 - 8 * UInt32(i))) & 0xFF) } }
-            put64(dataOffset, 24); put64(dataLength, 32); put64(xmlOffset, 216); put64(xmlLength, 224); put32(checksumType, 80)
-            return data
-        }
-        let zlib = Data([0x78, 0xDA] + [UInt8](repeating: 1, count: 100))
-        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataLength: 900, xmlOffset: 900, xmlLength: 100), size: 1512) == .udif(hasChecksum: true))
-        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataLength: 900, xmlOffset: 900, xmlLength: 100, checksumType: 0), size: 1512) == .udif(hasChecksum: false))
-        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataLength: 900, xmlOffset: 900, xmlLength: 101), size: 1512) == .udifTruncated,
-                "the directory points one byte past the end")
-        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataLength: 2000, xmlOffset: 0, xmlLength: 0), size: 1512) == .udifTruncated)
-        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataOffset: .max, dataLength: 2, xmlOffset: 0, xmlLength: 0), size: 1512) == .udifTruncated,
-                "an overflowing offset is not trusted")
-        #expect(FileFormatEvidence.classify(head: zlib, trailer: Data(repeating: 7, count: 512), size: 60_000_000) == .compressedImageWithoutDirectory)
-        #expect(FileFormatEvidence.classify(head: Data("encrcdsa".utf8) + Data(count: 100), trailer: Data(count: 512), size: 9000) == .encrypted)
-        #expect(FileFormatEvidence.classify(head: Data(count: 100), trailer: Data(count: 504) + Data("cdsaencr".utf8), size: 9000) == .encrypted)
-        #expect(FileFormatEvidence.classify(head: Data("  <!DOCTYPE html><html>".utf8), trailer: Data(), size: 95) == .otherFormat(.webPage))
-        #expect(FileFormatEvidence.classify(head: Data("PK\u{03}\u{04}rest".utf8), trailer: Data(), size: 10) == .otherFormat(.zipArchive))
-        #expect(FileFormatEvidence.classify(head: Data("xar!rest".utf8), trailer: Data(), size: 10) == .otherFormat(.installerPackage))
-        #expect(FileFormatEvidence.classify(head: Data("%PDF-1.7".utf8), trailer: Data(), size: 10) == .otherFormat(.pdf))
-        var gpt = Data(count: 2048)
-        gpt.replaceSubrange(512..<520, with: Array("EFI PART".utf8))
-        #expect(FileFormatEvidence.classify(head: gpt, trailer: Data(count: 512), size: 10_000_000) == .rawImage, "a read/write image has no directory")
-        var hfs = Data(count: 2048)
-        hfs.replaceSubrange(1024..<1026, with: Array("H+".utf8))
-        #expect(FileFormatEvidence.classify(head: hfs, trailer: Data(count: 512), size: 10_000_000) == .rawImage)
-        #expect(FileFormatEvidence.classify(head: Data(count: 100), trailer: Data(count: 512), size: 4096, sector16: Data("CD001".utf8)) == .rawImage)
-        #expect(FileFormatEvidence.classify(head: Data([0x13, 0x37, 0x00, 0x42]), trailer: Data(count: 512), size: 4096) == .unknown)
-        #expect(FileFormatEvidence.OtherFormat.allCasesProveNothingButOtherFormat)
-        #expect(!FileFormatEvidence.unknown.provesNotADiskImage && !FileFormatEvidence.rawImage.provesNotADiskImage && !FileFormatEvidence.encrypted.provesNotADiskImage)
-    }
-
-    @Test func notesKeepTheToolsWordsWithoutWarningsOrTheHomeFolder() {
-        let result = CommandResult(exitCode: 1, stdout: "", stderr: "hdiutil: WARNING: 'hdiutil attach' is deprecated.\nhdiutil: attach failed - Keine aktivierbaren Dateisysteme /Users/knut/x.dmg")
-        let note = InstallerArchiveInspector.note("hdiutil attach", result) { $0.replacingOccurrences(of: "/Users/knut", with: "~") }
-        #expect(note == "hdiutil attach: exit 1 – hdiutil: attach failed - Keine aktivierbaren Dateisysteme ~/x.dmg")
-        #expect(InstallerArchiveInspector.note("hdiutil verify", CommandResult(exitCode: 15, stdout: "", stderr: "", timedOut: true)) { $0 } == "hdiutil verify: did not finish in time")
-        #expect(InstallerArchiveInspector.note("pkgutil", CommandResult(exitCode: 1, stdout: "<?xml", stderr: "")) { $0 } == "pkgutil: exit 1")
-    }
 
     // MARK: Intact images that cannot be inspected are kept
 
@@ -285,7 +243,82 @@ struct InstallerValidationTests {
         return nil
     }
 
-    // MARK: Record, texts, restore
+    // MARK: Restore
+
+
+
+    /// On the new Mac: an image the user confirmed although it was not inspected is opened in Finder if MacReplica
+    /// cannot open it; an installer verified by its developer keeps MacReplica's own checks and is never handed over.
+    @Test func confirmedImageThatDoesNotOpenGoesToFinderOnTheNewMac() async throws {
+        let (sandbox, _, _, layout, _) = try Self.setup("validate-restore")
+        let raw = sandbox.url.appendingPathComponent("blank-raw.dmg")
+        let image = sandbox.url.appendingPathComponent("Blank.dmg")
+        #expect(try await Self.hdiutil(["create", "-quiet", "-size", "2m", "-layout", "NONE", raw.path]).succeeded)
+        #expect(try await Self.hdiutil(["convert", "-quiet", raw.path, "-format", "UDZO", "-o", image.path]).succeeded)
+        var installer = DownloadInstaller(layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]),
+                                          macOSVersion: "14.8", architecture: .x86_64)
+        installer.retryPause = 10_000_000
+        var offer = DownloadOffer(id: "own:x", itemID: "manual:m", kind: .ownInstaller, url: image.absoluteString, trust: .checksum)
+        offer.developerUnverified = true
+        let prepared = try await installer.prepare(image, offer: offer, staging: sandbox.url.appendingPathComponent("staging"))
+        guard case .openInFinder(let shown, _) = prepared else { Issue.record("expected Finder, got \(prepared)"); return }
+        #expect(shown == image)
+        offer.developerUnverified = nil
+        await #expect(throws: DownloadError.self) { try await installer.prepare(image, offer: offer, staging: sandbox.url.appendingPathComponent("staging2")) }
+        #expect(await !Self.isAttached(image))
+    }
+
+}
+
+/// The parts of the validation that need no tool: the file's bytes, the record, the texts, `hdiutil info` and `pkgutil`
+/// output. Separate from the slower suite above so mutation testing can run them for every change.
+@Suite("Installer evidence")
+struct InstallerEvidenceTests {
+    static let app = InstallerValidationTests.app
+
+    @Test func evidenceComesFromTheFileItself() {
+        func trailer(dataOffset: UInt64 = 0, dataLength: UInt64, xmlOffset: UInt64, xmlLength: UInt64, checksumType: UInt32 = 2) -> Data {
+            var data = Data(count: 512)
+            data.replaceSubrange(0..<4, with: Array("koly".utf8))
+            func put64(_ value: UInt64, _ at: Int) { for i in 0..<8 { data[at + i] = UInt8((value >> (56 - 8 * UInt64(i))) & 0xFF) } }
+            func put32(_ value: UInt32, _ at: Int) { for i in 0..<4 { data[at + i] = UInt8((value >> (24 - 8 * UInt32(i))) & 0xFF) } }
+            put64(dataOffset, 24); put64(dataLength, 32); put64(xmlOffset, 216); put64(xmlLength, 224); put32(checksumType, 80)
+            return data
+        }
+        let zlib = Data([0x78, 0xDA] + [UInt8](repeating: 1, count: 100))
+        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataLength: 900, xmlOffset: 900, xmlLength: 100), size: 1512) == .udif(hasChecksum: true))
+        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataLength: 900, xmlOffset: 900, xmlLength: 100, checksumType: 0), size: 1512) == .udif(hasChecksum: false))
+        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataLength: 900, xmlOffset: 900, xmlLength: 101), size: 1512) == .udifTruncated,
+                "the directory points one byte past the end")
+        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataLength: 2000, xmlOffset: 0, xmlLength: 0), size: 1512) == .udifTruncated)
+        #expect(FileFormatEvidence.classify(head: zlib, trailer: trailer(dataOffset: .max, dataLength: 2, xmlOffset: 0, xmlLength: 0), size: 1512) == .udifTruncated,
+                "an overflowing offset is not trusted")
+        #expect(FileFormatEvidence.classify(head: zlib, trailer: Data(repeating: 7, count: 512), size: 60_000_000) == .compressedImageWithoutDirectory)
+        #expect(FileFormatEvidence.classify(head: Data("encrcdsa".utf8) + Data(count: 100), trailer: Data(count: 512), size: 9000) == .encrypted)
+        #expect(FileFormatEvidence.classify(head: Data(count: 100), trailer: Data(count: 504) + Data("cdsaencr".utf8), size: 9000) == .encrypted)
+        #expect(FileFormatEvidence.classify(head: Data("  <!DOCTYPE html><html>".utf8), trailer: Data(), size: 95) == .otherFormat(.webPage))
+        #expect(FileFormatEvidence.classify(head: Data("PK\u{03}\u{04}rest".utf8), trailer: Data(), size: 10) == .otherFormat(.zipArchive))
+        #expect(FileFormatEvidence.classify(head: Data("xar!rest".utf8), trailer: Data(), size: 10) == .otherFormat(.installerPackage))
+        #expect(FileFormatEvidence.classify(head: Data("%PDF-1.7".utf8), trailer: Data(), size: 10) == .otherFormat(.pdf))
+        var gpt = Data(count: 2048)
+        gpt.replaceSubrange(512..<520, with: Array("EFI PART".utf8))
+        #expect(FileFormatEvidence.classify(head: gpt, trailer: Data(count: 512), size: 10_000_000) == .rawImage, "a read/write image has no directory")
+        var hfs = Data(count: 2048)
+        hfs.replaceSubrange(1024..<1026, with: Array("H+".utf8))
+        #expect(FileFormatEvidence.classify(head: hfs, trailer: Data(count: 512), size: 10_000_000) == .rawImage)
+        #expect(FileFormatEvidence.classify(head: Data(count: 100), trailer: Data(count: 512), size: 4096, sector16: Data("CD001".utf8)) == .rawImage)
+        #expect(FileFormatEvidence.classify(head: Data([0x13, 0x37, 0x00, 0x42]), trailer: Data(count: 512), size: 4096) == .unknown)
+        #expect(FileFormatEvidence.OtherFormat.allCasesProveNothingButOtherFormat)
+        #expect(!FileFormatEvidence.unknown.provesNotADiskImage && !FileFormatEvidence.rawImage.provesNotADiskImage && !FileFormatEvidence.encrypted.provesNotADiskImage)
+    }
+
+    @Test func notesKeepTheToolsWordsWithoutWarningsOrTheHomeFolder() {
+        let result = CommandResult(exitCode: 1, stdout: "", stderr: "hdiutil: WARNING: 'hdiutil attach' is deprecated.\nhdiutil: attach failed - Keine aktivierbaren Dateisysteme /Users/knut/x.dmg")
+        let note = InstallerArchiveInspector.note("hdiutil attach", result) { $0.replacingOccurrences(of: "/Users/knut", with: "~") }
+        #expect(note == "hdiutil attach: exit 1 – hdiutil: attach failed - Keine aktivierbaren Dateisysteme ~/x.dmg")
+        #expect(InstallerArchiveInspector.note("hdiutil verify", CommandResult(exitCode: 15, stdout: "", stderr: "", timedOut: true)) { $0 } == "hdiutil verify: did not finish in time")
+        #expect(InstallerArchiveInspector.note("pkgutil", CommandResult(exitCode: 1, stdout: "<?xml", stderr: "")) { $0 } == "pkgutil: exit 1")
+    }
 
     @Test func reasonIsRecordedAndOlderAndNewerBackupsStillRead() throws {
         let archive = InstallerArchive(id: "a", fileName: "X.dmg", kind: .dmg, size: 1, sha256: "a", originalPath: "/Volumes/Backup/X.dmg",
@@ -326,25 +359,62 @@ struct InstallerValidationTests {
         }
     }
 
-    /// On the new Mac: an image the user confirmed although it was not inspected is opened in Finder if MacReplica
-    /// cannot open it; an installer verified by its developer keeps MacReplica's own checks and is never handed over.
-    @Test func confirmedImageThatDoesNotOpenGoesToFinderOnTheNewMac() async throws {
-        let (sandbox, _, _, layout, _) = try Self.setup("validate-restore")
-        let raw = sandbox.url.appendingPathComponent("blank-raw.dmg")
-        let image = sandbox.url.appendingPathComponent("Blank.dmg")
-        #expect(try await Self.hdiutil(["create", "-quiet", "-size", "2m", "-layout", "NONE", raw.path]).succeeded)
-        #expect(try await Self.hdiutil(["convert", "-quiet", raw.path, "-format", "UDZO", "-o", image.path]).succeeded)
-        var installer = DownloadInstaller(layout: layout, runner: ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]),
-                                          macOSVersion: "14.8", architecture: .x86_64)
-        installer.retryPause = 10_000_000
-        var offer = DownloadOffer(id: "own:x", itemID: "manual:m", kind: .ownInstaller, url: image.absoluteString, trust: .checksum)
-        offer.developerUnverified = true
-        let prepared = try await installer.prepare(image, offer: offer, staging: sandbox.url.appendingPathComponent("staging"))
-        guard case .openInFinder(let shown, _) = prepared else { Issue.record("expected Finder, got \(prepared)"); return }
-        #expect(shown == image)
-        offer.developerUnverified = nil
-        await #expect(throws: DownloadError.self) { try await installer.prepare(image, offer: offer, staging: sandbox.url.appendingPathComponent("staging2")) }
-        #expect(await !Self.isAttached(image))
+    @Test func filesAreReadFromBothEnds() throws {
+        let sandbox = try Sandbox("evidence-files")
+        // A zip archive ends with its central directory; a comment may follow it (up to 64 KiB).
+        let payload = try sandbox.write("hello", to: "payload/readme.txt")
+        let zip = sandbox.url.appendingPathComponent("a.zip")
+        try OwnInstallerTests.run("/usr/bin/ditto", ["-c", "-k", payload.path, zip.path])
+        #expect(ZipEvidence.hasCentralDirectory(zip) == true)
+        let data = try Data(contentsOf: zip)
+        let commented = sandbox.url.appendingPathComponent("commented.zip")
+        try (data + Data(repeating: 0x20, count: 60_000)).write(to: commented)
+        #expect(ZipEvidence.hasCentralDirectory(commented) == true, "found before a long comment")
+        let cut = sandbox.url.appendingPathComponent("cut.zip")
+        try data.prefix(data.count - 22).write(to: cut)
+        #expect(ZipEvidence.hasCentralDirectory(cut) == false)
+        let tiny = try sandbox.write("PK", to: "tiny.zip")
+        #expect(ZipEvidence.hasCentralDirectory(tiny) == false)
+        #expect(ZipEvidence.hasCentralDirectory(sandbox.url.appendingPathComponent("missing.zip")) == nil)
+        // Files shorter than a disk image's directory, and missing files.
+        #expect(FileFormatEvidence.examine(try sandbox.write("hello", to: "small.dmg")) == .unknown)
+        #expect(FileFormatEvidence.examine(try sandbox.write("", to: "empty.dmg")) == .otherFormat(.empty))
+        #expect(FileFormatEvidence.examine(sandbox.url.appendingPathComponent("missing.dmg")) == nil)
+        var iso = Data(count: 40_000)
+        iso.replaceSubrange(32_769..<32_774, with: Array("CD001".utf8))
+        let isoFile = sandbox.url.appendingPathComponent("disc.dmg")
+        try iso.write(to: isoFile)
+        #expect(FileFormatEvidence.examine(isoFile) == .rawImage, "ISO 9660 is found in sector 16")
+        var udif = Data([0x78, 0x01]) + Data(count: 998)
+        var trailer = Data(count: 512)
+        trailer.replaceSubrange(0..<4, with: Array("koly".utf8))
+        trailer[39] = 0xE8; trailer[38] = 0x03  // data fork length 1000
+        trailer[83] = 2                          // CRC32
+        udif += trailer
+        let udifFile = sandbox.url.appendingPathComponent("image.dmg")
+        try udif.write(to: udifFile)
+        #expect(FileFormatEvidence.examine(udifFile) == .udif(hasChecksum: true))
+        try (udif.prefix(900) + trailer).write(to: udifFile)
+        #expect(FileFormatEvidence.examine(udifFile) == .udifTruncated)
+    }
+
+    @Test func aSignedInstallerWithUnknownContentsIsStillVerified() {
+        let app = AppRecord(name: "Tool", bundleIdentifier: "com.example.tool", path: "/Applications/Tool.app")
+        var archive = InstallerArchive(id: "a", fileName: "Tool.pkg", kind: .pkg, size: 1, sha256: "a", teamIdentifier: "TEAMID1234",
+                                       trustedSignature: true, originalPath: "/x", contentsLimit: .timedOut)
+        #expect(archive.contentsUnknown && archive.usability(for: app) == .verified, "the package's own Developer ID signature was checked")
+        archive.trustedSignature = false
+        #expect(archive.usability(for: app) == .unverified(.contentsNotInspected))
+        archive.contentsLimit = nil
+        #expect(!archive.contentsUnknown && archive.usability(for: app) == .unverified(.notSigned))
+        let l = TestEnvironment.english
+        let package = InstallerArchive(id: "b", fileName: "Tool.pkg", kind: .pkg, size: 1, sha256: "b", originalPath: "/x", containsPackage: true,
+                                       contentsLimit: .notReadable, inspectionNote: "pkgutil --check-signature: exit 1")
+        var approved = package
+        approved.userApprovedUnverified = true
+        #expect(l.installerDescription(approved, for: app).nextAction?.contains("shows it in Finder") == true, "a package is shown in Finder, not opened")
+        let image = InstallerArchive(id: "c", fileName: "Tool.dmg", kind: .dmg, size: 1, sha256: "c", originalPath: "/x", contentsLimit: .encrypted)
+        #expect(l.installerDescription(image, for: app).summary == "Disk image · protected by a password, contents not checked · not signed with a Developer ID")
     }
 
     @Test func attachmentListIsReadForThisImageOnly() {

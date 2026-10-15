@@ -258,6 +258,8 @@ public struct InstallerSelection: Sendable {
 public struct InstallerArchiveInspector: Sendable {
     public var layout: SystemLayout
     public var runner: CommandRunning
+    /// Pause between attempts when macOS reports a disk image as busy (shorter in tests).
+    public var retryPause: UInt64 = 1_000_000_000
 
     public init(layout: SystemLayout, runner: CommandRunning) {
         self.layout = layout
@@ -492,7 +494,7 @@ public struct InstallerArchiveInspector: Sendable {
         }
         let mountRoot = work.appendingPathComponent("mount-\(depth)")
         try FileManager.default.createDirectory(at: mountRoot, withIntermediateDirectories: true)
-        let attach = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: layout.hdiutil, environment: environment,
+        let attach = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: layout.hdiutil, environment: environment, pause: retryPause,
                                                                  arguments: ["attach", "-plist", "-nobrowse", "-readonly", "-noautoopen", "-mountrandom", mountRoot.path, file.path])
         guard attach.succeeded, let mountPoint = DownloadInstaller.mountPoint(fromAttachOutput: attach.stdout) else {
             if attach.succeeded {
