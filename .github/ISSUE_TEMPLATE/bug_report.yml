@@ -41,7 +41,10 @@ body:
         - Opening a backup / restore selection (new Mac)
         - Preview (Dry Run)
         - Restore
+        - Guided installation (downloads, your own installers)
+        - Passwords, keys and credentials
         - Resume after an interruption
+        - Tools (Gatekeeper, macOS updates, window corners)
         - Somewhere else
     validations:
       required: true

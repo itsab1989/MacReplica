@@ -84,7 +84,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Window corners:** an example preview (the eye next to each surface) shows the element at the default vs. the
   reduced corner, so you see what a change does before applying it.
 - **Window corners – one-click plugin setup.** The advanced plugin (menus, popovers, Quick Look, toolbar groups and
-  capsule buttons) now uses **Plugin Playground**, a maintained open-source tweak loader, instead of the archived
+  capsule buttons) now uses **Plugin Playground**, a maintained tweak loader with public source (no licence; MacReplica
+  downloads its pinned release and never bundles it), instead of the archived
   Ammonia. It needs System Integrity Protection only partly off (debugging allowed) — still your step, MacReplica
   never changes SIP — and no boot argument. **Set up automatically** downloads the pinned, checksum-verified loader,
   installs it and the plugin with one administrator prompt and opens Plugin Playground to enable; **Undo setup**
@@ -119,11 +120,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
     - Less rounded app windows and utility panels (2–24 pt) and classic menus, through undocumented AppKit
       settings, with an exact way back.
     - One radius for everything by default, or one per surface, and every surface can be left out.
-    - An example preview (the eye next to each surface) shows the element at the default vs. the reduced corner.
-    - Advanced, behind warnings: a corner plugin loaded by Plugin Playground (a maintained open-source tweak loader)
-      that also changes menus, popovers, the Quick Look window, toolbar groups and capsule buttons in all apps. It
-      needs System Integrity Protection only partly off (debugging allowed), which only you can set; MacReplica offers
-      a one-click download-and-install and a one-click undo, and does nothing on untested macOS builds.
+    - Advanced, behind warnings: a corner plugin for the Ammonia tweak loader that also changes menus, popovers,
+      the Quick Look window, toolbar groups and capsule buttons in all apps. It needs System Integrity Protection
+      off, which only you can do, and does nothing on untested macOS builds. (Replaced by Plugin Playground and a
+      one-click setup in 1.0.6.)
 
 ### Fixed
 - **A backup could be removed completely** when Word (or another Office app) was open: its temporary lock file

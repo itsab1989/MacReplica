@@ -46,6 +46,10 @@ last column says, so MacReplica never reports more than it checked.
 | Recovery material | `github-recovery-codes.txt`, "recovery key", "backup codes", "Emergency Kit" | yes, after an extra confirmation | same bytes | keep an offline copy as well |
 | Command-line logins | SSH folder, AWS, Git credential store, npm, Kubernetes, Terraform (providers) | yes | same bytes | the service may have revoked the login |
 | Secrets file / other | `.env`, `.netrc`, any file the user picks | yes | same bytes | — |
+
+“After an extra confirmation” applies when such a file found in your folders is added with **Add Encrypted**; adding
+all undecided files at once leaves these two kinds out. A file you pick yourself with **Add Keys or Password Files …**
+is added without a further question – picking it is the decision.
 | macOS keychain files | `*.keychain-db` | **no** – listed as "cannot be backed up as a file" | — | iCloud Keychain, Migration Assistant, Passwords › Export, Keychain Access export |
 | Browser password/cookie stores | `Login Data`, `Cookies`, `Web Data` | **no** | — | the browser's sync or export (see below) |
 | Passkeys | iCloud Keychain, password managers, security keys | **no** (never files) | — | sync with the account; security keys stay on the key |
@@ -116,7 +120,8 @@ app distributed outside the App Store with ad-hoc or Developer ID signing does n
   `~/Library/Application Support/MacReplica/Replaced Files/<session>/credentials/…`) or **skip**.
 - Each item is decrypted into a new private file in the destination folder, checked against the SHA-256 inside the
   encryption, moved into place, then hashed again and checked for its recorded format. New folders are created
-  `0700`. Secret files are `0600`; public keys, certificates and `known_hosts` keep up to `0644`.
+  `0700`. A restored file keeps its original permissions, limited to the owner (at most `0700`) for secrets and to at
+most `0755` for public keys, certificates and `known_hosts`, and never less than `0600`.
 - An item whose original folder does not exist (a drive that is not connected) goes to
   `~/MacReplica Restored Credentials/<id>/`, and the result says so.
 - Running the restore again finds identical files (keyed HMAC) and changes nothing. A damaged item fails on its own,

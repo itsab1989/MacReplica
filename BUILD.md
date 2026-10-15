@@ -28,7 +28,7 @@ open build/MacReplica.app
 | Command | Output |
 |---|---|
 | `swift build` | debug build of all targets in `.build/` |
-| `scripts/test.sh` | runs ~300 tests; adds the Swift Testing plug-in path when only the Command Line Tools are installed |
+| `scripts/test.sh` | runs all tests (more than 600); adds the Swift Testing plug-in path when only the Command Line Tools are installed |
 | `scripts/build-app.sh [folder]` | `MacReplica.app` in `folder` (default `build/`); only an earlier MacReplica build there is ever replaced |
 | `scripts/make-dmg.sh [folder]` | compressed disk image with an *Applications* link, plus its SHA-256 file |
 | `scripts/smoke-test.sh <app> [version] [simulation-root]` | launches the app and checks that it starts completely |

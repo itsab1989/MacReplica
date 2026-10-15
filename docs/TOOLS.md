@@ -24,11 +24,14 @@ page).
 Capability states: Supported, Supported with limits, Experimental, Your step in System Settings, Needs administrator
 password, Managed by your organisation, Not available on this macOS, Could not be determined.
 
-Commands are fixed argument lists of allow-listed executables (`spctl`, `csrutil`, `profiles`, `codesign`,
+The checks are fixed argument lists of allow-listed executables (`spctl`, `csrutil`, `profiles`, `codesign`,
 `syspolicy_check`, `softwareupdate`), all read-only and without administrator rights. MacReplica never runs `sudo` for
-these tools, never installs or removes a profile itself and never writes the Software Update settings: those steps are
-the user's, in System Settings, where macOS asks for the password. The only thing MacReplica writes is the window-corner
-setting in the user's own preferences, and the `.mobileconfig` files it prepares in its Application Support folder.
+these checks, never installs or removes a profile itself and never writes the Software Update settings: those steps are
+the user's, in System Settings, where macOS asks for the password. What MacReplica writes, each only after the user
+confirms it: the window-corner settings in the user's own preferences (and the plugin's settings), the `.mobileconfig`
+files it prepares in its Application Support folder, an app's quarantine mark (removed or put back on request, see
+below), and – for the corner plugin's one-click setup and undo only – the loader package (`installer`), the plugin file
+and the loader's own files, with administrator rights through macOS's authentication dialog.
 
 History entries hold: tool, change, previous and resulting state (machine-readable, no personal data), date, macOS
 version, result, verification, and whether a revert is available.
@@ -53,8 +56,9 @@ Findings:
   finding. When Gatekeeper is off, every verdict is `accepted` with `override=security disabled`; MacReplica shows
   this as “not checked”.
 - The supported per-app route is “Open Anyway” in Privacy & Security, available for about an hour after a blocked launch
-  (https://support.apple.com/en-us/102445). Removing the quarantine attribute skips Apple's malware check;
-  MacReplica does not do it.
+  (https://support.apple.com/en-us/102445). Removing the quarantine attribute skips Apple's first-launch malware check;
+  MacReplica does it only on request for one app, after a warning, never for an app whose signature is damaged, and
+  keeps the removed value so it can be put back.
 
 What MacReplica does:
 - Shows the state: Gatekeeper, the profile that sets it (a third-party one, MacReplica's own, or an organisation's), device

@@ -23,7 +23,7 @@ saved after every step.
 | Failure | Behavior |
 |---|---|
 | `manifest.json` missing or unreadable | “Backup cannot be read” with technical details; nothing is changed. |
-| Manifest from a newer MacReplica major version | Refused with a request to update MacReplica. Newer minor versions load; unknown keys are ignored. |
+| Manifest with a newer `manifest_version` than this MacReplica knows | Refused with a request to update MacReplica. Within the same `manifest_version`, unknown keys (fields added later) are ignored. |
 | Checksum file mismatch | Backup marked damaged. |
 | Individual files damaged or missing | Listed; those items are skipped as *Backup file damaged*, everything else restores. |
 | Backup from another architecture | Notice; apps without a matching architecture are skipped with an explanation; Rosetta noted where needed. |

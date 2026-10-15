@@ -42,7 +42,7 @@ verifies it. "Listed" means recorded in the backup and the restore instructions 
 | MacPorts | requested ports with variants (registry database) | guided: install MacPorts for this macOS version, then `sudo port -N install <port> +variants`; MacReplica checks each port |
 | Nix (`nix profile`) | packages from the profile's `manifest.json` | installing Nix is guided; packages from Nixpkgs are then automatic (`nix profile add nixpkgs#<attr>`). Packages from other flakes are third-party sources and are listed only. |
 | Pixi | global environments (`pixi-global.toml`) | automatic (`pixi global install --environment …`) |
-| mise | tools in `~/.config/mise/config.toml` | automatic for tools from mise's registry (`mise use --global`); tools from other backends (`ubi:`, `aqua:` …) are guided |
+| mise | tools in `~/.config/mise/config.toml` | automatic for the default version of tools from mise's registry (`mise use --global`); further versions of a tool and tools from other backends (`ubi:`, `aqua:` …) are guided |
 | asdf | `~/.tool-versions` | guided (`asdf plugin add` / `asdf install`): plugins are Git repositories with their own scripts |
 | pkgx / pkgm | packages in `~/.local/pkgs` | listed |
 | Fink | installed packages (dpkg database) | listed |

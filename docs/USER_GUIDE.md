@@ -64,7 +64,8 @@
      databases and folders containing them, from any folder or drive (several at once). Files found in your chosen
      folders are listed with **Add Encrypted** / **Leave Out**. The first time, you set a passphrase and MacReplica
      shows a **recovery key** – store it away from this Mac; either one opens the credentials, losing both loses them.
-     Everything here is stored only encrypted and checked after encrypting. Keychains, passkeys and browser password
+     The contents are stored only encrypted and checked after encrypting (names and paths stay readable in the
+     backup's list of contents). Keychains, passkeys and browser password
      stores cannot be moved as files: the section names the supported way for each (sync, export, sign-in). If
      credential files were found but not decided on, **Save Backup** asks once more. See
      [CREDENTIALS.md](CREDENTIALS.md);
@@ -88,8 +89,9 @@
 
 1. Open MacReplica, click **Restore** and choose the backup folder. MacReplica checks the backup and
    then this Mac.
-2. **What do you want to put onto this Mac?** — everything from the backup is selected. For each
-   area you see what is ready, already installed, needs a decision or is not recommended.
+2. **What do you want to put onto this Mac?** — everything from the backup is selected except items that are not
+   recommended on this Mac and the encrypted credentials (tick them and enter the passphrase or recovery key to
+   include them). For each area you see what is ready, already installed, needs a decision or is not recommended.
    - Untick whole areas or click **Choose Individual Items …** to untick single items, see details
      (version on this Mac, format, origin) and decide conflicts.
    - Allow third-party Homebrew sources (taps) only if you trust them.
@@ -187,7 +189,8 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
   without glass, ≈6 pt).
 - **Menus, popovers and Quick Look … (advanced)** shows, after a warning, the surfaces that need the corner plugin:
   menus with any radius, popovers, the Quick Look window, toolbar groups and capsule buttons in all apps. The plugin
-  runs through Plugin Playground, a maintained open-source tweak loader. It needs System Integrity Protection only
+  runs through Plugin Playground, a maintained tweak loader whose source is public (it has no licence, so MacReplica
+  only downloads its pinned release and never bundles it). The plugin is built for Apple silicon only. It needs System Integrity Protection only
   partly off – debugging allowed (`csrutil enable --without debug`), which only you can set in recoveryOS – and the
   loader enabled once in its own app. **Set up automatically** downloads and installs the pinned loader and the plugin
   (admin password) and opens Plugin Playground to enable; or do the steps by hand. **Undo setup** removes the plugin
@@ -240,4 +243,4 @@ Keep the folder complete. **Check Backup** verifies every checksum at any time.
 | A font or profile shows *Provided by macOS* | macOS already has it; keep macOS's version unless you need the old copy. |
 | Fonts do not show up in an app | Quit and reopen the app. |
 | MacReplica started in safe mode | It did not start completely last time. Use **Export Diagnostic Report …** and report the problem, then **Continue Normally**. |
-| Something else | *Help → Export Diagnostic Report …* creates a report without personal data that you can attach to an issue. |
+| Something else | *Help → Export Diagnostic Report …* creates a report you can attach to an issue: logs and system information with your home folder written as `~`, no passwords and no file contents (it does name apps, files and folders outside your home folder – read it before sharing). |
