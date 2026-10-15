@@ -32,6 +32,7 @@ accepted as “not signed” before, are now rejected.
 | Evidence | Result |
 |---|---|
 | Unit and integration tests (`InstallerEvidenceTests`, `InstallerValidationTests`, real `hdiutil`/`pkgutil`/`ditto`) | all pass; full suite 636+ tests pass locally, CI macOS + Intel green (PR #13) |
+| Mutation testing ([MUTATION_TESTING.md](MUTATION_TESTING.md#results)) | `FileFormatEvidence` 100 %, `InstallerDescriptions` 100 %, `InstallerArchive` 90.7 % (was 87.2 %), `DownloadInstaller` changed lines 89.5 % |
 | Real installers, this Mac (macOS 27.0.1, `MacReplicaSimulator inspect-installer`) | 14 official files (DisplayCAL, ACPU, AppPolice, Brackets [UDBZ], Karabiner-Elements [ULMO, dmg with pkg], macFUSE, IINA, Rectangle dmg+pkg, Stats, XQuartz pkg, SwiftBar zip, KeepingYouAwake zip, a copy named with spaces and non-ASCII letters) all kept and inspected; digests verified where published; independent `hdiutil verify` VALID, `pkgutil` signed, `unzip -t` OK |
 | Negative files | bit-flipped DisplayCAL → damaged (checksum); cut at 60 MB → incomplete; web page as .dmg → not an installer; empty → not an installer; cut-short pkg → damaged; encrypted → kept, no `hdiutil`; raw UDRW and LZFSE images → kept |
 | Real installers workflow (CI run 38737472965) | macOS 14.8, 15.7, 26.6, 15.7 Intel: every expected verdict, DisplayCAL already open stays open, nothing left attached |
