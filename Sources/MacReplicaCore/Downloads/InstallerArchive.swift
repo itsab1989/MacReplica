@@ -59,11 +59,34 @@ public struct InstallerArchive: Codable, Equatable, Hashable, Sendable, Identifi
     public var userApprovedUnverified: Bool
     /// An installer package (`.pkg`) was found: the file itself or inside a disk image or zip archive.
     public var containsPackage: Bool
+    /// The file is intact as far as MacReplica can tell, but it could not look inside (see `ContentsLimit`). Like a
+    /// disk image with a licence agreement, it is kept and used only after the user confirms it; on the new Mac it is
+    /// opened in Finder. Nil when the contents were read.
+    public var contentsLimit: ContentsLimit?
+    /// What the checks found, for support (the tool, its exit status, its message; no personal data beyond the file name).
+    public var inspectionNote: String?
+
+    /// Why the contents of an intact installer are unknown. None of these means the file is damaged.
+    public enum ContentsLimit: String, Codable, Equatable, Sendable, CaseIterable {
+        /// A password-protected disk image: only the user can open it.
+        case encrypted
+        /// macOS could not open the disk image here, but its own checksum is intact (or it has none to check).
+        case notMountable
+        /// `hdiutil` could not read the image's description, but the image is structurally intact.
+        case notReadable
+        /// A check did not finish in time (e.g. a slow or sleeping drive).
+        case timedOut
+        /// Opened, but there is no app or installer package where MacReplica looks (an unusual layout).
+        case notRecognised
+        /// The zip archive is complete but could not be unpacked here (e.g. too little space, or protected).
+        case notUnpacked
+    }
 
     public init(id: String, fileName: String, kind: Kind, size: Int64, sha256: String, teamIdentifier: String? = nil, signer: String? = nil,
                 trustedSignature: Bool = false, bundleIdentifier: String? = nil, version: String? = nil, architectures: [CPUArchitecture] = [],
                 includedPath: String? = nil, originalPath: String, containsLicence: Bool = false, containedApps: [ContainedApp] = [],
-                hasLicenseAgreement: Bool = false, userApprovedUnverified: Bool = false, containsPackage: Bool = false) {
+                hasLicenseAgreement: Bool = false, userApprovedUnverified: Bool = false, containsPackage: Bool = false,
+                contentsLimit: ContentsLimit? = nil, inspectionNote: String? = nil) {
         self.id = id
         self.fileName = fileName
         self.kind = kind
@@ -82,11 +105,14 @@ public struct InstallerArchive: Codable, Equatable, Hashable, Sendable, Identifi
         self.hasLicenseAgreement = hasLicenseAgreement
         self.userApprovedUnverified = userApprovedUnverified
         self.containsPackage = containsPackage || kind == .pkg
+        self.contentsLimit = contentsLimit
+        self.inspectionNote = inspectionNote
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, fileName, kind, size, sha256, teamIdentifier, signer, trustedSignature, bundleIdentifier, version, architectures
         case includedPath, originalPath, containsLicence, containedApps, hasLicenseAgreement, userApprovedUnverified, containsPackage
+        case contentsLimit, inspectionNote
     }
 
     public init(from decoder: Decoder) throws {
@@ -109,7 +135,17 @@ public struct InstallerArchive: Codable, Equatable, Hashable, Sendable, Identifi
         hasLicenseAgreement = try c.decodeIfPresent(Bool.self, forKey: .hasLicenseAgreement) ?? false
         userApprovedUnverified = try c.decodeIfPresent(Bool.self, forKey: .userApprovedUnverified) ?? false
         containsPackage = try c.decodeIfPresent(Bool.self, forKey: .containsPackage) ?? (kind == .pkg)
+        // A reason written by a newer MacReplica that this one does not know still means "contents not inspected".
+        if c.contains(.contentsLimit) {
+            contentsLimit = (try? c.decode(ContentsLimit.self, forKey: .contentsLimit)) ?? .notReadable
+        } else {
+            contentsLimit = nil
+        }
+        inspectionNote = try c.decodeIfPresent(String.self, forKey: .inspectionNote)
     }
+
+    /// MacReplica did not see what is inside: a licence agreement, or one of the `ContentsLimit` reasons.
+    public var contentsUnknown: Bool { hasLicenseAgreement || contentsLimit != nil }
 
     /// Whether and how MacReplica may use the installer for an app.
     public enum Usability: Equatable, Sendable {
@@ -127,7 +163,8 @@ public struct InstallerArchive: Codable, Equatable, Hashable, Sendable, Identifi
     public enum UnverifiedReason: String, Equatable, Sendable {
         /// No signature, or an ad-hoc signature (no developer identity).
         case notSigned
-        /// A disk image with a licence agreement: MacReplica did not look inside.
+        /// A disk image with a licence agreement, or an intact installer MacReplica could not look inside
+        /// (`contentsLimit`).
         case contentsNotInspected
     }
 
@@ -136,7 +173,7 @@ public struct InstallerArchive: Codable, Equatable, Hashable, Sendable, Identifi
             let found = Set(([bundleIdentifier] + containedApps.map(\.bundleIdentifier)).compactMap { $0?.lowercased() })
             if !found.isEmpty, !found.contains(wanted) { return .differentApp(bundleIdentifier ?? containedApps.first?.bundleIdentifier ?? "") }
         }
-        if hasLicenseAgreement && !trustedSignature { return .unverified(.contentsNotInspected) }
+        if contentsUnknown && !trustedSignature { return .unverified(.contentsNotInspected) }
         guard trustedSignature else { return .unverified(.notSigned) }
         if let team = teamIdentifier, let appTeam = app.teamIdentifier, team != appTeam { return .otherDeveloper(signer ?? team) }
         return .verified
@@ -161,23 +198,48 @@ public struct InstallerArchive: Codable, Equatable, Hashable, Sendable, Identifi
     public var mustBeIncluded: Bool { kind == .app }
 }
 
+/// Why a chosen file is not used. Only `damaged` says the file is broken, and only when the file proves it; a file
+/// that is intact but could not be inspected is kept instead (`InstallerArchive.contentsLimit`).
 public enum InstallerInspectionError: Error, Equatable, Sendable {
     /// Not an installer MacReplica can use (only .pkg, .mpkg, .dmg, .zip and .app).
     case unsupportedType
     /// The file cannot be read (permissions, a drive that went away).
     case unreadable
-    /// The disk image or archive cannot be opened: damaged, incomplete or encrypted.
-    case damaged
-    /// Opened, but there is no app, package or disk image inside.
+    /// Proven damaged or incomplete; `DamageEvidence` says how it was established.
+    case damaged(DamageEvidence)
+    /// The name says installer, the bytes say something else (e.g. a web page saved instead of the download).
+    case notAnInstaller(FileFormatEvidence.OtherFormat)
+    /// macOS cannot open it as a disk image and it has no disk image structure MacReplica knows. Damage is not proven.
+    case notRecognised
+    /// An app chosen directly that has no `Contents/Info.plist`.
     case nothingInside
     /// Kept for compatibility; disk images with a licence agreement are recorded now (`hasLicenseAgreement`).
     case licenseAgreement
+
+    public enum DamageEvidence: String, Equatable, Sendable {
+        /// `hdiutil verify` rejected the disk image's own checksum.
+        case checksumMismatch
+        /// The file ends too early: the disk image's directory or the zip archive's central directory is missing.
+        case truncated
+    }
+}
+
+/// A rejection with what was checked, for the user's details line and the log.
+public struct InstallerInspectionFailure: Error, Equatable, Sendable {
+    public var error: InstallerInspectionError
+    public var note: String?
+    public init(_ error: InstallerInspectionError, note: String? = nil) {
+        self.error = error
+        self.note = note
+    }
 }
 
 /// What choosing a file for an app produced: the installer, or why it cannot be used. Always shown to the user.
 public struct InstallerSelection: Sendable {
     public var source: URL
     public var result: Result<Inspected, InstallerInspectionError>
+    /// What the checks found when the file was not used (tool, exit status, message).
+    public var note: String?
 
     public struct Inspected: Sendable {
         public var archive: InstallerArchive
@@ -185,9 +247,10 @@ public struct InstallerSelection: Sendable {
         public var file: URL
     }
 
-    public init(source: URL, result: Result<Inspected, InstallerInspectionError>) {
+    public init(source: URL, result: Result<Inspected, InstallerInspectionError>, note: String? = nil) {
         self.source = source
         self.result = result
+        self.note = note
     }
 }
 
@@ -214,10 +277,12 @@ public struct InstallerArchiveInspector: Sendable {
             }
             let archive = try await inspect(file, workFolder: workFolder)
             return InstallerSelection(source: file, result: .success(.init(archive: archive, file: file)))
+        } catch let failure as InstallerInspectionFailure {
+            return InstallerSelection(source: file, result: .failure(failure.error), note: failure.note)
         } catch let error as InstallerInspectionError {
             return InstallerSelection(source: file, result: .failure(error))
         } catch {
-            return InstallerSelection(source: file, result: .failure(.unreadable))
+            return InstallerSelection(source: file, result: .failure(.unreadable), note: layout.redact(String(describing: error)))
         }
     }
 
@@ -231,11 +296,16 @@ public struct InstallerArchiveInspector: Sendable {
         var archive = InstallerArchive(id: String(sha.prefix(16)), fileName: file.lastPathComponent, kind: ext == "dmg" ? .dmg : (ext == "zip" ? .zip : .pkg),
                                        size: Int64(size), sha256: sha, originalPath: layout.displayPath(file))
         try FileManager.default.createDirectory(at: workFolder, withIntermediateDirectories: true)
-        let work = workFolder.appendingPathComponent("inspect-" + archive.id)
+        // A folder of its own for every inspection: two inspections of the same file (or a clean-up of another one)
+        // must never remove the folder an image is being mounted in.
+        let work = workFolder.appendingPathComponent("inspect-\(archive.id)-\(UUID().uuidString.prefix(8))")
         defer { try? FileManager.default.removeItem(at: work) }
         try await describe(file, into: &archive, work: work, depth: 0)
-        if !archive.containsPackage, !archive.hasLicenseAgreement, archive.containedApps.isEmpty {
-            throw InstallerInspectionError.nothingInside
+        if !archive.containsPackage, !archive.contentsUnknown, archive.containedApps.isEmpty {
+            // Opened, but no app or package where MacReplica looks: the file is fine, only its layout is unusual. It
+            // is kept for the user to confirm and opened in Finder on the new Mac.
+            archive.contentsLimit = .notRecognised
+            archive.inspectionNote = archive.inspectionNote ?? "opened; no app or installer package found in the top two folder levels"
         }
         return archive
     }
@@ -276,11 +346,21 @@ public struct InstallerArchiveInspector: Sendable {
             try await describeDiskImage(file, into: &archive, work: work, depth: depth)
         case "zip":
             guard depth < 2 else { return }
+            if case .otherFormat(let other)? = FileFormatEvidence.examine(file), other != .zipArchive {
+                throw InstallerInspectionFailure(.notAnInstaller(other), note: "the file is not a zip archive (\(other.rawValue))")
+            }
+            if ZipEvidence.hasCentralDirectory(file) == false {
+                throw InstallerInspectionFailure(.damaged(.truncated), note: "zip archive without its central directory (the end of the file is missing)")
+            }
             let folder = work.appendingPathComponent("zip-\(depth)")
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let result = try await runner.run(Command(executable: layout.ditto, arguments: ["-x", "-k", file.path, folder.path],
                                                       environment: environment, timeout: 900))
-            guard result.succeeded else { throw InstallerInspectionError.damaged }
+            guard result.succeeded else {
+                // A complete archive that could not be unpacked here (space, protection): kept, not called damaged.
+                limit(&archive, result.timedOut ? .timedOut : .notUnpacked, note: note("ditto -x", result))
+                return
+            }
             try await describeContents(of: folder, into: &archive, work: work, depth: depth + 1)
         default:
             break
@@ -320,9 +400,26 @@ public struct InstallerArchiveInspector: Sendable {
     }
 
     private func describePackage(_ file: URL, into archive: inout InstallerArchive) async throws {
+        let evidence = FileFormatEvidence.examine(file)
+        if case .otherFormat(let other)? = evidence, other != .installerPackage {
+            throw InstallerInspectionFailure(.notAnInstaller(other), note: "the file is not an installer package (\(other.rawValue))")
+        }
+        if evidence != nil, evidence != .otherFormat(.installerPackage), !Self.isPackageFolder(file) {
+            throw InstallerInspectionFailure(.notRecognised, note: "no installer package header (xar) at the start of the file")
+        }
         let result = try await runner.run(Command(executable: layout.pkgutil, arguments: ["--check-signature", file.path], environment: environment, timeout: 120))
-        // An unsigned package still reports a status ("no signature"); a damaged one cannot be opened at all.
-        guard result.stdout.contains("Status:") else { throw InstallerInspectionError.damaged }
+        // An unsigned package still reports a status ("no signature"). Without one, the package header was found but
+        // pkgutil could not check it: the package is kept with its contents unchecked rather than called damaged.
+        guard result.stdout.contains("Status:") else {
+            archive.containsPackage = true
+            limit(&archive, result.timedOut ? .timedOut : .notReadable, note: note("pkgutil --check-signature", result))
+            return
+        }
+        // pkgutil checks the package's own checksum: "Status: package is invalid (checksum did not verify)" for a package
+        // that was cut short or changed. Before 1.1 this counted as "not signed".
+        if Self.packageIsInvalid(result.stdout) {
+            throw InstallerInspectionFailure(.damaged(.checksumMismatch), note: note("pkgutil --check-signature", result))
+        }
         let (signed, team) = DownloadInstaller.parsePackageSignature(result.stdout)
         archive.containsPackage = true
         archive.trustedSignature = result.succeeded && signed
@@ -330,17 +427,67 @@ public struct InstallerArchiveInspector: Sendable {
         archive.signer = Self.signer(result.stdout)
     }
 
+    static func packageIsInvalid(_ output: String) -> Bool {
+        output.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            .contains { $0.hasPrefix("status:") && $0.contains("package is invalid") }
+    }
+
     static func signer(_ output: String) -> String? {
         output.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
             .first { $0.hasPrefix("1.") }.map { String($0.dropFirst(2)).trimmingCharacters(in: .whitespaces) }
     }
 
+    /// Bundle-style packages (`.pkg`/`.mpkg` folders) are not files; they are reported as unreadable before this.
+    static func isPackageFolder(_ file: URL) -> Bool {
+        (try? file.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+    }
+
+    /// The steps of a disk image, each with its own verdict: the file's bytes (encrypted, cut short, something else),
+    /// the image description (`imageinfo`), mounting, then the contents. Only the bytes or the image's own checksum
+    /// (`hdiutil verify`) can prove damage; every other failure keeps the image with its contents unchecked.
     private func describeDiskImage(_ file: URL, into archive: inout InstallerArchive, work: URL, depth: Int) async throws {
+        let evidence = FileFormatEvidence.examine(file)
+        switch evidence {
+        case nil:
+            throw InstallerInspectionFailure(.unreadable, note: "the file could not be read")
+        case .encrypted?:
+            // hdiutil would wait for the password in a dialog; MacReplica never asks for it.
+            limit(&archive, .encrypted, note: "password-protected disk image; not opened")
+            return
+        case .otherFormat(let other)?:
+            throw InstallerInspectionFailure(.notAnInstaller(other), note: "the file is not a disk image (\(other.rawValue))")
+        case .udifTruncated?, .compressedImageWithoutDirectory?:
+            throw InstallerInspectionFailure(.damaged(.truncated), note: "the disk image's directory at the end of the file is missing or points past its end")
+        case .udif?, .rawImage?, .unknown?:
+            break
+        }
         let info = try await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["imageinfo", "-plist", file.path], environment: environment, timeout: 120))
-        guard info.succeeded else { throw InstallerInspectionError.damaged }
+        guard info.succeeded else {
+            if info.timedOut {
+                limit(&archive, .timedOut, note: note("hdiutil imageinfo", info))
+                return
+            }
+            if evidence == .unknown { throw InstallerInspectionFailure(.notRecognised, note: note("hdiutil imageinfo", info)) }
+            try await verifyChecksum(file, evidence: evidence, after: note("hdiutil imageinfo", info))
+            limit(&archive, .notReadable, note: note("hdiutil imageinfo", info))
+            return
+        }
         if DownloadInstaller.hasLicenseAgreement(imageInfo: info.stdout) {
             // MacReplica never answers a licence agreement: the image is recorded, its contents stay unknown.
             archive.hasLicenseAgreement = true
+            return
+        }
+        // Already open, e.g. still mounted in Finder after installing from it: read where it is. It stays open – macOS
+        // refuses a second attachment ("resource busy"), and ejecting the user's volume is not MacReplica's business.
+        let existing = await DownloadInstaller.attachments(of: file.path, runner: runner, hdiutil: layout.hdiutil, environment: environment)
+        if let open = existing.compactMap(\.mountPoint).first(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+            try await describeContents(of: open, into: &archive, work: work, depth: depth + 1)
+            archive.inspectionNote = archive.inspectionNote ?? "read where the image was already open"
+            return
+        }
+        if !existing.isEmpty {
+            // Attached by another program without a volume: an attach would reuse (and a clean-up detach) that device.
+            limit(&archive, .notMountable, note: "already attached by another program without a volume; left as it is")
             return
         }
         let mountRoot = work.appendingPathComponent("mount-\(depth)")
@@ -348,7 +495,19 @@ public struct InstallerArchiveInspector: Sendable {
         let attach = try await DownloadInstaller.attachWithRetry(runner: runner, hdiutil: layout.hdiutil, environment: environment,
                                                                  arguments: ["attach", "-plist", "-nobrowse", "-readonly", "-noautoopen", "-mountrandom", mountRoot.path, file.path])
         guard attach.succeeded, let mountPoint = DownloadInstaller.mountPoint(fromAttachOutput: attach.stdout) else {
-            throw InstallerInspectionError.damaged
+            if attach.succeeded {
+                // Attached without a volume (no file system macOS can mount): detached again, nothing stays behind.
+                for device in DownloadInstaller.devices(fromAttachOutput: attach.stdout).prefix(1) {
+                    _ = try? await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["detach", device, "-force"], environment: environment, timeout: 120))
+                }
+            }
+            if attach.timedOut {
+                limit(&archive, .timedOut, note: note("hdiutil attach", attach))
+                return
+            }
+            try await verifyChecksum(file, evidence: evidence, after: note("hdiutil attach", attach))
+            limit(&archive, .notMountable, note: note("hdiutil attach", attach) + "; " + (evidence == .udif(hasChecksum: true) ? "checksum verified" : "no checksum to verify"))
+            return
         }
         // Detached before returning, also after an error, so no image stays mounted.
         do {
@@ -358,6 +517,36 @@ public struct InstallerArchiveInspector: Sendable {
             throw error
         }
         await detach(mountPoint)
+    }
+
+    /// After a failed step, the image's own checksum decides: rejected means damaged (thrown); intact, absent or not
+    /// checked in time means the image is kept with its contents unchecked.
+    private func verifyChecksum(_ file: URL, evidence: FileFormatEvidence?, after step: String) async throws {
+        guard evidence == .udif(hasChecksum: true) else { return }
+        let verify = try await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["verify", file.path], environment: environment, timeout: 900))
+        if !verify.succeeded, !verify.timedOut {
+            throw InstallerInspectionFailure(.damaged(.checksumMismatch), note: step + "; " + note("hdiutil verify", verify))
+        }
+    }
+
+    private func limit(_ archive: inout InstallerArchive, _ limit: InstallerArchive.ContentsLimit, note: String) {
+        archive.contentsLimit = archive.contentsLimit ?? limit
+        archive.inspectionNote = archive.inspectionNote ?? note
+    }
+
+    /// "hdiutil attach: exit 1 – <message>": the tool's own words (in the user's language), without deprecation
+    /// warnings and with the home folder hidden.
+    func note(_ step: String, _ result: CommandResult) -> String {
+        Self.note(step, result, redact: layout.redact)
+    }
+
+    static func note(_ step: String, _ result: CommandResult, redact: (String) -> String) -> String {
+        if result.timedOut { return "\(step): did not finish in time" }
+        let message = (result.stderr + "\n" + result.stdout).split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.contains("WARNING") && !$0.hasPrefix("<") }
+            .last.map { redact(String($0.prefix(200))) }
+        return "\(step): exit \(result.exitCode)" + (message.map { " – " + $0 } ?? "")
     }
 
     private func detach(_ mountPoint: URL) async {

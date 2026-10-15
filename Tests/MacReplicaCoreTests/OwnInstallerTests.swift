@@ -83,7 +83,7 @@ struct OwnInstallerTests {
         try Self.run("/usr/bin/pkgbuild", ["--root", payload.path, "--identifier", "com.example.activation", "--version", "1", "--install-location", "/tmp/x", pkg.path])
         let package = try await inspector.inspect(pkg, workFolder: work)
         #expect(package.kind == .pkg && !package.trustedSignature && package.signer == nil)
-        #expect(!FileManager.default.fileExists(atPath: work.appendingPathComponent("inspect-\(fromZip.id)").path), "nothing left behind")
+        #expect(((try? FileManager.default.contentsOfDirectory(atPath: work.path)) ?? []).filter { $0.hasPrefix("inspect-") }.isEmpty, "nothing left behind")
         await #expect(throws: InstallerInspectionError.unsupportedType) {
             try await inspector.inspect(sandbox.url.appendingPathComponent("notes.txt"), workFolder: work)
         }

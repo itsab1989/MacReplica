@@ -89,12 +89,19 @@ public struct DownloadInstaller: Sendable {
             let folder = staging.appendingPathComponent("extracted")
             let result = try await runner.run(Command(executable: layout.ditto, arguments: ["-x", "-k", file.path, folder.path],
                                                       environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 600))
-            guard result.succeeded else { throw DownloadError.extractionFailed(layout.redact(result.combinedOutput)) }
+            guard result.succeeded else {
+                if offer.kind == .ownInstaller, offer.developerUnverified == true {
+                    return .openInFinder(file, reason: .extractionFailed(InstallerArchiveInspector.note("ditto -x", result, redact: layout.redact)))
+                }
+                throw DownloadError.extractionFailed(layout.redact(result.combinedOutput))
+            }
             if let app = Self.application(in: folder, bundleIdentifier: offer.expectedBundleIdentifier, depth: 2) {
                 try checkApplication(app, offer: offer)
                 return Self.prepared(app, container: folder, mountPoint: nil)
             }
             if let package = Self.find(extension: "pkg", in: folder) { return try await preparePackage(package, offer: offer) }
+            // The user's confirmed installer with an unusual layout: shown in Finder for them.
+            if offer.kind == .ownInstaller, offer.developerUnverified == true { return .openInFinder(file, reason: .noApplicationFound) }
             throw DownloadError.noApplicationFound
         case "dmg":
             return try await prepareDiskImage(file, offer: offer, staging: staging)
@@ -105,9 +112,19 @@ public struct DownloadInstaller: Sendable {
 
     func prepareDiskImage(_ file: URL, offer: DownloadOffer, staging: URL) async throws -> PreparedDownload {
         let environment = layout.processEnvironment(homebrewPrefix: nil, askpass: nil)
+        // The user's own installer that they confirmed (its contents were not checked on the old Mac, or its developer is
+        // unknown): if MacReplica cannot open it, Finder opens it for them. Its checksum was verified before this.
+        let finderFallback = offer.kind == .ownInstaller && offer.developerUnverified == true
+        func failed(_ step: String, _ result: CommandResult?) throws -> PreparedDownload {
+            let detail = result.map { InstallerArchiveInspector.note(step, $0, redact: layout.redact) } ?? step
+            if finderFallback { return .openInFinder(file, reason: .extractionFailed(detail)) }
+            throw DownloadError.extractionFailed(detail)
+        }
+        // hdiutil would wait for the password of an encrypted image in a dialog; only the user can open it.
+        if FileFormatEvidence.examine(file) == .encrypted { return try failed("password-protected disk image", nil) }
         let info = try await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["imageinfo", "-plist", file.path],
                                                 environment: environment, timeout: 120))
-        guard info.succeeded else { throw DownloadError.extractionFailed("hdiutil imageinfo failed") }
+        guard info.succeeded else { return try failed("hdiutil imageinfo", info) }
         if Self.hasLicenseAgreement(imageInfo: info.stdout) {
             // The license must be accepted by the user; MacReplica never answers it.
             return .openInFinder(file, reason: .licenseAgreement)
@@ -117,7 +134,11 @@ public struct DownloadInstaller: Sendable {
         let attach = try await Self.attachWithRetry(runner: runner, hdiutil: layout.hdiutil, environment: environment, pause: retryPause,
                                                     arguments: ["attach", "-plist", "-nobrowse", "-readonly", "-noautoopen", "-mountrandom", mountRoot.path, file.path])
         guard attach.succeeded, let mountPoint = Self.mountPoint(fromAttachOutput: attach.stdout) else {
-            throw DownloadError.extractionFailed("hdiutil attach failed: " + layout.redact(String(attach.stderr.prefix(200))))
+            if attach.succeeded, let device = Self.devices(fromAttachOutput: attach.stdout).first {
+                // Attached without a volume: detached again, so nothing stays behind.
+                _ = try? await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["detach", device, "-force"], environment: environment, timeout: 120))
+            }
+            return try failed("hdiutil attach", attach)
         }
         do {
             if let app = Self.application(in: mountPoint, bundleIdentifier: offer.expectedBundleIdentifier, depth: 1) {
@@ -130,6 +151,11 @@ public struct DownloadInstaller: Sendable {
                 try FileManager.default.copyItem(at: package, to: copy)
                 await detach(mountPoint)
                 return try await preparePackage(copy, offer: offer)
+            }
+            if finderFallback {
+                // An unusual layout the user confirmed on the old Mac: they install from it in Finder.
+                await detach(mountPoint)
+                return .openInFinder(file, reason: .noApplicationFound)
             }
             throw DownloadError.noApplicationFound
         } catch {
@@ -157,31 +183,57 @@ public struct DownloadInstaller: Sendable {
     /// attached, so after the last failure every attachment of exactly this image is detached.
     static func attachWithRetry(runner: CommandRunning, hdiutil: String, environment: [String: String], pause: UInt64 = 1_000_000_000,
                                 arguments: [String]) async throws -> CommandResult {
+        // Attachments that existed before (the user opened the image in Finder) are never detached here.
+        let image = arguments.last
+        var before: Set<String> = []
+        if let image { before = Set(await attachments(of: image, runner: runner, hdiutil: hdiutil, environment: environment).map(\.device)) }
         var result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
         for attempt in 1...4 where !result.succeeded {
             try await Task.sleep(nanoseconds: UInt64(attempt) * pause)
             // A "failed" attempt may have attached the image anyway; it is detached before trying again,
-            // so at most one attachment exists afterwards.
-            if let image = arguments.last { await detachAttachments(of: image, runner: runner, hdiutil: hdiutil, environment: environment) }
+            // so at most one attachment of MacReplica's exists afterwards.
+            if let image { await detachAttachments(of: image, keeping: before, runner: runner, hdiutil: hdiutil, environment: environment) }
             result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
         }
-        if !result.succeeded, let image = arguments.last {
-            await detachAttachments(of: image, runner: runner, hdiutil: hdiutil, environment: environment)
+        if !result.succeeded, let image {
+            await detachAttachments(of: image, keeping: before, runner: runner, hdiutil: hdiutil, environment: environment)
         }
         return result
     }
 
-    /// Detaches every attachment of the image at `path` (and only of it), as listed by `hdiutil info`.
-    static func detachAttachments(of path: String, runner: CommandRunning, hdiutil: String, environment: [String: String]) async {
+    /// The current attachments of the image at `path` (and only of it), as listed by `hdiutil info`: the whole-disk
+    /// device and the first mount point, if any.
+    static func attachments(of path: String, runner: CommandRunning, hdiutil: String, environment: [String: String]) async -> [(device: String, mountPoint: URL?)] {
         guard let info = try? await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: ["info", "-plist"], environment: environment, timeout: 60)),
-              info.succeeded, let plist = try? PropertyListSerialization.propertyList(from: Data(info.stdout.utf8), format: nil) as? [String: Any],
-              let images = plist["images"] as? [[String: Any]] else { return }
+              info.succeeded else { return [] }
+        return attachments(of: path, infoPlist: info.stdout)
+    }
+
+    static func attachments(of path: String, infoPlist: String) -> [(device: String, mountPoint: URL?)] {
+        let start = infoPlist.range(of: "<?xml")?.lowerBound ?? infoPlist.startIndex
+        guard let plist = try? PropertyListSerialization.propertyList(from: Data(String(infoPlist[start...]).utf8), format: nil) as? [String: Any],
+              let images = plist["images"] as? [[String: Any]] else { return [] }
         let wanted = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
-        for image in images where (image["image-path"] as? String).map({ URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }) == wanted {
-            let devices = (image["system-entities"] as? [[String: Any]] ?? []).compactMap { $0["dev-entry"] as? String }
-            guard let device = devices.min(by: { $0.count < $1.count }) else { continue }
-            _ = try? await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: ["detach", device, "-force"], environment: environment, timeout: 120))
+        return images.filter { ($0["image-path"] as? String).map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path } == wanted }.compactMap { image in
+            let entities = image["system-entities"] as? [[String: Any]] ?? []
+            guard let device = entities.compactMap({ $0["dev-entry"] as? String }).min(by: { $0.count < $1.count }) else { return nil }
+            return (device, entities.compactMap { $0["mount-point"] as? String }.first.map { URL(fileURLWithPath: $0) })
         }
+    }
+
+    /// Detaches the attachments of the image at `path` except those in `keeping`.
+    static func detachAttachments(of path: String, keeping: Set<String> = [], runner: CommandRunning, hdiutil: String, environment: [String: String]) async {
+        for attachment in await attachments(of: path, runner: runner, hdiutil: hdiutil, environment: environment) where !keeping.contains(attachment.device) {
+            _ = try? await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: ["detach", attachment.device, "-force"], environment: environment, timeout: 120))
+        }
+    }
+
+    /// The whole-disk device of an `hdiutil attach -plist` result (shortest `dev-entry`), for detaching it again.
+    static func devices(fromAttachOutput plist: String) -> [String] {
+        let start = plist.range(of: "<?xml")?.lowerBound ?? plist.startIndex
+        guard let object = try? PropertyListSerialization.propertyList(from: Data(String(plist[start...]).utf8), format: nil) as? [String: Any],
+              let entities = object["system-entities"] as? [[String: Any]] else { return [] }
+        return entities.compactMap { $0["dev-entry"] as? String }.sorted { $0.count < $1.count }
     }
 
     /// Detaches the disk image. Right after copying an app the image can still be busy for a moment, so a

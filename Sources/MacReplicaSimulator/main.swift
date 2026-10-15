@@ -68,6 +68,37 @@ if arguments.first == "detect-live" {
 // Real-app validation: the real inventory, backup writer and restore of application data on this Mac, limited
 // to the given providers. The backup contains only their data; the restore keeps existing files unless
 // `replace` is given (then they are moved to "Replaced Files" as in the app).
+//   MacReplicaSimulator inspect-installer <file> [file …]
+// Runs MacReplica's own installer inspection (the one behind "Use my installer …") on real files and prints one line
+// per file: kept or rejected, why, and what was checked. Used for the real-package matrix on every supported macOS.
+if arguments.first == "inspect-installer", arguments.count >= 2 {
+    let layout = SystemLayout.live()
+    let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables),
+                                      baseEnvironment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil))
+    let inspector = InstallerArchiveInspector(layout: layout, runner: runner)
+    let work = FileManager.default.temporaryDirectory.appendingPathComponent("MacReplica-inspect-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: work) }
+    let english = Localizer(language: .english)
+    for path in arguments.dropFirst() {
+        let file = URL(fileURLWithPath: path)
+        let started = Date()
+        let selection = await inspector.select(file, workFolder: work.appendingPathComponent("w"), bundleStore: work.appendingPathComponent("b"))
+        let seconds = String(format: "%.1fs", Date().timeIntervalSince(started))
+        switch selection.result {
+        case .success(let inspected):
+            let a = inspected.archive
+            let contents = a.contentsLimit.map { "contents-not-checked:\($0.rawValue)" } ?? (a.hasLicenseAgreement ? "licence-agreement" : "inspected")
+            let apps = a.containedApps.map { "\($0.bundleIdentifier ?? "?") \($0.version ?? "?")" }.joined(separator: ", ")
+            print("KEPT\t\(file.lastPathComponent)\t\(a.kind.rawValue)\t\(contents)\tapps=[\(apps)]\tpackage=\(a.containsPackage)\t"
+                  + "signed=\(a.trustedSignature)\tteam=\(a.teamIdentifier ?? "-")\tarch=\(a.architectures.map(\.rawValue).joined(separator: "+"))\t"
+                  + "sha256=\(a.sha256.prefix(16))\t\(seconds)\tnote=\(a.inspectionNote ?? "-")")
+        case .failure(let error):
+            print("REJECTED\t\(file.lastPathComponent)\t\(error)\t\(seconds)\tnote=\(selection.note ?? "-")\ttext=\(english.installerProblemText(error))")
+        }
+    }
+    exit(0)
+}
+
 //   MacReplicaSimulator real-appdata-backup <parent folder> <provider> [provider …]
 //   MacReplicaSimulator real-appdata-restore <backup folder> [replace]
 if arguments.first == "real-appdata-backup", arguments.count >= 3 {

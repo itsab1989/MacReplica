@@ -149,7 +149,7 @@ struct InventoryResultsView: View {
                     LocationsSection()
 
                     if let apps = manifest?.applications, !apps.isEmpty {
-                        DisclosureGroup(l.t("results.showApps"), isExpanded: $showApps) {
+                        DisclosureGroup(isExpanded: $showApps) {
                             VStack(spacing: 0) {
                                 // Companion apps (e.g. DisplayCAL's 3D LUT Maker) are listed with their main app.
                                 let ids = Set(apps.map(\.id))
@@ -159,8 +159,10 @@ struct InventoryResultsView: View {
                                 }
                             }
                             .padding(.top, 6)
+                        } label: {
+                            // On the label, not the group: an identifier on the group would hide those of the rows inside.
+                            Text(l.t("results.showApps")).accessibilityIdentifier("results.showApps")
                         }
-                        .accessibilityIdentifier("results.showApps")
                         .onAppear { if model.stagingExpandLists { showApps = true } }
                     }
                 }
@@ -292,6 +294,10 @@ struct OwnInstallerRow: View {
                     Text(l.t("ownInstaller.next", next)).foregroundStyle(.secondary)
                         .accessibilityIdentifier("ownInstaller.next.\(archive.id)")
                 }
+                if archive.contentsLimit != nil, let note = archive.inspectionNote {
+                    Text(l.t("ownInstaller.details", note)).foregroundStyle(.secondary).textSelection(.enabled)
+                        .accessibilityIdentifier("ownInstaller.details.\(archive.id)")
+                }
                 if !(file.include || archive.mustBeIncluded) {
                     Text(l.t("ownInstaller.notInBackup")).foregroundStyle(.orange)
                 }
@@ -348,6 +354,11 @@ struct InstallerProblemRow: View {
                 Text(l.t("ownInstaller.problem.title", problem.fileName)).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
                 Text(l.installerProblemText(problem.error)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("ownInstaller.problem.\(problem.fileName)")
+                if let note = problem.note {
+                    Text(l.t("ownInstaller.problem.details", note)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("ownInstaller.problemDetails.\(problem.fileName)")
+                }
                 Text(problem.path).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             Spacer()

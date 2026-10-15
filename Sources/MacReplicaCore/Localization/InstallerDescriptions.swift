@@ -28,6 +28,8 @@ extension Localizer {
         var parts = [installerKindText(archive.kind)]
         if archive.hasLicenseAgreement {
             parts.append(t("ownInstaller.contents.notInspected"))
+        } else if let limit = archive.contentsLimit, archive.containedApps.isEmpty {
+            parts.append(t("ownInstaller.contents.limit.\(limit.rawValue)"))
         } else if let main = InstallerArchiveInspector.mainApp(archive.containedApps) {
             let name = [main.name, main.version].compactMap { $0 }.joined(separator: " ")
             parts.append(archive.containedApps.count > 1 ? p("ownInstaller.contents.suite", archive.containedApps.count - 1, name) : t("ownInstaller.contents.app", name))
@@ -44,7 +46,13 @@ extension Localizer {
             return InstallerDescription(summary: summary, status: t("ownInstaller.status.verified"), nextAction: nextAction(archive, unverified: false),
                                         style: .ok, canApproveUnverified: false)
         case .unverified(let reason):
-            let why = t(reason == .notSigned ? "ownInstaller.status.unverified.notSigned" : "ownInstaller.status.unverified.notInspected")
+            let why: String
+            switch reason {
+            case .notSigned: why = t("ownInstaller.status.unverified.notSigned")
+            case .contentsNotInspected:
+                why = archive.hasLicenseAgreement || archive.contentsLimit == nil ? t("ownInstaller.status.unverified.notInspected")
+                                                                                 : t("ownInstaller.status.limit.\(archive.contentsLimit!.rawValue)")
+            }
             if archive.userApprovedUnverified {
                 return InstallerDescription(summary: summary, status: why + " " + t("ownInstaller.status.approved"),
                                             nextAction: nextAction(archive, unverified: true), style: .attention, canApproveUnverified: true)
@@ -62,6 +70,7 @@ extension Localizer {
 
     func nextAction(_ archive: InstallerArchive, unverified: Bool) -> String {
         if archive.hasLicenseAgreement { return t("ownInstaller.next.licence") }
+        if archive.contentsLimit != nil, archive.containedApps.isEmpty, archive.kind != .pkg { return t("ownInstaller.next.finder") }
         if !archive.containedApps.isEmpty {
             let base = t(archive.containedApps.count > 1 ? "ownInstaller.next.suite" : "ownInstaller.next.app")
             return unverified ? base + " " + t("ownInstaller.next.gatekeeper") : base
@@ -73,7 +82,10 @@ extension Localizer {
         switch error {
         case .unsupportedType: return t("ownInstaller.problem.unsupported")
         case .unreadable: return t("ownInstaller.problem.unreadable")
-        case .damaged: return t("ownInstaller.problem.damaged")
+        case .damaged(.checksumMismatch): return t("ownInstaller.problem.damaged")
+        case .damaged(.truncated): return t("ownInstaller.problem.truncated")
+        case .notAnInstaller(let format): return t("ownInstaller.problem.notAnInstaller", t("ownInstaller.format.\(format.rawValue)"))
+        case .notRecognised: return t("ownInstaller.problem.notRecognised")
         case .nothingInside: return t("ownInstaller.problem.nothingInside")
         case .licenseAgreement: return t("ownInstaller.contents.notInspected")
         }
