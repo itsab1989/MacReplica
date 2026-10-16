@@ -7,6 +7,47 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Window corners: the corner-plugin setup now finishes by itself.** In 1.1.0, “Set up automatically” installed
+  Plugin Playground and the plugin, then opened Playground's window and asked you to “enable it” – but that window has
+  no such switch, so “Plugin Playground is enabled” stayed grey with no clear next step. The setup now also turns on
+  Playground's “Disable arm64e (PAC)” setting and sets up and starts its background service (exactly what
+  Playground's own *Install* button does), in the same single password prompt. You no longer need to open Plugin
+  Playground.
+- Every requirement is read from the real system: the service file, whether launchd has it loaded, whether the injector
+  runs, the PAC setting, the plugin files, and – new – whether the plugin is actually loaded in MacReplica itself.
+  Rows that cannot be read show a question mark instead of a guess. The panel refreshes when you come back to
+  MacReplica and says the **next step** in one sentence.
+- Running the setup again only does what is still missing. A cancelled or failed run lists each step with ✓/✗, says
+  what is already done and that retrying is safe; a service that does not start shows launchd's exit code and asks for
+  a restart. Each run is logged with an operation id and a path-free state line.
+- **Undo setup** no longer implies the loader stops at once: its injector keeps running until the next restart
+  (stopping it from outside can crash the Mac), and the panel says so. Undo now also forgets the loader's installer
+  receipt.
+- Clear, numbered setup steps in the app, the user guide and docs/TOOLS.md, including what to expect in recoveryOS.
+  Intel Macs are shown as unsupported (Plugin Playground exists for Apple silicon only).
+- The corner plugin **no longer goes inert on untested macOS builds**. It loads everywhere; on a build MacReplica did
+  not verify it shows an orange warning and requires an "at my own risk" checkbox before setup. The per-method class
+  checks remain the safety net.
+
+### Changed – honesty about the corner plugin's real scope and cost
+On-device testing on macOS 27.0.1 showed the feature is far more invasive than 1.1.0 implied, and reaches fewer apps.
+1.1.1 says so plainly in the app, help text, user guide and docs/TOOLS.md:
+- **"Disable arm64e (PAC)" runs your Apple-silicon apps from unsigned copies in `/tmp`.** This is how the loader reaches
+  Apple's own apps, and it affects *all* arm64e GUI apps, not just the ones the plugin targets. Most work; some crash or
+  misbehave. A new orange warning in the panel and in the setup confirmation spells this out.
+- **Some apps crash** when the plugin is injected (strict code-signing → `CODESIGNING, Invalid Page`). **Microsoft
+  AutoUpdate** is confirmed and is now in the shipped blacklist; you can add your own fragile apps. The blacklist stops
+  our plugin from loading into an app, but not the loader's `/tmp` stripping.
+- **Safari and other hardened Apple apps cannot be changed** (they refuse injection). The "Buttons in all apps" wording
+  is corrected to "apps that allow it".
+- **The Quick Look window is a no-op on current macOS** — its Liquid Glass frame keeps its own corners. The option and
+  its preview now say so.
+- **Partial SIP may not be enough on recent macOS.** `csrutil enable --without debug` lets the loader install but the
+  injector can be killed by AMFI on 27; full `csrutil disable` may be required. The steps keep the smaller change but
+  warn, and the injector-running check shows red when injection does not actually work. A compatibility issue was filed
+  with Plugin Playground.
+
 ### Documentation
 - Checked against the 1.1.0 code: the README and SECURITY.md now list every server MacReplica contacts, say that the
   backup is not encrypted apart from the contents of credentials, describe the administrator steps and the Homebrew

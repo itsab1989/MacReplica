@@ -40,10 +40,85 @@ public enum PluginLoader {
     public static let tweaks = URL(fileURLWithPath: "/opt/pluginplayground/tweaks")
     public static let daemonPlist = URL(fileURLWithPath: "/Library/LaunchDaemons/com.pluginplayground.grant.plist")
     public static let logs = URL(fileURLWithPath: "/var/log/pluginplayground")
+    public static let serviceLabel = "com.pluginplayground.grant"
+
+    /// The launch daemon exactly as Plugin Playground's own app writes it ("Install" in its Daemon box): it runs `grant`,
+    /// which patches amfid for half a second, starts the injector `fangs` and restores amfid.
+    public static func serviceDefinition(layout: SystemLayout) -> [String: Any] {
+        ["Label": serviceLabel,
+         "ProgramArguments": [layout.pluginLoaderBin.appendingPathComponent("grant").path],
+         "RunAtLoad": true,
+         "KeepAlive": true,
+         "StandardOutPath": layout.pluginLoaderLogs.appendingPathComponent("grant.log").path,
+         "StandardErrorPath": layout.pluginLoaderLogs.appendingPathComponent("grant.err").path]
+    }
+
+    /// Whether the loader's global settings have "Disable arm64e (PAC)" on. A missing or unreadable file means off –
+    /// that is what the injector itself assumes.
+    public static func pacStrippingOn(optionsFile: URL) -> Bool {
+        guard let data = try? Data(contentsOf: optionsFile),
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return false }
+        return (plist["disablePAC"] as? Bool) == true
+    }
+
+    /// The loader's settings with `disablePAC` on. Every other key the user set (blacklist, pause, legacy folder) is
+    /// kept; a missing file starts from the defaults Plugin Playground's own app writes.
+    public static func optionsWithPACStripping(existing: Data?) throws -> Data {
+        var options: [String: Any] = ["disablePAC": false, "pauseInjection": false, "useLegacyAmmonia": false, "globalBlacklist": [String]()]
+        if let existing, let plist = try? PropertyListSerialization.propertyList(from: existing, format: nil) as? [String: Any] {
+            options.merge(plist) { _, new in new }
+        }
+        options["disablePAC"] = true
+        return try PropertyListSerialization.data(fromPropertyList: options, format: .xml, options: 0)
+    }
+
+    /// `last exit code = …` from `launchctl print`, for diagnostics.
+    public static func lastExit(launchctlPrint: String) -> String? {
+        for line in launchctlPrint.split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("last exit code = ") { return String(trimmed.dropFirst("last exit code = ".count)) }
+        }
+        return nil
+    }
+
+    /// The privileged operations for the missing steps (one administrator prompt). Files MacReplica writes (settings,
+    /// daemon definition) are prepared in `staging` first. `package` is the verified download for `.installLoader`.
+    /// Order: loader, plugin, settings, daemon file, start – so a cancelled or failed run leaves every finished step
+    /// usable and the next run continues where this one stopped.
+    public static func setupOperations(_ steps: [CornerPlugin.SetupStep], layout: SystemLayout, appBundle: URL,
+                                       package: URL?, staging: URL) throws -> [PrivilegedOperation] {
+        let fm = FileManager.default
+        try fm.createDirectory(at: staging, withIntermediateDirectories: true)
+        var operations: [PrivilegedOperation] = []
+        for step in steps {
+            switch step {
+            case .installLoader:
+                guard let package else { throw InstallError.downloadFailed("no package") }
+                operations.append(.installPackage(package))
+            case .installPlugin:
+                guard let plugin = CornerPlugin.installOperations(layout: layout, appBundle: appBundle) else {
+                    throw InstallError.pluginMissingInApp
+                }
+                operations += plugin
+            case .savePACSetting:
+                let file = staging.appendingPathComponent("current.options")
+                try optionsWithPACStripping(existing: try? Data(contentsOf: layout.pluginLoaderOptions)).write(to: file)
+                operations.append(.installFile(source: file, destination: layout.pluginLoaderOptions))
+            case .installService:
+                let file = staging.appendingPathComponent(serviceLabel + ".plist")
+                try PropertyListSerialization.data(fromPropertyList: serviceDefinition(layout: layout), format: .xml, options: 0).write(to: file)
+                operations += [.createFolder(layout.pluginLoaderLogs), .installFile(source: file, destination: layout.pluginLoaderDaemon)]
+            case .startService:
+                operations.append(.startLoaderService(layout.pluginLoaderDaemon))
+            }
+        }
+        return operations
+    }
 
     public enum InstallError: Error, Equatable {
         case downloadFailed(String)
         case checksumMismatch(expected: String, got: String)
+        case pluginMissingInApp
     }
 
     /// Downloads the pinned Plugin Playground package into `work` and verifies its SHA-256. Returns the local file,
@@ -68,10 +143,21 @@ public enum PluginLoader {
     }
 
     /// The privileged steps that uninstall Plugin Playground: remove the app, its binaries and tweaks folder, and its
-    /// launch daemon. Each is tolerant of the target already being gone (`rm -rf`). The daemon stops for good at the
-    /// next restart, which the user does anyway to turn System Integrity Protection back on. No boot argument or
-    /// library-validation change has to be reversed – Playground makes none that persist.
-    public static func uninstallOperations() -> [PrivilegedOperation] {
+    /// launch daemon. Each is tolerant of the target already being gone (`rm -rf`). The running injector is
+    /// deliberately not stopped: launchd would kill it without letting it remove its breakpoints from launchd, which can
+    /// crash the Mac. It stops for good at the next restart, which the user does anyway to turn System Integrity
+    /// Protection back on. No boot argument or library-validation change has to be reversed – Playground makes none
+    /// that persist.
+    /// `receiptPresent`: the installer's receipt is forgotten too (last, because `pkgutil --forget` fails without one).
+    public static func uninstallOperations(receiptPresent: Bool = false) -> [PrivilegedOperation] {
         [.removeSystemItem(daemonPlist), .removeSystemItem(app), .removeSystemItem(installRoot), .removeSystemItem(logs)]
+            + (receiptPresent ? [.forgetLoaderReceipt] : [])
+    }
+
+    /// Whether macOS still has the loader's installer receipt (`pkgutil --pkg-info`, read-only). nil = could not tell.
+    public static func receiptPresent(layout: SystemLayout, runner: CommandRunning) async -> Bool? {
+        guard let result = try? await runner.run(Command(executable: layout.pkgutil, arguments: ["--pkg-info", receiptIdentifier],
+                                                          environment: ["LC_ALL": "C"], timeout: 15)) else { return nil }
+        return result.exitCode == 0
     }
 }

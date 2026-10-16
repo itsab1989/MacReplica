@@ -37,6 +37,9 @@ public struct SystemLayout: Sendable, Equatable {
     /// Read-only status tools of the Tools section (Gatekeeper, signatures, profiles, SIP, Software Update).
     public var spctl: String = "/usr/sbin/spctl"
     public var csrutil: String = "/usr/bin/csrutil"
+    /// Read-only probes of the corner plugin's tweak loader: whether its launch daemon is loaded and its injector runs.
+    public var launchctl: String = "/bin/launchctl"
+    public var pgrep: String = "/usr/bin/pgrep"
     public var profiles: String = "/usr/bin/profiles"
     public var codesign: String = "/usr/bin/codesign"
     public var syspolicyCheck: String = "/usr/bin/syspolicy_check"
@@ -48,6 +51,10 @@ public struct SystemLayout: Sendable, Equatable {
     public var pluginTweaks: URL = URL(fileURLWithPath: "/opt/pluginplayground/tweaks")
     public var pluginLoaderBin: URL = URL(fileURLWithPath: "/opt/pluginplayground/bin")
     public var pluginLoaderDaemon: URL = URL(fileURLWithPath: "/Library/LaunchDaemons/com.pluginplayground.grant.plist")
+    /// Plugin Playground's global settings (`disablePAC`, …), read by its injector whenever the file changes.
+    public var pluginLoaderOptions: URL = URL(fileURLWithPath: "/opt/pluginplayground/current.options")
+    /// The folder the loader's launch daemon writes its output to.
+    public var pluginLoaderLogs: URL = URL(fileURLWithPath: "/var/log/pluginplayground")
     /// Settings that configuration profiles enforce, readable by all users.
     public var managedPreferences: URL = URL(fileURLWithPath: "/Library/Managed Preferences")
     /// The PPD file of every print queue, readable by all users.
@@ -164,7 +171,8 @@ public struct SystemLayout: Sendable, Equatable {
     public var allowedExecutables: Set<String> {
         let pythons = homebrewPrefixes.flatMap { prefix in PythonVersion.supportedMinors.map { homebrewPython(minor: $0, prefix: prefix) } }
         return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto, lpstat, defaults, killall,
-                                                                  spctl, csrutil, profiles, codesign, syspolicyCheck, softwareupdate, nvram])
+                                                                  spctl, csrutil, profiles, codesign, syspolicyCheck, softwareupdate, nvram,
+                                                                  launchctl, pgrep])
     }
 
     public func baseFolder(for kind: BackupFileKind, domain: FileDomain) -> URL {

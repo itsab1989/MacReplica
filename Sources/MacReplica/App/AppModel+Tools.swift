@@ -248,124 +248,153 @@ extension AppModel {
     var appBundleURL: URL { Bundle.main.bundleURL }
 
     func refreshPlugin() {
-        Task {
-            let sip: GatekeeperStatus.SIP
-            if let known = tools.gatekeeper?.sip { sip = known } else { sip = await gatekeeperInspector.status().sip }
-            // A simulated Mac tells its own build (stand-in), so every requirement can be shown on screen.
-            var build = CornerPlugin.currentBuild()
-            if services.simulationRoot != nil, let simulated = defaults.string(forKey: "stagingMacOSBuild") { build = simulated }
-            tools.plugin = await CornerPlugin.status(layout: services.layout, runner: services.runner, sip: sip, appBundle: appBundleURL, build: build)
-        }
+        Task { tools.plugin = await readPluginStatus() }
     }
 
-    /// Installs exactly MacReplica's plugin and its blacklist into Ammonia's tweak folder (administrator password),
-    /// then checks that both files are there and are this version's.
-    func installPlugin() {
-        guard let operations = CornerPlugin.installOperations(layout: services.layout, appBundle: appBundleURL) else {
-            tools.pluginOutcome = ToolOutcome(verification: .failed, stateAfter: l.t("tools.plugin.missingInApp"))
-            return
-        }
-        runPluginOperations(operations, change: "windowCorners.pluginInstalled", wantInstalled: true)
+    /// Reads the real state of every requirement (nothing is changed). A simulated Mac tells its own build (stand-in),
+    /// so every requirement can be shown on screen.
+    func readPluginStatus() async -> CornerPlugin.Status {
+        let sip: GatekeeperStatus.SIP
+        if let known = tools.gatekeeper?.sip { sip = known } else { sip = await gatekeeperInspector.status().sip }
+        var build = CornerPlugin.currentBuild()
+        if services.simulationRoot != nil, let simulated = defaults.string(forKey: "stagingMacOSBuild") { build = simulated }
+        return await CornerPlugin.status(layout: services.layout, runner: services.runner, sip: sip, appBundle: appBundleURL,
+                                         build: build, architecture: tools.environment.architecture,
+                                         activeHere: CornerPlugin.loadedInThisProcess())
     }
 
-    func removePlugin() {
-        runPluginOperations(CornerPlugin.removeOperations(layout: services.layout), change: "windowCorners.pluginRemoved", wantInstalled: false)
-    }
-
-    /// One click, after the user turned System Integrity Protection off themselves: download and verify the pinned
-    /// Ammonia package, install it (its own installer sets the boot argument and disables library validation) and
-    /// install MacReplica's plugin – one administrator prompt. If the download or its checksum fails (for example the
-    /// archived release was taken down), nothing is installed and the manual steps stay.
+    /// One click, after the user allowed debugging in recoveryOS themselves: does exactly the steps the status shows as
+    /// missing – download and verify the pinned Plugin Playground, install it, install MacReplica's plugin, save the
+    /// loader's "Disable arm64e (PAC)" setting, set up and start its background service – in one administrator prompt.
+    /// Afterwards every step is checked against the real state; nothing counts as done because a command returned.
+    /// Running it again only repeats what is still missing.
     func setUpCornerPluginOneClick() {
-        guard tools.plugin?.debuggingAllowed == true else {
-            tools.pluginOutcome = ToolOutcome(verification: .notVerified, stateAfter: l.t("tools.plugin.oneClick.needsSIP"))
-            return
-        }
-        guard let pluginOps = CornerPlugin.installOperations(layout: services.layout, appBundle: appBundleURL) else {
-            tools.pluginOutcome = ToolOutcome(verification: .failed, stateAfter: l.t("tools.plugin.missingInApp"))
-            return
-        }
         tools.pluginBusy = true
         tools.pluginOutcome = nil
         Task {
-            let work = services.layout.caches.appendingPathComponent("PluginLoaderDownload")
-            let pkg: URL
-            do {
-                pkg = try await PluginLoader.downloadVerifiedPackage(transport: services.downloadTransport, work: work)
-            } catch {
+            let before = await readPluginStatus()
+            tools.plugin = before
+            let steps = before.missingSteps
+            let operation = String(UUID().uuidString.prefix(8))
+            appLog.info("Tools: corner setup \(operation) started on \(tools.environment.macOSVersion) (\(before.build ?? "?")), "
+                        + "\(before.diagnostics), steps \(steps.map(\.rawValue).joined(separator: ","))", component: .tools)
+            guard !steps.isEmpty else {
                 tools.pluginBusy = false
-                let reason: String
-                if case PluginLoader.InstallError.checksumMismatch = error { reason = l.t("tools.plugin.oneClick.checksum") }
-                else { reason = l.t("tools.plugin.oneClick.download") }
-                tools.pluginOutcome = ToolOutcome(verification: .failed, stateAfter: reason)
-                appLog.warning("Tools: loader download failed: \(services.layout.redact(String(describing: error)))", component: .tools)
+                tools.pluginOutcome = ToolOutcome(verification: before.readiness == .ready ? .verified : .notVerified,
+                                                  stateAfter: l.t("tools.plugin.next.\(before.readiness.rawValue)"))
                 return
             }
-            // Install the loader package and MacReplica's plugin in one administrator prompt. Enabling the loader
-            // itself is the user's step in Plugin Playground's own app, which MacReplica opens afterwards.
-            await runPluginBatch([.installPackage(pkg)] + pluginOps, change: "windowCorners.oneClickSetUp", wantInstalled: true,
-                                 reason: l.t("tools.plugin.oneClick.reason"), extraNote: l.t("tools.plugin.oneClick.thenEnable"),
-                                 requireLoaderEnabled: false)
-            try? FileManager.default.removeItem(at: work)
-            if tools.plugin?.loaderInstalled == true, services.simulationRoot == nil { NSWorkspace.shared.open(PluginLoader.app) }
+            let work = services.layout.caches.appendingPathComponent("PluginLoaderDownload")
+            defer { try? FileManager.default.removeItem(at: work) }
+            var package: URL?
+            if steps.contains(.installLoader) {
+                do {
+                    package = try await PluginLoader.downloadVerifiedPackage(transport: services.downloadTransport, work: work)
+                } catch {
+                    tools.pluginBusy = false
+                    let checksum: Bool
+                    if case PluginLoader.InstallError.checksumMismatch = error { checksum = true } else { checksum = false }
+                    tools.pluginOutcome = ToolOutcome(verification: .failed,
+                                                      stateAfter: l.t(checksum ? "tools.plugin.oneClick.checksum" : "tools.plugin.oneClick.download"),
+                                                      partialNote: l.t("tools.plugin.setup.nothingChanged"))
+                    appLog.warning("Tools: corner setup \(operation) download failed: \(services.layout.redact(String(describing: error)))", component: .tools)
+                    return
+                }
+            }
+            var failure: String?
+            var cancelled = false
+            do {
+                let operations = try PluginLoader.setupOperations(steps, layout: services.layout, appBundle: appBundleURL,
+                                                                  package: package, staging: work.appendingPathComponent("staging"))
+                try await services.privileged.run(operations, reason: l.t("tools.plugin.oneClick.reason"))
+            } catch PrivilegedError.denied {
+                cancelled = true
+            } catch PluginLoader.InstallError.pluginMissingInApp {
+                failure = l.t("tools.plugin.missingInApp")
+            } catch {
+                failure = services.layout.redact(String(describing: error))
+            }
+            // The injector needs a moment after launchd starts the service; wait up to five seconds for it.
+            var after = await readPluginStatus()
+            if steps.contains(.startService), !cancelled {
+                for _ in 0..<10 where after.injectorRunning != true {
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    after = await readPluginStatus()
+                }
+            }
+            tools.plugin = after
+            tools.pluginBusy = false
+            tools.pluginOutcome = setupOutcome(steps: steps, after: after, failure: failure, cancelled: cancelled)
+            appLog.info("Tools: corner setup \(operation) finished: \(after.diagnostics), cancelled \(cancelled), "
+                        + "error \(failure ?? "none")", component: .tools)
+            let result: ToolHistoryEntry.Result = cancelled ? .cancelled : (after.readiness == .ready ? .succeeded : (steps.contains { done($0, after) } ? .partial : .failed))
+            record(ToolHistoryEntry(tool: "cornerPlugin", change: "windowCorners.oneClickSetUp", previousState: before.diagnostics,
+                                    resultingState: after.diagnostics, macOSVersion: tools.environment.macOSVersion, result: result,
+                                    verification: after.readiness == .ready ? .verified : .failed, revertAvailable: false))
         }
     }
 
+    /// Whether a setup step's result is visible in the real state.
+    private func done(_ step: CornerPlugin.SetupStep, _ status: CornerPlugin.Status) -> Bool {
+        switch step {
+        case .installLoader: return status.loaderInstalled
+        case .installPlugin: return status.installed && status.current
+        case .savePACSetting: return status.pacStrippingOn
+        case .installService: return status.serviceInstalled
+        case .startService: return status.serviceLoaded == true && status.injectorRunning == true
+        }
+    }
+
+    /// The result of a setup run: one checked line per step, what is still missing and what to do next.
+    private func setupOutcome(steps: [CornerPlugin.SetupStep], after: CornerPlugin.Status, failure: String?, cancelled: Bool) -> ToolOutcome {
+        let lines = steps.map { (done($0, after) ? "✓ " : "✗ ") + l.t("tools.plugin.step.\($0.rawValue)") }
+        let doneAny = steps.contains { done($0, after) }
+        if after.readiness == .ready {
+            let text = l.t("tools.plugin.setup.verified") + "\n" + lines.joined(separator: "\n") + "\n" + l.t("tools.plugin.next.ready")
+            return ToolOutcome(verification: .verified, stateAfter: text, restart: .relaunchApps)
+        }
+        var text = l.t(cancelled ? "tools.plugin.cancelled" : "tools.plugin.setup.incomplete")
+        if let failure { text += "\n" + l.t("tools.plugin.failed", failure) }
+        if !cancelled { text += "\n" + lines.joined(separator: "\n") }
+        if after.readiness == .injectorNotRunning, let exit = after.serviceLastExit { text += "\n" + l.t("tools.plugin.setup.lastExit", exit) }
+        text += "\n" + l.t("tools.plugin.next.\(after.readiness.rawValue)")
+        let note = l.t(doneAny ? "tools.plugin.setup.partial" : "tools.plugin.setup.nothingChanged")
+        return ToolOutcome(verification: cancelled ? .notVerified : .failed, stateAfter: text, partialNote: cancelled ? nil : note)
+    }
+
     /// One click to reverse everything MacReplica did: remove the plugin and uninstall the Plugin Playground loader.
-    /// Playground persists no boot argument or library-validation change, so nothing else has to be reset. The user
-    /// restarts and turns System Integrity Protection back on in recoveryOS afterwards (MacReplica never changes SIP).
+    /// Playground persists no boot argument or library-validation change, so nothing else has to be reset. The running
+    /// injector is left alone until the restart (stopping it from outside can crash launchd); the user restarts and turns
+    /// System Integrity Protection back on in recoveryOS afterwards (MacReplica never changes SIP).
     func undoCornerPluginOneClick() {
         tools.pluginBusy = true
         tools.pluginOutcome = nil
         Task {
-            let ops = CornerPlugin.removeOperations(layout: services.layout) + PluginLoader.uninstallOperations()
-            await runPluginBatch(ops, change: "windowCorners.oneClickUndo", wantInstalled: false,
-                                 reason: l.t("tools.plugin.undo.reason"), extraNote: l.t("tools.plugin.undo.rebootSIP"))
-        }
-    }
-
-
-
-    private func runPluginOperations(_ operations: [PrivilegedOperation], change: String, wantInstalled: Bool) {
-        tools.pluginBusy = true
-        tools.pluginOutcome = nil
-        Task {
-            await runPluginBatch(operations, change: change, wantInstalled: wantInstalled,
-                                 reason: l.t(wantInstalled ? "tools.plugin.reason.install" : "tools.plugin.reason.remove"))
-        }
-    }
-
-    /// Runs a privileged batch (one administrator prompt), then re-reads the plugin status and records the outcome.
-    /// `wantInstalled` decides what "done" means; `extraNote` is appended to the result (e.g. the reboot/SIP reminder).
-    private func runPluginBatch(_ operations: [PrivilegedOperation], change: String, wantInstalled: Bool, reason: String, extraNote: String? = nil,
-                                requireLoaderEnabled: Bool = true) async {
-        tools.pluginBusy = true
-        let wasInstalled = tools.plugin?.installed == true
-        var failure: String?
-        do {
-            try await services.privileged.run(operations, reason: reason)
-        } catch PrivilegedError.denied {
-            failure = l.t("tools.plugin.cancelled")
-        } catch {
-            failure = services.layout.redact(String(describing: error))
-        }
-        let sip = tools.plugin?.sip ?? .unknown
-        var build = CornerPlugin.currentBuild()
-        if services.simulationRoot != nil, let simulated = defaults.string(forKey: "stagingMacOSBuild") { build = simulated }
-        let status = await CornerPlugin.status(layout: services.layout, runner: services.runner, sip: sip, appBundle: appBundleURL, build: build)
-        tools.plugin = status
-        tools.pluginBusy = false
-        let verified = wantInstalled ? (status.installed && status.current && (requireLoaderEnabled ? status.loaderEnabled : status.loaderInstalled))
-                                      : !status.installed
-        let verification: ToolVerification = verified ? (wantInstalled ? .partiallyVerified : .verified) : .failed
-        var text = failure.map { l.t("tools.plugin.failed", $0) }
-            ?? l.t(verified ? (wantInstalled ? "tools.plugin.installed" : "tools.plugin.removed") : "tools.plugin.notConfirmed")
-        if failure == nil, verified, let extraNote { text += "\n" + extraNote }
-        tools.pluginOutcome = ToolOutcome(verification: verification, stateAfter: text, restart: verified && wantInstalled ? .relaunchApps : .none)
-        if failure == nil || status.installed != wasInstalled {
-            record(ToolHistoryEntry(tool: "cornerPlugin", change: change, previousState: "installed=\(wasInstalled ? 1 : 0)",
-                                    resultingState: "installed=\(status.installed ? 1 : 0)", macOSVersion: tools.environment.macOSVersion,
-                                    result: verified ? .succeeded : .failed, verification: verification, revertAvailable: false))
+            let before = await readPluginStatus()
+            var failure: String?
+            do {
+                // The real package database only: a simulated Mac's loader was never installed with `installer`.
+                let receipt = services.simulationRoot == nil ? await PluginLoader.receiptPresent(layout: services.layout, runner: services.runner) == true : false
+                try await services.privileged.run(CornerPlugin.removeOperations(layout: services.layout) + PluginLoader.uninstallOperations(receiptPresent: receipt),
+                                                  reason: l.t("tools.plugin.undo.reason"))
+            } catch PrivilegedError.denied {
+                failure = l.t("tools.plugin.cancelled")
+            } catch {
+                failure = l.t("tools.plugin.failed", services.layout.redact(String(describing: error)))
+            }
+            let after = await readPluginStatus()
+            tools.plugin = after
+            tools.pluginBusy = false
+            let removed = !after.installed && !after.loaderInstalled && !after.serviceInstalled
+            var text = failure ?? l.t(removed ? "tools.plugin.undo.done" : "tools.plugin.notConfirmed")
+            if removed { text += "\n" + l.t(after.injectorRunning == true ? "tools.plugin.undo.stillRunning" : "tools.plugin.undo.rebootSIP") }
+            tools.pluginOutcome = ToolOutcome(verification: removed ? .verified : .failed, stateAfter: text, restart: removed ? .restart : .none)
+            appLog.info("Tools: corner undo finished: \(after.diagnostics)", component: .tools)
+            if failure == nil || removed {
+                record(ToolHistoryEntry(tool: "cornerPlugin", change: "windowCorners.oneClickUndo", previousState: before.diagnostics,
+                                        resultingState: after.diagnostics, macOSVersion: tools.environment.macOSVersion,
+                                        result: removed ? .succeeded : .failed, verification: removed ? .verified : .failed, revertAvailable: false))
+            }
         }
     }
 

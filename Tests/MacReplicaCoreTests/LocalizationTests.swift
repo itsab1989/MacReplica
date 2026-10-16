@@ -135,6 +135,8 @@ struct LocalizationTests {
         }
         // Keys built at runtime.
         for phase in InventoryPhase.allCases { #expect(Self.english["scan.phase.\(phase.rawValue)"] != nil) }
+        for readiness in CornerPlugin.Readiness.allCases { #expect(Self.english["tools.plugin.next.\(readiness.rawValue)"] != nil, "next \(readiness)") }
+        for step in CornerPlugin.SetupStep.allCases { #expect(Self.english["tools.plugin.step.\(step.rawValue)"] != nil, "step \(step)") }
         for category in FailureCategory.allCases {
             #expect(Self.english["failure.\(category.rawValue).title"] != nil)
             #expect(Self.english["failure.\(category.rawValue).explanation"] != nil)
