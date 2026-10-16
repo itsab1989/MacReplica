@@ -188,13 +188,38 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
 - Without anything else: app windows (with sheets and alerts), utility panels and **classic menus** (the older style
   without glass, ≈6 pt).
 - **Menus, popovers and Quick Look … (advanced)** shows, after a warning, the surfaces that need the corner plugin:
-  menus with any radius, popovers, the Quick Look window, toolbar groups and capsule buttons in all apps. The plugin
+  menus with any radius, popovers, toolbar groups and capsule buttons in apps that allow it (not Safari/hardened apps; the Quick Look window does not change on current macOS). The plugin
   runs through Plugin Playground, a maintained tweak loader whose source is public (it has no licence, so MacReplica
-  only downloads its pinned release and never bundles it). The plugin is built for Apple silicon only. It needs System Integrity Protection only
-  partly off – debugging allowed (`csrutil enable --without debug`), which only you can set in recoveryOS – and the
-  loader enabled once in its own app. **Set up automatically** downloads and installs the pinned loader and the plugin
-  (admin password) and opens Plugin Playground to enable; or do the steps by hand. **Undo setup** removes the plugin
-  and uninstalls the loader. On macOS versions it was not tested on, the plugin does nothing.
+  only downloads its pinned release and never bundles it). It works on Macs with Apple silicon only. Setup:
+  1. **Once, by you – allow debugging.** Shut down the Mac. Press and hold the power button until “Loading startup
+     options” appears, click **Options**, then **Continue**. Choose **Utilities > Terminal**, type
+     `csrutil enable --without debug` and press Return. macOS confirms the change and warns that it is an unsupported
+     configuration – that is expected. Choose **Apple menu > Restart**. Every other protection stays on; MacReplica
+     cannot do this step for you.
+  2. Back in macOS, open **Tools > Window corners > Menus, popovers and Quick Look …** again: “Debugging is allowed”
+     is green.
+  3. Click **Set up automatically …** and enter your administrator password once. MacReplica shows the exact steps
+     first, then downloads Plugin Playground (fixed version, checksum verified), installs it with its plugin, turns on
+     Playground's “Disable arm64e (PAC)” setting (needed for Apple's own apps) and starts Playground's background
+     service. You do not need to open Plugin Playground.
+  4. Every row except the last turns green. Quit and reopen apps (or restart the Mac). After reopening MacReplica, the
+     last row – “The plugin is loaded in MacReplica” – confirms it works.
+  5. Tick the surfaces you want and click **Apply …**; apps pick up a change when they are reopened.
+
+  Each row shows the real state of your Mac (green = checked, empty = missing, question mark = could not be read), and
+  **Next step** under the list says what to do. If a setup run is cancelled or fails, the steps marked ✓ stay done and
+  running it again only repeats what is missing. If the background service is set up but does not run, restart the
+  Mac. **Undo setup** removes the plugin and uninstalls the loader; the service keeps running until the next restart.
+  Then turn System Integrity Protection fully back on: recoveryOS > Terminal > `csrutil enable`, restart. On a macOS
+  version it was not tested on, the plugin still loads but asks you to accept the risk first.
+
+  **Know what this costs before you turn it on.** To reach Apple's own apps the loader turns on “Disable arm64e (PAC)”,
+  which runs **every** Apple-silicon app from an unsigned copy in `/tmp` and weakens code signing broadly while it is
+  active. Most apps work, but some crash or misbehave (Microsoft AutoUpdate, for example, is blocked by default; you can
+  add more). It can **not** change Safari and other protected Apple apps, the system UI, or the Quick Look window on
+  current macOS. If an app starts crashing or complaining about its location, add it to the loader's blocklist, or use
+  **Undo setup** and restart to return everything to normal. On recent macOS partial SIP may not be enough; if the
+  “enabled” row stays red after setup, you may need full `csrutil disable` in recoveryOS.
 - **Restore previous** returns every setting exactly to how it was; **Restore macOS default appearance …** removes
   them all. The picture area inside Quick Look keeps its own corners in any case.
 

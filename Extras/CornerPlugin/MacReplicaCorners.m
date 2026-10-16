@@ -1,14 +1,17 @@
 // MacReplica corner plugin for the Ammonia tweak loader (advanced, at the user's own risk).
 //
 // Changes the corner radius of menus, popovers and the outer Quick Look panel inside every app it is loaded into.
-// Ammonia only runs with System Integrity Protection turned off; MacReplica never turns it off. The plugin is
-// deliberately inert unless everything is exactly as tested:
-//   - only on the macOS builds listed in kTestedBuilds (after any macOS update it does nothing),
-//   - only in processes with AppKit, and never in system daemons (see the .blacklist file installed next to it),
+// A tweak loader only runs with System Integrity Protection relaxed; MacReplica never changes SIP. The plugin keeps
+// itself safe by only ever acting:
+//   - in processes with AppKit, and never in system daemons (see the .blacklist file installed next to it),
 //   - only for the surfaces the user chose (global defaults MacReplicaMenuCornerRadius, MacReplicaPopoverCornerRadius,
 //     MacReplicaQuickLookCornerRadius, MacReplicaToolbarCornerRadius: 2…24 points; MacReplicaRoundedButtons: buttons
 //     as rounded rectangles instead of capsules),
 //   - only for methods that exist with the expected names; anything missing is skipped.
+// It loads on every macOS build. On the builds in kTestedBuilds the hooks were verified; on others MacReplica warns
+// the user and makes them acknowledge the risk before installing, because an untested build's AppKit internals may
+// have changed (a hook then does nothing, or in the worst case an app crashes) — but the per-method checks below mean
+// it never patches something that is not exactly the expected class and selector.
 // The inner preview area of Quick Look is drawn by a separate Apple service and keeps its own corners.
 // Proven in a test app on macOS 27.0.1 (26A434): menus 11.9 → radius, popovers and Quick Look 20 → radius, toolbar
 // groups 18 → radius, capsule buttons → rounded rectangles.
@@ -167,7 +170,11 @@ static IMP Replace(NSString *className, NSString *selector, IMP replacement) {
 
 __attribute__((constructor)) static void MacReplicaCornersInit(void) {
     @autoreleasepool {
-        if (!NSClassFromString(@"NSApplication") || !TestedBuild()) return;
+        if (!NSClassFromString(@"NSApplication")) return;
+        // The plugin loads on every macOS build. On a build MacReplica did not verify (TestedBuild() == NO) it does not
+        // make itself inert: every Replace() below only patches a class and selector that exist exactly as expected, so
+        // an AppKit change just means a surface is skipped. MacReplica warns the user before installing on such a build.
+        (void)TestedBuild;
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         CGFloat (^radius)(NSString *) = ^CGFloat(NSString *key) {
             NSInteger value = [defaults integerForKey:key];

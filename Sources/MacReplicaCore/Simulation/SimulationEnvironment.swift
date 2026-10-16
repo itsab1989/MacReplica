@@ -112,6 +112,11 @@ public struct SimulationEnvironment: Sendable {
         self.layout.pluginTweaks = root.appendingPathComponent("opt/pluginplayground/tweaks")
         self.layout.pluginLoaderBin = root.appendingPathComponent("opt/pluginplayground/bin")
         self.layout.pluginLoaderDaemon = root.appendingPathComponent("Library/LaunchDaemons/com.pluginplayground.grant.plist")
+        self.layout.pluginLoaderOptions = root.appendingPathComponent("opt/pluginplayground/current.options")
+        self.layout.pluginLoaderLogs = root.appendingPathComponent("var/log/pluginplayground")
+        // The simulated Mac never asks the real launchd: without stand-ins the loader's daemon reads as not running.
+        self.layout.launchctl = root.appendingPathComponent("tools/launchctl").path
+        self.layout.pgrep = root.appendingPathComponent("tools/pgrep").path
         for name in ["spctl", "csrutil", "profiles", "softwareupdate", "nvram"] {
             let standIn = root.appendingPathComponent("tools/\(name)").path
             guard FileManager.default.isExecutableFile(atPath: standIn) else { continue }
@@ -156,6 +161,11 @@ public struct SimulationEnvironment: Sendable {
         let root = self.root
         return DirectPrivilegedExecutor(packageInstaller: { package in
             try SimulationEnvironment.installSimulatedPackage(package, root: root)
+        }, serviceStarter: { _ in
+            // The simulated Mac's stand-ins `tools/launchctl` and `tools/pgrep` report the service as running from now on.
+            let marker = root.appendingPathComponent("state/loader-service-running")
+            try FileManager.default.createDirectory(at: marker.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data().write(to: marker)
         })
     }
 

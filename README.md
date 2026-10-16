@@ -205,9 +205,12 @@ finds, asks before changing anything and checks the real result afterwards ([det
   keeps the current version up to date, and – where Apple still allows it – postponing major upgrades by up to
   90 days (not possible on macOS 27).
 - **Window corners** (experimental, macOS 26.4 and later): less rounded app windows and panels, classic menus – one
-  radius for everything or one per surface, with an example preview of each. Menus, popovers, Quick Look, toolbar
-  groups and capsule buttons only through an optional plugin (Apple silicon) loaded by Plugin Playground, which needs partial SIP
-  (debugging allowed; behind warnings, with a one-click setup and undo; MacReplica never changes SIP itself).
+  radius for everything or one per surface, with an example preview of each. Menus, popovers, toolbar groups and
+  capsule buttons in apps that allow it (not Safari or other hardened apps) through an optional plugin (Apple silicon)
+  loaded by Plugin Playground, which needs SIP relaxed (MacReplica never changes SIP itself). Enabling it is a large,
+  system-wide change: to reach Apple's own apps it runs your arm64e apps from unsigned `/tmp` copies and can crash or
+  break some; it is behind strong warnings, a one-click setup, a blocklist and a full undo. See
+  [docs/TOOLS.md](docs/TOOLS.md).
 
 The backup folder also contains `restore/RESTORE_INSTRUCTIONS.html` — a readable guide with the
 same steps, including commands for restoring by hand. Step-by-step instructions and the backup

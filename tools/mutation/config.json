@@ -110,7 +110,8 @@
         "SessionAndPrivilegeEdgeTests",
         "ToolsCornerPluginTests",
         "ToolsCornerEdgeTests",
-        "PluginLoaderTests"
+        "PluginLoaderTests",
+        "CornerPluginSetupTests"
       ],
       "area": "Security"
     },
@@ -550,14 +551,16 @@
       "file": "Tools/CornerPlugin.swift",
       "tests": [
         "ToolsCornerPluginTests",
-        "ToolsCornerEdgeTests"
+        "ToolsCornerEdgeTests",
+        "CornerPluginSetupTests"
       ],
       "area": "Tools"
     },
     {
       "file": "Tools/CornerPluginInstall.swift",
       "tests": [
-        "PluginLoaderTests"
+        "PluginLoaderTests",
+        "CornerPluginSetupTests"
       ],
       "area": "Tools"
     },
@@ -701,73 +704,73 @@
     {
       "file": "ColorProfiles/DisplayProfiles.swift",
       "pattern": "isConnected: Bool = true",
-      "operator": "true → false",
+      "operator": "true \u2192 false",
       "reason": "Parameter default only; every caller in the app passes isConnected explicitly (equivalent mutant)."
     },
     {
       "file": "ColorProfiles/DisplayProfiles.swift",
       "pattern": "profiles\\.first\\(where: \\{ \\$0\\.originalPath == path \\}\\)",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "A backup holds at most one profile record per original path, so first and last are the same record (equivalent mutant)."
     },
     {
       "file": "Restore/DisplayProfileRestore.swift",
       "pattern": "index\\.entries\\.first \\{ index\\.hash\\(of: \\$0\\) == sha \\}",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "Every identical copy of the backed-up profile is a correct profile to assign; which one is used when several exist is not specified."
     },
     {
       "file": "Restore/DisplayProfileRestore.swift",
       "pattern": "manager\\.displays\\(\\)\\.first \\{",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "ColorSync device IDs (and their salted keys) are unique, so at most one display matches (equivalent mutant)."
     },
     {
       "file": "Python/PythonPreservation.swift",
       "pattern": "referencesLocalPaths: Bool = false\\) \\{",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "Parameter default only; preserve() always passes the value (equivalent mutant)."
     },
     {
       "file": "Python/PythonPreservation.swift",
       "pattern": "architectures\\.sorted \\{ \\$0\\.rawValue < \\$1\\.rawValue \\}",
-      "operator": "< → <=",
+      "operator": "< \u2192 <=",
       "reason": "Sorts the elements of a set: there are no equal elements (equivalent mutant)."
     },
     {
       "file": "Restore/PythonAndDataRestore.swift",
       "pattern": "createDirectory\\(at: folder, withIntermediateDirectories: true, attributes",
-      "operator": "true → false",
+      "operator": "true \u2192 false",
       "reason": "Every credential folder (~/.ssh, ~/.aws, ~/.kube, ~/.terraform.d) is directly in the home folder, which always exists (equivalent mutant)."
     },
     {
       "file": "Restore/PythonAndDataRestore.swift",
       "pattern": "if case \\.existingFileMovedAside = \\$0 \\{ return true \\}; return false",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "At this point the notes only ever hold the moved-aside note, so the fallback value is never used (equivalent mutant)."
     },
     {
       "file": "Restore/PythonAndDataRestore.swift",
       "pattern": "profile\\.bundleIdentifiers\\.first\\(where: environment\\.isApplicationRunning\\)",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "Any running identifier blocks the restore (tested); which one the detail names when several run at once is not specified."
     },
     {
       "file": "Inventory/AppDataScanner.swift",
       "pattern": "var isDirectory: ObjCBool = false",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "fileExists(atPath:isDirectory:) always sets the flag when the path exists, and a missing path fails the same guard (equivalent mutant)."
     },
     {
       "file": "Inventory/AppDataScanner.swift",
       "pattern": "files\\.sort \\{ \\$0\\.record\\.relativePath < \\$1\\.record\\.relativePath \\}",
-      "operator": "< → <=",
+      "operator": "< \u2192 <=",
       "reason": "Relative paths inside one folder are unique, so < and <= give the same order (equivalent mutant)."
     },
     {
       "file": "Providers/AppDataProviders.swift",
       "pattern": "providers\\.first \\{ \\$0\\.id == id \\}",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "Provider identifiers are unique (tested in ProviderCatalogTests), so the first and the last match are the same provider (equivalent mutant)."
     },
     {
@@ -820,72 +823,72 @@
       "file": "Matching/VendorTaps.swift",
       "pattern": "return all\\.first \\{",
       "reason": "Every entry has distinct bundle identifiers, so at most one matches: first and last are the same (equivalent mutant).",
-      "operator": "first → last"
+      "operator": "first \u2192 last"
     },
     {
       "file": "Matching/Matcher.swift",
       "pattern": "var lastWasDash = false",
       "reason": "Before the first allowed character nothing is appended anyway (the dash also needs a non-empty result): equivalent mutant.",
-      "operator": "false → true"
+      "operator": "false \u2192 true"
     },
     {
       "file": "Localization/InstallerDescriptions.swift",
       "pattern": "return known\\.first\\.map",
       "reason": "After removing unknown entries, two different architectures are reported as universal earlier; first and last are the same (equivalent mutant).",
-      "operator": "first → last"
+      "operator": "first \u2192 last"
     },
     {
       "file": "Settings/SystemSettings.swift",
       "pattern": "categories\\.first \\{ \\$0\\.id == id \\}",
       "reason": "Category identifiers are unique: first and last are the same (equivalent mutant).",
-      "operator": "first → last"
+      "operator": "first \u2192 last"
     },
     {
       "file": "Settings/SystemSettings.swift",
       "pattern": "sorted\\(by: \\{ \\$0\\.key < \\$1\\.key \\}\\)",
       "reason": "Dictionary keys are unique, so < and <= sort them identically (equivalent mutant).",
-      "operator": "< → <="
+      "operator": "< \u2192 <="
     },
     {
       "file": "Settings/SystemSettings.swift",
       "pattern": "return to > from && crossVersion",
       "reason": "Equal major versions return earlier, so > and >= cannot differ here (equivalent mutant).",
-      "operator": "> → >="
+      "operator": "> \u2192 >="
     },
     {
       "file": "Tools/GatekeeperTool.swift",
       "pattern": "split\\(separator: \"\\\\n\"\\)\\.first \\{ \\$0\\.contains\\(\"MDM enrollment:\"\\) \\}",
-      "operator": "first → last",
-      "reason": "`profiles status` prints one “MDM enrollment:” line: first and last are the same (equivalent mutant)."
+      "operator": "first \u2192 last",
+      "reason": "`profiles status` prints one \u201cMDM enrollment:\u201d line: first and last are the same (equivalent mutant)."
     },
     {
       "file": "Tools/GatekeeperTool.swift",
       "pattern": "lines\\.first \\{ \\$0\\.hasPrefix\\(",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "`spctl --assess` prints each of these lines once: first and last are the same (equivalent mutant)."
     },
     {
       "file": "Tools/GatekeeperTool.swift",
       "pattern": "getxattr\\(url\\.path, attribute, nil, 0, 0, XATTR_NOFOLLOW\\) > 0",
-      "operator": "> → >=",
+      "operator": "> \u2192 >=",
       "reason": "An empty quarantine attribute carries no information; removing it or leaving it is the same (equivalent mutant)."
     },
     {
       "file": "Tools/ToolKit.swift",
       "pattern": "if all\\.count > limit",
-      "operator": "> → >=",
+      "operator": "> \u2192 >=",
       "reason": "At exactly the limit, removeFirst(0) removes nothing (equivalent mutant)."
     },
     {
       "file": "Tools/UpdatePreferencesTool.swift",
       "pattern": "else if installedMajor < newest",
-      "operator": "< → <=",
+      "operator": "< \u2192 <=",
       "reason": "Reached only when the installed major is older than the newest (the earlier branch handles the rest): equivalent mutant."
     },
     {
       "file": "Tools/UpdatePreferencesTool.swift",
       "pattern": "allSatisfy\\(\\{ \\$0 > installedMajor \\}\\)",
-      "operator": "> → >=",
+      "operator": "> \u2192 >=",
       "reason": "An installed major among the three newest is handled by the earlier branch: equivalent mutant."
     },
     {
@@ -897,61 +900,61 @@
     {
       "file": "Downloads/InstallerArchive.swift",
       "pattern": "var isDirectory: ObjCBool = false",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "fileExists(atPath:isDirectory:) always sets the value before it is read (equivalent mutant)."
     },
     {
       "file": "Downloads/InstallerArchive.swift",
       "pattern": "createDirectory\\(at: (bundleStore|folder), withIntermediateDirectories: true\\)",
-      "operator": "true → false",
+      "operator": "true \u2192 false",
       "reason": "The parent folders exist at this point, so both settings create the same folder (equivalent mutant)."
     },
     {
       "file": "Downloads/InstallerArchive.swift",
       "pattern": "\\.sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
-      "operator": "< → <=",
+      "operator": "< \u2192 <=",
       "reason": "Names in one folder are unique, so < and <= sort them identically (equivalent mutant)."
     },
     {
       "file": "Matching/Matcher.swift",
       "pattern": "lhs\\.score != rhs\\.score \\? lhs\\.score > rhs\\.score : lhs\\.token < rhs\\.token",
-      "operator": "> → >=",
+      "operator": "> \u2192 >=",
       "reason": "Reached only for different scores, so > and >= agree (equivalent mutant)."
     },
     {
       "file": "Matching/Matcher.swift",
       "pattern": "lhs\\.score != rhs\\.score \\? lhs\\.score > rhs\\.score : lhs\\.token < rhs\\.token",
-      "operator": "< → <=",
+      "operator": "< \u2192 <=",
       "reason": "Cask tokens are unique, so < and <= order them identically (equivalent mutant)."
     },
     {
       "file": "Tools/CornerPlugin.swift",
       "pattern": "sysctlbyname\\(\"kern\\.osversion\", nil, &size, nil, 0\\) == 0, size > 0",
-      "operator": "> → >=",
+      "operator": "> \u2192 >=",
       "reason": "The build string always has a length; a size of 0 does not occur (equivalent mutant)."
     },
     {
       "file": "Restore/PrivilegedExecutor.swift",
       "pattern": "set i to i \\+ wordCount \\+ 1",
-      "operator": "+ 1 → - 1",
+      "operator": "+ 1 \u2192 - 1",
       "reason": "AppleScript text inside a string literal, run only with a real administrator prompt; the argument layout it reads is tested in PrivilegedExecutorTests."
     },
     {
       "file": "Inventory/Printers.swift",
       "pattern": "apps\\.sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
-      "operator": "< → <=",
+      "operator": "< \u2192 <=",
       "reason": "Names in one folder are unique, so < and <= sort them identically (equivalent mutant)."
     },
     {
       "file": "Tools/WindowCornersTool.swift",
       "pattern": "roundedButtons: \\(buttons as\\? Bool\\) == true \\|\\| \\(buttons as\\? Int\\)",
-      "operator": "|| → &&",
+      "operator": "|| \u2192 &&",
       "reason": "A stored true and a stored 1 are the same property-list number, read alike as Bool and as Int (equivalent mutant)."
     },
     {
       "file": "Inventory/Printers.swift",
       "pattern": "components\\.user != nil \\|\\| components\\.password != nil",
-      "operator": "!= → ==",
+      "operator": "!= \u2192 ==",
       "reason": "URLComponents reports `:password@` with an empty (not missing) user, so a password never appears without a user: equivalent mutant (credentials removal is tested)."
     },
     {
@@ -967,50 +970,55 @@
     {
       "file": "Credentials/Credentials.swift",
       "pattern": "all\\.first \\{ \\$0\\.id == id \\}",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "Provider IDs are unique (checked by ProviderCatalogTests), so the first and the last match are the same provider (equivalent mutant)."
     },
     {
       "file": "Credentials/CredentialStore.swift",
       "pattern": "file\\.slots\\.first\\(where: \\{ \\$0\\.kind == kind \\}\\)",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "A key file has exactly one slot per unlock method, and every slot is authenticated by AES-GCM; first and last are the same slot (equivalent mutant)."
     },
     {
       "file": "Credentials/CredentialStore.swift",
       "pattern": "guard recordLength >= 16, recordLength <= header\\.recordSize \\+ 16",
-      "operator": ">= → >",
+      "operator": ">= \u2192 >",
       "reason": "A 16-byte record (empty ciphertext + tag) is never written and is rejected by AES-GCM authentication either way (equivalent mutant)."
     },
     {
       "file": "Credentials/CredentialStore.swift",
       "pattern": "guard headerLength > 0, headerLength < 4096",
-      "operator": "> → >=",
+      "operator": "> \u2192 >=",
       "reason": "FileHandle.read(upToCount: 0) returns nil, so a zero header length is refused by the following read either way (equivalent mutant)."
     },
     {
       "file": "Credentials/CredentialItems.swift",
       "pattern": "var isDirectory: ObjCBool = false",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "Only read after fileExists returned true, which always sets it (equivalent mutant)."
     },
     {
       "file": "Restore/CredentialRestore.swift",
       "pattern": "var isDirectory: ObjCBool = false",
-      "operator": "false → true",
+      "operator": "false \u2192 true",
       "reason": "Only read after fileExists returned true, which always sets it (equivalent mutant)."
     },
     {
       "file": "Credentials/CredentialItems.swift",
       "pattern": "credentialSelection\\.first\\(where: \\{ \\$0\\.id == id \\}\\)",
-      "operator": "first → last",
+      "operator": "first \u2192 last",
       "reason": "Item IDs are unique in the selection (one per real file), so first and last are the same item (equivalent mutant)."
     },
     {
       "file": "Credentials/CredentialItems.swift",
       "pattern": "\\$0\\.path == item\\.originalPath && \\$0\\.reason == \\.refusedSensitive",
-      "operator": "== → !=",
+      "operator": "== \u2192 !=",
       "reason": "Before a backup is written, the only issues a selected credential's path can have are sensitive-file issues; the reason test only guards against future issue kinds (equivalent mutant)."
+    },
+    {
+      "file": "Tools/CornerPlugin.swift",
+      "pattern": "_dyld_get_image_name",
+      "reason": "Defensive nil-guard for a dyld image name that is never nil in a real process; the false return cannot be forced from a test (equivalent mutant)."
     }
   ]
 }

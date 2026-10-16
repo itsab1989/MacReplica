@@ -73,14 +73,39 @@ struct PluginLoaderTests {
         #expect(joined.contains("/bin/rm -rf /opt/pluginplayground"))
         #expect(joined.contains("/bin/rm -rf /var/log/pluginplayground"))
         // Playground persists no boot-args / library-validation change, so undo never touches nvram or defaults.
-        for forbidden in ["nvram", "DisableLibraryValidation", "/bin/sh", "/bin/bash", "sudo", "osascript"] { #expect(!joined.contains(forbidden)) }
+        for forbidden in ["nvram", "DisableLibraryValidation", "/bin/sh", "/bin/bash", "sudo", "osascript", "pkgutil", "launchctl"] {
+            #expect(!joined.contains(forbidden))
+        }
+        // With a receipt, forgetting exactly the loader's package is the last step (it fails when there is none).
+        let withReceipt = PluginLoader.uninstallOperations(receiptPresent: true)
+        #expect(withReceipt.last == .forgetLoaderReceipt)
+        #expect(withReceipt.dropLast() == PluginLoader.uninstallOperations()[...])
+        #expect(PrivilegedOperation.forgetLoaderReceipt.argv == ["/usr/sbin/pkgutil", "--forget", "com.pluginplayground.core"])
+        #expect(PrivilegedOperation.forgetLoaderReceipt.paths.isEmpty)
+    }
+
+    @Test func receiptIsReadWithPkgutil() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        var layout = SystemLayout.live()
+        for (exit, expected) in [(Int32(0), Bool?.some(true)), (1, false)] {
+            layout.pkgutil = try CornerPluginSetupTests.standIn("pkgutil-\(exit)", exit: exit, in: folder).path
+            let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: [layout.pkgutil]), baseEnvironment: [:])
+            #expect(await PluginLoader.receiptPresent(layout: layout, runner: runner) == expected)
+        }
+        let refusing = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: []), baseEnvironment: [:])
+        #expect(await PluginLoader.receiptPresent(layout: layout, runner: refusing) == nil)
     }
 
     @Test func uninstallIsTolerantOfMissingItemsInTheSimulation() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         // The real absolute paths are allow-listed; running the uninstall when they are absent simply does nothing.
-        try await DirectPrivilegedExecutor().run(PluginLoader.uninstallOperations(), reason: "test")
+        // Never on a Mac that really has the loader: this would delete it (or fail half-way on permissions).
+        let realItems = [PluginLoader.daemonPlist, PluginLoader.app, PluginLoader.installRoot, PluginLoader.logs]
+        if !realItems.contains(where: { FileManager.default.fileExists(atPath: $0.path) }) {
+            try await DirectPrivilegedExecutor().run(PluginLoader.uninstallOperations(), reason: "test")
+        }
         await #expect(throws: PrivilegedError.self) {
             try await DirectPrivilegedExecutor().run([.removeSystemItem(root)], reason: "test")
         }

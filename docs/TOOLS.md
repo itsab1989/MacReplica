@@ -149,8 +149,9 @@ What MacReplica does (experimental, 26.4+ only; elsewhere the card says it isn't
   - one radius (2–24 pt) for app windows and for utility panels;
   - classic menus as a separate switch;
   - written to the user's global preferences through CFPreferences, the same as `defaults write -g`.
-- **With the corner plugin** (behind a warning): its own radius for menus, popovers, the Quick Look window and toolbar
-  groups, plus capsule buttons drawn as rounded rectangles in all apps.
+- **With the corner plugin** (behind a warning): its own radius for menus, popovers and toolbar groups, plus capsule
+  buttons drawn as rounded rectangles, in apps that allow injection (not Safari/hardened apps). The Quick Look window
+  is listed but does not visibly change on current macOS (Liquid Glass).
 - **Radius per surface:** one radius for everything by default, or a separate radius per surface. Every surface can be
   left out.
 - **One step for all keys:** one confirmation, one history entry with a snapshot of every key's exact previous value.
@@ -160,23 +161,58 @@ What MacReplica does (experimental, 26.4+ only; elsewhere the card says it isn't
 
 `Extras/CornerPlugin/MacReplicaCorners.m` is built into the app as `Contents/Library/CornerPlugin/MacReplicaCorners.dylib`
 (arm64 and arm64e), next to `MacReplicaCorners.dylib.options`. It is loaded by **Plugin Playground**, the maintained
-tweak loader (github.com/CoreBedtime/playground; its predecessor Ammonia is archived and unlicensed). Playground needs:
-- System Integrity Protection only **partly** off — debugging allowed (`csrutil enable --without debug`), not a full
-  `csrutil disable`;
-- the loader installed (`PluginPlayground-1.1.0.pkg`, pinned by SHA-256 below) and enabled once in its own app, where
-  the user turns on injection and “Disable arm64e (PAC)”. Enabling creates the `com.pluginplayground.grant` launch
-  daemon; it needs no boot argument and persists no library-validation change (the `grant` daemon patches amfid only
-  while injecting).
+tweak loader (github.com/CoreBedtime/playground; its predecessor Ammonia is archived and unlicensed). It exists for
+Apple silicon only (its injector uses arm64 debug registers), so Intel Macs are shown as unsupported. Playground needs:
+- System Integrity Protection only **partly** relaxed — debugging allowed (`csrutil enable --without debug` in
+  recoveryOS), not a full `csrutil disable`. Only the user can do this; MacReplica never changes SIP.
+- the loader installed (`PluginPlayground-1.1.0.pkg`, pinned by SHA-256 below): `/Applications/Plugin Playground.app`
+  (its settings window), `/opt/pluginplayground/bin/grant` and `fangs`, `/opt/pluginplayground/tweaks/`.
+- its **background service** running: the launch daemon `/Library/LaunchDaemons/com.pluginplayground.grant.plist`
+  runs `grant`, which patches amfid for half a second, starts the injector `fangs` and restores amfid. `fangs` attaches
+  to launchd and adds the tweaks to every *new* process (`DYLD_INSERT_LIBRARIES`); apps that were already open are not
+  affected until they are reopened. No boot argument, no persisted library-validation change.
+- on Apple silicon, `disablePAC = true` in `/opt/pluginplayground/current.options` (“Disable arm64e (PAC)” in
+  Playground's window): without it, Apple's own arm64e apps (Finder, Safari, TextEdit …) never get the plugin. `fangs`
+  re-reads the file whenever it changes.
 
-MacReplica never changes System Integrity Protection. The one-click setup downloads the pinned loader, verifies its
-checksum, installs it and the plugin (`installer -pkg` + `install`, one administrator prompt) and opens Plugin
-Playground so the user enables it; it falls back to the manual steps if the download or checksum fails. It detects each
-requirement (`csrutil status`, `/opt/pluginplayground/bin`, the grant daemon plist, the plugin files) and installs or
-removes exactly its two files in `/opt/pluginplayground/tweaks/`. Undo removes the plugin and uninstalls the loader
-(its app, `/opt/pluginplayground`, the grant daemon plist and logs) with fixed `rm -rf` commands on an allow-list;
-`rm` is refused for any other path. No `nvram` or library-validation command is ever run. The loader's project is
-unlicensed, so MacReplica only links to and downloads the official release — it never forks, mirrors or bundles it;
-the pinned reference and the plugin's own interface are documented here so the feature survives the loader changing.
+**What went wrong in 1.1.0 (fixed in 1.1.1).** The one-click setup installed the loader and the plugin, then opened
+Playground's window and told the user to “enable it”. That window has no such switch: enabling means clicking
+**Install** in its *Daemon* box (which writes the daemon file and loads it) and **Save Global Changes** after ticking
+“Disable arm64e (PAC)” – the tick alone is not saved, and the box is drawn ticked even when nothing is saved. On the
+reporting Mac neither had happened, so the daemon file was missing, `fangs` was not running and `current.options` did
+not exist; “Plugin Playground is enabled” correctly stayed grey, but nothing said what to click.
+
+**How the setup works since 1.1.1.** MacReplica reads every requirement from the real system, never from the last
+button pressed: `csrutil status`; the loader's programs; the daemon file; `launchctl print
+system/com.pluginplayground.grant` (exit 0 loaded, 113 not loaded, anything else unknown); `pgrep -x fangs` (the only
+proof the loader is active); `disablePAC` in `current.options`; the plugin files and their checksum against this copy
+of MacReplica; and whether `MacReplicaCorners.dylib` is loaded in MacReplica's own process (`_dyld_get_image_name`) –
+end-to-end proof that injection works. Unknown values show as a question mark, never as green. The status is read again
+after every action, on **Check again**, and whenever MacReplica becomes the active app.
+
+“Set up automatically…” (or “Finish setup automatically…” once the loader is there) runs only the steps that are still
+missing, in one administrator prompt, and lists them before asking:
+1. download the pinned package and verify its SHA-256 (nothing is installed on a mismatch), then `installer -pkg`;
+2. `install` MacReplica's two plugin files into the tweaks folder;
+3. `install` a `current.options` with `disablePAC = true` – every other key the user set is kept;
+4. `mkdir -p /var/log/pluginplayground` and `install` the daemon file – byte-for-byte the definition Playground's own
+   “Install” button writes (label, `grant`, `RunAtLoad`, `KeepAlive`, log paths; a test pins it);
+5. `launchctl bootstrap system <daemon file>` – only if launchd does not already have the service loaded.
+
+Afterwards it waits up to five seconds for `fangs` and checks each step against the real state (✓/✗ per step). A run
+that is cancelled or fails keeps the finished steps, says which ones they are, and the next run only repeats what is
+missing. If the service is loaded but `fangs` does not run, MacReplica shows launchd's last exit code and asks for a
+restart; it never kills or restarts the injector itself. Each run is logged with an operation id, the macOS build and a
+path-free one-line state (`readiness=… loader=… service=… loaded=… injector=… pac=… plugin=… active=…`).
+
+**Undo** removes the plugin and uninstalls the loader (its app, `/opt/pluginplayground` including `current.options`, the
+daemon file and logs) with fixed `rm -rf` commands on an allow-list; `rm` is refused for any other path. It does **not**
+stop the running injector: launchd would end `grant` and its process group without letting `fangs` remove its hardware
+breakpoints from launchd, which can crash the Mac. `fangs` only cleans up on SIGTERM to itself, and the restart that
+turns SIP back on stops it anyway, so the panel says “restart” until then. No `nvram` or library-validation command is
+ever run. The loader's project is unlicensed, so MacReplica only links to and downloads the official release — it
+never forks, mirrors or bundles it; the pinned reference and the plugin's own interface are documented here so the
+feature survives the loader changing.
 
 Pinned loader: `PluginPlayground-1.1.0.pkg`, 1,186,472 bytes, SHA-256
 `283c3b87e8861e158d726b3742e0bb42ea8d9677eaf9955eb541db88a7252b00`,
@@ -190,16 +226,51 @@ into AppKit processes and blacklists the system UI (`loginwindow`, `WindowManage
 `ControlCenter`, `NotificationCenter`, `Spotlight`, `Setup Assistant`, `SecurityAgent`).
 
 Safety design of the plugin:
-- It does nothing on macOS builds other than the tested ones. Currently that is only 26A434 = 27.0.1, and a test keeps
-  the list in Swift and in the plugin identical.
+- On macOS builds other than the tested ones (currently 26A434 = 27.0.1, a test keeps the Swift list and the plugin
+  list identical) the plugin **still loads**, but MacReplica shows a warning and requires the user to acknowledge the
+  risk before installing. Its per-method class/selector checks remain the real safety net.
 - It only hooks what was chosen and never loads into the system UI processes above (`frameworkDependencies = AppKit`
   plus the blacklist).
 - It checks every class and method before replacing it, and adds overrides only on the exact class.
 - It catches exceptions around every change.
 
-Costs while debugging is allowed and the loader is enabled: the Mac's security is weaker and a crash in a loaded plugin
-would affect apps. Recovery is always possible by removing the plugin and uninstalling the loader (in MacReplica, or by
-hand) and turning System Integrity Protection fully back on, which also stops all loading.
+**What actually works, and what does not (measured on 27.0.1, 26A434, SIP fully off).** The loader injects ordinary
+AppKit apps (Finder, Mail-type apps, MacReplica): menus, popovers, toolbar "pills" and capsule buttons all change when
+the app is reopened. It does **not** reach:
+- **Safari and other hardened Apple apps** — their code-signing refuses `DYLD_INSERT_LIBRARIES` outright (`plugin=0`,
+  no crash). Nothing we ship changes this.
+- **The Quick Look window** — on Tahoe the panel (`QLPreviewPanel`) is drawn with a Liquid Glass `NSGlassView`; setting
+  the glass corner radius does not visibly change its outer frame, so the "Quick Look window" option is effectively a
+  no-op on current macOS (the inner picture area, ~15 pt, was never changeable — it comes from `QuickLookUIService`).
+- **System UI** (Dock, Control Center, menu bar) — blacklisted on purpose.
+
+**The real cost of "Disable arm64e (PAC)" (`disablePAC = true`).** This is far more invasive than "a plugin in some
+apps". Plugin Playground achieves arm64e injection by **running every arm64e app from an unsigned, PAC-/signature-
+stripped copy under `/tmp/RuntimeApplications/`** — this happens to *all* arm64e GUI apps the loader sees, **not just
+the ones our dylib targets** (observed: `Dock`, which our dylib blacklists, is still copied to `/tmp`). Consequences:
+- The Mac's code signing is broadly bypassed while the loader runs; many of the user's apps run unsigned from `/tmp`.
+- Apps with strict code-signing are **SIGKILLed** when our dylib is inserted (`CODESIGNING, Invalid Page`). Confirmed:
+  **Microsoft AutoUpdate** crash-loops; it is in the shipped blacklist. Our per-tweak blacklist stops *our dylib* from
+  loading (which fixes that crash), but it does **not** stop the loader's `/tmp` stripping — only turning the PAC
+  setting off, pausing injection, or uninstalling the loader does.
+- Apps that verify their own install location misbehave — e.g. **Little Snitch** shows "must be installed in
+  Applications" because its GUI was launched from the `/tmp` copy (the firewall daemon itself, arm64, is untouched).
+- Known-fragile apps can be added to `blacklistedApps` in `MacReplicaCorners.dylib.options`, or to Plugin Playground's
+  global blacklist in its configurator.
+
+Because of this, MacReplica's setup confirmation, the panel, the help text and the user guide now state plainly that
+enabling the PAC setting runs arm64e apps from unsigned `/tmp` copies and can crash or break some of them.
+
+**SIP level.** The loader's README and MacReplica's steps ask for partial SIP (`csrutil enable --without debug`). On
+macOS 27.0.1 that is **not sufficient** — the injector (`fangs`, ad-hoc signed with restricted entitlements) is killed
+by AMFI even with debugging allowed; only full `csrutil disable` let it run in testing. MacReplica keeps the partial
+instruction (the smaller change) but warns that recent macOS may need full `csrutil disable`, and its injector-running
+check correctly shows red when the loader cannot actually inject. See the compatibility issue filed upstream.
+
+Costs while the loader is enabled: the Mac's security is broadly weaker (see above) and a crash in a loaded plugin, or
+in a PAC-stripped app, affects that app. Recovery is always possible by removing the plugin and uninstalling the loader
+(in MacReplica, or by hand) and turning System Integrity Protection fully back on, which also stops all loading and the
+`/tmp` stripping.
 
 Measured in the test app with the real plugin (menu / popover / Quick Look):
 
@@ -211,8 +282,28 @@ Measured in the test app with the real plugin (menu / popover / Quick Look):
 
 Further results:
 - Toolbar group 18 → 7 pt; the large capsule button and Quick Look's “Open with …” became rounded rectangles.
-- A build of the plugin whose tested list does not contain this Mac's build changed nothing.
-- Untested on Apple's own apps (Finder, Safari): that would need the loader enabled with partial SIP on the test Mac.
+- On a real Apple app with the loader enabled (SIP off) on 27.0.1: **Finder** toolbar pills and buttons became rounded
+  rectangles, and menus/popovers took the chosen radius. **Safari** was not affected (injection refused). The **Quick
+  Look window** outer frame did not change (Liquid Glass).
+
+### Showcase
+
+Built-in before/after explainers (one per surface) and real screenshots, in `docs/images/corner-plugin/`:
+
+| | |
+|---|---|
+| Menus | ![](images/corner-plugin/example-menus.png) |
+| Popovers | ![](images/corner-plugin/example-popovers.png) |
+| Toolbar groups | ![](images/corner-plugin/example-toolbars.png) |
+| Buttons | ![](images/corner-plugin/example-buttons.png) |
+| Quick Look | ![](images/corner-plugin/example-quickLook.png) |
+| App windows | ![](images/corner-plugin/example-windows.png) |
+| Utility panels | ![](images/corner-plugin/example-utilityPanels.png) |
+
+Real, with the plugin active (macOS 27.0.1, SIP off): Finder toolbar (pills → rounded rectangles) and a real menu:
+
+![Finder toolbar](images/corner-plugin/real-toolbar.png)
+![Rounded menu](images/corner-plugin/real-menu.png)
 
 | | 13–15 | 26.0–26.3 | 26.4+ | 27 |
 |---|---|---|---|---|
@@ -250,3 +341,21 @@ Further results:
 
 Nothing in these tests changed the test Mac's Gatekeeper, update or appearance settings. The global corner value (7, set
 by the user before) was read but never written.
+
+## Verification addendum (2026-10-16, 1.1.1)
+
+The corner plugin was finally run with the real loader on a real Mac (macOS 27.0.1 / 26A434, M3 Max), SIP fully
+disabled. This supersedes the "test app" rows above for the plugin:
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Automatic setup (download → install → PAC setting → service → start) | Verified | All seven status rows green incl. "loaded in MacReplica"; `fangs` running; `lsof`/`vmmap` show the dylib in Finder and MacReplica |
+| Partial SIP sufficient | **Disproved** | `csrutil enable --without debug` → AMFI SIGKILLs `fangs` (restricted entitlements); only full `csrutil disable` worked |
+| Menus, popovers, toolbar pills, buttons in Finder | Verified | Finder reopened with the loader active: pills/buttons → rounded rectangles, menus/popovers → chosen radius (screenshots in `docs/images/corner-plugin/`) |
+| Buttons in Safari / iMessage | **Does not work** | Safari and Messages refuse injection (hardened runtime); `plugin=0`, no effect |
+| Quick Look window | **Does not work** on 27 | Panel is `QLPreviewPanel` with a Liquid Glass `NSGlassView`; outer frame keeps its corners (diagnosed via an injected logging build) |
+| PAC-stripping side effects | Confirmed | Loader runs all arm64e apps from `/tmp/RuntimeApplications/`; Microsoft AutoUpdate crash-loops (`CODESIGNING, Invalid Page`) and is blacklisted; Little Snitch GUI showed "must be in Applications" |
+| Undo + receipt forget | Verified | App, `/opt/pluginplayground`, daemon, logs and the `pkgutil` receipt all removed |
+
+Untested-build behaviour, the acknowledgement gate, and the "not installed" state were verified on screen (a simulated
+build `26Z999`). The real-Mac loader was left **paused** after testing and is removed entirely at the end of the work.

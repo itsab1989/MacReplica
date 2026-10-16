@@ -645,7 +645,10 @@ struct WindowCornersToolCard: View {
                     Text(l.t(state.classicMenus ? "tools.corners.now.classic" : "tools.corners.now.glass")).font(.caption).foregroundStyle(.secondary)
                 }
                 Divider()
-                if advancedUnlocked {
+                // The status is read in the background: anything already set up opens the panel as soon as it is known.
+                // A result (e.g. after "Undo setup") stays visible even when nothing is installed any more.
+                if advancedUnlocked || model.tools.pluginOutcome != nil
+                    || model.tools.plugin.map({ $0.installed || $0.loaderInstalled || $0.serviceInstalled }) == true {
                     Text(l.t("tools.plugin.surfaces")).font(.subheadline.weight(.semibold))
                     surfaceRow(.menus, state: state)
                     surfaceRow(.popovers, state: state)
@@ -774,13 +777,15 @@ struct RadiusPicker: View {
     }
 }
 
-/// Requirements, steps and install/remove of the corner plugin – all of it behind the warning the user confirmed.
+/// Requirements, steps and setup/undo of the corner plugin – all of it behind the warning the user confirmed. Every row
+/// shows the real state read from the Mac (re-read after each action, on "Check again" and when MacReplica becomes
+/// active again), never the last button pressed.
 struct CornerPluginView: View {
     @EnvironmentObject var model: AppModel
-    @ViewState private var confirmInstall = false
-    @ViewState private var confirmRemove = false
     @ViewState private var confirmOneClick = false
     @ViewState private var confirmUndo = false
+    /// On a macOS build MacReplica did not verify, the user must tick this before the setup button works.
+    @ViewState private var untestedAcknowledged = false
 
     var body: some View {
         let l = model.l
@@ -793,39 +798,45 @@ struct CornerPluginView: View {
             }
             if let status = model.tools.plugin {
                 pluginRequirements(status)
-                if status.readiness != .ready, status.readiness != .untestedBuild {
+                nextStep(status)
+                // What "Disable arm64e (PAC)" really costs: Apple-silicon apps run from unsigned /tmp copies, some break.
+                if status.needsPACStripping, status.readiness != .unsupportedHardware {
+                    Label(l.t("tools.plugin.pacNote"), systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption).foregroundStyle(Color.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("tools.plugin.pacNote")
+                }
+                if ![.ready, .unsupportedHardware].contains(status.readiness) {
                     Text(l.t("tools.plugin.steps")).font(.caption).fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
                         .accessibilityIdentifier("tools.plugin.steps")
                 }
-                if status.readiness == .untestedBuild {
-                    Text(l.t("tools.plugin.untested")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                // An untested macOS build does not block setup, but the user has to accept the risk first.
+                if !status.tested, status.readiness != .unsupportedHardware, !status.missingSteps.isEmpty {
+                    Toggle(l.t("tools.plugin.untested.ack"), isOn: $untestedAcknowledged)
+                        .font(.caption).toggleStyle(.checkbox)
+                        .accessibilityIdentifier("tools.plugin.untested.ack")
                 }
                 pluginActions(status)
             } else {
-                ProgressView().controlSize(.small)
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text(l.t("tools.plugin.checking")).font(.caption).foregroundStyle(.secondary)
+                }
             }
             if let outcome = model.tools.pluginOutcome { ToolOutcomeView(outcome: outcome, id: "tools.plugin.outcome") }
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.07)))
-        .alert(l.t("tools.plugin.confirm.title"), isPresented: $confirmInstall) {
-            Button(l.t("tools.plugin.confirm.go"), role: .destructive) { model.installPlugin() }
-            Button(l.t("common.cancel"), role: .cancel) {}
-        } message: {
-            Text(l.t("tools.plugin.confirm.message"))
-        }
-        .alert(l.t("tools.plugin.remove"), isPresented: $confirmRemove) {
-            Button(l.t("tools.plugin.remove.go")) { model.removePlugin() }
-            Button(l.t("common.cancel"), role: .cancel) {}
-        } message: {
-            Text(l.t("tools.plugin.remove.message"))
+        // Steps done elsewhere (recoveryOS, Plugin Playground's own app, a restart) show up as soon as the user comes back.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            if !model.tools.pluginBusy { model.refreshPlugin() }
         }
         .alert(l.t("tools.plugin.oneClick.confirm.title"), isPresented: $confirmOneClick) {
             Button(l.t("tools.plugin.oneClick.confirm.go"), role: .destructive) { model.setUpCornerPluginOneClick() }
             Button(l.t("common.cancel"), role: .cancel) {}
         } message: {
-            Text(l.t("tools.plugin.oneClick.confirm.message"))
+            Text(confirmMessage)
         }
         .alert(l.t("tools.plugin.undo.button"), isPresented: $confirmUndo) {
             Button(l.t("tools.plugin.undo.go")) { model.undoCornerPluginOneClick() }
@@ -835,32 +846,57 @@ struct CornerPluginView: View {
         }
     }
 
+    /// Lists exactly the steps this run will do, then the warning.
+    private var confirmMessage: String {
+        let l = model.l
+        let steps = model.tools.plugin?.missingSteps ?? []
+        let list = steps.enumerated().map { "\($0.offset + 1). " + l.t("tools.plugin.step.\($0.element.rawValue)") }
+        let untested = model.tools.plugin?.tested == false ? l.t("tools.plugin.oneClick.confirm.untested", model.tools.plugin?.build ?? "?") + "\n\n" : ""
+        return untested + l.t("tools.plugin.oneClick.confirm.intro") + "\n\n" + list.joined(separator: "\n") + "\n\n" + l.t("tools.plugin.oneClick.confirm.message")
+    }
+
     @ViewBuilder private func pluginRequirements(_ status: CornerPlugin.Status) -> some View {
         let l = model.l
-        requirement(status.readiness != .untestedBuild, l.t("tools.plugin.req.build", status.build ?? "?"), id: "build")
-        requirement(status.debuggingAllowed == true, l.t("tools.plugin.req.sip"), id: "sip")
+        // The build row is green when the build is verified; on any other build it is a warning, not a blocker.
+        if status.tested {
+            requirement(true, l.t("tools.plugin.req.build", status.build ?? "?"), id: "build")
+        } else if status.needsPACStripping {
+            warningRow(l.t("tools.plugin.req.untested", status.build ?? "?"), id: "build")
+        } else {
+            requirement(false, l.t("tools.plugin.req.unsupportedHardware"), id: "build")
+        }
+        requirement(status.debuggingAllowed, l.t("tools.plugin.req.sip"), id: "sip")
         requirement(status.loaderInstalled, l.t("tools.plugin.req.loaderInstalled"), id: "loaderInstalled")
-        requirement(status.loaderEnabled, l.t("tools.plugin.req.loaderEnabled"), id: "loaderEnabled")
+        // Enabled = the background service is set up and its injector verifiably runs.
+        requirement(status.serviceInstalled ? status.injectorRunning : false, l.t("tools.plugin.req.loaderEnabled"), id: "loaderEnabled")
+        if status.needsPACStripping {
+            requirement(status.pacStrippingOn, l.t("tools.plugin.req.pac"), id: "pac")
+        }
         requirement(status.installed && status.current,
                     l.t(status.installed && !status.current ? "tools.plugin.req.outdated" : "tools.plugin.req.installed"), id: "installed")
+        requirement(status.activeHere, l.t("tools.plugin.req.active"), id: "active")
+    }
+
+    private func nextStep(_ status: CornerPlugin.Status) -> some View {
+        let l = model.l
+        let key = status.readiness == .ready && !status.activeHere ? "tools.plugin.next.reopen" : "tools.plugin.next.\(status.readiness.rawValue)"
+        return (Text(l.t("tools.plugin.next")).bold() + Text(" " + l.t(key)))
+            .font(.caption).fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("tools.plugin.next")
     }
 
     @ViewBuilder private func pluginActions(_ status: CornerPlugin.Status) -> some View {
         let l = model.l
         HStack {
-            // The loader is not installed yet but debugging is allowed: offer the one-click download + install.
-            if status.debuggingAllowed == true, !status.loaderInstalled {
-                Button(l.t("tools.plugin.oneClick.button")) { confirmOneClick = true }
-                    .disabled(model.tools.pluginBusy)
+            // Offered only for the steps MacReplica can do itself; it does just the missing ones. On an untested build
+            // the button stays disabled until the user has acknowledged the risk above.
+            if !status.missingSteps.isEmpty {
+                Button(l.t(status.loaderInstalled ? "tools.plugin.oneClick.finish" : "tools.plugin.oneClick.button")) { confirmOneClick = true }
+                    .disabled(model.tools.pluginBusy || (!status.tested && !untestedAcknowledged))
                     .accessibilityIdentifier("tools.plugin.oneClick")
-            } else if status.readiness == .ready, !(status.installed && status.current) {
-                // The loader is installed and enabled: just place (or update) our plugin files.
-                Button(l.t(status.installed ? "tools.plugin.update" : "tools.plugin.install")) { confirmInstall = true }
-                    .disabled(model.tools.pluginBusy)
-                    .accessibilityIdentifier("tools.plugin.install")
             }
             // Anything MacReplica set up can be reversed in one step.
-            if status.loaderInstalled || status.installed {
+            if status.loaderInstalled || status.installed || status.serviceInstalled {
                 Button(l.t("tools.plugin.undo.button")) { confirmUndo = true }
                     .disabled(model.tools.pluginBusy)
                     .accessibilityIdentifier("tools.plugin.undo")
@@ -868,15 +904,26 @@ struct CornerPluginView: View {
             if model.tools.pluginBusy { ProgressView().controlSize(.small) }
             Spacer()
             Button(l.t("tools.recheck")) { model.refreshPlugin() }.controlSize(.small)
+                .disabled(model.tools.pluginBusy)
                 .accessibilityIdentifier("tools.plugin.recheck")
         }
     }
 
-    private func requirement(_ met: Bool, _ text: String, id: String) -> some View {
-        Label(text, systemImage: met ? "checkmark.circle.fill" : "circle")
+    /// Met (green), missing (empty circle) or could not be determined (question mark).
+    private func requirement(_ met: Bool?, _ text: String, id: String) -> some View {
+        let state = met.map { $0 ? "met" : "open" } ?? "unknown"
+        return Label(text, systemImage: met == true ? "checkmark.circle.fill" : (met == false ? "circle" : "questionmark.circle"))
             .font(.caption)
-            .foregroundStyle(met ? Color.green : Color.secondary)
-            .accessibilityIdentifier("tools.plugin.req.\(id).\(met ? "met" : "open")")
+            .foregroundStyle(met == true ? Color.green : (met == false ? Color.secondary : Color.orange))
+            .accessibilityIdentifier("tools.plugin.req.\(id).\(state)")
+    }
+
+    /// A row that is neither met nor unmet but a caution the user should read (e.g. an untested macOS build).
+    private func warningRow(_ text: String, id: String) -> some View {
+        Label(text, systemImage: "exclamationmark.triangle.fill")
+            .font(.caption).foregroundStyle(Color.orange)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("tools.plugin.req.\(id).warning")
     }
 }
 

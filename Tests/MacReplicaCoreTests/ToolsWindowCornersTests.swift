@@ -122,24 +122,84 @@ struct ToolsWindowCornersTests {
 /// The corner plugin: requirements, its two files only, and the same tested builds as the plugin source.
 @Suite("Tools: corner plugin")
 struct ToolsCornerPluginTests {
-    static func status(build: String? = "26A434", debugging: Bool? = true, loaderInstalled: Bool = true, loaderEnabled: Bool = true,
-                       installed: Bool = false, current: Bool = false) -> CornerPlugin.Status {
+    static func status(build: String? = "26A434", debugging: Bool? = true, loaderInstalled: Bool = true, serviceInstalled: Bool = true,
+                       serviceLoaded: Bool? = true, injectorRunning: Bool? = true, appleSilicon: Bool = true, pac: Bool = true,
+                       installed: Bool = true, current: Bool = true) -> CornerPlugin.Status {
         CornerPlugin.Status(build: build, sip: .disabled, debuggingAllowed: debugging, loaderInstalled: loaderInstalled,
-                            loaderEnabled: loaderEnabled, installed: installed, current: current)
+                            serviceInstalled: serviceInstalled, serviceLoaded: serviceLoaded, injectorRunning: injectorRunning,
+                            needsPACStripping: appleSilicon, pacStrippingOn: pac, installed: installed, current: current)
     }
 
     @Test func readinessNamesTheFirstMissingStep() {
         #expect(Self.status().readiness == .ready)
+        #expect(Self.status().loaderEnabled)
         #expect(Self.status().capability == .requiresAdministrator)
-        #expect(Self.status(build: "26B100").readiness == .untestedBuild)
-        #expect(Self.status(build: nil).readiness == .untestedBuild)
-        #expect(Self.status(build: "26B100").capability == .unsupportedOnThisVersion)
+        #expect(Self.status(appleSilicon: false).readiness == .unsupportedHardware)
+        #expect(Self.status(appleSilicon: false).capability == .unsupportedOnThisVersion)
+        // An untested build is no longer a terminal state: readiness and capability follow the real steps, only `tested` flips.
+        #expect(Self.status().tested)
+        #expect(!Self.status(build: "26B100").tested)
+        #expect(!Self.status(build: nil).tested)
+        #expect(Self.status(build: "26B100").readiness == .ready)
+        #expect(Self.status(build: "26B100").capability == .requiresAdministrator)
+        #expect(Self.status(build: "26B100", loaderInstalled: false, injectorRunning: false).readiness == .loaderMissing)
+        #expect(Self.status(build: nil, pac: false).readiness == .pacOff)
         #expect(Self.status(debugging: false).readiness == .sipFullyOn)
         #expect(Self.status(debugging: nil).readiness == .unknown)
-        #expect(Self.status(loaderInstalled: false).readiness == .loaderMissing)
-        #expect(Self.status(loaderEnabled: false).readiness == .loaderNotEnabled)
+        #expect(Self.status(debugging: nil).capability == .unableToDetermine)
+        #expect(Self.status(loaderInstalled: false, injectorRunning: false).readiness == .loaderMissing)
+        #expect(Self.status(loaderInstalled: false, injectorRunning: true).readiness == .removedPendingRestart)
+        #expect(Self.status(serviceInstalled: false).readiness == .serviceMissing)
+        #expect(Self.status(serviceLoaded: false, injectorRunning: false).readiness == .serviceMissing)
+        #expect(Self.status(serviceLoaded: true, injectorRunning: false).readiness == .injectorNotRunning)
+        #expect(Self.status(serviceLoaded: nil, injectorRunning: nil).readiness == .unknown)
+        #expect(Self.status(serviceLoaded: true, injectorRunning: nil).readiness == .unknown)
+        #expect(Self.status(serviceLoaded: nil, injectorRunning: true).readiness == .ready)
+        #expect(Self.status(pac: false).readiness == .pacOff)
+        #expect(Self.status(installed: false).readiness == .pluginMissing)
+        #expect(Self.status(current: false).readiness == .pluginMissing)
         #expect(Self.status(debugging: false).capability == .requiresUserAction)
-        #expect(Self.status(loaderInstalled: false).capability == .requiresUserAction)
+        #expect(Self.status(serviceLoaded: true, injectorRunning: false).capability == .requiresUserAction)
+        #expect(Self.status(loaderInstalled: false, injectorRunning: true).capability == .requiresUserAction)
+        #expect(Self.status(loaderInstalled: false, injectorRunning: false).capability == .requiresAdministrator)
+        #expect(!Self.status(serviceInstalled: false).loaderEnabled, "a running injector without its daemon file is not enabled")
+        #expect(!Self.status(injectorRunning: nil).loaderEnabled)
+    }
+
+    @Test func setupDoesOnlyTheMissingStepsInOrder() {
+        // Fresh Mac after recoveryOS: everything.
+        #expect(Self.status(loaderInstalled: false, serviceInstalled: false, serviceLoaded: false, injectorRunning: false, pac: false,
+                            installed: false, current: false).missingSteps == [.installLoader, .installPlugin, .savePACSetting, .installService, .startService])
+        // The reported case: loader and plugin in place, service never installed, PAC setting never saved.
+        #expect(Self.status(serviceInstalled: false, serviceLoaded: false, injectorRunning: false, pac: false).missingSteps
+                == [.savePACSetting, .installService, .startService])
+        #expect(Self.status(serviceInstalled: true, serviceLoaded: false, injectorRunning: false).missingSteps == [.startService])
+        // Daemon file removed earlier but launchd still has it loaded: only the file, never a second bootstrap.
+        #expect(Self.status(serviceInstalled: false, serviceLoaded: true, injectorRunning: true).missingSteps == [.installService])
+        #expect(Self.status(current: false).missingSteps == [.installPlugin])
+        #expect(Self.status(pac: false).missingSteps == [.savePACSetting])
+        // Intel has no PAC; the loader does not exist there anyway.
+        #expect(Self.status(appleSilicon: false, pac: false).missingSteps.isEmpty)
+        // An untested build still offers setup (the UI gates it behind an acknowledgement, not the model).
+        #expect(Self.status(build: "26B100", loaderInstalled: false, serviceInstalled: false, serviceLoaded: false,
+                            injectorRunning: false, pac: false, installed: false, current: false).missingSteps
+                == [.installLoader, .installPlugin, .savePACSetting, .installService, .startService])
+        // Nothing to do, or only the user can act: no setup button.
+        #expect(Self.status().missingSteps.isEmpty)
+        #expect(Self.status(debugging: false, loaderInstalled: false).missingSteps.isEmpty)
+        #expect(Self.status(serviceLoaded: true, injectorRunning: false).missingSteps.isEmpty)
+        #expect(Self.status(loaderInstalled: false, injectorRunning: true).missingSteps.isEmpty)
+        #expect(Self.status(debugging: nil).missingSteps.isEmpty)
+    }
+
+    @Test func diagnosticsAreOneLineWithoutPaths() {
+        let text = Self.status(serviceLoaded: nil, pac: false).diagnostics
+        #expect(text == "readiness=pacOff tested=1 debug=1 loader=1 service=1 loaded=? injector=1 pac=0 plugin=1 active=0")
+        #expect(Self.status(appleSilicon: false).diagnostics.contains("pac=n/a"))
+        #expect(Self.status(build: "26B100").diagnostics.contains("tested=0"))
+        var exited = Self.status()
+        exited.serviceLastExit = "78: Function not implemented"
+        #expect(exited.diagnostics.hasSuffix(" lastExit=78: Function not implemented"))
     }
 
     @Test func debuggingAllowedIsReadFromCsrutil() {
@@ -203,7 +263,8 @@ struct ToolsCornerPluginTests {
         var layout = SystemLayout.live()
         layout.pluginTweaks = folder.appendingPathComponent("pluginplayground/tweaks")
         layout.pluginLoaderBin = folder.appendingPathComponent("pluginplayground/bin")
-        layout.pluginLoaderDaemon = folder.appendingPathComponent("grant.plist")
+        layout.pluginLoaderDaemon = folder.appendingPathComponent("Library/LaunchDaemons/com.pluginplayground.grant.plist")
+        layout.pluginLoaderOptions = folder.appendingPathComponent("pluginplayground/current.options")
         let install = try #require(CornerPlugin.installOperations(layout: layout, appBundle: app))
         guard case .installFile(_, let first) = install[0] else { Issue.record("not an install"); return }
         #expect(first.lastPathComponent == CornerPlugin.optionsName)
@@ -212,22 +273,35 @@ struct ToolsCornerPluginTests {
         // Installing and removing through the executor used for simulated Macs; the status follows the files.
         try FileManager.default.createDirectory(at: layout.pluginTweaks, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: layout.pluginLoaderBin, withIntermediateDirectories: true)
+        for tool in ["grant", "fangs"] {
+            let file = layout.pluginLoaderBin.appendingPathComponent(tool)
+            try Data().write(to: file)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: file.path)
+        }
+        try FileManager.default.createDirectory(at: layout.pluginLoaderDaemon.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data().write(to: layout.pluginLoaderDaemon)
+        try PluginLoader.optionsWithPACStripping(existing: nil).write(to: layout.pluginLoaderOptions)
         try await DirectPrivilegedExecutor().run(install, reason: "test")
         // A csrutil stand-in that reports debugging allowed, so status reads it.
         let csr = folder.appendingPathComponent("csrutil")
         try "#!/bin/bash\necho \"System Integrity Protection status: disabled.\"\n".write(to: csr, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: csr.path)
         layout.csrutil = csr.path
-        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: [csr.path]), baseEnvironment: [:])
-        var status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
+        layout.launchctl = try CornerPluginSetupTests.standIn("launchctl", exit: 0, in: folder).path
+        layout.pgrep = try CornerPluginSetupTests.standIn("pgrep", exit: 0, in: folder).path
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: [csr.path, layout.launchctl, layout.pgrep]), baseEnvironment: [:])
+        var status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434",
+                                               architecture: .arm64)
         #expect(status.installed && status.current)
         #expect(status.loaderInstalled && status.loaderEnabled)
         #expect(status.debuggingAllowed == true)
         #expect(status.readiness == .ready)
         try await DirectPrivilegedExecutor().run(CornerPlugin.removeOperations(layout: layout), reason: "test")
-        status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434")
+        status = await CornerPlugin.status(layout: layout, runner: runner, sip: .disabled, appBundle: app, build: "26A434",
+                                           architecture: .arm64)
         #expect(!status.installed)
         #expect(status.loaderInstalled)
+        #expect(status.readiness == .pluginMissing)
+        #expect(status.missingSteps == [.installPlugin])
     }
 }

@@ -3,13 +3,18 @@
 <plist version="1.0">
 <dict>
     <!-- Plugin Playground targeting for MacReplicaCorners.dylib. Inject only into processes that link AppKit
-         (GUI apps), matching the plugin's own NSApplication gate, and never into these system UI processes. -->
+         (GUI apps), matching the plugin's own NSApplication gate, and never into the system-UI processes and
+         known-fragile apps below. IMPORTANT: this blacklist only stops *our dylib* from loading into an app; it does
+         NOT stop Plugin Playground's own "Disable arm64e (PAC)" stripping, which runs every arm64e app from an
+         unsigned copy in /tmp/RuntimeApplications regardless of this list. See docs/TOOLS.md. Users can add their own
+         fragile apps to Plugin Playground's global blacklist (its configurator) or to this file by process name. -->
     <key>frameworkDependencies</key>
     <array>
         <string>AppKit</string>
     </array>
     <key>blacklistedApps</key>
     <array>
+        <!-- System UI: never touch these. -->
         <string>loginwindow</string>
         <string>WindowManager</string>
         <string>Dock</string>
@@ -19,6 +24,11 @@
         <string>Spotlight</string>
         <string>Setup Assistant</string>
         <string>SecurityAgent</string>
+        <!-- Known-fragile: our dylib is SIGKILLed on load inside these (strict code-signing + PAC-stripped copy).
+             Verified on macOS 27.0.1 (26A434): Microsoft AutoUpdate crash-loops without this. -->
+        <string>Microsoft AutoUpdate</string>
+        <string>Microsoft Update Assistant</string>
+        <string>com.microsoft.autoupdate2</string>
     </array>
 </dict>
 </plist>

@@ -14,9 +14,14 @@ public enum PrivilegedOperation: Equatable, Sendable {
     case removePluginFile(URL)
     /// Removes one of the tweak loader's own items when uninstalling it – only the fixed set (see `isRemovableLoaderItem`).
     case removeSystemItem(URL)
+    /// Loads the tweak loader's launch daemon into launchd (what its own app's "Install" button does) – only its one
+    /// fixed daemon file (see `isLoaderService`).
+    case startLoaderService(URL)
+    /// Forgets the tweak loader's installer receipt after uninstalling it – only its one fixed package identifier.
+    case forgetLoaderReceipt
 
-    /// The executable and arguments for this operation. Only these five
-    /// fixed system tools can ever be run with administrator rights.
+    /// The executable and arguments for this operation. Only these fixed system tools can ever be run with
+    /// administrator rights.
     var argv: [String] {
         switch self {
         case .createFolder(let url): return ["/bin/mkdir", "-p", url.path]
@@ -28,13 +33,17 @@ public enum PrivilegedOperation: Equatable, Sendable {
         case .installPackage(let url): return ["/usr/sbin/installer", "-pkg", url.path, "-target", "/"]
         case .removePluginFile(let url): return ["/bin/rm", "-f", url.path]
         case .removeSystemItem(let url): return ["/bin/rm", "-rf", url.path]
+        case .startLoaderService(let url): return ["/bin/launchctl", "bootstrap", "system", url.path]
+        case .forgetLoaderReceipt: return ["/usr/sbin/pkgutil", "--forget", PluginLoader.receiptIdentifier]
         }
     }
 
     var paths: [URL] {
         switch self {
-        case .createFolder(let url), .installPackage(let url), .removePluginFile(let url), .removeSystemItem(let url): return [url]
+        case .createFolder(let url), .installPackage(let url), .removePluginFile(let url), .removeSystemItem(let url),
+             .startLoaderService(let url): return [url]
         case .installFile(let source, let destination), .move(let source, let destination): return [source, destination]
+        case .forgetLoaderReceipt: return []
         }
     }
 }
@@ -54,6 +63,12 @@ extension PrivilegedOperation {
         guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
         let allowed = [PluginLoader.daemonPlist, PluginLoader.app, PluginLoader.installRoot, PluginLoader.logs].map(\.standardizedFileURL)
         return allowed.contains(url.standardizedFileURL)
+    }
+
+    /// Only the tweak loader's own daemon file (`…/Library/LaunchDaemons/com.pluginplayground.grant.plist`) may be loaded.
+    public static func isLoaderService(_ url: URL) -> Bool {
+        guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/..") else { return false }
+        return url.path.hasSuffix("/Library/LaunchDaemons/" + PluginLoader.serviceLabel + ".plist")
     }
 }
 
@@ -119,6 +134,9 @@ public struct AppleScriptPrivilegedExecutor: PrivilegedExecuting {
             if case .removeSystemItem(let url) = operation, !PrivilegedOperation.isRemovableLoaderItem(url) {
                 throw PrivilegedError.invalidPath(url.path)
             }
+            if case .startLoaderService(let url) = operation, !PrivilegedOperation.isLoaderService(url) {
+                throw PrivilegedError.invalidPath(url.path)
+            }
             let argv = operation.argv
             arguments.append(String(argv.count))
             arguments.append(contentsOf: argv)
@@ -152,9 +170,12 @@ public struct AppleScriptPrivilegedExecutor: PrivilegedExecuting {
 public struct DirectPrivilegedExecutor: PrivilegedExecuting {
     /// Installs a "package" in the simulation: a JSON file describing files to create.
     public var packageInstaller: (@Sendable (URL) throws -> Void)?
+    /// Starts a launch daemon in the simulation (the real launchd is never asked).
+    public var serviceStarter: (@Sendable (URL) throws -> Void)?
 
-    public init(packageInstaller: (@Sendable (URL) throws -> Void)? = nil) {
+    public init(packageInstaller: (@Sendable (URL) throws -> Void)? = nil, serviceStarter: (@Sendable (URL) throws -> Void)? = nil) {
         self.packageInstaller = packageInstaller
+        self.serviceStarter = serviceStarter
     }
 
     public func run(_ operations: [PrivilegedOperation], reason: String) async throws {
@@ -177,6 +198,13 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
             case .removeSystemItem(let url):
                 guard PrivilegedOperation.isRemovableLoaderItem(url) else { throw PrivilegedError.invalidPath(url.path) }
                 if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+            case .startLoaderService(let url):
+                guard PrivilegedOperation.isLoaderService(url) else { throw PrivilegedError.invalidPath(url.path) }
+                guard let serviceStarter else { throw PrivilegedError.failed("no service starter") }
+                try serviceStarter(url)
+            case .forgetLoaderReceipt:
+                // The simulated Mac has no package database.
+                break
             }
         }
     }
