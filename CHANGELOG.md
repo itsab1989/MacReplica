@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-16
+
 ### Fixed
 - **Window corners: the corner-plugin setup now finishes by itself.** In 1.1.0, “Set up automatically” installed
   Plugin Playground and the plugin, then opened Playground's window and asked you to “enable it” – but that window has
