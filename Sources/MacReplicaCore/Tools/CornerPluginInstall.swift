@@ -64,7 +64,8 @@ public enum PluginLoader {
     /// The loader's settings with `disablePAC` on. Every other key the user set (blacklist, pause, legacy folder) is
     /// kept; a missing file starts from the defaults Plugin Playground's own app writes.
     public static func optionsWithPACStripping(existing: Data?) throws -> Data {
-        var options: [String: Any] = ["disablePAC": false, "pauseInjection": false, "useLegacyAmmonia": false, "globalBlacklist": [String]()]
+        // `disablePAC` is set unconditionally below, so it is deliberately not seeded here (no dead store).
+        var options: [String: Any] = ["pauseInjection": false, "useLegacyAmmonia": false, "globalBlacklist": [String]()]
         if let existing, let plist = try? PropertyListSerialization.propertyList(from: existing, format: nil) as? [String: Any] {
             options.merge(plist) { _, new in new }
         }

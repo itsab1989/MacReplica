@@ -102,6 +102,8 @@ struct CornerPluginSetupTests {
         let status = await CornerPlugin.status(layout: layout, runner: refusing, sip: .disabled, appBundle: folder, build: "26A434")
         #expect(status.serviceLoaded == nil && status.injectorRunning == nil)
         #expect(!status.loaderInstalled, "an empty bin folder is not an installed loader")
+        // `activeHere` defaults to false and is only true when the caller passes it (the app checks its own images).
+        #expect(!status.activeHere)
     }
 
     @Test func lastExitIsReadFromLaunchctl() {
