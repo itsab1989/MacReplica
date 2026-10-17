@@ -11,23 +11,34 @@ permissions:
   contents: read
 
 jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build MacReplica's Launchpad tool (arm64) and a Finder-style probe app
+        run: |
+          swift build -c release --arch arm64 --product MacReplicaSimulator
+          mkdir tool && cp "$(swift build -c release --arch arm64 --show-bin-path)/MacReplicaSimulator" tool/sim
+          cp -R "$(swift build -c release --arch arm64 --show-bin-path)/MacReplica_MacReplicaCore.bundle" tool/
+          mkdir -p tool/Probe.app/Contents/MacOS
+          swiftc -O -target arm64-apple-macos13 repro/LaunchpadProbe.swift -o tool/Probe.app/Contents/MacOS/Probe
+          /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string Probe" -c "Add :CFBundleIdentifier string io.example.launchpadprobe" \
+            -c "Add :CFBundlePackageType string APPL" tool/Probe.app/Contents/Info.plist
+          codesign -s - --force tool/Probe.app
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tool
+          path: tool
+
   launchpad:
+    needs: build
     runs-on: macos-14
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - name: Build MacReplica's Launchpad tool and a Finder-style probe app
-        run: |
-          sw_vers; uname -m
-          swift build -c release --product MacReplicaSimulator
-          cp "$(swift build -c release --show-bin-path)/MacReplicaSimulator" sim
-          cp -R "$(swift build -c release --show-bin-path)/MacReplica_MacReplicaCore.bundle" . || true
-          ls -la sim
-          mkdir -p Probe.app/Contents/MacOS
-          swiftc -O repro/LaunchpadProbe.swift -o Probe.app/Contents/MacOS/Probe
-          /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string Probe" -c "Add :CFBundleIdentifier string io.example.launchpadprobe" \
-            -c "Add :CFBundlePackageType string APPL" Probe.app/Contents/Info.plist
-          codesign -s - --force Probe.app
+      - uses: actions/download-artifact@v8
+        with:
+          name: tool
+      - run: chmod +x sim Probe.app/Contents/MacOS/Probe; sw_vers; uname -m
       - name: Probe, rewrite with MacReplica's code, restart the Dock, probe again
         run: |
           set +e -x
