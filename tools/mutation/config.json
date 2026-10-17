@@ -101,7 +101,8 @@
         "SessionAndPrivilegeEdgeTests",
         "DeveloperEnvironmentTests",
         "GuidedInstallationTests",
-        "TesterFeedback110Tests"
+        "TesterFeedback110Tests",
+        "LaunchpadRestoreTests"
       ],
       "area": "Resume"
     },

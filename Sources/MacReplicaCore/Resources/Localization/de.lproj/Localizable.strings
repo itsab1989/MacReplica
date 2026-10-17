@@ -2204,3 +2204,4 @@
 "summary.guidedDevices.other" = "%1$d Schritte für Bildschirme, Drucker und Scanner, eingerichtet in den Systemeinstellungen";
 "report.restore.waitingHint.one" = "%1$d Schritt wartet auf dich. Die geführten Schritte sind in MacReplica, nicht in diesem Bericht: Öffne MacReplica, wähle im Startfenster „Fortsetzen“ und dann „Mit geführten Schritten weitermachen“.";
 "report.restore.waitingHint.other" = "%1$d Schritte warten auf dich. Die geführten Schritte sind in MacReplica, nicht in diesem Bericht: Öffne MacReplica, wähle im Startfenster „Fortsetzen“ und dann „Mit geführten Schritten weitermachen“.";
+"skip.launchpadDatabaseMissing" = "Noch nicht angeordnet: Die App-Liste von Launchpad wurde auf diesem Mac nicht gefunden. Öffne Launchpad einmal und wähle dann „Fortsetzen“ – MacReplica prüft es erneut";

@@ -2204,3 +2204,4 @@
 "summary.guidedDevices.other" = "%1$d stappen voor beeldschermen, printers en scanners, in te stellen in Systeeminstellingen";
 "report.restore.waitingHint.one" = "%1$d stap wacht op jou. De begeleide stappen staan in MacReplica, niet in dit rapport: open MacReplica, kies Hervat in het startvenster en dan Doorgaan met begeleide stappen.";
 "report.restore.waitingHint.other" = "%1$d stappen wachten op jou. De begeleide stappen staan in MacReplica, niet in dit rapport: open MacReplica, kies Hervat in het startvenster en dan Doorgaan met begeleide stappen.";
+"skip.launchpadDatabaseMissing" = "Nog niet ingedeeld: de lijst met apps van Launchpad is niet gevonden op deze Mac. Open Launchpad één keer en kies dan Hervat – MacReplica controleert het opnieuw";

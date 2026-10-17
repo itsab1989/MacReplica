@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **“Launchpad does not exist on this macOS” on macOS 14.** A tester's restore on Sonoma skipped Launchpad with that
+  message. MacReplica gave the same reason when the macOS has no Launchpad (macOS 26 and later) and when Launchpad's
+  database was simply not found, and never checked again. On a macOS with Launchpad the step now says it is *not
+  arranged yet* because Launchpad's list was not found, waits, and arranges Launchpad when you choose **Continue**.
+  A restore saved by 1.1.2 with the wrong result is checked again when you continue it.
+
 ## [1.1.2] - 2026-10-17
 
 Fixes from a tester's restore with 1.1.0 on an Intel Mac (macOS 14) after a clean reinstall, where the home folder

@@ -2204,3 +2204,4 @@
 "summary.guidedDevices.other" = "%1$d trinn for skjermer, skrivere og skannere, konfigureres i Systeminnstillinger";
 "report.restore.waitingHint.one" = "%1$d trinn venter på deg. De veiledede trinnene er i MacReplica, ikke i denne rapporten: åpne MacReplica, velg Fortsett i startvinduet og deretter Fortsett med veiledede trinn.";
 "report.restore.waitingHint.other" = "%1$d trinn venter på deg. De veiledede trinnene er i MacReplica, ikke i denne rapporten: åpne MacReplica, velg Fortsett i startvinduet og deretter Fortsett med veiledede trinn.";
+"skip.launchpadDatabaseMissing" = "Ikke ordnet ennå: Launchpads liste over apper ble ikke funnet på denne Macen. Åpne Launchpad én gang og velg deretter Fortsett – MacReplica sjekker igjen";

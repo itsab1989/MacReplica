@@ -421,7 +421,7 @@ public final class RestoreExecutor: Sendable {
     @discardableResult
     public func run(plan: RestorePlan, session initial: RestoreSession,
                     onEvent: @escaping @Sendable (RestoreEvent) -> Void) async -> RestoreSession {
-        var session = initial
+        var session = initial.reopeningStaleLaunchpadResult(macOSVersion: environment.macOSVersion)
         let inspector = Inspector(environment: environment, backupRoot: backupRoot, selection: session.selection, damagedFiles: damagedFiles)
         var context = RunContext()
         if environment.askpassPath != nil, let prompt = environment.adminPasswordPrompt {

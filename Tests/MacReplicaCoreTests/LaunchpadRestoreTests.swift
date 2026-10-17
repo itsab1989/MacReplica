@@ -91,6 +91,56 @@ struct LaunchpadRestoreTests {
                 "a folder (and page) that becomes empty is left out")
     }
 
+    /// The tester's macOS 14 Mac: Launchpad exists, but its database was not found when the step ran. That is not
+    /// “Launchpad does not exist on this macOS”: the step waits, says what to do, and arranges Launchpad on Continue.
+    @Test func aMissingDatabaseOnAMacOSWithLaunchpadWaitsAndIsArrangedOnContinue() async throws {
+        let c = try await backup("launchpad-no-db")
+        let (_, environment, db) = try target(c, apps: Self.folder + Self.page)
+        let kept = db.deletingLastPathComponent().appendingPathComponent("db.aside")
+        try FileManager.default.moveItem(at: db, to: kept)
+        let plan = RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.launchpad]))
+        let dry = await RestoreExecutor(environment: environment, backupRoot: c.backup, sessionStore: nil)
+            .dryRun(plan: plan, selection: RestoreSelection(components: [.launchpad]))
+        #expect(dry.first?.prediction == .willSkip(.launchpadDatabaseMissing))
+        let first = await run(plan, environment, c)
+        let outcome = first.results[RestoreItem.launchpadID]?.outcome
+        #expect(outcome == .skipped(.launchpadDatabaseMissing))
+        #expect(outcome?.isOpen == true, "waits for Continue instead of being closed")
+        #expect(first.status == .inProgress)
+        #expect(!FileManager.default.fileExists(atPath: db.path), "nothing is created in the Dock's place")
+        let text = TestEnvironment.english.outcomeText(outcome ?? .succeeded)
+        #expect(!text.contains("does not exist"))
+
+        try FileManager.default.moveItem(at: kept, to: db)
+        let resumed = await run(plan, environment, c, session: first)
+        #expect(resumed.results[RestoreItem.launchpadID]?.outcome == .succeeded)
+        #expect(try layout(db, c).pages == c.manifest.launchpadLayout?.pages)
+    }
+
+    /// A session saved by 1.1.2 holds “Launchpad does not exist on this macOS” for macOS 14. Continuing it checks again.
+    @Test func aStaleNotAvailableResultIsReopenedOnlyWhereLaunchpadExists() async throws {
+        var stale = RestoreSession(backupPath: "", selection: RestoreSelection(components: [.launchpad]), itemIDs: [RestoreItem.launchpadID, "x"])
+        stale.results[RestoreItem.launchpadID] = ItemResult(itemID: RestoreItem.launchpadID, outcome: .skipped(.launchpadNotAvailable))
+        stale.results["x"] = ItemResult(itemID: "x", outcome: .succeeded)
+        stale.status = .completed
+        let reopened = stale.reopeningStaleLaunchpadResult(macOSVersion: "14.8.9")
+        #expect(reopened.results[RestoreItem.launchpadID] == nil && reopened.status == .inProgress)
+        #expect(reopened.results["x"]?.outcome == .succeeded)
+        #expect(stale.reopeningStaleLaunchpadResult(macOSVersion: "26.1") == stale, "true on macOS 26: unchanged")
+        var arranged = stale
+        arranged.results[RestoreItem.launchpadID] = ItemResult(itemID: RestoreItem.launchpadID, outcome: .succeeded)
+        #expect(arranged.reopeningStaleLaunchpadResult(macOSVersion: "14.8.9") == arranged)
+
+        let c = try await backup("launchpad-stale")
+        let (_, environment, db) = try target(c, apps: Self.folder + Self.page)
+        let plan = RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.launchpad]))
+        var saved = RestoreSession(backupPath: "", selection: RestoreSelection(components: [.launchpad]), itemIDs: plan.items.map(\.id))
+        saved.results[RestoreItem.launchpadID] = ItemResult(itemID: RestoreItem.launchpadID, outcome: .skipped(.launchpadNotAvailable))
+        let continued = await run(plan, environment, c, session: saved)
+        #expect(continued.results[RestoreItem.launchpadID]?.outcome == .succeeded)
+        #expect(try layout(db, c).pages == c.manifest.launchpadLayout?.pages)
+    }
+
     @Test func switchedOffOrWithoutLaunchpadNothingIsChanged() async throws {
         let c = try await backup("launchpad-off")
         #expect(!RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.applications]))

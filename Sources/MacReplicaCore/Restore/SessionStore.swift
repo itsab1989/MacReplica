@@ -51,6 +51,17 @@ public struct RestoreSession: Codable, Equatable, Sendable, Identifiable {
         }.keys)
     }
 
+    /// Up to 1.1.2 a Launchpad database that was not found on a macOS with Launchpad was saved as “Launchpad does not
+    /// exist on this macOS” and never checked again. On such a macOS that result is reopened, so Continue arranges it.
+    public func reopeningStaleLaunchpadResult(macOSVersion: String) -> RestoreSession {
+        guard LaunchpadLayout.isSupported(macOSVersion: macOSVersion),
+              results[RestoreItem.launchpadID]?.outcome == .skipped(.launchpadNotAvailable) else { return self }
+        var session = self
+        session.results[RestoreItem.launchpadID] = nil
+        session.status = .inProgress
+        return session
+    }
+
     /// The same session, ready to run the retryable steps again. Everything that worked, and the steps that wait for
     /// the user, keep their results – so the summary, the guided steps and resuming after quitting stay complete.
     public func preparedForRetry() -> RestoreSession {

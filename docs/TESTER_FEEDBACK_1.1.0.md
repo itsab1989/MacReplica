@@ -12,6 +12,9 @@ Sources (kept outside the repository, not changed):
 - **Report 2** – email “MacReplica restore report”: two sentences and the restore summary
   (`MacReplica Restore Summary.html`, zipped). The body shows an image placeholder, but the message contains no
   image part – only the zip. Nothing else was missing.
+- **Report 3** – email “Test of MacReplica 1.1.2” (same session resumed with 1.1.2 on the restored Mac, macOS 14.8.9):
+  text, one screenshot of the summary (a higher-resolution copy supplied separately), `restore-20261017-222553.log`
+  (467 steps, 460 already finished). All readable.
 
 Status categories: **Verified** (real app on screen, simulated Mac) · **Tests** (automated, simulated Mac or
 synthetic data) · **Not verified on real hardware** where the tester's environment (Intel + T2, real Homebrew,
@@ -44,6 +47,11 @@ real administrator prompt, network share) was not available. Baseline: `main` at
 | RESTORE-005 | Report: 9 guided installations, 5 scanners waiting; Launchpad waits for 9 apps (R2) | Corroborating | – | Matches the 15 waiting steps of R1 screenshot 3; Launchpad waiting is intended. | See RESTORE-001. |
 | RESTORE-006 | The report after the restart is the *original* session (387/65), not the retry (3/65) (R2) | Corroborating | – | Confirms F-13's cause: the original session stayed unfinished and is what **Continue** resumes; the retry was a separate, completed session. | – |
 | RESTORE-007 | Backup made on macOS 14.8.4, restored on 14.8.9, Intel (R2 header) | Context | Info | Same major version: settings are offered as usual. | Not applicable. |
+| TEST112-001 | With 1.1.2 the restore completed and “guided steps were possible to click and reach” (R3 text, screenshot: “4 steps for displays, printers and scanners”) | Confirmation | – | – | **RESTORE-001 and F-13/F-14 verified by the tester on his real Mac.** |
+| TEST112-002 | “The reinstall guide includes all the things I had problems with” (R3 text) | Confirmation | – | – | **F-05/F-06 confirmed by the tester** (content; he did not repeat the reinstall). |
+| TEST112-003 | “The restore window falsely claims that Launchpad does not exist on this macOS, which is Sonoma … restoring the Launchpad was skipped” (R3 text; screenshot: *Launchpad – Launchpad does not exist on this macOS (replaced by the Apps view)* under “4 items skipped”) | New defect (not a regression of 1.1.2's changes: the Launchpad code was not touched) | Medium (misleading status; the arrangement is lost silently) | **Confirmed in code:** `predictLaunchpad` returned `launchpadNotAvailable` for three different causes – macOS 26 or later (correct), *and* a Launchpad database that was not found or no store – and that result was final, so it was never checked again. On 14.8.9 the version check passes, so the database file (`$(getconf DARWIN_USER_DIR)/com.apple.dock.launchpad/db/db`) was not found when the step ran. **Why it was missing is not known** (same Mac arranged Launchpad with 1.1.0, R1 log; the step ran in an earlier 1.1.2 run of the session, not in the attached log). | **Fixed, tests + on screen (simulated)** – a missing database on a macOS with Launchpad is now *“Not arranged yet: Launchpad's list of apps was not found … Open Launchpad once, then choose Continue”*, the step waits and is checked again; a session saved by 1.1.2 with the false result is reopened on Continue (the tester's own session included). Not verified on a real macOS 14 (none here): whether opening Launchpad recreates a missing database. **Clarification asked:** output of `ls "$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/"` on his Mac. |
+| TEST112-004 | Cakebrew, Get It, iClue “Skipped as you chose” (R3 screenshot) | Informational | – | The tester skipped them in the guided steps. | Not applicable. |
+| TEST112-005 | 4 scanner steps still waiting (R3 screenshot, log) | Informational | – | Set up in System Settings by the user; the restore stays open for them. | Not applicable. |
 
 ## Changes
 
@@ -73,3 +81,15 @@ real administrator prompt, network share) was not available. Baseline: `main` at
 - Incident during on-screen testing: the **Reinstall Guide** button opened the page in the maintainer's Safari; a window
   screenshot of it was deleted at once (it showed private tabs) and the closed browser window was reopened. HTML pages
   are now checked as files on disk.
+
+### Report 3 (TEST112-003, Launchpad)
+
+- Code: `Restore/RestoreModel.swift` (`launchpadDatabaseMissing`, open), `Restore/LaunchpadRestore.swift`,
+  `Restore/SessionStore.swift` (`reopeningStaleLaunchpadResult`, applied at the start of every run),
+  `Localization/Descriptions.swift`, one new text in 7 languages.
+- Tests: `LaunchpadRestoreTests` +2 (missing database waits and is arranged on Continue; a 1.1.2 session with the
+  false result is reopened on macOS 14 and left alone on macOS 26). Full suite: **674 tests passed**. Mutation of the
+  changed lines: 1 of 1 valid mutant killed (the guard changes produce no mutants with this tool).
+- On screen (simulated macOS 15.1, real app): restore onto a Mac without Launchpad database → *Waiting for apps or
+  permissions: Launchpad – Not arranged yet …* (`gui-09`); database created, **Continue** → “Launchpad arranged
+  (1 pages, 1 folders)” (`gui-10`). Not verified on a real macOS 14.
