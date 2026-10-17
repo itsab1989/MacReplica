@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-10-17
+
 ### Fixed
 - **“Launchpad does not exist on this macOS” on macOS 14.** A tester's restore on Sonoma skipped Launchpad with that
   message. MacReplica gave the same reason when the macOS has no Launchpad (macOS 26 and later) and when Launchpad's
@@ -475,7 +477,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/itsab1989/MacReplica/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/itsab1989/MacReplica/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/itsab1989/MacReplica/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/itsab1989/MacReplica/compare/v1.0.7...v1.1.0
