@@ -149,6 +149,22 @@ public struct LaunchpadStore: Sendable {
 
     static let pageCapacity = 35
 
+    /// What exists along the database path, for the log when the database is not found: each folder from the user's
+    /// temporary folder down, and the names of the files in the `db` folder. No absolute path is written.
+    public func locationReport() -> String {
+        let fm = FileManager.default
+        let db = database.deletingLastPathComponent(), launchpad = db.deletingLastPathComponent(), user = launchpad.deletingLastPathComponent()
+        func state(_ url: URL) -> String {
+            var isFolder: ObjCBool = false
+            guard fm.fileExists(atPath: url.path, isDirectory: &isFolder) else { return "missing" }
+            guard isFolder.boolValue else { return "a file" }
+            return fm.isReadableFile(atPath: url.path) ? "present" : "present, not readable"
+        }
+        let files = (try? fm.contentsOfDirectory(atPath: db.path))?.sorted().joined(separator: ", ") ?? "-"
+        return "user folder \(state(user)), \(launchpad.lastPathComponent) \(state(launchpad)), db folder \(state(db)) [\(files)], "
+            + "database file \(fm.fileExists(atPath: database.path) ? "present" : "missing")"
+    }
+
     /// Makes the Dock load a rebuilt database (`applyAndReloadDock`); the simulation records the signals instead.
     public var signalDock: @Sendable (Int32) -> Void = LaunchpadStore.signalDock
 

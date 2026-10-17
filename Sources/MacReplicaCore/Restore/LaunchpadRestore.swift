@@ -30,7 +30,12 @@ extension RestoreExecutor {
     func restoreLaunchpad(_ item: RestoreItem, inspector: Inspector, plan: RestorePlan, session: RestoreSession,
                           onEvent: @escaping @Sendable (RestoreEvent) -> Void) async -> ItemResult {
         switch inspector.predictLaunchpad(item) {
-        case .willSkip(let reason): return ItemResult(itemID: item.id, outcome: .skipped(reason))
+        case .willSkip(let reason):
+            if reason == .launchpadDatabaseMissing {
+                log.warning("\(item.id): Launchpad database not found – " + (layout.launchpadStore?.locationReport() ?? "no user folder (confstr failed)"),
+                            component: .restore)
+            }
+            return ItemResult(itemID: item.id, outcome: .skipped(reason))
         default: break
         }
         guard let recorded = item.launchpadLayout, let store = layout.launchpadStore else {

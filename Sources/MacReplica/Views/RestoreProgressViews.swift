@@ -261,6 +261,9 @@ struct RestoreSummaryView: View {
                                     Spacer()
                                     Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
                                         .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+                                    Button(l.t("guided.skip")) { model.markGuided(item.id, .userSkipped) }
+                                        .controlSize(.small)
+                                        .accessibilityIdentifier("summary.skip.\(item.id)")
                                 }
                             }
                             if waitingForApps.contains(where: { if case .skipped(.needsFullDiskAccess) = $0.1.outcome { return true }; return false }) {

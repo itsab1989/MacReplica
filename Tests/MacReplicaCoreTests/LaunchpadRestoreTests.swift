@@ -141,6 +141,20 @@ struct LaunchpadRestoreTests {
         #expect(try layout(db, c).pages == c.manifest.launchpadLayout?.pages)
     }
 
+    @Test func theLogSaysWhatExistsAlongTheDatabasePathWithoutAnyPath() throws {
+        let sandbox = try Sandbox("launchpad-report")
+        let user = try sandbox.folder("0")
+        let store = LaunchpadStore(database: user.appendingPathComponent("com.apple.dock.launchpad/db/db"))
+        #expect(store.locationReport() == "user folder present, com.apple.dock.launchpad missing, db folder missing [-], database file missing")
+        let db = user.appendingPathComponent("com.apple.dock.launchpad/db")
+        try FileManager.default.createDirectory(at: db, withIntermediateDirectories: true)
+        try Data().write(to: db.appendingPathComponent("db-wal"))
+        #expect(store.locationReport() == "user folder present, com.apple.dock.launchpad present, db folder present [db-wal], database file missing")
+        try Data().write(to: db.appendingPathComponent("db"))
+        #expect(store.locationReport().hasSuffix("[db, db-wal], database file present"))
+        #expect(!store.locationReport().contains(sandbox.url.path))
+    }
+
     @Test func switchedOffOrWithoutLaunchpadNothingIsChanged() async throws {
         let c = try await backup("launchpad-off")
         #expect(!RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.applications]))

@@ -2204,4 +2204,9 @@
 "summary.guidedDevices.other" = "%1$d pasos para pantallas, impresoras y escáneres, que se configuran en Ajustes del Sistema";
 "report.restore.waitingHint.one" = "%1$d paso te espera. Los pasos guiados están en MacReplica, no en este informe: abre MacReplica, elige Reanudar en la ventana de inicio y luego Continuar con los pasos guiados.";
 "report.restore.waitingHint.other" = "%1$d pasos te esperan. Los pasos guiados están en MacReplica, no en este informe: abre MacReplica, elige Reanudar en la ventana de inicio y luego Continuar con los pasos guiados.";
-"skip.launchpadDatabaseMissing" = "Aún sin ordenar: no se encontró la lista de apps de Launchpad en este Mac. Abre Launchpad una vez y elige Reanudar; MacReplica lo vuelve a comprobar";
+"skip.launchpadDatabaseMissing" = "Sin ordenar: MacReplica no encontró la base de datos de Launchpad en este Mac, así que tu disposición actual se queda como está. Elige Omitir si no la necesitas; el registro de la restauración anota lo que se encontró";
+"guided.skipAll" = "Omitir todo";
+"guided.skipAll.help" = "Omite todas las apps y pasos que se muestran aquí. Puedes instalarlos o configurarlos tú mismo más tarde.";
+"guided.skipAll.title.one" = "¿Omitir %1$d paso pendiente?";
+"guided.skipAll.title.other" = "¿Omitir %1$d pasos pendientes?";
+"guided.skipAll.message" = "MacReplica no volverá a preguntar por ellos en esta restauración y los mostrará como omitidos. No se cambia ni se elimina nada en este Mac.";

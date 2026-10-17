@@ -2204,4 +2204,9 @@
 "summary.guidedDevices.other" = "%1$d passaggi per monitor, stampanti e scanner, da configurare in Impostazioni di Sistema";
 "report.restore.waitingHint.one" = "%1$d passaggio ti aspetta. I passaggi guidati sono in MacReplica, non in questo rapporto: apri MacReplica, scegli Riprendi nella finestra iniziale, poi Continua con i passaggi guidati.";
 "report.restore.waitingHint.other" = "%1$d passaggi ti aspettano. I passaggi guidati sono in MacReplica, non in questo rapporto: apri MacReplica, scegli Riprendi nella finestra iniziale, poi Continua con i passaggi guidati.";
-"skip.launchpadDatabaseMissing" = "Non ancora disposto: l’elenco delle app di Launchpad non è stato trovato su questo Mac. Apri Launchpad una volta, poi scegli Riprendi: MacReplica controlla di nuovo";
+"skip.launchpadDatabaseMissing" = "Non disposto: MacReplica non ha trovato il database di Launchpad su questo Mac, quindi la disposizione attuale resta com’è. Scegli Salta se non ti serve; il registro del ripristino annota cosa è stato trovato";
+"guided.skipAll" = "Salta tutto";
+"guided.skipAll.help" = "Salta tutte le app e i passaggi mostrati qui. Puoi comunque installarli o configurarli tu più tardi.";
+"guided.skipAll.title.one" = "Saltare %1$d passaggio rimanente?";
+"guided.skipAll.title.other" = "Saltare %1$d passaggi rimanenti?";
+"guided.skipAll.message" = "MacReplica non li chiederà più in questo ripristino e li indicherà come saltati. Su questo Mac non viene modificato né rimosso nulla.";

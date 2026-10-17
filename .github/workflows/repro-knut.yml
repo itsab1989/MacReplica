@@ -19,7 +19,10 @@ jobs:
       - name: Build MacReplica's Launchpad tool and a Finder-style probe app
         run: |
           sw_vers; uname -m
-          swift build -c release --product MacReplicaSimulator && cp "$(swift build -c release --show-bin-path)/MacReplicaSimulator" sim
+          swift build -c release --product MacReplicaSimulator
+          cp "$(swift build -c release --show-bin-path)/MacReplicaSimulator" sim
+          cp -R "$(swift build -c release --show-bin-path)/MacReplica_MacReplicaCore.bundle" . || true
+          ls -la sim
           mkdir -p Probe.app/Contents/MacOS
           swiftc -O repro/LaunchpadProbe.swift -o Probe.app/Contents/MacOS/Probe
           /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string Probe" -c "Add :CFBundleIdentifier string io.example.launchpadprobe" \
@@ -27,13 +30,13 @@ jobs:
           codesign -s - --force Probe.app
       - name: Probe, rewrite with MacReplica's code, restart the Dock, probe again
         run: |
-          set -x
+          set +e -x
           mkdir -p out
           DB="$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db"
           echo "shell DARWIN_USER_DIR=$(getconf DARWIN_USER_DIR)"
           ls -la "$DB" || true
           ./Probe.app/Contents/MacOS/Probe out/1-terminal.txt
-          open -W -n Probe.app --args "$PWD/out/2-launchservices.txt"; cat out/2-launchservices.txt
+          open -n Probe.app --args "$PWD/out/2-launchservices.txt"; sleep 5; cat out/2-launchservices.txt
           ./sim launchpad-export out/original.json
           cat > recorded.json <<'JSON'
           {"macosVersion": "14", "pages": [[{"folder": {"name": "Backup & Safety", "pages": [["com.apple.Safari", "com.apple.Notes"]]}}, {"app": "com.apple.mail"}]]}
@@ -42,7 +45,7 @@ jobs:
           ls -la "$DB" | tee out/4-after-apply-ls.txt
           killall Dock; sleep 10
           ls -la "$DB" | tee out/5-after-dock-restart-ls.txt
-          open -W -n Probe.app --args "$PWD/out/6-launchservices-after.txt"; cat out/6-launchservices-after.txt
+          open -n Probe.app --args "$PWD/out/6-launchservices-after.txt"; sleep 5; cat out/6-launchservices-after.txt
           ./sim launchpad-export out/7-after.json || echo EXPORT_FAILED
           # The tester's advice check: if the database is missing, does opening Launchpad (or a Dock restart) recreate it?
           killall -STOP Dock; mv "$DB" "$DB.aside"; killall -KILL Dock; sleep 10
@@ -60,26 +63,33 @@ jobs:
     runs-on: macos-15-intel
     timeout-minutes: 90
     steps:
-      - name: Old Homebrew (as brought back by Time Machine), then the tester's casks
+      - name: Old Homebrew (as brought back by Time Machine), then MacReplica's sequence (fail, brew update, again)
         run: |
-          set -x
-          sw_vers; uname -m; mkdir -p out
+          set +e -x
+          sw_vers; uname -m; sysctl -n machdep.cpu.brand_string; mkdir -p out
           export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_AUTOREMOVE=1 NONINTERACTIVE=1
           brew --version | tee out/brew-current.txt
           git -C "$(brew --repo)" fetch --tags --quiet
           git -C "$(brew --repo)" checkout --quiet 4.2.0
           brew --version | tee out/brew-old.txt
-          for c in gimp zoom microsoft-office; do
-            echo "== $c (old Homebrew)"; brew install --cask "$c" > "out/old-$c.txt" 2>&1; echo "exit=$?" >> "out/old-$c.txt"; tail -15 "out/old-$c.txt"
+          arch_of() { for app in "$@"; do [ -d "$app" ] || { echo "$app: not there"; continue; }; exe="$app/Contents/MacOS/$(defaults read "$app/Contents/Info" CFBundleExecutable 2>/dev/null)"; echo "$app: $(lipo -archs "$exe" 2>&1)"; done; }
+          for c in gimp microsoft-office; do
+            echo "== $c (old Homebrew)"
+            brew install --cask "$c" > "out/old-$c.txt" 2>&1; echo "exit=$?" >> "out/old-$c.txt"; tail -25 "out/old-$c.txt"
+            brew list --cask --versions "$c" >> "out/old-$c.txt" 2>&1; echo "listed=$?" >> "out/old-$c.txt"
           done
-          unset HOMEBREW_NO_AUTO_UPDATE
-          git -C "$(brew --repo)" checkout --quiet master || git -C "$(brew --repo)" checkout --quiet main || true
+          arch_of /Applications/GIMP.app "/Applications/Microsoft Word.app" "/Applications/Microsoft Excel.app" | tee out/apps-after-old.txt
+          # What MacReplica 1.1.2+ does on this evidence: brew update once, then the same install again.
+          git -C "$(brew --repo)" checkout --quiet master 2>/dev/null || git -C "$(brew --repo)" checkout --quiet main
           brew update > out/update.txt 2>&1; echo "exit=$?" >> out/update.txt; tail -5 out/update.txt
           brew --version | tee out/brew-updated.txt
-          export HOMEBREW_NO_AUTO_UPDATE=1
-          echo "== microsoft-office (updated Homebrew)"
-          brew install --cask microsoft-office > out/new-microsoft-office.txt 2>&1; echo "exit=$?" >> out/new-microsoft-office.txt; tail -20 out/new-microsoft-office.txt
-          ls -d /Applications/Microsoft*.app | tee out/office-apps.txt || true
+          for c in gimp microsoft-office; do
+            echo "== $c (after brew update)"
+            brew install --cask "$c" > "out/new-$c.txt" 2>&1; echo "exit=$?" >> "out/new-$c.txt"; tail -25 "out/new-$c.txt"
+            brew list --cask --versions "$c" >> "out/new-$c.txt" 2>&1; echo "listed=$?" >> "out/new-$c.txt"
+          done
+          arch_of /Applications/GIMP.app "/Applications/Microsoft Word.app" "/Applications/Microsoft Excel.app" | tee out/apps-after-update.txt
+          ls -d /Applications/Microsoft* 2>&1 | tee out/office-apps.txt
       - uses: actions/upload-artifact@v7
         if: always()
         with:

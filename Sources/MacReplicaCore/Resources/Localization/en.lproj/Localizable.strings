@@ -2206,4 +2206,9 @@
 "summary.guidedDevices.other" = "%1$d steps for displays, printers and scanners, set up in System Settings";
 "report.restore.waitingHint.one" = "%1$d step waits for you. The guided steps are in MacReplica, not in this report: open MacReplica, choose Continue on its start window, then Continue with Guided Steps.";
 "report.restore.waitingHint.other" = "%1$d steps wait for you. The guided steps are in MacReplica, not in this report: open MacReplica, choose Continue on its start window, then Continue with Guided Steps.";
-"skip.launchpadDatabaseMissing" = "Not arranged yet: Launchpad's list of apps was not found on this Mac. Open Launchpad once, then choose Continue – MacReplica checks again";
+"skip.launchpadDatabaseMissing" = "Not arranged: MacReplica could not find Launchpad's database on this Mac, so your current arrangement stays as it is. Choose Skip if you do not need it; the restore log records what was found";
+"guided.skipAll" = "Skip All";
+"guided.skipAll.help" = "Leaves out every app and step shown here. You can still install or set them up yourself later.";
+"guided.skipAll.title.one" = "Skip %1$d remaining step?";
+"guided.skipAll.title.other" = "Skip %1$d remaining steps?";
+"guided.skipAll.message" = "MacReplica will not ask for them again in this restore and lists them as skipped. Nothing on this Mac is changed or removed.";

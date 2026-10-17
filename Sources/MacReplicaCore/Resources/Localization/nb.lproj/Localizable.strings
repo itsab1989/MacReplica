@@ -2204,4 +2204,9 @@
 "summary.guidedDevices.other" = "%1$d trinn for skjermer, skrivere og skannere, konfigureres i Systeminnstillinger";
 "report.restore.waitingHint.one" = "%1$d trinn venter på deg. De veiledede trinnene er i MacReplica, ikke i denne rapporten: åpne MacReplica, velg Fortsett i startvinduet og deretter Fortsett med veiledede trinn.";
 "report.restore.waitingHint.other" = "%1$d trinn venter på deg. De veiledede trinnene er i MacReplica, ikke i denne rapporten: åpne MacReplica, velg Fortsett i startvinduet og deretter Fortsett med veiledede trinn.";
-"skip.launchpadDatabaseMissing" = "Ikke ordnet ennå: Launchpads liste over apper ble ikke funnet på denne Macen. Åpne Launchpad én gang og velg deretter Fortsett – MacReplica sjekker igjen";
+"skip.launchpadDatabaseMissing" = "Ikke ordnet: MacReplica fant ikke Launchpads database på denne Macen, så det nåværende oppsettet forblir som det er. Velg Hopp over hvis du ikke trenger det; gjenopprettingsloggen viser hva som ble funnet";
+"guided.skipAll" = "Hopp over alle";
+"guided.skipAll.help" = "Utelater alle apper og trinn som vises her. Du kan fortsatt installere eller sette dem opp selv senere.";
+"guided.skipAll.title.one" = "Hoppe over %1$d gjenstående trinn?";
+"guided.skipAll.title.other" = "Hoppe over %1$d gjenstående trinn?";
+"guided.skipAll.message" = "MacReplica spør ikke om dem igjen i denne gjenopprettingen og viser dem som hoppet over. Ingenting på denne Macen endres eller fjernes.";

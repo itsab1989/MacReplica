@@ -2204,4 +2204,9 @@
 "summary.guidedDevices.other" = "%1$d stappen voor beeldschermen, printers en scanners, in te stellen in Systeeminstellingen";
 "report.restore.waitingHint.one" = "%1$d stap wacht op jou. De begeleide stappen staan in MacReplica, niet in dit rapport: open MacReplica, kies Hervat in het startvenster en dan Doorgaan met begeleide stappen.";
 "report.restore.waitingHint.other" = "%1$d stappen wachten op jou. De begeleide stappen staan in MacReplica, niet in dit rapport: open MacReplica, kies Hervat in het startvenster en dan Doorgaan met begeleide stappen.";
-"skip.launchpadDatabaseMissing" = "Nog niet ingedeeld: de lijst met apps van Launchpad is niet gevonden op deze Mac. Open Launchpad één keer en kies dan Hervat – MacReplica controleert het opnieuw";
+"skip.launchpadDatabaseMissing" = "Niet ingedeeld: MacReplica heeft de database van Launchpad op deze Mac niet gevonden, dus je huidige indeling blijft zoals ze is. Kies Overslaan als je die niet nodig hebt; het logboek van het herstel legt vast wat er is gevonden";
+"guided.skipAll" = "Alles overslaan";
+"guided.skipAll.help" = "Slaat alle apps en stappen over die hier staan. Je kunt ze later nog steeds zelf installeren of instellen.";
+"guided.skipAll.title.one" = "%1$d resterende stap overslaan?";
+"guided.skipAll.title.other" = "%1$d resterende stappen overslaan?";
+"guided.skipAll.message" = "MacReplica vraagt er in dit herstel niet meer om en toont ze als overgeslagen. Er wordt niets gewijzigd of verwijderd op deze Mac.";
