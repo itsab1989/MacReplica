@@ -2204,3 +2204,4 @@
 "summary.guidedDevices.other" = "%1$d étapes pour moniteurs, imprimantes et scanners, à configurer dans Réglages Système";
 "report.restore.waitingHint.one" = "%1$d étape t’attend. Les étapes guidées sont dans MacReplica, pas dans ce rapport : ouvre MacReplica, choisis Reprendre dans la fenêtre de départ, puis Continuer avec les étapes guidées.";
 "report.restore.waitingHint.other" = "%1$d étapes t’attendent. Les étapes guidées sont dans MacReplica, pas dans ce rapport : ouvre MacReplica, choisis Reprendre dans la fenêtre de départ, puis Continuer avec les étapes guidées.";
+"skip.launchpadDatabaseMissing" = "Pas encore organisé : la liste des apps du Launchpad est introuvable sur ce Mac. Ouvre le Launchpad une fois, puis choisis Reprendre – MacReplica vérifie à nouveau";

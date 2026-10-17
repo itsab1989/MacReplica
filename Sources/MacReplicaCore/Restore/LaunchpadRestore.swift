@@ -2,9 +2,13 @@ import Foundation
 
 extension Inspector {
     func predictLaunchpad(_ item: RestoreItem) -> Prediction {
-        guard let recorded = item.launchpadLayout else { return .willSkip(.launchpadNotAvailable) }
-        guard LaunchpadLayout.isSupported(macOSVersion: environment.macOSVersion), let store = layout.launchpadStore,
-              FileManager.default.fileExists(atPath: store.database.path) else { return .willSkip(.launchpadNotAvailable) }
+        guard let recorded = item.launchpadLayout, LaunchpadLayout.isSupported(macOSVersion: environment.macOSVersion) else {
+            return .willSkip(.launchpadNotAvailable)
+        }
+        // This macOS has Launchpad: a database that cannot be found is not a missing Launchpad.
+        guard let store = layout.launchpadStore, FileManager.default.fileExists(atPath: store.database.path) else {
+            return .willSkip(.launchpadDatabaseMissing)
+        }
         if let current = try? store.read(macOSVersion: environment.macOSVersion, work: launchpadWorkFolder),
            recorded.matches(current, installed: current.appEntryCounts),
            Set(recorded.appEntryCounts.keys).isSubset(of: current.appEntryCounts.keys) {
@@ -30,7 +34,7 @@ extension RestoreExecutor {
         default: break
         }
         guard let recorded = item.launchpadLayout, let store = layout.launchpadStore else {
-            return ItemResult(itemID: item.id, outcome: .skipped(.launchpadNotAvailable))
+            return ItemResult(itemID: item.id, outcome: .skipped(.launchpadDatabaseMissing))
         }
         let recordedApps = Set(recorded.appEntryCounts.keys)
         let appKinds: Set<RestoreItemKind> = [.cask, .appStoreApp, .manualApp]
@@ -52,6 +56,8 @@ extension RestoreExecutor {
         onEvent(.activity(itemID: item.id, .installing))
         do {
             try store.applyAndReloadDock(recorded)
+        } catch LaunchpadError.databaseMissing {
+            return ItemResult(itemID: item.id, outcome: .skipped(.launchpadDatabaseMissing))
         } catch {
             return failed(item, .unknown, layout.redact(String(describing: error)))
         }

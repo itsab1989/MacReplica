@@ -2204,3 +2204,4 @@
 "summary.guidedDevices.other" = "%1$d pasos para pantallas, impresoras y escáneres, que se configuran en Ajustes del Sistema";
 "report.restore.waitingHint.one" = "%1$d paso te espera. Los pasos guiados están en MacReplica, no en este informe: abre MacReplica, elige Reanudar en la ventana de inicio y luego Continuar con los pasos guiados.";
 "report.restore.waitingHint.other" = "%1$d pasos te esperan. Los pasos guiados están en MacReplica, no en este informe: abre MacReplica, elige Reanudar en la ventana de inicio y luego Continuar con los pasos guiados.";
+"skip.launchpadDatabaseMissing" = "Aún sin ordenar: no se encontró la lista de apps de Launchpad en este Mac. Abre Launchpad una vez y elige Reanudar; MacReplica lo vuelve a comprobar";

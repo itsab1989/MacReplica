@@ -314,6 +314,9 @@ public enum SkipReason: Codable, Equatable, Sendable {
     /// Launchpad does not exist on this macOS (replaced by the Apps view in macOS 26); the layout stays in the
     /// backup's report as a reference.
     case launchpadNotAvailable
+    /// A macOS with Launchpad, but its database was not found (yet): the step waits and is checked again on Continue.
+    /// Up to 1.1.2 this was reported as “Launchpad does not exist on this macOS”, also on macOS 14 (tester, 2026-10-17).
+    case launchpadDatabaseMissing
     /// Launchpad was arranged with the apps installed so far; it is arranged again when the restore continues
     /// and the remaining apps are installed.
     case launchpadWaitingForApps(count: Int)
@@ -347,7 +350,8 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
         guard case .skipped(let reason) = self else { return false }
         switch reason {
         case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected,
-             .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess, .launchpadWaitingForApps: return true
+             .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess, .launchpadWaitingForApps,
+             .launchpadDatabaseMissing: return true
         default: return false
         }
     }

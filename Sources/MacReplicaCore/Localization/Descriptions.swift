@@ -140,6 +140,7 @@ extension Localizer {
         case .applicationVersionOlder(let name, let installed, let backup): return t("skip.applicationVersionOlder", name, installed, backup)
         case .needsFullDiskAccess(let name): return t("skip.needsFullDiskAccess", name)
         case .launchpadNotAvailable: return t("skip.launchpadNotAvailable")
+        case .launchpadDatabaseMissing: return t("skip.launchpadDatabaseMissing")
         case .launchpadWaitingForApps(let count): return p("skip.launchpadWaitingForApps", count)
         }
     }

@@ -126,6 +126,13 @@ the apps, printers and scanners that wait, and **Retry Failed Items** runs the f
 restore, so what already worked stays listed. The guided steps are only in MacReplica; the HTML restore report
 lists them but cannot run them.
 
+## Launchpad was not arranged
+
+- *“Launchpad does not exist on this macOS”* appears only on macOS 26 and later, which replaced Launchpad with the
+  Apps view; the old layout stays in the backup's report.
+- *“Not arranged yet: Launchpad's list of apps was not found”* means this macOS has Launchpad but MacReplica could not
+  find its database. Open Launchpad once, then choose **Continue** – MacReplica checks again and arranges it.
+
 ## A file says “Backup copy could not be read”
 
 MacReplica could not find or read the copy in the backup – usually because the backup drive or network share
