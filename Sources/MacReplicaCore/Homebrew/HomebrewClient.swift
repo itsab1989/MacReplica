@@ -210,6 +210,9 @@ public struct HomebrewClient: Sendable {
         case .cask(let token):
             try Self.validatePackageName(token)
             arguments = ["install", "--cask", token]
+        case .caskReinstall(let token):
+            try Self.validatePackageName(token)
+            arguments = ["reinstall", "--cask", token]
         case .tap(let name, let remote):
             try Self.validatePackageName(name)
             if let remote {
@@ -273,6 +276,8 @@ public enum HomebrewPackage: Sendable, Equatable {
     /// The development version built from the formula's source repository (`--HEAD`).
     case formulaHead(String)
     case cask(String)
+    /// Installs a cask again over Homebrew's own copy (`brew reinstall --cask`).
+    case caskReinstall(String)
     case tap(name: String, remote: String?)
 }
 

@@ -2204,4 +2204,13 @@
 "summary.guidedDevices.other" = "%1$d stappen voor beeldschermen, printers en scanners, in te stellen in Systeeminstellingen";
 "report.restore.waitingHint.one" = "%1$d stap wacht op jou. De begeleide stappen staan in MacReplica, niet in dit rapport: open MacReplica, kies Hervat in het startvenster en dan Doorgaan met begeleide stappen.";
 "report.restore.waitingHint.other" = "%1$d stappen wachten op jou. De begeleide stappen staan in MacReplica, niet in dit rapport: open MacReplica, kies Hervat in het startvenster en dan Doorgaan met begeleide stappen.";
-"skip.launchpadDatabaseMissing" = "Nog niet ingedeeld: de lijst met apps van Launchpad is niet gevonden op deze Mac. Open Launchpad één keer en kies dan Hervat – MacReplica controleert het opnieuw";
+"skip.launchpadDatabaseMissing" = "Niet ingedeeld: MacReplica heeft de database van Launchpad op deze Mac niet gevonden, dus je huidige indeling blijft zoals ze is. Kies Overslaan als je die niet nodig hebt; het logboek van het herstel legt vast wat er is gevonden";
+"guided.skipAll" = "Alles overslaan";
+"guided.skipAll.help" = "Slaat alle apps en stappen over die hier staan. Je kunt ze later nog steeds zelf installeren of instellen.";
+"guided.skipAll.title.one" = "%1$d resterende stap overslaan?";
+"guided.skipAll.title.other" = "%1$d resterende stappen overslaan?";
+"guided.skipAll.message" = "MacReplica vraagt er in dit herstel niet meer om en toont ze als overgeslagen. Er wordt niets gewijzigd of verwijderd op deze Mac.";
+"failure.wrongProcessor.title" = "Gemaakt voor een andere processor";
+"failure.wrongProcessor.explanation" = "De app in Apps bevat geen code voor de processor van deze Mac (bijvoorbeeld een app alleen voor Apple silicon op een Intel-Mac, zoals een verouderde Homebrew kan installeren) en opent hier niet. Heeft Homebrew haar geïnstalleerd, dan heeft MacReplica haar één keer opnieuw geïnstalleerd; anders blijft ze zoals ze is. Zet de app in de prullenmand en kies Probeer mislukte onderdelen opnieuw – of installeer een versie voor deze Mac van de ontwikkelaar.";
+"note.reinstalledForThisProcessor" = "De kopie van Homebrew bevatte alleen code voor %1$@ en kon niet draaien op deze Mac, dus MacReplica heeft haar opnieuw geïnstalleerd met Homebrew en opnieuw gecontroleerd.";
+"skip.launchpadAccessDenied" = "Niet ingedeeld: macOS laat MacReplica de database van Launchpad niet lezen. Geef MacReplica volledige schijftoegang, stop MacReplica en open het opnieuw (pas dan past macOS de toestemming toe) en kies dan Hervat – of Overslaan";

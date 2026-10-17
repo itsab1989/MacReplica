@@ -130,8 +130,19 @@ lists them but cannot run them.
 
 - *“Launchpad does not exist on this macOS”* appears only on macOS 26 and later, which replaced Launchpad with the
   Apps view; the old layout stays in the backup's report.
-- *“Not arranged yet: Launchpad's list of apps was not found”* means this macOS has Launchpad but MacReplica could not
-  find its database. Open Launchpad once, then choose **Continue** – MacReplica checks again and arranges it.
+- *“Not arranged: MacReplica could not find Launchpad's database”*: this macOS has Launchpad, but MacReplica could not
+  use its database; your current arrangement is not changed. The restore log (`~/Library/Logs/MacReplica`) records
+  what macOS reported for each folder – please include it when you report this. Choose **Skip** if you do not need it.
+- *“macOS does not let MacReplica read Launchpad's database”*: give MacReplica Full Disk Access, **quit MacReplica and
+  open it again** (macOS applies the permission only then), then choose **Continue**.
+
+## An app from Homebrew does not open (“built for another processor”)
+
+An outdated Homebrew can install an app for the wrong processor, for example the Apple-silicon-only GIMP on an Intel
+Mac, and still count it as installed. MacReplica checks the app's code: Homebrew's copy is reinstalled once; if that
+does not help, the item says **Built for another processor**. To check an app yourself:
+`lipo -archs "/Applications/GIMP.app/Contents/MacOS/$(defaults read /Applications/GIMP.app/Contents/Info CFBundleExecutable)"`
+– an Intel Mac needs `x86_64` in the answer.
 
 ## A file says “Backup copy could not be read”
 

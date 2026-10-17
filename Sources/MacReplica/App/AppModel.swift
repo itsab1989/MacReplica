@@ -118,6 +118,8 @@ final class AppModel: ObservableObject {
     var guidedInstallation: GuidedInstallation?
     var downloadQueue: DownloadQueue?
     var pendingDecision: CheckedContinuation<GuidedDecision, Never>?
+    /// The confirmation before “Skip All” leaves out every step the guided installation still shows.
+    @Published var confirmSkipAll = false
     var guidedTask: Task<Void, Never>?
     /// Passphrase for restoring encrypted credentials; requested right before the restore.
     @Published var askForRestorePassphrase = false

@@ -261,9 +261,15 @@ struct RestoreSummaryView: View {
                                     Spacer()
                                     Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
                                         .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+                                    Button(l.t("guided.skip")) { model.markGuided(item.id, .userSkipped) }
+                                        .controlSize(.small)
+                                        .accessibilityIdentifier("summary.skip.\(item.id)")
                                 }
                             }
-                            if waitingForApps.contains(where: { if case .skipped(.needsFullDiskAccess) = $0.1.outcome { return true }; return false }) {
+                            if waitingForApps.contains(where: {
+                                if case .skipped(.needsFullDiskAccess) = $0.1.outcome { return true }
+                                return $0.1.outcome == .skipped(.launchpadAccessDenied)
+                            }) {
                                 HStack {
                                     Spacer()
                                     Button(l.t("summary.openFullDiskAccess")) { NSWorkspace.shared.open(AccessProbe.fullDiskAccessSettingsURL) }
@@ -274,6 +280,7 @@ struct RestoreSummaryView: View {
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+                        .accessibilityElement(children: .contain)
                         .accessibilityIdentifier("summary.waitingForApps")
                     }
                     if !failed.isEmpty {

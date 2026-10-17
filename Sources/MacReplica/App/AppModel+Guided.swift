@@ -200,6 +200,11 @@ extension AppModel {
         recordGuided(itemID, ItemResult(itemID: itemID, outcome: .skipped(reason)))
     }
 
+    /// Leaves out every app and step the guided installation still shows (after the user confirmed it).
+    func skipAllGuided() {
+        for item in openApps + openToolchainSteps { markGuided(item.id, .userSkipped) }
+    }
+
     /// Stores a guided result in the restore session (saved, so it survives quitting) and updates the summary.
     func recordGuided(_ itemID: String, _ result: ItemResult) {
         guard var session else { return }

@@ -2204,4 +2204,13 @@
 "summary.guidedDevices.other" = "%1$d trinn for skjermer, skrivere og skannere, konfigureres i Systeminnstillinger";
 "report.restore.waitingHint.one" = "%1$d trinn venter på deg. De veiledede trinnene er i MacReplica, ikke i denne rapporten: åpne MacReplica, velg Fortsett i startvinduet og deretter Fortsett med veiledede trinn.";
 "report.restore.waitingHint.other" = "%1$d trinn venter på deg. De veiledede trinnene er i MacReplica, ikke i denne rapporten: åpne MacReplica, velg Fortsett i startvinduet og deretter Fortsett med veiledede trinn.";
-"skip.launchpadDatabaseMissing" = "Ikke ordnet ennå: Launchpads liste over apper ble ikke funnet på denne Macen. Åpne Launchpad én gang og velg deretter Fortsett – MacReplica sjekker igjen";
+"skip.launchpadDatabaseMissing" = "Ikke ordnet: MacReplica fant ikke Launchpads database på denne Macen, så det nåværende oppsettet forblir som det er. Velg Hopp over hvis du ikke trenger det; gjenopprettingsloggen viser hva som ble funnet";
+"guided.skipAll" = "Hopp over alle";
+"guided.skipAll.help" = "Utelater alle apper og trinn som vises her. Du kan fortsatt installere eller sette dem opp selv senere.";
+"guided.skipAll.title.one" = "Hoppe over %1$d gjenstående trinn?";
+"guided.skipAll.title.other" = "Hoppe over %1$d gjenstående trinn?";
+"guided.skipAll.message" = "MacReplica spør ikke om dem igjen i denne gjenopprettingen og viser dem som hoppet over. Ingenting på denne Macen endres eller fjernes.";
+"failure.wrongProcessor.title" = "Laget for en annen prosessor";
+"failure.wrongProcessor.explanation" = "Appen i Programmer har ingen kode for denne Macens prosessor (for eksempel en app bare for Apple silicon på en Intel-Mac, slik en utdatert Homebrew kan installere), så den kan ikke åpnes her. Hvis Homebrew installerte den, installerte MacReplica den på nytt én gang; ellers blir den som den er. Flytt appen til papirkurven og velg Prøv mislykkede igjen – eller installer en versjon for denne Macen fra utvikleren.";
+"note.reinstalledForThisProcessor" = "Homebrews kopi hadde bare kode for %1$@ og kunne ikke kjøre på denne Macen, så MacReplica installerte den på nytt med Homebrew og kontrollerte den igjen.";
+"skip.launchpadAccessDenied" = "Ikke ordnet: macOS lar ikke MacReplica lese Launchpads database. Gi MacReplica full disktilgang, avslutt MacReplica og åpne den igjen (først da tar macOS i bruk tillatelsen), og velg deretter Fortsett – eller Hopp over";

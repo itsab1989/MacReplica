@@ -149,6 +149,29 @@ public struct LaunchpadStore: Sendable {
 
     static let pageCapacity = 35
 
+    /// What `stat` says along the database path, for the log when the database cannot be used: each level from the user's
+    /// temporary folder down ("ok" or the error, e.g. "Operation not permitted"), and the file names in the `db` folder.
+    /// No absolute path is written.
+    public func locationReport() -> String {
+        let db = database.deletingLastPathComponent(), launchpad = db.deletingLastPathComponent(), user = launchpad.deletingLastPathComponent()
+        func state(_ url: URL) -> String { Self.statError(url).map { String(cString: strerror($0)) } ?? "ok" }
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: db.path))?.sorted().joined(separator: ", ") ?? "-"
+        return "user folder: \(state(user)); \(launchpad.lastPathComponent): \(state(launchpad)); db folder: \(state(db)) [\(files)]; "
+            + "database file: \(state(database))"
+    }
+
+    /// The `errno` of `stat` for the path, or nil if it succeeds.
+    static func statError(_ url: URL) -> Int32? {
+        var info = stat()
+        return stat(url.path, &info) == 0 ? nil : errno
+    }
+
+    /// True when the database exists but macOS refuses access to it or a folder above it (privacy protection).
+    public var accessDenied: Bool {
+        [database, database.deletingLastPathComponent(), database.deletingLastPathComponent().deletingLastPathComponent()]
+            .contains { [EPERM, EACCES].contains(Self.statError($0) ?? 0) }
+    }
+
     /// Makes the Dock load a rebuilt database (`applyAndReloadDock`); the simulation records the signals instead.
     public var signalDock: @Sendable (Int32) -> Void = LaunchpadStore.signalDock
 

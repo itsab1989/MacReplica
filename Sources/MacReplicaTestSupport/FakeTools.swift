@@ -235,6 +235,16 @@ enum FakeTools {
       --version)
         if [ -f "$S/brew-version" ]; then echo "Homebrew $(cat "$S/brew-version")"; else echo "Homebrew 4.4.0"; fi
         exit 0 ;;
+      reinstall)
+        # Replaces Homebrew's own copy of a cask's app; "reinstall-keeps-app" simulates a reinstall that changes nothing.
+        name="${3:-}"; spec="$S/brew/available/casks/$name.json"
+        [ -f "$S/brew/casks/$name" ] && [ -f "$spec" ] || { echo "Error: Cask '$name' is not installed." >&2; exit 1; }
+        app="$(json_value "$spec" app)"; appdir="$(cat "$S/appdir")"
+        if [ -n "$app" ] && [ ! -f "$S/reinstall-keeps-app" ]; then
+          rm -rf "${appdir:?}/$app"; make_app "$appdir/$app" "$(json_value "$spec" bundle_id)" "$(json_value "$spec" version)"
+        fi
+        echo "==> Reinstalling Cask $name"
+        exit 0 ;;
       update)
         # Updating clears the simulated "too old for the current definitions" state, unless it is set to fail.
         if [ -f "$S/brew-update-fails" ]; then echo "Error: Failed to update tap: homebrew/core" >&2; exit 1; fi

@@ -141,6 +141,41 @@ struct LaunchpadRestoreTests {
         #expect(try layout(db, c).pages == c.manifest.launchpadLayout?.pages)
     }
 
+    @Test func theLogSaysWhatStatReportsAlongTheDatabasePathWithoutAnyPath() throws {
+        let sandbox = try Sandbox("launchpad-report")
+        let user = try sandbox.folder("0")
+        let store = LaunchpadStore(database: user.appendingPathComponent("com.apple.dock.launchpad/db/db"))
+        let missing = String(cString: strerror(ENOENT))
+        #expect(store.locationReport() == "user folder: ok; com.apple.dock.launchpad: \(missing); db folder: \(missing) [-]; database file: \(missing)")
+        #expect(!store.accessDenied)
+        let db = user.appendingPathComponent("com.apple.dock.launchpad/db")
+        try FileManager.default.createDirectory(at: db, withIntermediateDirectories: true)
+        try Data().write(to: db.appendingPathComponent("db-wal"))
+        #expect(store.locationReport() == "user folder: ok; com.apple.dock.launchpad: ok; db folder: ok [db-wal]; database file: \(missing)")
+        try Data().write(to: db.appendingPathComponent("db"))
+        #expect(store.locationReport().hasSuffix("[db, db-wal]; database file: ok"))
+        #expect(!store.locationReport().contains(sandbox.url.path))
+
+        // A folder the process may not search: the file is there, but stat is refused (EACCES) – reported as access denied.
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: db.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: db.path) }
+        #expect(store.accessDenied)
+        #expect(store.locationReport().hasSuffix("database file: \(String(cString: strerror(EACCES)))"))
+    }
+
+    @Test func refusedAccessIsReportedAsSuchAndWaits() async throws {
+        let c = try await backup("launchpad-denied")
+        let (_, environment, db) = try target(c, apps: Self.folder + Self.page)
+        let folder = db.deletingLastPathComponent()
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: folder.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder.path) }
+        let plan = RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.launchpad]))
+        let session = await run(plan, environment, c)
+        let outcome = session.results[RestoreItem.launchpadID]?.outcome
+        #expect(outcome == .skipped(.launchpadAccessDenied))
+        #expect(outcome?.isOpen == true)
+    }
+
     @Test func switchedOffOrWithoutLaunchpadNothingIsChanged() async throws {
         let c = try await backup("launchpad-off")
         #expect(!RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.applications]))

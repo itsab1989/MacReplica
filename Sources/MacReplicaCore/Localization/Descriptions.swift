@@ -141,6 +141,7 @@ extension Localizer {
         case .needsFullDiskAccess(let name): return t("skip.needsFullDiskAccess", name)
         case .launchpadNotAvailable: return t("skip.launchpadNotAvailable")
         case .launchpadDatabaseMissing: return t("skip.launchpadDatabaseMissing")
+        case .launchpadAccessDenied: return t("skip.launchpadAccessDenied")
         case .launchpadWaitingForApps(let count): return p("skip.launchpadWaitingForApps", count)
         }
     }
@@ -211,6 +212,7 @@ extension Localizer {
         case .newerVersionInstalled(let original, let installed): return t("note.newerVersion", installed, original)
         case .requiresRosetta: return t("note.requiresRosetta")
         case .homebrewUpdated(let version): return t("note.homebrewUpdated", version)
+        case .reinstalledForThisProcessor(let found): return t("note.reinstalledForThisProcessor", found)
         case .existingFileMovedAside(let path): return t("note.movedAside", path)
         case .identicalFileExists: return t("note.identical")
         case .equivalentFileInstalled: return t("note.equivalentFile")
