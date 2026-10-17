@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-17
+
 Fixes from a tester's restore with 1.1.0 on an Intel Mac (macOS 14) after a clean reinstall, where the home folder
 had first been brought back from Time Machine. Details: [docs/TESTER_FEEDBACK_1.1.0.md](docs/TESTER_FEEDBACK_1.1.0.md).
 
@@ -466,7 +468,9 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/itsab1989/MacReplica/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/itsab1989/MacReplica/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/itsab1989/MacReplica/compare/v1.0.7...v1.1.0
 [1.0.7]: https://github.com/itsab1989/MacReplica/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/itsab1989/MacReplica/compare/v1.0.5...v1.0.6
