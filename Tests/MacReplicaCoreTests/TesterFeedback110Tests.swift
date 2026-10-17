@@ -418,4 +418,86 @@ struct TesterFeedback110Tests {
         #expect(!done.contains(HTML.escape(l.t("summary.waiting"))), "no waiting card when nothing waits")
         #expect(!done.contains(HTML.escape(l.t("report.manual.title"))))
     }
+
+    // MARK: Third report (1.1.3): an outdated Homebrew installed the Apple-silicon GIMP on an Intel Mac
+
+    /// Reproduced on a real Intel runner with Homebrew 4.2.0: `brew install --cask gimp` failed (“Unexpected method
+    /// 'command_wrapper'”) but still moved the arm64-only GIMP into Applications and recorded the cask; after
+    /// `brew update`, Homebrew said “already installed” – and MacReplica reported it as already installed.
+    func wrongProcessorCask(_ c: Context, keepsApp: Bool = false) throws -> URL {
+        let spec = try JSONSerialization.jsonObject(with: Data(contentsOf: c.fresh.state.appendingPathComponent("brew/available/casks/pixel-forge.json"))) as? [String: Any]
+        let app = c.target.layout.applicationFolders[0].appendingPathComponent(spec?["app"] as? String ?? "Pixel Forge.app")
+        try FileManager.default.createDirectory(at: app.appendingPathComponent("Contents/MacOS"), withIntermediateDirectories: true)
+        let info: [String: Any] = ["CFBundleIdentifier": spec?["bundle_id"] as? String ?? "com.example.pixelforge",
+                                   "CFBundleShortVersionString": "2.4.1", "CFBundleExecutable": "PixelForge"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: app.appendingPathComponent("Contents/Info.plist"))
+        try SimulationBuilder.machOHeader([.arm64]).write(to: app.appendingPathComponent("Contents/MacOS/PixelForge"))
+        try c.fresh.setFlag("brew/casks/pixel-forge", true, content: "2.4.1")
+        try c.fresh.setFlag("reinstall-keeps-app", keepsApp)
+        return app
+    }
+
+    func restoreOnIntel(_ c: Context) async -> RestoreSession {
+        let selection = RestoreSelection(components: [.brewCasks, .applications])
+        let plan = RestorePlanner().plan(manifest: c.manifest, selection: selection)
+        let environment = TestEnvironment.restoreEnvironment(c.target, architecture: .x86_64)
+        return await RestoreExecutor(environment: environment, backupRoot: c.backup, sessionStore: nil)
+            .run(plan: plan, session: RestoreSession(backupPath: c.backup.path, selection: selection, itemIDs: plan.items.map(\.id)), onEvent: { _ in })
+    }
+
+    @Test("Homebrew's app without code for this Mac is reinstalled, not reported as already installed")
+    func wrongProcessorAppFromHomebrewIsReinstalled() async throws {
+        let c = try await context("wrong-cpu")
+        try preinstallHomebrew(c)
+        let app = try wrongProcessorCask(c)
+        let session = await restoreOnIntel(c)
+        let result = session.results["cask:pixel-forge"]
+        #expect(result?.outcome == .succeeded, "\(result?.outcome.label ?? "-")")
+        #expect(result?.notes.contains(.reinstalledForThisProcessor(found: "arm64")) == true)
+        #expect(c.fresh.calls().contains("brew reinstall --cask pixel-forge"))
+        #expect(MachO.architectures(ofFile: app.appendingPathComponent("Contents/MacOS/PixelForge")) != [.arm64], "the arm64-only copy is gone")
+    }
+
+    @Test("If the reinstall does not help, the step fails as 'wrong processor' instead of succeeding")
+    func wrongProcessorAfterReinstallFails() async throws {
+        let c = try await context("wrong-cpu-stays")
+        try preinstallHomebrew(c)
+        _ = try wrongProcessorCask(c, keepsApp: true)
+        let session = await restoreOnIntel(c)
+        #expect(session.results["cask:pixel-forge"]?.outcome.label == "failed(wrongProcessor)")
+    }
+
+    @Test("An app not from Homebrew without code for this Mac is left alone and reported honestly")
+    func wrongProcessorAppNotFromHomebrewIsLeftAlone() async throws {
+        let c = try await context("wrong-cpu-user")
+        try preinstallHomebrew(c)
+        let app = try wrongProcessorCask(c)
+        try c.fresh.setFlag("brew/casks/pixel-forge", false)
+        let before = try Data(contentsOf: app.appendingPathComponent("Contents/MacOS/PixelForge"))
+        let session = await restoreOnIntel(c)
+        #expect(session.results["cask:pixel-forge"]?.outcome.label == "failed(wrongProcessor)")
+        #expect(!c.fresh.calls().contains { $0.hasPrefix("brew reinstall") })
+        #expect(try Data(contentsOf: app.appendingPathComponent("Contents/MacOS/PixelForge")) == before, "the user's app is never replaced")
+    }
+
+    @Test("Apps that can run here stay 'already installed': universal, Intel on Apple silicon (Rosetta), unreadable")
+    func appsThatRunHereAreAlreadyPresent() async throws {
+        let c = try await context("cpu-ok")
+        let folder = try c.sandbox.folder("apps")
+        func app(_ archs: [CPUArchitecture]?) throws -> URL {
+            let url = folder.appendingPathComponent("A\(UUID().uuidString.prefix(6)).app")
+            try FileManager.default.createDirectory(at: url.appendingPathComponent("Contents/MacOS"), withIntermediateDirectories: true)
+            try PropertyListSerialization.data(fromPropertyList: ["CFBundleExecutable": "X"], format: .xml, options: 0).write(to: url.appendingPathComponent("Contents/Info.plist"))
+            try (archs.map { SimulationBuilder.machOHeader($0) } ?? Data("#!/bin/sh".utf8)).write(to: url.appendingPathComponent("Contents/MacOS/X"))
+            return url
+        }
+        let intel = Inspector(environment: TestEnvironment.restoreEnvironment(c.target, architecture: .x86_64), backupRoot: c.backup, selection: RestoreSelection(), damagedFiles: [])
+        let appleSilicon = Inspector(environment: TestEnvironment.restoreEnvironment(c.target, architecture: .arm64), backupRoot: c.backup, selection: RestoreSelection(), damagedFiles: [])
+        #expect(!intel.appRunsHere(try app([.arm64])))
+        #expect(intel.appRunsHere(try app([.arm64, .x86_64])))
+        #expect(intel.appRunsHere(try app([.x86_64])))
+        #expect(appleSilicon.appRunsHere(try app([.x86_64])), "Rosetta")
+        #expect(appleSilicon.appRunsHere(try app([.arm64])))
+        #expect(intel.appRunsHere(try app(nil)), "not readable: no claim")
+    }
 }

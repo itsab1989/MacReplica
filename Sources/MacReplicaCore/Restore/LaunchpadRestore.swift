@@ -7,7 +7,7 @@ extension Inspector {
         }
         // This macOS has Launchpad: a database that cannot be found is not a missing Launchpad.
         guard let store = layout.launchpadStore, FileManager.default.fileExists(atPath: store.database.path) else {
-            return .willSkip(.launchpadDatabaseMissing)
+            return .willSkip(layout.launchpadStore?.accessDenied == true ? .launchpadAccessDenied : .launchpadDatabaseMissing)
         }
         if let current = try? store.read(macOSVersion: environment.macOSVersion, work: launchpadWorkFolder),
            recorded.matches(current, installed: current.appEntryCounts),
@@ -30,7 +30,12 @@ extension RestoreExecutor {
     func restoreLaunchpad(_ item: RestoreItem, inspector: Inspector, plan: RestorePlan, session: RestoreSession,
                           onEvent: @escaping @Sendable (RestoreEvent) -> Void) async -> ItemResult {
         switch inspector.predictLaunchpad(item) {
-        case .willSkip(let reason): return ItemResult(itemID: item.id, outcome: .skipped(reason))
+        case .willSkip(let reason):
+            if reason == .launchpadDatabaseMissing || reason == .launchpadAccessDenied {
+                log.warning("\(item.id): Launchpad database cannot be used – " + (layout.launchpadStore?.locationReport() ?? "no user folder (confstr failed)"),
+                            component: .restore)
+            }
+            return ItemResult(itemID: item.id, outcome: .skipped(reason))
         default: break
         }
         guard let recorded = item.launchpadLayout, let store = layout.launchpadStore else {

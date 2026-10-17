@@ -7,6 +7,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Apps an outdated Homebrew installed for the wrong processor were reported as already installed.** Reproduced with
+  Homebrew 4.2.0 on Intel: it fails on GIMP's current cask but still puts the Apple-silicon-only GIMP into
+  Applications; after `brew update` Homebrew calls it installed. MacReplica now checks that the app has code for this
+  Mac's processor, reinstalls Homebrew's copy once if not, and otherwise reports *Built for another processor*. An app
+  not installed by Homebrew is never replaced.
+- **Launchpad:** the advice “open Launchpad once” is gone (on macOS 14 the Dock recreates a missing database at once,
+  so it never helped). When macOS refuses access, the step says so and offers Full Disk Access (quit and reopen
+  MacReplica afterwards); the restore log records what macOS reports for each folder of the database path.
+
+### Added
+- **Skip** on every guided step for displays, printers and scanners and on every item waiting for apps or permissions,
+  and **Skip All** (with a confirmation) in the guided installation.
+
 ## [1.1.3] - 2026-10-17
 
 ### Fixed

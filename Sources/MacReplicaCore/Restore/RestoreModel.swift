@@ -244,6 +244,8 @@ public enum FailureCategory: String, Codable, Sendable, CaseIterable {
     /// The backup copy could not be read (drive or network share disconnected, file gone, access refused); this says
     /// nothing about damage.
     case backupUnreachable
+    /// The app on this Mac has no code for its processor (e.g. Apple silicon only on an Intel Mac).
+    case wrongProcessor
     case homebrewUnavailable
     case homebrewBroken
     /// Homebrew on this Mac is too old for the current package definitions, and `brew update` did not help.
@@ -317,6 +319,8 @@ public enum SkipReason: Codable, Equatable, Sendable {
     /// A macOS with Launchpad, but its database was not found (yet): the step waits and is checked again on Continue.
     /// Up to 1.1.2 this was reported as “Launchpad does not exist on this macOS”, also on macOS 14 (tester, 2026-10-17).
     case launchpadDatabaseMissing
+    /// macOS refuses MacReplica access to Launchpad's database (privacy protection); waits, checked again on Continue.
+    case launchpadAccessDenied
     /// Launchpad was arranged with the apps installed so far; it is arranged again when the restore continues
     /// and the remaining apps are installed.
     case launchpadWaitingForApps(count: Int)
@@ -351,7 +355,7 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
         switch reason {
         case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected,
              .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess, .launchpadWaitingForApps,
-             .launchpadDatabaseMissing: return true
+             .launchpadDatabaseMissing, .launchpadAccessDenied: return true
         default: return false
         }
     }
@@ -383,6 +387,8 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case existingFileMovedAside(path: String)
     /// Homebrew on this Mac was too old for the current package definitions, so MacReplica ran `brew update` once.
     case homebrewUpdated(version: String)
+    /// Homebrew's copy had code only for another processor (`found`) and was reinstalled for this Mac.
+    case reinstalledForThisProcessor(found: String)
     case identicalFileExists
     /// The same font or profile is already installed (same identity and version), possibly under another file name.
     case equivalentFileInstalled

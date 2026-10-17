@@ -2206,4 +2206,13 @@
 "summary.guidedDevices.other" = "%1$d steps for displays, printers and scanners, set up in System Settings";
 "report.restore.waitingHint.one" = "%1$d step waits for you. The guided steps are in MacReplica, not in this report: open MacReplica, choose Continue on its start window, then Continue with Guided Steps.";
 "report.restore.waitingHint.other" = "%1$d steps wait for you. The guided steps are in MacReplica, not in this report: open MacReplica, choose Continue on its start window, then Continue with Guided Steps.";
-"skip.launchpadDatabaseMissing" = "Not arranged yet: Launchpad's list of apps was not found on this Mac. Open Launchpad once, then choose Continue – MacReplica checks again";
+"skip.launchpadDatabaseMissing" = "Not arranged: MacReplica could not find Launchpad's database on this Mac, so your current arrangement stays as it is. Choose Skip if you do not need it; the restore log records what was found";
+"guided.skipAll" = "Skip All";
+"guided.skipAll.help" = "Leaves out every app and step shown here. You can still install or set them up yourself later.";
+"guided.skipAll.title.one" = "Skip %1$d remaining step?";
+"guided.skipAll.title.other" = "Skip %1$d remaining steps?";
+"guided.skipAll.message" = "MacReplica will not ask for them again in this restore and lists them as skipped. Nothing on this Mac is changed or removed.";
+"failure.wrongProcessor.title" = "Built for another processor";
+"failure.wrongProcessor.explanation" = "The app in Applications has no code for this Mac's processor (for example an Apple-silicon-only app on an Intel Mac, as an outdated Homebrew can install), so it cannot open here. If Homebrew installed it, MacReplica reinstalled it once; otherwise it is left as it is. Move the app to the Trash, then choose Retry Failed Items – or install a version for this Mac from the developer.";
+"note.reinstalledForThisProcessor" = "Homebrew's copy had code only for %1$@ and could not run on this Mac, so MacReplica reinstalled it with Homebrew and checked it again.";
+"skip.launchpadAccessDenied" = "Not arranged: macOS does not let MacReplica read Launchpad's database. Give MacReplica Full Disk Access, quit MacReplica and open it again (macOS applies the permission only then), then choose Continue – or choose Skip";

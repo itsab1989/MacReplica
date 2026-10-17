@@ -180,6 +180,22 @@ struct Inspector: Sendable {
         ApplicationLocator.find(names: item.appBundleNames, bundleIdentifier: item.bundleIdentifier, in: layout.applicationFolders)
     }
 
+    /// The processors the app's main executable has code for; empty when it cannot be read.
+    func executableArchitectures(ofApp url: URL) -> [CPUArchitecture] {
+        let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
+        guard let name = info?["CFBundleExecutable"] as? String else { return [] }
+        return MachO.architectures(ofFile: url.appendingPathComponent("Contents/MacOS").appendingPathComponent(name))
+    }
+
+    /// False only when the app's executable can be read and has no code this Mac can run – e.g. the Apple-silicon-only
+    /// GIMP an outdated Homebrew installed on an Intel Mac (reproduced with Homebrew 4.2.0, 2026-10-18).
+    func appRunsHere(_ url: URL) -> Bool {
+        let architectures = executableArchitectures(ofApp: url).filter { $0 != .unknown }
+        guard !architectures.isEmpty, environment.targetArchitecture != .unknown else { return true }
+        if architectures.contains(environment.targetArchitecture) { return true }
+        return environment.targetArchitecture == .arm64 && architectures.contains(.x86_64)
+    }
+
     func installedVersion(ofApp url: URL) -> String? {
         let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
         return info?["CFBundleShortVersionString"] as? String
@@ -745,10 +761,18 @@ public final class RestoreExecutor: Sendable {
                              onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
         if let reason = inspector.architectureSkip(item) { return ItemResult(itemID: item.id, outcome: .skipped(reason)) }
         guard let brew = context.brew else { return failed(item, .homebrewUnavailable) }
+        // “Already installed” only for an app that can run here.
         if let version = try await environment.homebrew.installedCaskVersion(brew, token: item.identifier) {
+            if let app = inspector.installedApp(for: item), !inspector.appRunsHere(app) {
+                return try await reinstallForThisMac(item, app: app, brew: brew, inspector: inspector, context: &context, onEvent: onEvent)
+            }
             return ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: version)
         }
         if let app = inspector.installedApp(for: item) {
+            guard inspector.appRunsHere(app) else {
+                // Not Homebrew's: the user's app is never replaced.
+                return failed(item, .wrongProcessor, "\(layout.displayPath(app)): \(inspector.executableArchitectures(ofApp: app).map(\.rawValue).joined(separator: ", ")) only; not installed by Homebrew, left as it is")
+            }
             return ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: inspector.installedVersion(ofApp: app))
         }
         onEvent(.activity(itemID: item.id, .installing))
@@ -767,6 +791,26 @@ public final class RestoreExecutor: Sendable {
         }
         return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: installedVersion,
                           notes: updateNotes + versionNotes(original: item.originalVersion, installed: installedVersion) + inspector.notes(for: item))
+    }
+
+    /// Homebrew lists the cask as installed, but its app has no code for this Mac's processor (an outdated Homebrew
+    /// picked the wrong download and still recorded the cask). The app is Homebrew's own and cannot run here, so it is
+    /// reinstalled once with Homebrew; the result counts only if the new copy can run here.
+    private func reinstallForThisMac(_ item: RestoreItem, app: URL, brew: HomebrewInstallation, inspector: Inspector,
+                                     context: inout RunContext, onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
+        let found = inspector.executableArchitectures(ofApp: app)
+        log.warning("\(item.id): \(layout.displayPath(app)) has code only for \(found.map(\.rawValue).joined(separator: ", ")); "
+                    + "this Mac is \(environment.targetArchitecture.rawValue) – reinstalling with Homebrew", component: .homebrew)
+        onEvent(.activity(itemID: item.id, .installing))
+        let result = try await environment.homebrew.install(context.brew ?? brew, package: .caskReinstall(item.identifier), askpass: environment.askpassPath,
+                                                           extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment))
+        guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
+        onEvent(.activity(itemID: item.id, .verifying))
+        guard let reinstalled = inspector.installedApp(for: item), inspector.appRunsHere(reinstalled) else {
+            return failed(item, .wrongProcessor, "still no code for \(environment.targetArchitecture.rawValue) after brew reinstall")
+        }
+        return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: inspector.installedVersion(ofApp: reinstalled),
+                          notes: [.reinstalledForThisProcessor(found: found.map(\.rawValue).joined(separator: ", "))])
     }
 
     private func installAppStoreApp(_ item: RestoreItem, inspector: Inspector,

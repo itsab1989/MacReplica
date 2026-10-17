@@ -2204,4 +2204,13 @@
 "summary.guidedDevices.other" = "%1$d passaggi per monitor, stampanti e scanner, da configurare in Impostazioni di Sistema";
 "report.restore.waitingHint.one" = "%1$d passaggio ti aspetta. I passaggi guidati sono in MacReplica, non in questo rapporto: apri MacReplica, scegli Riprendi nella finestra iniziale, poi Continua con i passaggi guidati.";
 "report.restore.waitingHint.other" = "%1$d passaggi ti aspettano. I passaggi guidati sono in MacReplica, non in questo rapporto: apri MacReplica, scegli Riprendi nella finestra iniziale, poi Continua con i passaggi guidati.";
-"skip.launchpadDatabaseMissing" = "Non ancora disposto: l’elenco delle app di Launchpad non è stato trovato su questo Mac. Apri Launchpad una volta, poi scegli Riprendi: MacReplica controlla di nuovo";
+"skip.launchpadDatabaseMissing" = "Non disposto: MacReplica non ha trovato il database di Launchpad su questo Mac, quindi la disposizione attuale resta com’è. Scegli Salta se non ti serve; il registro del ripristino annota cosa è stato trovato";
+"guided.skipAll" = "Salta tutto";
+"guided.skipAll.help" = "Salta tutte le app e i passaggi mostrati qui. Puoi comunque installarli o configurarli tu più tardi.";
+"guided.skipAll.title.one" = "Saltare %1$d passaggio rimanente?";
+"guided.skipAll.title.other" = "Saltare %1$d passaggi rimanenti?";
+"guided.skipAll.message" = "MacReplica non li chiederà più in questo ripristino e li indicherà come saltati. Su questo Mac non viene modificato né rimosso nulla.";
+"failure.wrongProcessor.title" = "Creato per un altro processore";
+"failure.wrongProcessor.explanation" = "L’app in Applicazioni non contiene codice per il processore di questo Mac (per esempio un’app solo per Apple silicon su un Mac Intel, come può installare un Homebrew non aggiornato) e qui non si apre. Se l’ha installata Homebrew, MacReplica l’ha reinstallata una volta; altrimenti resta com’è. Sposta l’app nel Cestino, poi scegli Riprova elementi non riusciti – oppure installa una versione per questo Mac dallo sviluppatore.";
+"note.reinstalledForThisProcessor" = "La copia di Homebrew conteneva solo codice per %1$@ e non poteva funzionare su questo Mac, quindi MacReplica l’ha reinstallata con Homebrew e l’ha controllata di nuovo.";
+"skip.launchpadAccessDenied" = "Non disposto: macOS non permette a MacReplica di leggere il database di Launchpad. Concedi a MacReplica l’accesso completo al disco, esci da MacReplica e riaprilo (solo allora macOS applica il permesso), poi scegli Riprendi – oppure Salta";

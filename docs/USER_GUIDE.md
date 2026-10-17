@@ -128,6 +128,8 @@
    first.
 8. **Continue with Guided Steps** opens the guided installation (see below), including printers and scanners
    to set up in System Settings. After a restart, choose **Continue** on the start window to get back here.
+   Every waiting app and step has **Skip**; **Skip All** leaves out everything the guided installation still shows
+   (after a confirmation – nothing on the Mac is changed).
 
 If you chose **Use my installer …** for an app when making the backup, that installer is used on the new Mac in
 the guided steps – also for apps that have a Homebrew cask (up to 1.1.1 the cask was used and your installer

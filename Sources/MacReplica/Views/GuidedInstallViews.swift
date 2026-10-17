@@ -68,6 +68,11 @@ struct GuidedInstallView: View {
                 .keyboardShortcut(.cancelAction)
                 .accessibilityIdentifier("guided.back")
             Spacer()
+            if !model.guided.running, !model.openItems.isEmpty {
+                Button(l.t("guided.skipAll")) { model.confirmSkipAll = true }
+                    .help(l.t("guided.skipAll.help"))
+                    .accessibilityIdentifier("guided.skipAll")
+            }
             Button(l.t("guided.checkAgain")) { model.checkOpenStepsAgain() }
                 .help(l.t("guided.checkAgain.help"))
                 .disabled(model.guided.running)
@@ -84,6 +89,13 @@ struct GuidedInstallView: View {
         }
         .sheet(isPresented: Binding(get: { model.guided.pending != nil }, set: { if !$0 { model.answerPending(.later) } })) {
             if let pending = model.guided.pending { PendingStepSheet(pending: pending) }
+        }
+        .confirmationDialog(l.p("guided.skipAll.title", apps.count + steps.count), isPresented: $model.confirmSkipAll) {
+            Button(l.t("guided.skipAll"), role: .destructive) { model.skipAllGuided() }
+                .accessibilityIdentifier("guided.skipAll.confirm")
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("guided.skipAll.message"))
         }
     }
 }
@@ -234,6 +246,12 @@ struct GuidedToolchainRow: View {
                 Spacer()
                 if let result = model.session?.results[item.id] {
                     Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
+                    // Every waiting step can be left out, not only apps (tester feedback on 1.1.3).
+                    if result.outcome.isOpen {
+                        Button(l.t("guided.skip")) { model.markGuided(item.id, .userSkipped) }
+                            .controlSize(.small)
+                            .accessibilityIdentifier("guided.skip.\(item.id)")
+                    }
                 }
             }
             if item.kind == .printer, let instruction {

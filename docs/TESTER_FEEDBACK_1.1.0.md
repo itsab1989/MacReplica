@@ -12,6 +12,9 @@ Sources (kept outside the repository, not changed):
 - **Report 2** – email “MacReplica restore report”: two sentences and the restore summary
   (`MacReplica Restore Summary.html`, zipped). The body shows an image placeholder, but the message contains no
   image part – only the zip. Nothing else was missing.
+- **Report 4** – email “Test of MacReplica 1.1.3” and a follow-up: text, 3 screenshots (Launchpad, summary, guided
+  steps), `restore-20261018-002425.log`, an `lporg` export of the old Mac's layout (YAML, read as data), a how-to text and
+  the `lporg` tool itself (archive not unpacked or run). Follow-up: Office had to be installed by hand.
 - **Report 3** – email “Test of MacReplica 1.1.2” (same session resumed with 1.1.2 on the restored Mac, macOS 14.8.9):
   text, one screenshot of the summary (a higher-resolution copy supplied separately), `restore-20261017-222553.log`
   (467 steps, 460 already finished). All readable.
@@ -93,3 +96,17 @@ real administrator prompt, network share) was not available. Baseline: `main` at
 - On screen (simulated macOS 15.1, real app): restore onto a Mac without Launchpad database → *Waiting for apps or
   permissions: Launchpad – Not arranged yet …* (`gui-09`); database created, **Continue** → “Launchpad arranged
   (1 pages, 1 folders)” (`gui-10`). Not verified on a real macOS 14.
+
+### Report 4 (1.1.3) and reproduction on GitHub's macOS runners
+
+Reproduced on real runners with a throw-away workflow (`repro/knut-1.1.3`, not merged): macOS 14.8.9 (23J631, the
+tester's version, Apple silicon) for Launchpad, macOS 15 Intel for Homebrew. Artifacts in
+`~/Desktop/MacReplica-Staging/knut-feedback/repro-*`.
+
+| ID | Observation (source) | Kind | Severity | Root cause (confidence) | Disposition |
+|---|---|---|---|---|---|
+| TEST113-001 | Launchpad still “not found” after opening Launchpad and Continue; Full Disk Access did not help; Launchpad shows the arranged folders (R4 text, screenshots 1–2, log) | **Contradicts** TEST112-003's assumption (database missing) | Medium | The screenshot shows the 12 folders 1.1.0 arranged on this Mac, so the database exists. On macOS 14.8.9 the runner proved: MacReplica's exact code finds and rewrites it, also from an app started by LaunchServices; **a deleted database is recreated by the Dock at once** – so “open Launchpad once” could never help. What makes MacReplica's check fail on the tester's Mac is **not reproduced and not known**; hypothesis: macOS refuses access (privacy protection – each ad-hoc-signed release counts as a new app; Full Disk Access applies only after reopening). The runner's unapproved probe app could read it, which weakens that hypothesis. | **Fix of the message + diagnostics (tests, on screen):** the advice is gone; *access refused* (`EPERM`/`EACCES`) is reported as such with the Full Disk Access button and “quit and reopen”; the log records `stat`'s answer for each level of the path. **Requires the tester's log** of the next run. |
+| TEST113-002 | “There should be a choice to skip / ignore each one of them, or all” (R4 text, screenshot 3) | Enhancement (UX) | Medium | Device steps and waiting data had no Skip. | **Implemented, on screen (simulated):** Skip on every device step and every “Waiting for apps or permissions” row, **Skip All** with a confirmation (`gui-11`–`gui-15`). |
+| TEST113-003 | Office had to be installed by hand; the Homebrew cask did not work (follow-up) | Corroborates F-10/F-17 | High (closed) | **Reproduced:** Homebrew 4.2.0 crashes while loading the current `microsoft-office` cask (stack trace in `cask_loader.rb`, nothing installed); after `brew update` the same command installs Office 16.114 correctly on Intel. 1.1.2's update-and-retry covers it; the tester's manual install was most likely made after the 1.1.0 failure (no 1.1.2 log of that step). | **Root cause confirmed, fix (1.1.2) verified with real Homebrew on Intel.** |
+| TEST113-004 | (found while reproducing TEST113-003) | **New defect** | High (false success, app that cannot run) | **Reproduced:** Homebrew 4.2.0 fails on `gimp` (`Unexpected method 'command_wrapper'`, exit 1) but still moves the **arm64-only** GIMP into Applications on the Intel Mac and records the cask; after `brew update`, `brew install` says “already installed” and MacReplica reported it as *already installed*. | **Fixed, tests:** a cask whose app has no code for this Mac's processor is reinstalled once with Homebrew and checked again; still wrong → *Built for another processor*; an app not installed by Homebrew is never replaced. The tester's GIMP (and other casks the old Homebrew touched) may be affected: check with `lipo -archs`. |
+| TEST113-005 | `lporg` export and how-to supplied “for reference” (R4 attachments) | Informational | – | The export (old Mac, before the reinstall) confirms the layout MacReplica recorded (same folder names). MacReplica does not read `lporg` files. | Not applicable. |
