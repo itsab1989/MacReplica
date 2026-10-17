@@ -2,6 +2,31 @@
   "default_threshold": 80,
   "modules": [
     {
+      "file": "Reports/ReportBuilder.swift",
+      "tests": [
+        "TesterFeedback110Tests",
+        "ReinstallGuideTests",
+        "ReinstallGuideStructureTests"
+      ],
+      "area": "Reports"
+    },
+    {
+      "file": "Reports/RestoreInstructions.swift",
+      "tests": [
+        "TesterFeedback110Tests",
+        "ReinstallGuideTests"
+      ],
+      "area": "Reports"
+    },
+    {
+      "file": "Localization/Descriptions.swift",
+      "tests": [
+        "TesterFeedback110Tests",
+        "InstallerDescriptionTests"
+      ],
+      "area": "Localization"
+    },
+    {
       "file": "Model/ManifestIO.swift",
       "tests": [
         "ManifestTests",
@@ -27,7 +52,9 @@
         "TwoStageSelectionTests",
         "SelectionPlannerTests",
         "DeveloperEnvironmentTests",
-        "LaunchpadRestoreTests"
+        "LaunchpadRestoreTests",
+        "TesterFeedback110Tests",
+        "HomebrewAvailabilityTests"
       ],
       "area": "Restore"
     },
@@ -60,7 +87,8 @@
         "ExecutorEdgeTests",
         "RestorePlannerTests",
         "AdminPasswordTests",
-        "LaunchpadRestoreTests"
+        "LaunchpadRestoreTests",
+        "TesterFeedback110Tests"
       ],
       "area": "Restore, conflicts, dry run, verification",
       "threshold": 75
@@ -72,7 +100,8 @@
         "CleanupTests",
         "SessionAndPrivilegeEdgeTests",
         "DeveloperEnvironmentTests",
-        "GuidedInstallationTests"
+        "GuidedInstallationTests",
+        "TesterFeedback110Tests"
       ],
       "area": "Resume"
     },
@@ -119,7 +148,8 @@
       "file": "Restore/ErrorClassifier.swift",
       "tests": [
         "ClassifierAndProgressTests",
-        "FailureModeTests"
+        "FailureModeTests",
+        "TesterFeedback110Tests"
       ],
       "area": "Failure handling"
     },
@@ -412,7 +442,8 @@
         "HomebrewTests",
         "InventoryTests",
         "HomebrewAvailabilityTests",
-        "HomebrewRemovedCaskTests"
+        "HomebrewRemovedCaskTests",
+        "TesterFeedback110Tests"
       ],
       "area": "Homebrew detection"
     },
@@ -470,7 +501,8 @@
       "file": "Reports/ReinstallGuide.swift",
       "tests": [
         "ReinstallGuideTests",
-        "ReinstallGuideStructureTests"
+        "ReinstallGuideStructureTests",
+        "TesterFeedback110Tests"
       ],
       "area": "Reinstall guide"
     },
@@ -502,7 +534,8 @@
         "HomebrewAvailabilityTests",
         "ReinstallGuideTests",
         "InstallerApprovalTests",
-        "InstallerEvidenceTests"
+        "InstallerEvidenceTests",
+        "TesterFeedback110Tests"
       ],
       "area": "Descriptions"
     },
@@ -601,6 +634,11 @@
     }
   ],
   "exclusions": [
+    {
+      "file": "Restore/RestoreExecutor.swift",
+      "pattern": "installed \\+= 1",
+      "reason": "Counter for the log line after a stopped administrator copy only (equivalent mutant)."
+    },
     {
       "file": "System/CommandRunner.swift",
       "pattern": "guard !data.isEmpty else",

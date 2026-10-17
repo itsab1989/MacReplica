@@ -82,7 +82,10 @@
 3. Click **Save Backup** (or **Save Backup …** if no location is chosen yet). MacReplica creates a folder named
    `MacReplica-Backup-<date>-<time>`, verifies it and shows its size, location, contents and how complete it is.
    The folder also contains a copy of MacReplica itself and **REINSTALL_MACOS.html** – click **Reinstall Guide**
-   and print it before you erase the Mac.
+   and print it before you erase the Mac (it is also available later under **Check Backup**). It contains every
+   step on paper, including how to create a USB installer with Apple's `createinstallmedia` and start up from
+   it. On an Intel Mac with the T2 chip it tells you to allow external boot media in Startup Security Utility
+   *before* erasing: that utility asks for an administrator of this Mac, and after erasing there is none.
 4. Copy that folder to the new Mac (or keep it on the external drive).
 
 ## 2. Restore on the new Mac
@@ -119,8 +122,16 @@
    later have no Launchpad; the backup's report lists the layout for reference.
 6. Keep MacReplica open and the Mac awake. You can **Stop** at any time; the restore can continue later.
 7. The summary lists what worked, what failed (with what to do), what is **waiting for you**, and
-   services to sign in to. **Retry Failed Items** runs only the failed steps again.
-8. **Continue with Guided Steps** opens the guided installation (see below).
+   services to sign in to. **Retry Failed Items** runs the failed steps again (and steps that waited for them)
+   in the same restore: everything that already worked stays in the summary, the guided steps stay, and the
+   restore can still be continued after you quit or restart. If the backup drive is not connected, it says so
+   first.
+8. **Continue with Guided Steps** opens the guided installation (see below), including printers and scanners
+   to set up in System Settings. After a restart, choose **Continue** on the start window to get back here.
+
+If you chose **Use my installer …** for an app when making the backup, that installer is used on the new Mac in
+the guided steps – also for apps that have a Homebrew cask (up to 1.1.1 the cask was used and your installer
+was never offered). A match you choose on the restore screen still wins.
 
 ### Guided installation
 
@@ -240,7 +251,9 @@ MacReplica-Backup-2026-10-02-1852/
 └── logs/                              the backup log (home folder written as ~)
 ```
 
-Keep the folder complete. **Check Backup** verifies every checksum at any time.
+Keep the folder complete. **Check Backup** verifies every checksum at any time, says whether files were
+missing when the backup was made, and opens the **Reinstall Guide** for the Mac the backup came from (written
+with your current MacReplica; the copy in the backup stays unchanged).
 
 ## Where MacReplica keeps its own files
 

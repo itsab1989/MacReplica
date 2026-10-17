@@ -1062,14 +1062,16 @@ final class AppModel: ObservableObject {
         unfinishedSession = services.sessionStore.unfinishedSession()
     }
 
+    /// Runs the failed steps again in the same restore session (not a new one), so the results that worked, the guided
+    /// steps and the list of apps to install stay as they were, and the restore can still be resumed after quitting.
     func retryFailed() {
         guard let plan, let session, let backupURL else { return }
-        let failedIDs = Set(session.results.filter { $0.value.outcome.isFailure }.map(\.key))
-        guard !failedIDs.isEmpty else { return }
-        let retryPlan = plan.subset(retrying: failedIDs)
-        let retrySession = RestoreSession(backupPath: services.layout.displayPath(backupURL), selection: session.selection,
-                                          itemIDs: retryPlan.items.map(\.id))
-        run(plan: retryPlan, session: retrySession)
+        guard !session.retryableItemIDs.isEmpty else { return }
+        guard FileManager.default.fileExists(atPath: backupURL.appendingPathComponent(ManifestIO.fileName).path) else {
+            show(ProblemInfo(title: l.t("resume.backupMissing.title"), message: l.t("retry.backupMissing.message", displayPath(backupURL)), detail: nil))
+            return
+        }
+        run(plan: plan, session: session.preparedForRetry())
     }
 
     // MARK: Reports
@@ -1089,6 +1091,23 @@ final class AppModel: ObservableObject {
                 .sorted { ($0.modificationDate ?? .distantPast) > ($1.modificationDate ?? .distantPast) }
             for old in reports.dropFirst(10) { try? FileManager.default.removeItem(at: old) }
         }
+    }
+
+    /// Writes the reinstall guide for the Mac a backup was made on with this MacReplica (so an older backup gets the
+    /// current instructions) and opens it. The backup itself is not changed.
+    func openReinstallGuide(manifest: Manifest, backupURL: URL) {
+        let profile = MacProfile(architecture: manifest.architecture, modelIdentifier: manifest.modelIdentifier, macOSVersion: manifest.macosVersion)
+        let html = ReportBuilder(localizer: l).reinstallGuide(profile: profile, manifest: manifest, backupFolderName: backupURL.lastPathComponent)
+        let folder = services.layout.applicationSupport.appendingPathComponent("Reports")
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appendingPathComponent("REINSTALL_MACOS.html")
+        guard (try? Data(html.utf8).write(to: url, options: .atomic)) != nil else {
+            // Fall back to the copy saved in the backup.
+            open(backupURL.appendingPathComponent(BackupWriter.reinstallGuidePath))
+            return
+        }
+        appLog.info("Reinstall guide written for the backup's Mac", component: .general)
+        open(url)
     }
 
     func exportDryRunReport() {

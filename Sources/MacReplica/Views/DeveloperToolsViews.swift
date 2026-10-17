@@ -105,7 +105,11 @@ struct GuidedStepsCard: View {
                     }
                 }
                 if apps.count > 6 { Text(l.p("summary.guidedMore", apps.count - 6)).font(.caption).foregroundStyle(.secondary) }
-                if !tools.isEmpty { Text(l.p("summary.guidedTools", tools.count)).font(.callout) }
+                // Printers, scanners and displays are set up in System Settings; only toolchain steps are commands.
+                let commands = tools.filter { $0.kind == .toolchainStep }.count
+                let devices = tools.count - commands
+                if commands > 0 { Text(l.p("summary.guidedTools", commands)).font(.callout) }
+                if devices > 0 { Text(l.p("summary.guidedDevices", devices)).font(.callout) }
                 HStack {
                     Spacer()
                     Button(l.t("summary.guidedOpen")) { model.showGuidedInstall() }

@@ -226,6 +226,20 @@ public struct HomebrewClient: Sendable {
         return try await runner.run(installCommand, onOutputLine: onOutputLine)
     }
 
+    /// True when Homebrew says it is too old for the package definitions it just loaded. Homebrew reads current casks
+    /// from its online API, so an old copy (e.g. one brought back by Time Machine, with automatic updates off) fails
+    /// with "Unexpected method 'postflight_steps' called on Cask zoom" or prints "Do not report this issue until
+    /// you've run `brew update` and tried again" (both seen by a tester on 2026-10-17).
+    public static func isOutdatedHomebrewOutput(_ output: String) -> Bool {
+        let lower = output.lowercased()
+        return lower.contains("unexpected method '") || lower.contains("until you've run `brew update`")
+    }
+
+    /// Updates Homebrew itself and its package definitions (`brew update`); installed packages are not upgraded.
+    public func update(_ brew: HomebrewInstallation) async throws -> CommandResult {
+        try await runner.run(command(brew, ["update"], timeout: 1200))
+    }
+
     /// Homebrew 6.0 and later only load formulae and casks from third-party taps the user trusts.
     public static func requiresTapTrust(_ version: String) -> Bool {
         (Int(version.split(separator: ".").first ?? "") ?? 0) >= 6

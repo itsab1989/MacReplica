@@ -4,6 +4,8 @@ import Foundation
 /// instead of raw command output.
 public enum ErrorClassifier {
     private static let rules: [(FailureCategory, [String])] = [
+        // Before everything else: an old Homebrew's errors also contain words of other rules.
+        (.homebrewOutdated, ["unexpected method '", "until you've run `brew update`"]),
         (.diskFull, ["no space left on device", "not enough disk space", "disk is full"]),
         (.appStoreNotSignedIn, ["not signed in", "sign in to the app store", "notsignedin", "no apple account", "not logged in", "unauthenticated"]),
         (.adminRightsDenied, ["a password is required", "no askpass program", "incorrect password", "sorry, try again",

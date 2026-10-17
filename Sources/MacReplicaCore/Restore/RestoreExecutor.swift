@@ -521,6 +521,8 @@ public final class RestoreExecutor: Sendable {
         /// Results of the batched administrator copy for files in shared folders.
         var privilegedFileResults: [String: Result<FileAction, PrivilegedError>] = [:]
         var privilegedBatchDone = false
+        /// `brew update` runs at most once per restore, and only when Homebrew said it is too old.
+        var homebrewUpdateAttempted = false
         /// The channel the askpass helper gets the administrator password from during this run.
         var askpassServer: AskpassServer?
         var askpassBroker: AdminPasswordBroker?
@@ -548,8 +550,8 @@ public final class RestoreExecutor: Sendable {
             case .homebrew: return await installHomebrew(item, context: &context, onEvent: onEvent)
             case .tap: return try await installTap(item, inspector: inspector, context: &context, onEvent: onEvent)
             case .masTool: return try await installMasTool(item, context: context, onEvent: onEvent)
-            case .formula: return try await installFormula(item, inspector: inspector, context: context, onEvent: onEvent)
-            case .cask: return try await installCask(item, inspector: inspector, context: context, onEvent: onEvent)
+            case .formula: return try await installFormula(item, inspector: inspector, context: &context, onEvent: onEvent)
+            case .cask: return try await installCask(item, inspector: inspector, context: &context, onEvent: onEvent)
             case .appStoreApp: return await checkAppStoreInstall(item, inspector: inspector)
             case .font, .colorProfile:
                 return await restoreFile(item, inspector: inspector, context: &context, plan: plan, session: session, onEvent: onEvent)
@@ -696,7 +698,31 @@ public final class RestoreExecutor: Sendable {
         return [.newerVersionInstalled(original: original, installed: installed)]
     }
 
-    private func installFormula(_ item: RestoreItem, inspector: Inspector, context: RunContext,
+    /// Installs a formula or cask. If Homebrew answers that it is too old for the current package definitions, it is
+    /// updated once (`brew update`, what Homebrew itself asks for and does by default before installing) and the
+    /// package is tried again. An existing Homebrew is never changed without that evidence.
+    private func brewInstall(_ brew: HomebrewInstallation, _ package: HomebrewPackage, item: RestoreItem,
+                             context: inout RunContext) async throws -> (CommandResult, [ResultNote]) {
+        let extra = context.askpassEnvironment(environment.askpassEnvironment)
+        let result = try await environment.homebrew.install(brew, package: package, askpass: environment.askpassPath, extraEnvironment: extra)
+        guard !result.succeeded, HomebrewClient.isOutdatedHomebrewOutput(result.combinedOutput), !context.homebrewUpdateAttempted else {
+            return (result, [])
+        }
+        context.homebrewUpdateAttempted = true
+        log.warning("\(item.id): Homebrew \(brew.version) is too old for the current package definitions; running brew update", component: .homebrew)
+        let update = try await environment.homebrew.update(brew)
+        guard update.succeeded else {
+            log.error("brew update failed: \(ErrorClassifier.technicalDetail(update.combinedOutput, layout: layout, maxLines: 4))", component: .homebrew)
+            return (result, [])
+        }
+        let updated = await environment.homebrew.locate().installation ?? brew
+        context.brew = updated
+        log.info("Homebrew updated from \(brew.version) to \(updated.version); trying \(item.id) again", component: .homebrew)
+        let again = try await environment.homebrew.install(updated, package: package, askpass: environment.askpassPath, extraEnvironment: extra)
+        return (again, [.homebrewUpdated(version: updated.version)])
+    }
+
+    private func installFormula(_ item: RestoreItem, inspector: Inspector, context: inout RunContext,
                                 onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
         guard let brew = context.brew else { return failed(item, .homebrewUnavailable) }
         if let version = try await environment.homebrew.installedFormulaVersion(brew, name: item.identifier) {
@@ -704,18 +730,18 @@ public final class RestoreExecutor: Sendable {
         }
         onEvent(.activity(itemID: item.id, .installing))
         let head = inspector.selection.installsHead(item)
-        let result = try await environment.homebrew.install(brew, package: head ? .formulaHead(item.identifier) : .formula(item.identifier),
-                                                           askpass: environment.askpassPath, extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment))
+        let (result, updateNotes) = try await brewInstall(brew, head ? .formulaHead(item.identifier) : .formula(item.identifier),
+                                                         item: item, context: &context)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
-        guard let version = try await environment.homebrew.installedFormulaVersion(brew, name: item.identifier) else {
+        guard let version = try await environment.homebrew.installedFormulaVersion(context.brew ?? brew, name: item.identifier) else {
             return failed(item, .verificationFailed, "formula not listed after installation")
         }
         return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version,
-                          notes: versionNotes(original: item.originalVersion, installed: version))
+                          notes: updateNotes + versionNotes(original: item.originalVersion, installed: version))
     }
 
-    private func installCask(_ item: RestoreItem, inspector: Inspector, context: RunContext,
+    private func installCask(_ item: RestoreItem, inspector: Inspector, context: inout RunContext,
                              onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
         if let reason = inspector.architectureSkip(item) { return ItemResult(itemID: item.id, outcome: .skipped(reason)) }
         guard let brew = context.brew else { return failed(item, .homebrewUnavailable) }
@@ -726,11 +752,10 @@ public final class RestoreExecutor: Sendable {
             return ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: inspector.installedVersion(ofApp: app))
         }
         onEvent(.activity(itemID: item.id, .installing))
-        let result = try await environment.homebrew.install(brew, package: .cask(item.identifier), askpass: environment.askpassPath,
-                                                           extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment))
+        let (result, updateNotes) = try await brewInstall(brew, .cask(item.identifier), item: item, context: &context)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
-        guard let version = try await environment.homebrew.installedCaskVersion(brew, token: item.identifier) else {
+        guard let version = try await environment.homebrew.installedCaskVersion(context.brew ?? brew, token: item.identifier) else {
             return failed(item, .verificationFailed, "cask not listed after installation")
         }
         var installedVersion = version
@@ -741,7 +766,7 @@ public final class RestoreExecutor: Sendable {
             installedVersion = inspector.installedVersion(ofApp: app) ?? version
         }
         return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: installedVersion,
-                          notes: versionNotes(original: item.originalVersion, installed: installedVersion) + inspector.notes(for: item))
+                          notes: updateNotes + versionNotes(original: item.originalVersion, installed: installedVersion) + inspector.notes(for: item))
     }
 
     private func installAppStoreApp(_ item: RestoreItem, inspector: Inspector,
@@ -812,10 +837,10 @@ public final class RestoreExecutor: Sendable {
     }
 
     private func fileAction(_ item: RestoreItem, inspector: Inspector, session: RestoreSession) -> (FileAction?, ItemResult?) {
-        // A damaged backup copy is reported as such before anything is compared.
-        guard let targets = inspector.fileTargets(item), sourceIsIntact(item, targets), let analysis = inspector.assessFile(item) else {
-            return (nil, failed(item, .backupFileDamaged, item.file?.backupPath ?? ""))
-        }
+        // A backup copy that cannot be read or is damaged is reported as such before anything is compared.
+        guard let targets = inspector.fileTargets(item) else { return (nil, failed(item, .backupFileDamaged, "unsafe path in backup")) }
+        if let problem = sourceProblem(item, targets, inspector: inspector) { return (nil, problem) }
+        guard let analysis = inspector.assessFile(item) else { return (nil, failed(item, .backupFileDamaged, item.file?.backupPath ?? "")) }
         let assessment = analysis.assessment
         func replacing(_ existing: URL?) -> (FileAction?, ItemResult?) {
             guard let existing else { return (.copy, nil) }
@@ -875,6 +900,25 @@ public final class RestoreExecutor: Sendable {
         return (try? Hashing.sha256Hex(ofFile: targets.source)) == record.sha256
     }
 
+    /// Why the backup copy cannot be used, or nil. "Damaged" needs proof – a checksum that differs, or the backup check
+    /// found it damaged; a copy that cannot be found or read (e.g. the backup drive was disconnected) is reported as
+    /// unreachable instead (a tester's retry called 52 intact profiles damaged, 2026-10-17).
+    func sourceProblem(_ item: RestoreItem, _ targets: Inspector.FileTargets, inspector: Inspector) -> ItemResult? {
+        guard let record = item.file else { return failed(item, .backupFileDamaged, "") }
+        if inspector.damagedFiles.contains(record.backupPath) { return failed(item, .backupFileDamaged, record.backupPath) }
+        guard FileManager.default.fileExists(atPath: targets.source.path) else {
+            let rootReachable = FileManager.default.fileExists(atPath: inspector.backupRoot.appendingPathComponent(ManifestIO.fileName).path)
+            return failed(item, .backupUnreachable, (rootReachable ? "not found in the backup: " : "backup not reachable: ") + record.backupPath)
+        }
+        let digest: String
+        do {
+            digest = try Hashing.sha256Hex(ofFile: targets.source)
+        } catch {
+            return failed(item, .backupUnreachable, record.backupPath + ": " + layout.redact((error as NSError).localizedDescription))
+        }
+        return digest == record.sha256 ? nil : failed(item, .backupFileDamaged, record.backupPath)
+    }
+
     private func restoreFile(_ item: RestoreItem, inspector: Inspector, context: inout RunContext, plan: RestorePlan,
                              session: RestoreSession, onEvent: @escaping @Sendable (RestoreEvent) -> Void) async -> ItemResult {
         guard let record = item.file, let targets = inspector.fileTargets(item) else {
@@ -890,7 +934,7 @@ public final class RestoreExecutor: Sendable {
             return early
         }
         guard let action else { return failed(item, .unknown) }
-        guard sourceIsIntact(item, targets) else { return failed(item, .backupFileDamaged, record.backupPath) }
+        if let problem = sourceProblem(item, targets, inspector: inspector) { return problem }
 
         if inspector.fileNeedsAdmin(targets) {
             if !context.privilegedBatchDone {
@@ -925,7 +969,9 @@ public final class RestoreExecutor: Sendable {
                                      onEvent: @escaping @Sendable (RestoreEvent) -> Void) -> ItemResult {
         switch batch {
         case .failure(.denied): return failed(item, .adminRightsDenied)
-        case .failure(let error): return failed(item, .unknown, layout.redact(String(describing: error)))
+        case .failure(let error):
+            let detail = String(describing: error)
+            return failed(item, detail.lowercased().contains("operation not permitted") ? .permissionDenied : .unknown, layout.redact(detail))
         case .success(let action):
             onEvent(.activity(itemID: item.id, .verifying))
             let installed = action.destination(targets)
@@ -948,28 +994,49 @@ public final class RestoreExecutor: Sendable {
     }
 
     /// Copies all remaining files that need administrator rights after a single password prompt.
+    ///
+    /// The administrator copy never reads from the backup drive: macOS can refuse root access to a network share or
+    /// an external drive the user mounted ("install: …: Operation not permitted", seen by a tester on 2026-10-17 for
+    /// 52 colour profiles). Each file is first copied as the user into a private work folder on this Mac and checked
+    /// against its checksum; only that copy is installed.
     private func runPrivilegedFileBatch(plan: RestorePlan, session: RestoreSession, inspector: Inspector,
                                         context: inout RunContext, onEvent: @escaping @Sendable (RestoreEvent) -> Void) async {
         context.privilegedBatchDone = true
+        let fm = FileManager.default
+        let staging = layout.caches.appendingPathComponent("Work/admin-copy-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: staging) }
         var operations: [PrivilegedOperation] = []
         var itemIDs: [String] = []
-        var actions: [String: FileAction] = [:]
+        var planned: [String: (action: FileAction, destination: URL, sha256: String)] = [:]
         var createdFolders = Set<String>()
         for item in plan.items where item.kind.isFile && session.results[item.id] == nil {
-            guard let targets = inspector.fileTargets(item), inspector.fileNeedsAdmin(targets) else { continue }
+            guard let record = item.file, let targets = inspector.fileTargets(item), inspector.fileNeedsAdmin(targets) else { continue }
             let (action, early) = fileAction(item, inspector: inspector, session: session)
             guard early == nil, let action, sourceIsIntact(item, targets) else { continue }
+            let local = staging.appendingPathComponent("\(itemIDs.count)").appendingPathComponent(targets.source.lastPathComponent)
+            do {
+                try fm.createDirectory(at: local.deletingLastPathComponent(), withIntermediateDirectories: true,
+                                       attributes: [.posixPermissions: 0o700])
+                try fm.copyItem(at: targets.source, to: local)
+            } catch {
+                context.privilegedFileResults[item.id] = .failure(.failed("could not prepare the copy: " + layout.redact((error as NSError).localizedDescription)))
+                continue
+            }
+            guard (try? Hashing.sha256Hex(ofFile: local)) == record.sha256 else {
+                context.privilegedFileResults[item.id] = .failure(.failed("the copy read from the backup differs from its checksum"))
+                continue
+            }
             let folder = targets.destination.deletingLastPathComponent()
-            if !FileManager.default.fileExists(atPath: folder.path), createdFolders.insert(folder.path).inserted {
+            if !fm.fileExists(atPath: folder.path), createdFolders.insert(folder.path).inserted {
                 operations.append(.createFolder(folder))
             }
             if case .replace(let existing, let aside) = action {
-                try? FileManager.default.createDirectory(at: aside.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? fm.createDirectory(at: aside.deletingLastPathComponent(), withIntermediateDirectories: true)
                 operations.append(.move(source: existing, destination: aside))
             }
-            operations.append(.installFile(source: targets.source, destination: action.destination(targets)))
+            operations.append(.installFile(source: local, destination: action.destination(targets)))
             itemIDs.append(item.id)
-            actions[item.id] = action
+            planned[item.id] = (action, action.destination(targets), record.sha256)
         }
         guard !operations.isEmpty else { return }
         let fontCount = plan.items.filter { itemIDs.contains($0.id) && $0.kind == .font }.count
@@ -979,11 +1046,21 @@ public final class RestoreExecutor: Sendable {
         log.info("Requesting administrator rights for \(itemIDs.count) files in shared folders", component: .permissions)
         do {
             try await environment.privileged.run(operations, reason: reason)
-            for id in itemIDs { context.privilegedFileResults[id] = .success(actions[id] ?? .copy) }
-        } catch let error as PrivilegedError {
-            for id in itemIDs { context.privilegedFileResults[id] = .failure(error) }
+            for id in itemIDs { context.privilegedFileResults[id] = .success(planned[id]?.action ?? .copy) }
         } catch {
-            for id in itemIDs { context.privilegedFileResults[id] = .failure(.failed(String(describing: error))) }
+            let failure = (error as? PrivilegedError) ?? .failed(String(describing: error))
+            // The commands stop at the first error: files copied before it are in place. Each one counts only by
+            // what is on disk now, never by the batch's exit status alone.
+            var installed = 0
+            for id in itemIDs {
+                if let entry = planned[id], failure != .denied, (try? Hashing.sha256Hex(ofFile: entry.destination)) == entry.sha256 {
+                    context.privilegedFileResults[id] = .success(entry.action)
+                    installed += 1
+                } else {
+                    context.privilegedFileResults[id] = .failure(failure)
+                }
+            }
+            log.warning("Administrator copy stopped: \(installed) of \(itemIDs.count) files are in place", component: .permissions)
         }
     }
 }

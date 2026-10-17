@@ -71,9 +71,21 @@ public struct RestorePlanner: Sendable {
             if case .homebrewCask(let token) = app.restoreMethod { appsByToken[token] = app }
         }
 
+        // The user chose their own installer for these apps (“Use my installer …”, “Will be used on the new Mac”): it is
+        // used in the guided steps instead of the cask. Until 1.1.1 the cask silently won and the installer in the
+        // backup was never offered, not even when the cask failed (tester feedback, 2026-10-17). A match the user
+        // decides on the restore screen still wins.
+        let ownInstallerTokens = Set(manifest.applications.filter { selection.matchDecisions[$0.path] == nil && Self.usesOwnInstaller($0) }
+            .flatMap { app -> [String] in
+                var tokens: [String] = []
+                if case .homebrewCask(let token) = app.source { tokens.append(token) }
+                if case .homebrewCask(let token) = app.restoreMethod { tokens.append(token) }
+                return tokens
+            })
+
         if components.contains(.brewCasks) {
             // Casks Homebrew can no longer install are restored like any other app without a package (official download).
-            for cask in manifest.brewCasks where cask.isInstallable {
+            for cask in manifest.brewCasks where cask.isInstallable && !ownInstallerTokens.contains(cask.token) {
                 let app = appsByToken[cask.token]
                 let names = cask.appArtifacts.isEmpty ? (app.map { [$0.bundleFileName] } ?? []) : cask.appArtifacts
                 casks.append(RestoreItem(
@@ -91,7 +103,9 @@ public struct RestorePlanner: Sendable {
             for app in manifest.applications {
                 // A companion app comes back with its main app (same installer, suite folder or cask).
                 if let main = app.companionOf, appIDs.contains(main) { continue }
-                if case .homebrewCask(let token) = app.source, installableCasks.contains(token) || app.homebrewNote == nil { continue }
+                let ownInstaller = selection.matchDecisions[app.path] == nil && Self.usesOwnInstaller(app)
+                if case .homebrewCask(let token) = app.source, installableCasks.contains(token) || app.homebrewNote == nil,
+                   !ownInstaller { continue }
                 if app.source == .appStore || app.restoreMethod.category == .appStore { continue }
                 var method = app.restoreMethod
                 if let decision = selection.matchDecisions[app.path] {
@@ -101,6 +115,7 @@ public struct RestorePlanner: Sendable {
                         method = candidate.restoreMethod
                     }
                 }
+                if ownInstaller, method.category == .homebrew { method = app.homepage.map { .officialDownload(url: $0) } ?? .manual }
                 switch method {
                 case .homebrewCask(let token):
                     guard !caskTokens.contains(token) else { continue }
@@ -393,5 +408,12 @@ public struct RestorePlanner: Sendable {
         let prefix = kind == .font ? "font" : "icc"
         return RestoreItem(id: "\(prefix):\(record.domain.rawValue)/\(record.relativePath)", kind: kind,
                            title: record.fileName, identifier: record.relativePath, file: record, component: component)
+    }
+}
+
+extension RestorePlanner {
+    /// True when the user attached an installer to the app that may be used on the new Mac (see `InstallerArchive.isUsable`).
+    public static func usesOwnInstaller(_ app: AppRecord) -> Bool {
+        (app.ownInstallers ?? []).contains { $0.isUsable(for: app) }
     }
 }

@@ -241,8 +241,13 @@ public enum FailureCategory: String, Codable, Sendable, CaseIterable {
     case diskFull
     case verificationFailed
     case backupFileDamaged
+    /// The backup copy could not be read (drive or network share disconnected, file gone, access refused); this says
+    /// nothing about damage.
+    case backupUnreachable
     case homebrewUnavailable
     case homebrewBroken
+    /// Homebrew on this Mac is too old for the current package definitions, and `brew update` did not help.
+    case homebrewOutdated
     case commandLineToolsUnavailable
     case masUnavailable
     case pythonVersionUnavailable
@@ -372,6 +377,8 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case newerVersionInstalled(original: String, installed: String)
     case requiresRosetta
     case existingFileMovedAside(path: String)
+    /// Homebrew on this Mac was too old for the current package definitions, so MacReplica ran `brew update` once.
+    case homebrewUpdated(version: String)
     case identicalFileExists
     /// The same font or profile is already installed (same identity and version), possibly under another file name.
     case equivalentFileInstalled

@@ -122,6 +122,19 @@ extension Localizer {
         }
     }
 
+    /// Title and message as running text for reports and the reinstall guide: some titles end without a full stop
+    /// (“Partial: 2 selected files are missing”), so one is added before the message.
+    public func completenessSentence(_ manifest: Manifest) -> String {
+        let title = completenessTitle(manifest)
+        return title + Self.separator(after: title) + completenessMessage(manifest)
+    }
+
+    /// What goes between a title and the sentence after it: a full stop unless the title already ends one.
+    public static func separator(after title: String) -> String {
+        guard let last = title.last else { return "" }
+        return ".!?".contains(last) ? " " : ". "
+    }
+
     public func completenessMessage(_ manifest: Manifest) -> String {
         switch manifest.completeness {
         case .complete: return t("completeness.complete.message")
