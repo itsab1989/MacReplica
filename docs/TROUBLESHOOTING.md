@@ -57,6 +57,19 @@ reinstalled this way.
 - The Command Line Tools are installed by Apple's own dialog — confirm it when it appears; on a slow
   connection it can take a while.
 - If Homebrew is installed but broken, the summary says so; repair it (`brew doctor`) and retry.
+- **Casks fail with “Unexpected method … called on Cask” or “Do not report this issue until you've run
+  `brew update`”:** the Homebrew on this Mac is too old for today's package definitions – typically one brought
+  back from a Time Machine backup with automatic updates off. MacReplica then runs `brew update` once by itself
+  (only on this evidence; it never updates a working Homebrew) and tries the package again; the summary notes it.
+  If that update fails, the items say **Homebrew is too old**: run `brew update` in Terminal, then **Retry Failed
+  Items**.
+
+## Fonts or profiles for all users failed with “Operation not permitted”
+
+MacReplica 1.1.1 and earlier let the administrator copy read each file straight from the backup drive. macOS
+can refuse that to the administrator copy when the backup is on a network share or a drive you mounted, and the
+first refusal stopped all remaining files. Now every file is first copied to this Mac as you and checked
+against its checksum; only that copy is installed. Files that did arrive before a failure count as restored.
 
 ## An app could not be restored automatically
 
@@ -107,10 +120,27 @@ Open MacReplica again. The start screen offers **Continue** (same choices; finis
 repeated), **Review …** (change what has not been restored yet) or **Discard**. If credentials are
 part of the restore, the passphrase is asked for again — it is never stored.
 
+A restore stays open while steps wait for you (guided installations, printers and scanners), also after you quit
+MacReplica or restart the Mac. **Continue** brings you back to its summary: **Continue with Guided Steps** opens
+the apps, printers and scanners that wait, and **Retry Failed Items** runs the failed steps again – in the same
+restore, so what already worked stays listed. The guided steps are only in MacReplica; the HTML restore report
+lists them but cannot run them.
+
+## A file says “Backup copy could not be read”
+
+MacReplica could not find or read the copy in the backup – usually because the backup drive or network share
+was disconnected (or went to sleep) during the restore. This is **not** damage: connect the backup again and
+choose **Retry Failed Items**. **Check Backup** shows whether the files are intact. Only a copy whose checksum
+differs is reported as **Damaged in the backup**.
+
 ## A backup is reported as damaged or incomplete
 
 Copy the whole backup folder again from the old Mac. **Check Backup** lists the affected files;
 damaged files are never restored, everything else can be.
+
+**Check Backup** checks the files that are *in* the backup. Files that could not be saved when the backup was made
+are not in it, so no checksum can find them: for such a backup the check says *“The saved files are undamaged – but
+the backup is not complete”* and lists the missing files, like the reinstall guide does.
 
 ## An installer I chose is not used, or its contents were not checked
 

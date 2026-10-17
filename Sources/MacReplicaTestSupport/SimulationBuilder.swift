@@ -30,6 +30,11 @@ public struct SimulationRoot {
     public func setOffline(_ on: Bool) throws { try setFlag("offline", on) }
     public func setAppStoreSignedOut(_ on: Bool) throws { try setFlag("mas/signed-out", on) }
     public func setHomebrewBroken(_ on: Bool) throws { try setFlag("brew-broken", on) }
+    /// Homebrew too old for the current package definitions until `brew update` runs (`failingUpdate`: the update fails).
+    public func setHomebrewOutdated(_ on: Bool, failingUpdate: Bool = false) throws {
+        try setFlag("brew-outdated", on)
+        try setFlag("brew-update-fails", on && failingUpdate)
+    }
     public func setDelay(_ seconds: Double) throws { try setFlag("delay", seconds > 0, content: String(seconds)) }
     public func failOnce(_ package: String, message: String) throws { try setFlag("fail-once/\(package)", true, content: message) }
     public func failAlways(_ package: String, message: String) throws { try setFlag("fail/\(package)", true, content: message) }

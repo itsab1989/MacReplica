@@ -176,7 +176,8 @@ extension ReportBuilder {
     /// what to do. Paths and file names only – never contents.
     func notInBackupSection(_ manifest: Manifest) -> String {
         let l = localizer
-        var body = "<p class=\"\(manifest.completeness == .partial ? "warn" : "ok")\"><b>\(HTML.escape(l.completenessTitle(manifest)))</b> "
+        let title = l.completenessTitle(manifest)
+        var body = "<p class=\"\(manifest.completeness == .partial ? "warn" : "ok")\"><b>\(HTML.escape(title))</b>\(Localizer.separator(after: title))"
             + HTML.escape(l.completenessMessage(manifest)) + "</p>"
         if !manifest.backupGaps.isEmpty {
             body += "<p><b>\(HTML.escape(l.p("notInBackup.gaps", manifest.backupGaps.count)))</b></p><ul>"

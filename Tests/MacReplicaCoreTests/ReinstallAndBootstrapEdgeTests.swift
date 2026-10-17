@@ -28,12 +28,12 @@ struct ReinstallGuideStructureTests {
         let builder = ReportBuilder(localizer: TestEnvironment.english)
         let appleSilicon = builder.reinstallGuide(profile: MacProfile(architecture: .arm64, modelIdentifier: "Mac15,9", macOSVersion: "27.0.1"),
                                                   manifest: nil, backupFolderName: nil)
-        #expect(Self.listTags(appleSilicon) == [1: "ul", 2: "ul", 3: "ul", 4: "ul", 5: "ol", 6: "ol", 7: "ol", 8: "ol", 9: "ol", 10: "ol", 11: "ul", 12: "ul"])
+        #expect(Self.listTags(appleSilicon) == [1: "ul", 2: "ul", 3: "ul", 4: "ul", 5: "ol", 6: "ol", 7: "ol", 8: "ol", 9: "ol", 10: "ol", 11: "ol", 12: "ul", 13: "ul"])
         let intel = builder.reinstallGuide(profile: MacProfile(architecture: .x86_64, modelIdentifier: "MacBookPro16,1", macOSVersion: "14.8.4"),
                                            manifest: nil, backupFolderName: nil)
         // On Intel the startup keys are alternatives, not a sequence.
-        #expect(Self.listTags(intel)[5] == "ul")
-        #expect(Self.listTags(intel)[6] == "ol")
+        #expect(Self.listTags(intel)[6] == "ul")
+        #expect(Self.listTags(intel)[7] == "ol")
     }
 
     @Test func backupStateAndBootstrapLine() {

@@ -1,5 +1,20 @@
 # MacReplica – validation report
 
+## Addendum 2026-10-17 (1.1.2): restore after a clean reinstall with a Time Machine home folder
+
+Two reports from the beta tester (1.1.0, Intel Mac with T2, macOS 14): 13 casks and 52 shared colour profiles failed,
+the retry called intact profiles damaged and lost the rest of the restore, own installers were ignored for cask apps,
+Check Backup and the reinstall guide disagreed, the guide lacked the USB-installer steps (the tester got locked out by
+Startup Security Utility after erasing), and the waiting scanners could not be found. Every finding, its root cause,
+fix and verification level: [TESTER_FEEDBACK_1.1.0.md](TESTER_FEEDBACK_1.1.0.md).
+
+- Tests: 672 in 110 suites passing. Mutation of the changed lines: 95.5 % ([MUTATION_TESTING.md](MUTATION_TESTING.md)).
+- Real app on screen (simulated Macs): partial backup → Check Backup (gaps listed, Reinstall Guide written), restore
+  with an outdated pre-installed Homebrew (one `brew update`, casks installed), Retry Failed Items in the same session,
+  quit/relaunch/Continue → guided steps, scanners named as such in the guided-steps card, report on disk.
+- Not verified on real hardware: Intel + T2, the tester's Homebrew, a real administrator copy into `/Library`, a backup
+  on a network share.
+
 ## Addendum 2026-10-15 (1.1.0): working disk images reported as damaged
 
 Report (beta tester, 1.0.7, Intel MacBook Pro, macOS Sonoma, installers on an external drive): DisplayCAL 3.9.19 – which

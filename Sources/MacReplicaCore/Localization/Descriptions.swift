@@ -209,6 +209,7 @@ extension Localizer {
         switch note {
         case .newerVersionInstalled(let original, let installed): return t("note.newerVersion", installed, original)
         case .requiresRosetta: return t("note.requiresRosetta")
+        case .homebrewUpdated(let version): return t("note.homebrewUpdated", version)
         case .existingFileMovedAside(let path): return t("note.movedAside", path)
         case .identicalFileExists: return t("note.identical")
         case .equivalentFileInstalled: return t("note.equivalentFile")
@@ -447,6 +448,7 @@ extension Localizer {
     }
 
     public func manualHint(for app: AppRecord) -> String {
+        if RestorePlanner.usesOwnInstaller(app) { return t("manual.hint.ownInstaller") }
         if app.source == .appStore || app.restoreMethod.category == .appStore { return t("manual.hint.appStore") }
         if !app.candidates.isEmpty { return t("manual.hint.candidates", app.candidates.map(\.token).joined(separator: ", ")) }
         if case .officialDownload = app.restoreMethod { return t("manual.hint.officialDownload") }

@@ -30,7 +30,13 @@ struct VerificationResultView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if let report {
-                        if report.isIntact {
+                        // "Complete" only when the backup also recorded no gaps: files that could not be saved are
+                        // not in the backup, so no checksum can find them (they are listed in the manifest).
+                        if report.isIntact, let manifest = report.manifest, manifest.completeness == .partial {
+                            NoticeView(style: .warning, title: l.t("verify.result.intactWithGaps"),
+                                       message: l.p("verify.result.intactMessage", report.checkedFiles) + " " + l.t("verify.result.gapsMessage"))
+                                .accessibilityIdentifier("verify.result.intactWithGaps")
+                        } else if report.isIntact {
                             NoticeView(style: .success, title: l.t("verify.result.intact"),
                                        message: l.p("verify.result.intactMessage", report.checkedFiles))
                         } else if report.isUsable {
@@ -50,6 +56,11 @@ struct VerificationResultView: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
+                        }
+                        if let manifest = report.manifest, report.isUsable,
+                           manifest.completeness != .complete || !manifest.sensitiveFilesIncludedOnRequest.isEmpty {
+                            CompletenessNotice(manifest: manifest)
+                            Card { NotInBackupView(manifest: manifest, editable: false, onThisMac: false) }
                         }
                         if let manifest = report.manifest {
                             let counts = InventoryCounts(manifest)
@@ -78,6 +89,11 @@ struct VerificationResultView: View {
             }
         } buttons: {
             if let url = model.backupURL, report?.isUsable == true {
+                if let manifest = report?.manifest {
+                    Button(l.t("saved.reinstallGuide")) { model.openReinstallGuide(manifest: manifest, backupURL: url) }
+                        .help(l.t("saved.reinstallGuide.help"))
+                        .accessibilityIdentifier("verify.reinstallGuide")
+                }
                 Button(l.t("verify.result.restore")) { model.openBackupForRestore(url) }
             }
             Button(l.t("common.done")) { model.goHome() }

@@ -41,6 +41,25 @@ public struct RestoreSession: Codable, Equatable, Sendable, Identifiable {
 
     /// True when every step ran at least once; what remains only waits for the user.
     public var onlyWaitingForUser: Bool { itemIDs.allSatisfy { results[$0] != nil } && !openItemIDs.isEmpty }
+
+    /// Steps "Retry Failed Items" runs again: failed ones, and those skipped only because a step they need failed.
+    public var retryableItemIDs: Set<String> {
+        Set(results.filter { _, result in
+            if result.outcome.isFailure { return true }
+            if case .skipped(.dependencyFailed) = result.outcome { return true }
+            return false
+        }.keys)
+    }
+
+    /// The same session, ready to run the retryable steps again. Everything that worked, and the steps that wait for
+    /// the user, keep their results – so the summary, the guided steps and resuming after quitting stay complete.
+    public func preparedForRetry() -> RestoreSession {
+        var session = self
+        for id in retryableItemIDs { session.results[id] = nil }
+        session.status = .inProgress
+        session.currentItemID = nil
+        return session
+    }
 }
 
 public struct SessionStore: Sendable {

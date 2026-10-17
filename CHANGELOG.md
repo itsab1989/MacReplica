@@ -7,6 +7,48 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+Fixes from a tester's restore with 1.1.0 on an Intel Mac (macOS 14) after a clean reinstall, where the home folder
+had first been brought back from Time Machine. Details: [docs/TESTER_FEEDBACK_1.1.0.md](docs/TESTER_FEEDBACK_1.1.0.md).
+
+### Fixed
+- **An old Homebrew made 13 casks fail as “Unexpected problem”.** Homebrew restored by Time Machine was too old for
+  today's package definitions (“Unexpected method 'postflight_steps' called on Cask …”). When Homebrew itself says
+  so, MacReplica now runs `brew update` once and tries the package again; the summary notes it. A working Homebrew is
+  never updated. If the update fails, the items say **Homebrew is too old** with what to do, instead of
+  “Unexpected problem”.
+- **52 colour profiles for all users failed with “Operation not permitted”.** The administrator copy read each file
+  straight from the backup drive, which macOS can refuse (network share, user-mounted drive), and the first refusal
+  stopped every remaining file. Each file is now copied to this Mac as you first and checked against its checksum;
+  only that copy is installed. After a failure, files that are in place count as restored – checked on disk.
+- **“Damaged in the backup” for intact files.** A backup copy that could not be found or read (for example a
+  disconnected backup drive) was reported as damaged. It is now **Backup copy could not be read**, with the reason;
+  only a checksum that differs counts as damage. **Retry Failed Items** checks first that the backup is reachable.
+- **Retry Failed Items lost the rest of the restore.** It ran the failed steps in a new session, so the summary
+  afterwards showed only those steps, the guided steps disappeared and apps already present (even MacReplica) were
+  listed as “Install these apps yourself”. Retry now runs in the same restore, also retries steps that waited for a
+  failed one, and keeps every other result.
+- **Your own installers were ignored for apps with a Homebrew cask.** Installers chosen with **Use my installer …**
+  were saved in the backup and said “Will be used on the new Mac”, but the cask was used and the installer was never
+  offered, not even when the cask failed. Such apps now come back from your installer in the guided steps, and the
+  list of apps to install says so instead of “No automatic source was found”.
+- **Check Backup said “complete” for a partial backup.** It now says the saved files are undamaged but the backup is
+  not complete, and lists the files that could not be saved – matching the reinstall guide.
+- **Scanners were counted as “developer tool steps”.** The summary's guided-steps card now names displays, printers
+  and scanners separately, so the steps that say “Waiting for you – see the guided steps” can be found.
+- The restore report shows how many steps wait for you and where the guided steps are (in MacReplica, not in the
+  report), and no longer lists apps that are already installed as apps to install.
+- Missing full stop in “Partial: 2 selected files are missing. Everything else …” (reinstall guide and restore
+  instructions).
+
+### Changed
+- **The reinstall guide is complete on paper.** New section *Install from a USB installer*: Apple's steps to
+  download the full installer, the exact `createinstallmedia` command for this Mac's macOS, and how to start up from
+  the USB drive on Intel and Apple silicon. On Intel Macs with the T2 chip a warning *before* the erase step says to
+  allow external boot media in Startup Security Utility first – it needs an administrator of this Mac, and after
+  erasing there is none.
+- **The reinstall guide is also available from Check Backup**, written for the backup's Mac with the current
+  MacReplica (the copy in the backup is not changed).
+
 ## [1.1.1] - 2026-10-16
 
 ### Fixed

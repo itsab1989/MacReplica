@@ -275,7 +275,11 @@ public struct ReportBuilder: Sendable {
         body += card(summary.succeeded, l.t("summary.succeeded"))
         body += card(summary.failed, l.t("summary.failed"))
         body += card(summary.skipped, l.t("summary.skipped"))
-        body += "</div><h2>\(HTML.escape(l.t("report.restore.steps")))</h2>"
+        if summary.waiting > 0 { body += card(summary.waiting, l.t("summary.waiting")) }
+        body += "</div>"
+        // A printed report has no guided steps: it says where they are (a tester could not find them, 2026-10-17).
+        if summary.waiting > 0 { body += "<p class=\"warn\">\(HTML.escape(l.p("report.restore.waitingHint", summary.waiting)))</p>" }
+        body += "<h2>\(HTML.escape(l.t("report.restore.steps")))</h2>"
         body += table([l.t("report.column.name"), l.t("report.column.method"), l.t("report.column.result"), l.t("report.column.notes")],
                       plan.items.map { item in
                           guard let result = session.results[item.id] else {
@@ -291,10 +295,12 @@ public struct ReportBuilder: Sendable {
                                   "<span class=\"\(css)\">\(HTML.escape(l.outcomeText(result.outcome)))</span>",
                                   notes.isEmpty ? "—" : notes.joined(separator: "<br>")]
                       })
-        if !plan.manualApps.isEmpty {
+        // Apps that are on this Mac by now (installed in the meantime, or already there) are not listed as to install.
+        let manual = plan.manualApps.filter { session.results["manual:\($0.path)"]?.outcome.isSuccessLike != true }
+        if !manual.isEmpty {
             body += "<h2>\(HTML.escape(l.t("report.manual.title")))</h2>"
             body += table([l.t("report.column.name"), l.t("report.column.vendorPage"), l.t("report.column.notes")],
-                          plan.manualApps.map { [text($0.name), HTML.link($0.homepage), HTML.escape(l.manualHint(for: $0))] })
+                          manual.map { [text($0.name), HTML.link($0.homepage), HTML.escape(l.manualHint(for: $0))] })
         }
         return page(title: l.t("report.restore.title"), subtitle: subtitle(manifest), body: body)
     }

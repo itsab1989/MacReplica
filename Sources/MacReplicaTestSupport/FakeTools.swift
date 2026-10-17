@@ -235,6 +235,13 @@ enum FakeTools {
       --version)
         if [ -f "$S/brew-version" ]; then echo "Homebrew $(cat "$S/brew-version")"; else echo "Homebrew 4.4.0"; fi
         exit 0 ;;
+      update)
+        # Updating clears the simulated "too old for the current definitions" state, unless it is set to fail.
+        if [ -f "$S/brew-update-fails" ]; then echo "Error: Failed to update tap: homebrew/core" >&2; exit 1; fi
+        rm -f "$S/brew-outdated"
+        echo "5.0.1" > "$S/brew-version"
+        echo "Updated 2 taps (homebrew/core and homebrew/cask)."
+        exit 0 ;;
       trust)
         [ "${2:-}" = "--tap" ] && [ -n "${3:-}" ] || { echo "Error: Invalid usage" >&2; exit 1; }
         mkdir -p "$S/brew/trusted"
@@ -324,6 +331,13 @@ enum FakeTools {
       install)
         kind="${2:-}"; name="${3:-}"
         sim_delay
+        # An old Homebrew (e.g. restored by Time Machine) cannot read current package definitions (tester, 2026-10-17).
+        if [ -f "$S/brew-outdated" ]; then
+          echo "Error: Unexpected method 'postflight_steps' called on Cask $name." >&2
+          echo "Follow the instructions here:" >&2
+          echo "  https://github.com/Homebrew/homebrew-cask#reporting-bugs" >&2
+          exit 1
+        fi
         fail_if_needed "$name"
         # Homebrew 6+: packages of third-party taps load only from trusted taps.
         case "$name" in */*/*)

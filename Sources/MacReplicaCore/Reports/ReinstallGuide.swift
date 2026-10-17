@@ -56,7 +56,11 @@ public enum AppleSupportLinks {
 extension ReportBuilder {
     public func reinstallGuide(profile: MacProfile, manifest: Manifest?, backupFolderName: String?) -> String {
         let l = localizer
-        func h2(_ number: Int, _ key: String) -> String { "<h2>\(number). \(HTML.escape(l.t(key)))</h2>" }
+        var section = 0
+        func h2(_ key: String) -> String {
+            section += 1
+            return "<h2>\(section). \(HTML.escape(l.t(key)))</h2>"
+        }
         func p(_ text: String, _ cls: String? = nil) -> String { "<p\(cls.map { " class=\"\($0)\"" } ?? "")>\(HTML.escape(text))</p>" }
         func list(_ items: [String], ordered: Bool = false) -> String {
             let tag = ordered ? "ol" : "ul"
@@ -68,15 +72,18 @@ extension ReportBuilder {
         // Warning first: nothing is erased before the backup is checked.
         body += "<p class=\"bad\"><b>\(HTML.escape(l.t("reinstall.warning")))</b></p>"
 
-        body += h2(1, "reinstall.preflight.title")
+        body += h2("reinstall.preflight.title")
         var preflight = [l.t("reinstall.preflight.power"), l.t("reinstall.preflight.network"), l.t("reinstall.preflight.account"),
                          l.t("reinstall.preflight.licences"), l.t("reinstall.preflight.drive")]
         if profile.family != .appleSilicon { preflight.append(l.t("reinstall.preflight.firmwarePassword")) }
         body += list(preflight)
+        // Startup Security Utility asks for an administrator of this Mac (Apple, support.apple.com/102522); after the
+        // disk is erased there is none, so the setting for USB installers must be changed before (tester, 2026-10-17).
+        if profile.family == .intelT2 { body += p(l.t("reinstall.preflight.t2External"), "bad") }
 
-        body += h2(2, "reinstall.backup.title")
+        body += h2("reinstall.backup.title")
         if let manifest {
-            body += p(l.completenessTitle(manifest) + " " + l.completenessMessage(manifest), manifest.completeness == .partial ? "warn" : "ok")
+            body += p(l.completenessSentence(manifest), manifest.completeness == .partial ? "warn" : "ok")
             if let app = manifest.bootstrapApp {
                 // The copy must run on this very Mac (a release build runs on both processors).
                 let runsHere = app.runs(on: profile.architecture)
@@ -87,20 +94,40 @@ extension ReportBuilder {
         }
         body += list([l.t("reinstall.backup.verify"), l.t("reinstall.backup.secondCopy"), l.t("reinstall.backup.manual")])
 
-        body += h2(3, "reinstall.mac.title")
+        body += h2("reinstall.mac.title")
         let model = profile.modelIdentifier.map { " (\($0))" } ?? ""
         body += p(l.t("reinstall.mac.\(profile.family.rawValue)", profile.macOSVersion) + model)
         body += p(l.t("reinstall.mac.compatibility"))
         body += "<ul>" + link(AppleSupportLinks.compatibilityTahoe, "reinstall.link.tahoe") + link(AppleSupportLinks.compatibilitySequoia, "reinstall.link.sequoia")
             + link(AppleSupportLinks.compatibilitySonoma, "reinstall.link.sonoma") + link(AppleSupportLinks.downloadMacOS, "reinstall.link.download") + "</ul>"
 
-        body += h2(4, "reinstall.choose.title")
+        body += h2("reinstall.choose.title")
         var choices = [l.t("reinstall.choose.keep"), l.t("reinstall.choose.erase")]
         if profile.hasEraseAllContentAndSettings { choices.insert(l.t("reinstall.choose.eraseAll"), at: 1) }
         choices.append(l.t("reinstall.choose.bootable"))
         body += list(choices)
 
-        body += h2(5, "reinstall.startup.title")
+        // The USB installer, written out completely: the guide is meant to be printed, so a link alone does not help.
+        body += h2("reinstall.usb.title")
+        body += p(l.t("reinstall.usb.intro"))
+        body += "<h3>\(HTML.escape(l.t("reinstall.usb.create.title")))</h3>"
+        let installerName = Self.installerAppName(macOSVersion: profile.macOSVersion)
+        let command = "sudo /Applications/\(installerName.replacingOccurrences(of: " ", with: "\\ ")).app/Contents/Resources/createinstallmedia --volume /Volumes/MyVolume"
+        body += "<ol><li>\(HTML.escape(l.t("reinstall.usb.create.1")))</li><li>\(HTML.escape(l.t("reinstall.usb.create.2")))</li>"
+            + "<li>\(HTML.escape(l.t("reinstall.usb.create.3")))</li><li>\(HTML.escape(l.t("reinstall.usb.create.4", installerName)))"
+            + "<pre><code>\(HTML.escape(command))</code></pre></li><li>\(HTML.escape(l.t("reinstall.usb.create.5")))</li></ol>"
+        body += "<h3>\(HTML.escape(l.t("reinstall.usb.start.title")))</h3>"
+        switch profile.family {
+        case .appleSilicon:
+            body += list([l.t("reinstall.usb.start.as.1"), l.t("reinstall.usb.start.as.2"), l.t("reinstall.usb.start.as.3"),
+                          l.t("reinstall.usb.start.as.4")], ordered: true)
+        case .intel, .intelT2:
+            body += list([l.t("reinstall.usb.start.intel.1"), l.t("reinstall.usb.start.intel.2"), l.t("reinstall.usb.start.intel.3"),
+                          l.t("reinstall.usb.start.intel.4")], ordered: true)
+            if profile.family == .intelT2 { body += p(l.t("reinstall.usb.start.t2"), "warn") }
+        }
+
+        body += h2("reinstall.startup.title")
         switch profile.family {
         case .appleSilicon:
             body += list([l.t("reinstall.startup.as.1"), l.t("reinstall.startup.as.2"), l.t("reinstall.startup.as.3")], ordered: true)
@@ -110,27 +137,27 @@ extension ReportBuilder {
             if profile.family == .intelT2 { body += p(l.t("reinstall.startup.t2"), "warn") }
         }
 
-        body += h2(6, "reinstall.erase.title")
+        body += h2("reinstall.erase.title")
         body += p(l.t("reinstall.erase.warning"), "bad")
         body += list([l.t("reinstall.erase.1"), l.t("reinstall.erase.2"), l.t("reinstall.erase.3")], ordered: true)
 
-        body += h2(7, "reinstall.install.title")
+        body += h2("reinstall.install.title")
         body += list([l.t("reinstall.install.1"), l.t("reinstall.install.2"), l.t("reinstall.install.3")], ordered: true)
 
-        body += h2(8, "reinstall.firstBoot.title")
+        body += h2("reinstall.firstBoot.title")
         body += list([l.t("reinstall.firstBoot.1"), l.t("reinstall.firstBoot.2"), l.t("reinstall.firstBoot.3"), l.t("reinstall.firstBoot.4")], ordered: true)
 
-        body += h2(9, "reinstall.macreplica.title")
+        body += h2("reinstall.macreplica.title")
         body += list([manifest?.bootstrapApp == nil ? l.t("guide.newMac.1") : l.t("guide.newMac.1.fromBackup"),
                       l.t("reinstall.macreplica.open", backupFolderName ?? "MacReplica-Backup-…")], ordered: true)
 
-        body += h2(10, "reinstall.restore.title")
+        body += h2("reinstall.restore.title")
         body += list([l.t("guide.newMac.3"), l.t("guide.newMac.4"), l.t("guide.newMac.5"), l.t("guide.newMac.6")], ordered: true)
 
-        body += h2(11, "reinstall.verify.title")
+        body += h2("reinstall.verify.title")
         body += list([l.t("guide.newMac.7"), l.t("guide.newMac.8"), l.t("reinstall.verify.apps"), l.t("reinstall.verify.keepBackup")])
 
-        body += h2(12, "reinstall.help.title")
+        body += h2("reinstall.help.title")
         var links = [link(AppleSupportLinks.reinstall, "reinstall.link.reinstall"), link(AppleSupportLinks.recovery, "reinstall.link.recovery")]
         switch profile.family {
         case .appleSilicon: links.append(link(AppleSupportLinks.eraseAppleSilicon, "reinstall.link.erase"))
@@ -146,5 +173,15 @@ extension ReportBuilder {
 
         let subtitle = l.t("reinstall.subtitle", l.t("reinstall.family.\(profile.family.rawValue)"), profile.macOSVersion)
         return page(title: l.t("reinstall.title"), subtitle: subtitle, body: body)
+    }
+}
+
+extension ReportBuilder {
+    /// The name of Apple's full installer app for a macOS version, as used in Apple's `createinstallmedia` commands
+    /// (support.apple.com/101578). Unknown versions get the generic pattern.
+    static func installerAppName(macOSVersion: String) -> String {
+        let names = ["12": "Monterey", "13": "Ventura", "14": "Sonoma", "15": "Sequoia", "26": "Tahoe"]
+        let major = String(macOSVersion.split(separator: ".").first ?? "")
+        return "Install macOS " + (names[major] ?? "…")
     }
 }

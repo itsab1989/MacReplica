@@ -34,6 +34,20 @@ python3 tools/mutation/mutate.py --merge r0 r1 r2 r3 r4 r5 --report merged --che
 
 ## Results
 
+**2026-10-17 (1.1.2: tester feedback on 1.1.0):** changed lines only (`--changed-since main`) in 11 modules, 6 shards;
+covering suites now include `TesterFeedback110Tests`. Round 1: 35 of 47 valid mutants killed. Tests were added for the
+waiting card and hint at zero, numbered USB start-up steps, a local copy that cannot be prepared, and
+`HomebrewAvailabilityTests` now covers `RestorePlanner`. The full-stop rule was moved into one helper
+(`Localizer.separator(after:)`), which removed two equivalent mutants. Round 2 (survivors only; the refactored files
+in full): 7 of 9 killed. Excluded: the counter of the log line after a stopped administrator copy. Remaining:
+`RestorePlanner.swift:107` `||`→`&&` and `:108` removed `continue` – the pre-existing condition for cask-installed apps
+(only reformatted), which differs only for a manifest whose cask record is missing or when *Homebrew Casks* is
+unticked.
+
+| Module (changed lines) | Killed | Survived | Excluded | Score | Result |
+|---|---:|---:|---:|---:|---|
+| all 11 modules together | 42 | 2 | 1 | 95.5 % | ✅ |
+
 **2026-10-15 (1.1.0: installer validation – damage only with proof):** 4 modules. `DownloadInstaller.swift` was run
 only on its changed lines (new `--changed-since main` option), the others in full. Two rounds: the first left
 `InstallerArchive` at 80.8 %, `FileFormatEvidence` with 24 and `DownloadInstaller` with 10 survivors; tests were added
