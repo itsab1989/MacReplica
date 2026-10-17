@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-10-17
+
 ### Fixed
 - **Apps an outdated Homebrew installed for the wrong processor were reported as already installed.** Reproduced with
   Homebrew 4.2.0 on Intel: it fails on GIMP's current cask but still puts the Apple-silicon-only GIMP into
@@ -491,7 +493,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.4...HEAD
+[1.1.4]: https://github.com/itsab1989/MacReplica/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/itsab1989/MacReplica/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/itsab1989/MacReplica/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/itsab1989/MacReplica/compare/v1.1.0...v1.1.1
