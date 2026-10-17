@@ -1,0 +1,87 @@
+name: Reproduce tester issues (1.1.3)
+
+# Throw-away reproduction for a tester's report on 1.1.3 (branch repro/knut-1.1.3 only, never merged):
+# 1. macOS 14: MacReplica 1.1.3 cannot find the Launchpad database although Launchpad works.
+# 2. Intel: Microsoft Office did not install through Homebrew with an old Homebrew (as restored by Time Machine).
+on:
+  push:
+    branches: [repro/knut-1.1.3]
+
+permissions:
+  contents: read
+
+jobs:
+  launchpad:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build MacReplica's Launchpad tool and a Finder-style probe app
+        run: |
+          sw_vers; uname -m
+          swift build -c release --product MacReplicaSimulator && cp "$(swift build -c release --show-bin-path)/MacReplicaSimulator" sim
+          mkdir -p Probe.app/Contents/MacOS
+          swiftc -O repro/LaunchpadProbe.swift -o Probe.app/Contents/MacOS/Probe
+          /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string Probe" -c "Add :CFBundleIdentifier string io.example.launchpadprobe" \
+            -c "Add :CFBundlePackageType string APPL" Probe.app/Contents/Info.plist
+          codesign -s - --force Probe.app
+      - name: Probe, rewrite with MacReplica's code, restart the Dock, probe again
+        run: |
+          set -x
+          mkdir -p out
+          DB="$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db"
+          echo "shell DARWIN_USER_DIR=$(getconf DARWIN_USER_DIR)"
+          ls -la "$DB" || true
+          ./Probe.app/Contents/MacOS/Probe out/1-terminal.txt
+          open -W -n Probe.app --args "$PWD/out/2-launchservices.txt"; cat out/2-launchservices.txt
+          ./sim launchpad-export out/original.json
+          cat > recorded.json <<'JSON'
+          {"macosVersion": "14", "pages": [[{"folder": {"name": "Backup & Safety", "pages": [["com.apple.Safari", "com.apple.Notes"]]}}, {"app": "com.apple.mail"}]]}
+          JSON
+          ./sim launchpad-apply recorded.json | tee out/3-apply.txt || true
+          ls -la "$DB" | tee out/4-after-apply-ls.txt
+          killall Dock; sleep 10
+          ls -la "$DB" | tee out/5-after-dock-restart-ls.txt
+          open -W -n Probe.app --args "$PWD/out/6-launchservices-after.txt"; cat out/6-launchservices-after.txt
+          ./sim launchpad-export out/7-after.json || echo EXPORT_FAILED
+          # The tester's advice check: if the database is missing, does opening Launchpad (or a Dock restart) recreate it?
+          killall -STOP Dock; mv "$DB" "$DB.aside"; killall -KILL Dock; sleep 10
+          ls -la "$DB" 2>&1 | tee out/8-missing-after-dock-restart.txt
+          open -a Launchpad; sleep 6; osascript -e 'tell application "System Events" to key code 53' || true; sleep 2
+          ls -la "$DB" 2>&1 | tee out/9-after-opening-launchpad.txt
+          screencapture -x out/launchpad.png || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: launchpad-macos-14
+          path: out/
+
+  office:
+    runs-on: macos-15-intel
+    timeout-minutes: 90
+    steps:
+      - name: Old Homebrew (as brought back by Time Machine), then the tester's casks
+        run: |
+          set -x
+          sw_vers; uname -m; mkdir -p out
+          export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_ENV_HINTS=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_AUTOREMOVE=1 NONINTERACTIVE=1
+          brew --version | tee out/brew-current.txt
+          git -C "$(brew --repo)" fetch --tags --quiet
+          git -C "$(brew --repo)" checkout --quiet 4.2.0
+          brew --version | tee out/brew-old.txt
+          for c in gimp zoom microsoft-office; do
+            echo "== $c (old Homebrew)"; brew install --cask "$c" > "out/old-$c.txt" 2>&1; echo "exit=$?" >> "out/old-$c.txt"; tail -15 "out/old-$c.txt"
+          done
+          unset HOMEBREW_NO_AUTO_UPDATE
+          git -C "$(brew --repo)" checkout --quiet master || git -C "$(brew --repo)" checkout --quiet main || true
+          brew update > out/update.txt 2>&1; echo "exit=$?" >> out/update.txt; tail -5 out/update.txt
+          brew --version | tee out/brew-updated.txt
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          echo "== microsoft-office (updated Homebrew)"
+          brew install --cask microsoft-office > out/new-microsoft-office.txt 2>&1; echo "exit=$?" >> out/new-microsoft-office.txt; tail -20 out/new-microsoft-office.txt
+          ls -d /Applications/Microsoft*.app | tee out/office-apps.txt || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: office-intel
+          path: out/
