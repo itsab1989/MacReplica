@@ -2204,7 +2204,7 @@
 "summary.guidedDevices.other" = "%1$d pasos para pantallas, impresoras y escáneres, que se configuran en Ajustes del Sistema";
 "report.restore.waitingHint.one" = "%1$d paso te espera. Los pasos guiados están en MacReplica, no en este informe: abre MacReplica, elige Reanudar en la ventana de inicio y luego Continuar con los pasos guiados.";
 "report.restore.waitingHint.other" = "%1$d pasos te esperan. Los pasos guiados están en MacReplica, no en este informe: abre MacReplica, elige Reanudar en la ventana de inicio y luego Continuar con los pasos guiados.";
-"skip.launchpadDatabaseMissing" = "Sin ordenar: MacReplica no encontró la base de datos de Launchpad en este Mac, así que tu disposición actual se queda como está. Elige Omitir si no la necesitas; el registro de la restauración anota lo que se encontró";
+"skip.launchpadDatabaseMissing" = "Sin ordenar: el Dock de este Mac no tiene ahora base de datos de Launchpad, así que tu disposición actual se queda como está. Elige Reiniciar el Dock (macOS suele crearla de nuevo y MacReplica ordena Launchpad) u Omitir";
 "guided.skipAll" = "Omitir todo";
 "guided.skipAll.help" = "Omite todas las apps y pasos que se muestran aquí. Puedes instalarlos o configurarlos tú mismo más tarde.";
 "guided.skipAll.title.one" = "¿Omitir %1$d paso pendiente?";
@@ -2215,3 +2215,7 @@
 "note.reinstalledForThisProcessor" = "La copia de Homebrew solo tenía código para %1$@ y no podía ejecutarse en este Mac, así que MacReplica la reinstaló con Homebrew y la volvió a comprobar.";
 "skip.launchpadAccessDenied" = "Sin ordenar: macOS no deja que MacReplica lea la base de datos de Launchpad. Da a MacReplica acceso total al disco, sal de MacReplica y vuelve a abrirlo (solo entonces macOS aplica el permiso) y elige Reanudar, o elige Omitir";
 "skip.launchpadOtherUser" = "Sin ordenar: MacReplica se ejecuta como un usuario distinto del que ha iniciado sesión (por ejemplo, iniciado con sudo en Terminal), así que no llega a tu Launchpad. Sal de MacReplica, ábrelo desde el Finder o Launchpad y elige Reanudar";
+"restore.selectAll" = "Seleccionar todo";
+"restore.deselectAll" = "Deseleccionar todo";
+"launchpad.restartDock" = "Reiniciar el Dock";
+"launchpad.restartDock.help" = "Cierra el Dock con normalidad; macOS lo vuelve a abrir enseguida (el Dock desaparece un momento) y suele crear de nuevo la base de datos de Launchpad. No se borra nada. MacReplica vuelve a comprobarlo y ordena Launchpad.";

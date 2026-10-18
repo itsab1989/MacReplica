@@ -59,8 +59,10 @@ public enum SyntheticLaunchpad {
     """
 
     /// Creates the database with `apps` on one page and `folder` apps in a folder named "Other" at the end of it.
+    /// `titles` are the names Launchpad shows (default: the bundle identifier).
     @discardableResult
-    public static func create(at url: URL, apps: [String], folder: [String] = []) throws -> URL {
+    public static func create(at url: URL, apps: [String], folder: [String] = [], titles: [String: String] = [:]) throws -> URL {
+        func title(_ bundle: String) -> String { (titles[bundle] ?? bundle).replacingOccurrences(of: "'", with: "''") }
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? FileManager.default.removeItem(at: url)
         var db: OpaquePointer?
@@ -71,20 +73,20 @@ public enum SyntheticLaunchpad {
         sql += "INSERT INTO items VALUES (10,'PAGE1',0,3,1,1); INSERT INTO groups VALUES (10,NULL,NULL);\n"
         for (index, bundle) in apps.enumerated() {
             id += 1
-            sql += "INSERT INTO items VALUES (\(id),'A\(id)',0,4,10,\(index)); INSERT INTO apps VALUES (\(id),'\(bundle)','\(bundle)',NULL,NULL,0,NULL);\n"
+            sql += "INSERT INTO items VALUES (\(id),'A\(id)',0,4,10,\(index)); INSERT INTO apps VALUES (\(id),'\(title(bundle))','\(bundle)',NULL,NULL,0,NULL);\n"
         }
         if !folder.isEmpty {
             sql += "INSERT INTO items VALUES (20,'F20',0,2,10,\(apps.count)); INSERT INTO groups VALUES (20,NULL,'Other');\n"
             sql += "INSERT INTO items VALUES (21,'F21',0,3,20,0); INSERT INTO groups VALUES (21,NULL,NULL);\n"
             for (index, bundle) in folder.enumerated() {
                 id += 1
-                sql += "INSERT INTO items VALUES (\(id),'A\(id)',0,4,21,\(index)); INSERT INTO apps VALUES (\(id),'\(bundle)','\(bundle)',NULL,NULL,0,NULL);\n"
+                sql += "INSERT INTO items VALUES (\(id),'A\(id)',0,4,21,\(index)); INSERT INTO apps VALUES (\(id),'\(title(bundle))','\(bundle)',NULL,NULL,0,NULL);\n"
             }
         }
         // The version page holds a second, invisible entry of some apps.
         if let first = apps.first {
             id += 1
-            sql += "INSERT INTO items VALUES (\(id),'V\(id)',0,4,6,0); INSERT INTO apps VALUES (\(id),'\(first)','\(first)',NULL,NULL,0,NULL);\n"
+            sql += "INSERT INTO items VALUES (\(id),'V\(id)',0,4,6,0); INSERT INTO apps VALUES (\(id),'\(title(first))','\(first)',NULL,NULL,0,NULL);\n"
         }
         sql += "UPDATE dbinfo SET value=0 WHERE key='ignore_items_update_triggers';"
         guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw CocoaError(.fileWriteUnknown) }

@@ -261,6 +261,14 @@ struct RestoreSummaryView: View {
                                     Spacer()
                                     Text(l.outcomeText(result.outcome)).font(.caption).foregroundStyle(.secondary)
                                         .multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
+                                    if result.outcome == .skipped(.launchpadDatabaseMissing) {
+                                        if model.restartingDock { ProgressView().controlSize(.small) }
+                                        Button(l.t("launchpad.restartDock")) { model.restartDockForLaunchpad() }
+                                            .controlSize(.small)
+                                            .disabled(model.restartingDock)
+                                            .help(l.t("launchpad.restartDock.help"))
+                                            .accessibilityIdentifier("summary.restartDock")
+                                    }
                                     Button(l.t("guided.skip")) { model.markGuided(item.id, .userSkipped) }
                                         .controlSize(.small)
                                         .accessibilityIdentifier("summary.skip.\(item.id)")

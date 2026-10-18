@@ -200,6 +200,27 @@ extension AppModel {
         recordGuided(itemID, ItemResult(itemID: itemID, outcome: .skipped(reason)))
     }
 
+    /// Restarts the Dock (a normal quit; launchd starts it again at once), waits up to 20 seconds for Launchpad's
+    /// database and continues the restore. On a tester's macOS 14 Mac the Dock had run without the database and created
+    /// it only when restarted (2026-10-18).
+    func restartDockForLaunchpad() {
+        guard let session, !restartingDock else { return }
+        restartingDock = true
+        restoreLog?.info("launchpad:layout: restarting the Dock at the user's request", component: .restore)
+        let layout = services.layout
+        Task { [weak self] in
+            layout.launchpadStore?.signalDock(SIGTERM)
+            for _ in 0..<20 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if let database = layout.launchpadStore?.database, FileManager.default.fileExists(atPath: database.path) { break }
+            }
+            await MainActor.run { [weak self] in
+                self?.restartingDock = false
+                self?.resumeRestore(session)
+            }
+        }
+    }
+
     /// Leaves out every app and step the guided installation still shows (after the user confirmed it).
     func skipAllGuided() {
         for item in openApps + openToolchainSteps { markGuided(item.id, .userSkipped) }

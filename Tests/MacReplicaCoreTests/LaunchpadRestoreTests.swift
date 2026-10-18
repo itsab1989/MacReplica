@@ -83,12 +83,60 @@ struct LaunchpadRestoreTests {
         #expect(dry.first?.prediction == .alreadyPresent(version: nil))
     }
 
-    @Test func appsLeftOutOfTheBackupLeaveTheLayout() async throws {
+    /// Since 1.1.7 apps left out of the backup keep their place in the layout: installed anyway on the new Mac, they go
+    /// into their folder (a tester's Defender, OneDrive and DisplayCAL tools ended up after his pages, 2026-10-19).
+    @Test func appsLeftOutOfTheBackupKeepTheirPlace() async throws {
         let c = try await backup("launchpad-exclude", exclude: ["com.example.ledgerlite", "com.example.nimbusnotes"])
-        #expect(c.manifest.launchpadLayout?.pages == [[.app("com.example.pixelforge"),
-                                                      .folder(name: "Other", pages: [["com.example.quillwriter", "com.example.studiomixer"]])]])
+        #expect(!c.manifest.applications.contains { $0.bundleIdentifier == "com.example.ledgerlite" }, "the app itself is not in the backup")
+        #expect(c.manifest.launchpadLayout?.pages == [[.app(Self.page[0]), .app(Self.page[1]), .folder(name: "Other", pages: [Self.folder])]])
+        // On the new Mac Ledger Lite was installed by hand, Nimbus Notes was not.
+        let installed = Self.folder + [Self.page[1]]
+        let (_, environment, db) = try target(c, apps: installed)
+        let plan = RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.launchpad]))
+        let session = await run(plan, environment, c)
+        #expect(session.results[RestoreItem.launchpadID]?.outcome == .succeeded)
+        #expect(try layout(db, c).pages == [[.app(Self.page[1]), .folder(name: "Other", pages: [Self.folder])]],
+                "Ledger Lite is in its folder; Nimbus Notes, not installed, is left out")
         #expect(LaunchpadLayout(pages: [[.folder(name: "Solo", pages: [["a"]])]], macOSVersion: "14").removing(["a"]).pages.isEmpty,
                 "a folder (and page) that becomes empty is left out")
+    }
+
+    /// The tester's GIMP: recorded as `org.gimp.gimp-2.10`, installed as GIMP 3 (`org.gimp.gimp`). The app of the same
+    /// name takes the place; an app that has its own place in the layout is never moved away from it.
+    @Test func anAppWhoseIdentifierChangedIsPlacedByItsName() async throws {
+        let c = try await backup("launchpad-renamed")
+        let recorded = try #require(c.manifest.launchpadLayout)
+        #expect(recorded.names?["com.example.quillwriter"] == "com.example.quillwriter", "names are recorded from the Dock")
+        var layout = recorded
+        layout.names?["com.example.quillwriter"] = "Quill Writer"
+        layout.names?["com.example.pixelforge"] = "Pixel Forge"
+        var manifest = c.manifest
+        manifest.launchpadLayout = layout
+        // New Mac: Quill Writer has a new identifier; a second "Pixel Forge" exists, but Pixel Forge keeps its own.
+        let apps = [Self.page[0], Self.page[1], "com.example.quillwriter3", "com.example.ledgerlite", "com.example.studiomixer", "com.example.pixelforge-beta"]
+        let titles = ["com.example.quillwriter3": "Quill Writer", "com.example.pixelforge-beta": "Pixel Forge"]
+        let (fresh, target) = try TestEnvironment.freshMac(c.sandbox)
+        let db = try SyntheticLaunchpad.create(at: fresh.state.appendingPathComponent("launchpad/db/db"), apps: apps, titles: titles)
+        var environment = TestEnvironment.restoreEnvironment(target)
+        environment.macOSVersion = "14.8.9"
+        environment.launchpadSettleTimeout = 0
+        let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.launchpad]))
+        _ = await run(plan, environment, c)
+        let pages = try self.layout(db, c).pages
+        #expect(pages.first == [.app(Self.page[0]), .app(Self.page[1]),
+                                .folder(name: "Other", pages: [["com.example.quillwriter3", "com.example.ledgerlite", "com.example.studiomixer"]])])
+        #expect(pages.dropFirst().joined().contains(.app("com.example.pixelforge-beta")), "not taken from its namesake")
+    }
+
+    /// Backups made before 1.1.7 have no names in the layout: they come from the backup's app list.
+    @Test func olderBackupsTakeNamesFromTheirAppList() async throws {
+        let c = try await backup("launchpad-oldnames")
+        var manifest = c.manifest
+        manifest.launchpadLayout?.names = nil
+        let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.launchpad]))
+        let names = plan.items.first { $0.kind == .launchpadLayout }?.launchpadLayout?.names
+        #expect(names?["com.example.quillwriter"] == "Quill Writer")
+        #expect(names?["com.example.pixelforge"] == "Pixel Forge")
     }
 
     /// The tester's macOS 14 Mac: Launchpad exists, but its database was not found when the step ran. That is not

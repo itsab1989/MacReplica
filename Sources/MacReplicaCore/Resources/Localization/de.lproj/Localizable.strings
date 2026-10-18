@@ -2204,7 +2204,7 @@
 "summary.guidedDevices.other" = "%1$d Schritte für Bildschirme, Drucker und Scanner, eingerichtet in den Systemeinstellungen";
 "report.restore.waitingHint.one" = "%1$d Schritt wartet auf dich. Die geführten Schritte sind in MacReplica, nicht in diesem Bericht: Öffne MacReplica, wähle im Startfenster „Fortsetzen“ und dann „Mit geführten Schritten weitermachen“.";
 "report.restore.waitingHint.other" = "%1$d Schritte warten auf dich. Die geführten Schritte sind in MacReplica, nicht in diesem Bericht: Öffne MacReplica, wähle im Startfenster „Fortsetzen“ und dann „Mit geführten Schritten weitermachen“.";
-"skip.launchpadDatabaseMissing" = "Nicht angeordnet: MacReplica hat die Datenbank von Launchpad auf diesem Mac nicht gefunden, deine jetzige Anordnung bleibt deshalb unverändert. Wähle „Überspringen“, wenn du sie nicht brauchst; das Protokoll der Wiederherstellung hält fest, was gefunden wurde";
+"skip.launchpadDatabaseMissing" = "Nicht angeordnet: Das Dock dieses Macs hat gerade keine Launchpad-Datenbank, deine jetzige Anordnung bleibt deshalb unverändert. Wähle „Dock neu starten“ – macOS legt sie dann meist neu an und MacReplica ordnet Launchpad an – oder „Überspringen“";
 "guided.skipAll" = "Alle überspringen";
 "guided.skipAll.help" = "Lässt alle hier gezeigten Apps und Schritte aus. Du kannst sie später trotzdem selbst installieren oder einrichten.";
 "guided.skipAll.title.one" = "%1$d verbleibenden Schritt überspringen?";
@@ -2215,3 +2215,7 @@
 "note.reinstalledForThisProcessor" = "Die Kopie von Homebrew enthielt nur Code für %1$@ und lief auf diesem Mac nicht; MacReplica hat sie deshalb mit Homebrew neu installiert und erneut geprüft.";
 "skip.launchpadAccessDenied" = "Nicht angeordnet: macOS lässt MacReplica die Datenbank von Launchpad nicht lesen. Gib MacReplica „Festplattenvollzugriff“, beende MacReplica und öffne es erneut (erst dann wendet macOS die Berechtigung an) und wähle dann „Fortsetzen“ – oder „Überspringen“";
 "skip.launchpadOtherUser" = "Nicht angeordnet: MacReplica läuft als ein anderer Benutzer als der angemeldete (etwa mit sudo im Terminal gestartet) und erreicht dein Launchpad deshalb nicht. Beende MacReplica, öffne es im Finder oder über Launchpad und wähle dann „Fortsetzen“";
+"restore.selectAll" = "Alle auswählen";
+"restore.deselectAll" = "Auswahl aufheben";
+"launchpad.restartDock" = "Dock neu starten";
+"launchpad.restartDock.help" = "Beendet das Dock normal; macOS startet es sofort wieder (das Dock verschwindet kurz) und legt dabei meist die Datenbank von Launchpad neu an. Es wird nichts gelöscht. MacReplica prüft danach erneut und ordnet Launchpad an.";

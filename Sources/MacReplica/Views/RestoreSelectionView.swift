@@ -38,6 +38,16 @@ struct RestoreSelectionView: View {
                     }
                     warnings
 
+                    // Bulk toggles for the parts of the restore (tester's suggestion, 2026-10-19).
+                    HStack {
+                        Spacer()
+                        Button(l.t("restore.selectAll")) { model.selection.components = Set(RestoreComponent.allCases) }
+                            .controlSize(.small)
+                            .accessibilityIdentifier("restore.selectAll")
+                        Button(l.t("restore.deselectAll")) { model.selection.components = [] }
+                            .controlSize(.small)
+                            .accessibilityIdentifier("restore.deselectAll")
+                    }
                     Card {
                         ForEach(RestoreComponent.allCases) { component in
                             let group = items.filter { $0.component == component }

@@ -2204,7 +2204,7 @@
 "summary.guidedDevices.other" = "%1$d passaggi per monitor, stampanti e scanner, da configurare in Impostazioni di Sistema";
 "report.restore.waitingHint.one" = "%1$d passaggio ti aspetta. I passaggi guidati sono in MacReplica, non in questo rapporto: apri MacReplica, scegli Riprendi nella finestra iniziale, poi Continua con i passaggi guidati.";
 "report.restore.waitingHint.other" = "%1$d passaggi ti aspettano. I passaggi guidati sono in MacReplica, non in questo rapporto: apri MacReplica, scegli Riprendi nella finestra iniziale, poi Continua con i passaggi guidati.";
-"skip.launchpadDatabaseMissing" = "Non disposto: MacReplica non ha trovato il database di Launchpad su questo Mac, quindi la disposizione attuale resta com’è. Scegli Salta se non ti serve; il registro del ripristino annota cosa è stato trovato";
+"skip.launchpadDatabaseMissing" = "Non disposto: il Dock di questo Mac al momento non ha un database di Launchpad, quindi la disposizione attuale resta com’è. Scegli Riavvia il Dock – di solito macOS lo ricrea e MacReplica dispone Launchpad – oppure Salta";
 "guided.skipAll" = "Salta tutto";
 "guided.skipAll.help" = "Salta tutte le app e i passaggi mostrati qui. Puoi comunque installarli o configurarli tu più tardi.";
 "guided.skipAll.title.one" = "Saltare %1$d passaggio rimanente?";
@@ -2215,3 +2215,7 @@
 "note.reinstalledForThisProcessor" = "La copia di Homebrew conteneva solo codice per %1$@ e non poteva funzionare su questo Mac, quindi MacReplica l’ha reinstallata con Homebrew e l’ha controllata di nuovo.";
 "skip.launchpadAccessDenied" = "Non disposto: macOS non permette a MacReplica di leggere il database di Launchpad. Concedi a MacReplica l’accesso completo al disco, esci da MacReplica e riaprilo (solo allora macOS applica il permesso), poi scegli Riprendi – oppure Salta";
 "skip.launchpadOtherUser" = "Non disposto: MacReplica funziona come un utente diverso da quello che ha effettuato l’accesso (per esempio avviato con sudo nel Terminale), quindi non raggiunge il tuo Launchpad. Esci da MacReplica, aprilo dal Finder o da Launchpad, poi scegli Riprendi";
+"restore.selectAll" = "Seleziona tutto";
+"restore.deselectAll" = "Deseleziona tutto";
+"launchpad.restartDock" = "Riavvia il Dock";
+"launchpad.restartDock.help" = "Chiude il Dock normalmente; macOS lo riavvia subito (il Dock scompare per un attimo) e di solito ricrea il database di Launchpad. Non viene eliminato nulla. MacReplica poi controlla di nuovo e dispone Launchpad.";

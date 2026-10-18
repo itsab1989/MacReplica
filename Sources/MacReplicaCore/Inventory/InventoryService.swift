@@ -123,13 +123,14 @@ public struct InventoryResult: Sendable {
     }
 
     /// Leaves out applications the user deselected for the backup (by `AppRecord.id`).
+    ///
+    /// They keep their place in the Launchpad layout (only the identifier and name stay in the backup): if the user
+    /// installs such an app on the new Mac anyway, it goes into its old folder; if not, it is left out there as any
+    /// app that is not installed. Until 1.1.6 they were removed, and a tester's Defender, OneDrive and DisplayCAL
+    /// tools ended up after the arranged pages (2026-10-19).
     public mutating func excludeApplications(_ ids: Set<String>) {
         guard !ids.isEmpty else { return }
-        let removed = Set(manifest.applications.filter { ids.contains($0.id) }.compactMap(\.bundleIdentifier))
         manifest.applications.removeAll { ids.contains($0.id) }
-        // They leave the Launchpad layout too (unless another copy of the app stays in the backup).
-        let kept = Set(manifest.applications.compactMap(\.bundleIdentifier))
-        manifest.launchpadLayout = manifest.launchpadLayout?.removing(removed.subtracting(kept))
     }
 
     /// Adds a folder of application data chosen by the user (replacing an earlier scan of it).

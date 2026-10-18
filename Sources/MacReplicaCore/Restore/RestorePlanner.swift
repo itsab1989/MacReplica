@@ -397,7 +397,13 @@ public struct RestorePlanner: Sendable {
         if components.contains(.launchpad), let recorded = manifest.launchpadLayout, !excluded.contains(RestoreItem.launchpadID) {
             var item = RestoreItem(id: RestoreItem.launchpadID, kind: .launchpadLayout, title: "Launchpad",
                                    identifier: recorded.macOSVersion, component: .launchpad)
-            item.launchpadLayout = recorded
+            // Backups before 1.1.7 have no names in the layout: the backup's app list provides them (name, else file name).
+            var names: [String: String] = [:]
+            for app in manifest.applications {
+                guard let bundle = app.bundleIdentifier else { continue }
+                names[bundle] = app.name.isEmpty ? app.bundleFileName.replacingOccurrences(of: ".app", with: "") : app.name
+            }
+            item.launchpadLayout = recorded.withNames(names)
             items.append(item)
         }
         manual.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }

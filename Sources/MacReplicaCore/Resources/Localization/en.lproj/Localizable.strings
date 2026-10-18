@@ -2206,7 +2206,7 @@
 "summary.guidedDevices.other" = "%1$d steps for displays, printers and scanners, set up in System Settings";
 "report.restore.waitingHint.one" = "%1$d step waits for you. The guided steps are in MacReplica, not in this report: open MacReplica, choose Continue on its start window, then Continue with Guided Steps.";
 "report.restore.waitingHint.other" = "%1$d steps wait for you. The guided steps are in MacReplica, not in this report: open MacReplica, choose Continue on its start window, then Continue with Guided Steps.";
-"skip.launchpadDatabaseMissing" = "Not arranged: MacReplica could not find Launchpad's database on this Mac, so your current arrangement stays as it is. Choose Skip if you do not need it; the restore log records what was found";
+"skip.launchpadDatabaseMissing" = "Not arranged: this Mac's Dock has no Launchpad database right now, so your current arrangement stays as it is. Choose Restart the Dock – macOS then usually creates it again and MacReplica arranges Launchpad – or Skip";
 "guided.skipAll" = "Skip All";
 "guided.skipAll.help" = "Leaves out every app and step shown here. You can still install or set them up yourself later.";
 "guided.skipAll.title.one" = "Skip %1$d remaining step?";
@@ -2217,3 +2217,7 @@
 "note.reinstalledForThisProcessor" = "Homebrew's copy had code only for %1$@ and could not run on this Mac, so MacReplica reinstalled it with Homebrew and checked it again.";
 "skip.launchpadAccessDenied" = "Not arranged: macOS does not let MacReplica read Launchpad's database. Give MacReplica Full Disk Access, quit MacReplica and open it again (macOS applies the permission only then), then choose Continue – or choose Skip";
 "skip.launchpadOtherUser" = "Not arranged: MacReplica runs as a different user than the one logged in (for example started with sudo in Terminal), so it cannot reach your Launchpad. Quit MacReplica, open it from the Finder or Launchpad, then choose Continue";
+"restore.selectAll" = "Select All";
+"restore.deselectAll" = "Deselect All";
+"launchpad.restartDock" = "Restart the Dock";
+"launchpad.restartDock.help" = "Quits the Dock normally; macOS starts it again at once (the Dock disappears for a moment) and then usually creates Launchpad's database again. Nothing is deleted. MacReplica then checks again and arranges Launchpad.";

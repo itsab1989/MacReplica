@@ -2204,7 +2204,7 @@
 "summary.guidedDevices.other" = "%1$d trinn for skjermer, skrivere og skannere, konfigureres i Systeminnstillinger";
 "report.restore.waitingHint.one" = "%1$d trinn venter på deg. De veiledede trinnene er i MacReplica, ikke i denne rapporten: åpne MacReplica, velg Fortsett i startvinduet og deretter Fortsett med veiledede trinn.";
 "report.restore.waitingHint.other" = "%1$d trinn venter på deg. De veiledede trinnene er i MacReplica, ikke i denne rapporten: åpne MacReplica, velg Fortsett i startvinduet og deretter Fortsett med veiledede trinn.";
-"skip.launchpadDatabaseMissing" = "Ikke ordnet: MacReplica fant ikke Launchpads database på denne Macen, så det nåværende oppsettet forblir som det er. Velg Hopp over hvis du ikke trenger det; gjenopprettingsloggen viser hva som ble funnet";
+"skip.launchpadDatabaseMissing" = "Ikke ordnet: Dock på denne Macen har ingen Launchpad-database nå, så det nåværende oppsettet forblir som det er. Velg Start Dock på nytt – macOS lager den da vanligvis igjen og MacReplica ordner Launchpad – eller Hopp over";
 "guided.skipAll" = "Hopp over alle";
 "guided.skipAll.help" = "Utelater alle apper og trinn som vises her. Du kan fortsatt installere eller sette dem opp selv senere.";
 "guided.skipAll.title.one" = "Hoppe over %1$d gjenstående trinn?";
@@ -2215,3 +2215,7 @@
 "note.reinstalledForThisProcessor" = "Homebrews kopi hadde bare kode for %1$@ og kunne ikke kjøre på denne Macen, så MacReplica installerte den på nytt med Homebrew og kontrollerte den igjen.";
 "skip.launchpadAccessDenied" = "Ikke ordnet: macOS lar ikke MacReplica lese Launchpads database. Gi MacReplica full disktilgang, avslutt MacReplica og åpne den igjen (først da tar macOS i bruk tillatelsen), og velg deretter Fortsett – eller Hopp over";
 "skip.launchpadOtherUser" = "Ikke ordnet: MacReplica kjører som en annen bruker enn den som er logget på (for eksempel startet med sudo i Terminal), så den når ikke Launchpad-en din. Avslutt MacReplica, åpne den fra Finder eller Launchpad, og velg deretter Fortsett";
+"restore.selectAll" = "Velg alle";
+"restore.deselectAll" = "Opphev alle valg";
+"launchpad.restartDock" = "Start Dock på nytt";
+"launchpad.restartDock.help" = "Avslutter Dock på vanlig måte; macOS starter den igjen med en gang (Dock forsvinner et øyeblikk) og lager da vanligvis Launchpads database på nytt. Ingenting slettes. MacReplica sjekker deretter igjen og ordner Launchpad.";
