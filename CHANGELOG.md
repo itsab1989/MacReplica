@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.5] - 2026-10-18
+
 ### Fixed
 - **Launchpad was not arranged on a tester's macOS 14 Mac although Launchpad worked.** The 1.1.4 log showed that
   the folder macOS names for the user (`DARWIN_USER_DIR`) had no Launchpad data at all – access was not refused, the
@@ -500,7 +502,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.5...HEAD
+[1.1.5]: https://github.com/itsab1989/MacReplica/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/itsab1989/MacReplica/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/itsab1989/MacReplica/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/itsab1989/MacReplica/compare/v1.1.1...v1.1.2
