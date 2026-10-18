@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-10-18
+
 ### Fixed
 - **Launchpad: apps whose identifier changed are placed in their folder.** A tester's GIMP 2.10 (`org.gimp.gimp-2.10`)
   became GIMP 3 (`org.gimp.gimp`) on the new Mac and ended up after his pages. When an app of the arrangement is not on
@@ -530,7 +532,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.6...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.7...HEAD
+[1.1.7]: https://github.com/itsab1989/MacReplica/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/itsab1989/MacReplica/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/itsab1989/MacReplica/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/itsab1989/MacReplica/compare/v1.1.3...v1.1.4
