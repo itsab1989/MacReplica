@@ -64,6 +64,14 @@ jobs:
           open -a Launchpad; sleep 6; osascript -e 'tell application "System Events" to key code 53' || true; sleep 2
           ls -la "$DB" 2>&1 | tee out/9-after-opening-launchpad.txt
           screencapture -x out/launchpad.png || true
+          # 1.1.4 report: the folder MacReplica computes has no com.apple.dock.launchpad, yet the Dock works.
+          # Does the running Dock show which database it has open (lsof on the user's own process, no root)?
+          for round in 1 2 3; do
+            echo "== round $round"; lsof -a -c Dock -Fn 2>/dev/null | grep -E "^n.*com\.apple\.dock\.launchpad/db/db" | tee -a out/10-lsof.txt
+            lsof -a -p "$(pgrep -x -u "$(id -u)" Dock)" -Fn 2>/dev/null | grep -c "launchpad" | tee -a out/10-lsof.txt
+            killall Dock; sleep 8
+          done
+          echo "computed: $(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db" | tee -a out/10-lsof.txt
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -71,6 +79,7 @@ jobs:
           path: out/
 
   office:
+    if: false
     runs-on: macos-15-intel
     timeout-minutes: 90
     steps:
