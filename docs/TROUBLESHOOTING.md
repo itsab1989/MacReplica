@@ -133,6 +133,9 @@ lists them but cannot run them.
 - *“Not arranged: MacReplica could not find Launchpad's database”*: this macOS has Launchpad, but neither the user's
   folder nor the running Dock showed MacReplica a database it could use; your current arrangement is not changed. The restore log (`~/Library/Logs/MacReplica`) records
   what macOS reported for each folder – please include it when you report this. Choose **Skip** if you do not need it.
+- *“MacReplica runs as a different user than the one logged in”*: MacReplica was started for example with `sudo` in
+  Terminal. Quit it and open it from the Finder or Launchpad, then choose **Continue**. Do not start MacReplica with
+  `sudo`: it asks for administrator rights itself where they are needed.
 - *“macOS does not let MacReplica read Launchpad's database”*: give MacReplica Full Disk Access, **quit MacReplica and
   open it again** (macOS applies the permission only then), then choose **Continue**.
 
