@@ -470,8 +470,8 @@ public struct InstallerArchiveInspector: Sendable {
                 return
             }
             if evidence == .unknown { throw InstallerInspectionFailure(.notRecognised, note: note("hdiutil imageinfo", info)) }
-            try await verifyChecksum(file, evidence: evidence, after: note("hdiutil imageinfo", info))
-            limit(&archive, .notReadable, note: note("hdiutil imageinfo", info))
+            let checksum = try await verifyChecksum(file, evidence: evidence, after: note("hdiutil imageinfo", info))
+            limit(&archive, .notReadable, note: note("hdiutil imageinfo", info) + "; " + checksum)
             return
         }
         if DownloadInstaller.hasLicenseAgreement(imageInfo: info.stdout) {
@@ -507,8 +507,8 @@ public struct InstallerArchiveInspector: Sendable {
                 limit(&archive, .timedOut, note: note("hdiutil attach", attach))
                 return
             }
-            try await verifyChecksum(file, evidence: evidence, after: note("hdiutil attach", attach))
-            limit(&archive, .notMountable, note: note("hdiutil attach", attach) + "; " + (evidence == .udif(hasChecksum: true) ? "checksum verified" : "no checksum to verify"))
+            let checksum = try await verifyChecksum(file, evidence: evidence, after: note("hdiutil attach", attach))
+            limit(&archive, .notMountable, note: note("hdiutil attach", attach) + "; " + checksum)
             return
         }
         // Detached before returning, also after an error, so no image stays mounted.
@@ -521,14 +521,43 @@ public struct InstallerArchiveInspector: Sendable {
         await detach(mountPoint)
     }
 
-    /// After a failed step, the image's own checksum decides: rejected means damaged (thrown); intact, absent or not
-    /// checked in time means the image is kept with its contents unchecked.
-    private func verifyChecksum(_ file: URL, evidence: FileFormatEvidence?, after step: String) async throws {
-        guard evidence == .udif(hasChecksum: true) else { return }
-        let verify = try await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["verify", file.path], environment: environment, timeout: 900))
-        if !verify.succeeded, !verify.timedOut {
-            throw InstallerInspectionFailure(.damaged(.checksumMismatch), note: step + "; " + note("hdiutil verify", verify))
+    /// After a failed step, the image's own checksum decides. Damage needs proof: `hdiutil verify -plist` reporting a
+    /// calculated checksum that differs from the expected one (structured, so independent of the user's language).
+    /// Any other failure is no proof – a release run saw an intact image called damaged because `hdiutil verify` failed
+    /// with “Resource temporarily unavailable” (the disk-image service was busy, 2026-10-18). Such a failure is tried
+    /// again; if it stays, the image is kept with its contents unchecked. Returns what was found, for the note.
+    @discardableResult
+    private func verifyChecksum(_ file: URL, evidence: FileFormatEvidence?, after step: String) async throws -> String {
+        guard evidence == .udif(hasChecksum: true) else { return "no checksum to verify" }
+        var last: CommandResult?
+        for attempt in 0..<3 {
+            if attempt > 0 { try? await Task.sleep(nanoseconds: retryPause * UInt64(attempt)) }
+            let verify = try await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["verify", "-plist", file.path],
+                                                                         environment: environment, timeout: 900))
+            if verify.timedOut { return "checksum not checked in time" }
+            if let checksums = Self.checksums(inVerifyOutput: verify.stdout) {
+                guard checksums.calculated == checksums.expected else {
+                    throw InstallerInspectionFailure(.damaged(.checksumMismatch),
+                                                     note: step + "; hdiutil verify: calculated \(checksums.calculated), expected \(checksums.expected)")
+                }
+                return "checksum verified"
+            }
+            if verify.succeeded { return "checksum verified" }
+            last = verify
         }
+        return "checksum not checked – " + (last.map { note("hdiutil verify", $0) } ?? "hdiutil verify did not run")
+    }
+
+    /// The calculated and expected checksum from `hdiutil verify -plist`, or nil when the output has no such report.
+    static func checksums(inVerifyOutput output: String) -> (calculated: String, expected: String)? {
+        guard let start = output.range(of: "<?xml"), let data = String(output[start.lowerBound...]).data(using: .utf8),
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return nil }
+        func value(_ key: String) -> String? {
+            guard let entry = plist[key] as? [String: Any], let value = entry["Checksum Value"] as? String, !value.isEmpty else { return nil }
+            return ((entry["Checksum Type"] as? String) ?? "") + " " + value
+        }
+        guard let calculated = value("calculated"), let expected = value("expected") else { return nil }
+        return (calculated, expected)
     }
 
     private func limit(_ archive: inout InstallerArchive, _ limit: InstallerArchive.ContentsLimit, note: String) {

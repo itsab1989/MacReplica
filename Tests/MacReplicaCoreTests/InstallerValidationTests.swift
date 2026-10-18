@@ -53,6 +53,80 @@ struct InstallerValidationTests {
 
     // MARK: Intact images that cannot be inspected are kept
 
+    /// Answers `hdiutil verify` like a busy disk-image service ("Resource temporarily unavailable", exit 1, no report)
+    /// for the first `busy` calls; everything else runs the real tool.
+    final class BusyVerifyRunner: CommandRunning, @unchecked Sendable {
+        let base: CommandRunning
+        private let lock = NSLock()
+        private var remaining: Int
+        private(set) var verifyCalls = 0
+        init(_ base: CommandRunning, busy: Int) { self.base = base; remaining = busy }
+        func run(_ command: Command, onOutputLine: (@Sendable (String) -> Void)?) async throws -> CommandResult {
+            if command.arguments.first == "verify" {
+                let busy: Bool = lock.withLock { verifyCalls += 1; if remaining > 0 { remaining -= 1; return true }; return false }
+                if busy { return CommandResult(exitCode: 1, stdout: "", stderr: "hdiutil: verify failed - Resource temporarily unavailable\n", timedOut: false) }
+            }
+            return try await base.run(command, onOutputLine: onOutputLine)
+        }
+    }
+
+    func intactUnmountableImage(_ sandbox: Sandbox) async throws -> URL {
+        let raw = sandbox.url.appendingPathComponent("blank.dmg")
+        let image = sandbox.url.appendingPathComponent("Busy Installer.dmg")
+        #expect(try await Self.hdiutil(["create", "-quiet", "-size", "2m", "-layout", "NONE", raw.path]).succeeded)
+        #expect(try await Self.hdiutil(["convert", "-quiet", raw.path, "-format", "UDZO", "-o", image.path]).succeeded)
+        return image
+    }
+
+    /// The 1.1.7 release run: an intact image was called damaged because `hdiutil verify` failed while the service was
+    /// busy. Without a checksum report there is no proof: it is tried again and the image is kept, never “damaged”.
+    @Test func aBusyVerifyIsNoProofOfDamage() async throws {
+        let (sandbox, _, _, layout, work) = try Self.setup("validate-busy")
+        let image = try await intactUnmountableImage(sandbox)
+        let busy = BusyVerifyRunner(ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]), busy: 99)
+        var inspector = InstallerArchiveInspector(layout: layout, runner: busy)
+        inspector.retryPause = 10_000_000
+        let selection = await inspector.select(image, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("bundles"))
+        let archive = try selection.result.get().archive
+        #expect(archive.contentsLimit == .notMountable)
+        #expect(archive.inspectionNote?.contains("checksum not checked – hdiutil verify: exit 1") == true, "\(archive.inspectionNote ?? "-")")
+        #expect(archive.inspectionNote?.contains("checksum verified") == false, "never claimed")
+        #expect(busy.verifyCalls == 3, "tried three times")
+    }
+
+    @Test func aVerifyThatSucceedsOnRetryCounts() async throws {
+        let (sandbox, _, _, layout, work) = try Self.setup("validate-busy-once")
+        let image = try await intactUnmountableImage(sandbox)
+        let busy = BusyVerifyRunner(ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]), busy: 1)
+        var inspector = InstallerArchiveInspector(layout: layout, runner: busy)
+        inspector.retryPause = 10_000_000
+        let archive = try await inspector.select(image, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("bundles")).result.get().archive
+        #expect(archive.inspectionNote?.contains("checksum verified") == true)
+        #expect(busy.verifyCalls == 2)
+    }
+
+    /// `hdiutil verify -plist` (macOS 27, all image formats): calculated and expected checksum; English keys whatever the
+    /// user's language.
+    @Test func checksumsAreReadFromTheVerifyReport() {
+        func report(_ calculated: String, _ expected: String) -> String {
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0"><dict>
+            <key>calculated</key><dict><key>Checksum Type</key><string>CRC32</string><key>Checksum Value</key><string>\(calculated)</string></dict>
+            <key>expected</key><dict><key>Checksum Type</key><string>CRC32</string><key>Checksum Value</key><string>\(expected)</string></dict>
+            </dict></plist>
+            """
+        }
+        let same = InstallerArchiveInspector.checksums(inVerifyOutput: report("$409D9D0F", "$409D9D0F"))
+        #expect(same?.calculated == "CRC32 $409D9D0F" && same?.expected == "CRC32 $409D9D0F")
+        let differs = InstallerArchiveInspector.checksums(inVerifyOutput: "verifying…\n" + report("$85FB4511", "$409D9D0F"))
+        #expect(differs?.calculated != differs?.expected)
+        #expect(InstallerArchiveInspector.checksums(inVerifyOutput: "") == nil)
+        #expect(InstallerArchiveInspector.checksums(inVerifyOutput: "hdiutil: verify failed - Resource temporarily unavailable") == nil)
+        #expect(InstallerArchiveInspector.checksums(inVerifyOutput: report("", "$409D9D0F")) == nil, "an empty value is no report")
+    }
+
     /// The regression: an intact disk image that macOS does not mount here ("no mountable file systems" – the same
     /// message an attach gets when its folder disappears) was "damaged". Its own checksum is intact, so it is kept.
     @Test func intactImageThatDoesNotMountIsKeptNotCalledDamaged() async throws {
@@ -203,7 +277,7 @@ struct InstallerValidationTests {
         let selection = await inspector.select(dmg, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("b"))
         guard case .failure(let error) = selection.result else { Issue.record("a changed image was accepted"); return }
         #expect(error == .damaged(.checksumMismatch))
-        #expect(selection.note?.contains("hdiutil verify: exit") == true)
+        #expect(selection.note?.contains("hdiutil verify: calculated CRC32 $") == true, "\(selection.note ?? "-")")
         #expect(await !Self.isAttached(dmg))
         #expect(TestEnvironment.english.installerProblemText(error).contains("damaged"))
     }
