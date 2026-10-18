@@ -232,6 +232,8 @@ if arguments.first == "launchpad-locate" {
     print("dock has open: \(LaunchpadStore.openDockDatabase()?.path ?? "-")")
     let store = LaunchpadStore.live()
     print("used: \(store?.database.path ?? "-") (\(store?.sourceReport ?? "-"))")
+    print("runs as logged-in user: \(LaunchpadStore.runsAsLoggedInUser)")
+    print(LaunchpadStore.userReport())
     exit(store.map { FileManager.default.fileExists(atPath: $0.database.path) } == true ? 0 : 1)
 }
 

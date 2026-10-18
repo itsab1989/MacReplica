@@ -142,6 +142,7 @@ extension Localizer {
         case .launchpadNotAvailable: return t("skip.launchpadNotAvailable")
         case .launchpadDatabaseMissing: return t("skip.launchpadDatabaseMissing")
         case .launchpadAccessDenied: return t("skip.launchpadAccessDenied")
+        case .launchpadOtherUser: return t("skip.launchpadOtherUser")
         case .launchpadWaitingForApps(let count): return p("skip.launchpadWaitingForApps", count)
         }
     }

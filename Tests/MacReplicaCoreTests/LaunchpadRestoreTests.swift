@@ -198,6 +198,22 @@ struct LaunchpadRestoreTests {
         #expect(LaunchpadStore(database: store.database).sourceReport == "database in the user's folder")
     }
 
+    /// `ps -A -o pid=,uid=,comm=`: only Docks, with their user ID (seen on macOS 14.8.9: "1755/uid 501").
+    @Test func runningDocksAreListedWithTheirUser() {
+        let output = """
+          1 0 /sbin/launchd
+        1755 501 /System/Library/CoreServices/Dock.app/Contents/MacOS/Dock
+        1900 501 /Applications/Dockside.app/Contents/MacOS/Docksidekick
+        2001 502 Dock
+        """
+        #expect(LaunchpadStore.dockProcesses(inPsOutput: output) == ["1755/uid 501", "2001/uid 502"])
+        #expect(LaunchpadStore.dockProcesses(inPsOutput: "") == [])
+        // In tests MacReplica runs as the user at the screen.
+        #expect(LaunchpadStore.runsAsLoggedInUser)
+        let report = LaunchpadStore.userReport()
+        #expect(report.contains("MacReplica uid \(getuid())") && !report.contains(NSUserName()) && !report.contains(NSHomeDirectory()))
+    }
+
     @Test func switchedOffOrWithoutLaunchpadNothingIsChanged() async throws {
         let c = try await backup("launchpad-off")
         #expect(!RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.applications]))
