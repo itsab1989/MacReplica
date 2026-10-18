@@ -13,8 +13,9 @@ extension Inspector {
             return .willSkip(layout.launchpadStore?.accessDenied == true ? .launchpadAccessDenied : .launchpadDatabaseMissing)
         }
         if let current = try? store.read(macOSVersion: environment.macOSVersion, work: launchpadWorkFolder),
-           recorded.matches(current, installed: current.appEntryCounts),
-           Set(recorded.appEntryCounts.keys).isSubset(of: current.appEntryCounts.keys) {
+           case let resolved = recorded.resolving(against: current),
+           resolved.matches(current, installed: current.appEntryCounts),
+           Set(resolved.appEntryCounts.keys).isSubset(of: current.appEntryCounts.keys) {
             return .alreadyPresent(version: nil)
         }
         return .willInstall
@@ -74,7 +75,7 @@ extension RestoreExecutor {
             return failed(item, .unknown, layout.redact(String(describing: error)))
         }
         guard let after = try? store.read(macOSVersion: environment.macOSVersion, work: work),
-              recorded.matches(after, installed: after.appEntryCounts) else {
+              recorded.resolving(against: after).matches(after, installed: after.appEntryCounts) else {
             return failed(item, .verificationFailed, "Launchpad arrangement differs after rebuilding")
         }
         log.info("\(item.id): Launchpad arranged (\(after.pages.count) pages, \(after.folderNames.count) folders)", component: .restore)

@@ -35,16 +35,78 @@ public struct LaunchpadLayout: Codable, Equatable, Hashable, Sendable {
     public var pages: [[Entry]]
     /// macOS version the layout was recorded on.
     public var macOSVersion: String
+    /// The name Launchpad showed for each app (bundle identifier → title), recorded since 1.1.7. When an app's
+    /// identifier differs on the new Mac (GIMP 2.10 `org.gimp.gimp-2.10` → GIMP 3 `org.gimp.gimp`, tester 2026-10-19),
+    /// the app of the same name takes its place. Older backups get the names from their app list (`withNames`).
+    public var names: [String: String]?
 
     // `macosVersion` survives the manifest's snake_case conversion (`macOSVersion` would come back as `macOsVersion`).
     private enum CodingKeys: String, CodingKey {
         case pages
         case macOSVersion = "macosVersion"
+        case names
     }
 
-    public init(pages: [[Entry]], macOSVersion: String) {
+    public init(pages: [[Entry]], macOSVersion: String, names: [String: String]? = nil) {
         self.pages = pages
         self.macOSVersion = macOSVersion
+        self.names = names
+    }
+
+    /// Every bundle identifier in the layout.
+    public var bundleIdentifiers: Set<String> {
+        Set(pages.flatMap { $0 }.flatMap { entry -> [String] in
+            switch entry {
+            case .app(let bundle): return [bundle]
+            case .folder(_, let pages): return pages.flatMap { $0 }
+            }
+        })
+    }
+
+    /// The layout as it applies to `actual`: each recorded identifier `actual` does not contain is replaced by the app of
+    /// the same name in `actual` that the layout does not contain itself – the rule `apply` places apps by. Used to
+    /// verify an arrangement in which an app with a changed identifier took its place.
+    public func resolving(against actual: LaunchpadLayout) -> LaunchpadLayout {
+        guard let names, !names.isEmpty else { return self }
+        let present = actual.bundleIdentifiers, mine = bundleIdentifiers
+        var byTitle: [String: [String]] = [:]
+        for (bundle, title) in (actual.names ?? [:]).sorted(by: { $0.key < $1.key }) where !mine.contains(bundle) {
+            byTitle[title.trimmingCharacters(in: .whitespaces).lowercased(), default: []].append(bundle)
+        }
+        var used = Set<String>(), map: [String: String] = [:]
+        let ordered = pages.flatMap { $0 }.flatMap { entry -> [String] in
+            if case .folder(_, let pages) = entry { return pages.flatMap { $0 } }
+            if case .app(let bundle) = entry { return [bundle] }
+            return []
+        }
+        for bundle in ordered where !present.contains(bundle) && map[bundle] == nil {
+            guard let name = names[bundle]?.trimmingCharacters(in: .whitespaces).lowercased(),
+                  let other = byTitle[name]?.first(where: { !used.contains($0) }) else { continue }
+            map[bundle] = other
+            used.insert(other)
+        }
+        guard !map.isEmpty else { return self }
+        var copy = self
+        copy.pages = pages.map { page in
+            page.map { entry in
+                switch entry {
+                case .app(let bundle): return .app(map[bundle] ?? bundle)
+                case .folder(let name, let pages): return .folder(name: name, pages: pages.map { $0.map { map[$0] ?? $0 } })
+                }
+            }
+        }
+        return copy
+    }
+
+    /// The layout with names added for apps it has none for (e.g. from the backup's app list).
+    public func withNames(_ fallback: [String: String]) -> LaunchpadLayout {
+        var copy = self
+        var merged = names ?? [:]
+        for bundle in bundleIdentifiers where merged[bundle] == nil {
+            if let name = fallback[bundle], !name.isEmpty { merged[bundle] = name }
+        }
+        copy.names = merged.isEmpty ? nil : merged
+        return copy
     }
 
     public var folderNames: [String] { pages.flatMap { $0 }.compactMap { if case .folder(let name, _) = $0 { return name }; return nil } }
@@ -320,7 +382,14 @@ public struct LaunchpadStore: Sendable {
             }
             if !entries.isEmpty { pages.append(entries) }
         }
-        return LaunchpadLayout(pages: pages, macOSVersion: macOSVersion)
+        var layout = LaunchpadLayout(pages: pages, macOSVersion: macOSVersion)
+        let wanted = layout.bundleIdentifiers
+        var names: [String: String] = [:]
+        for row in try rows(db, "SELECT IFNULL(bundleid,''), IFNULL(title,'') FROM apps") where wanted.contains(row[0]) && !row[1].isEmpty {
+            names[row[0]] = row[1]
+        }
+        layout.names = names.isEmpty ? nil : names
+        return layout
     }
 
     // MARK: Rebuilding
@@ -393,8 +462,23 @@ public struct LaunchpadStore: Sendable {
                 try exec(db, "INSERT INTO groups (item_id, category_id, title) VALUES (\(id), NULL, \(title.map(quoted) ?? "NULL"))")
                 return id
             }
-            /// The next entry of the app that is not placed yet.
-            func appItem(_ bundle: String) -> Int? { entries[bundle]?.first { !placed.contains($0) } }
+            /// The next entry of the app that is not placed yet – or, when this Mac has no app with the recorded identifier,
+            /// of the app with the same name that is not itself part of the layout (an identifier that changed).
+            let recordedBundles = layout.bundleIdentifiers
+            var byTitle: [String: [String]] = [:]
+            // Sorted by identifier – the same choice `resolving(against:)` makes when two apps share a name.
+            for row in try rows(db, "SELECT IFNULL(bundleid,''), IFNULL(title,'') FROM apps ORDER BY bundleid") where !row[1].isEmpty && !row[0].isEmpty {
+                let key = row[1].trimmingCharacters(in: .whitespaces).lowercased()
+                if !(byTitle[key]?.contains(row[0]) ?? false) { byTitle[key, default: []].append(row[0]) }
+            }
+            func appItem(_ bundle: String) -> Int? {
+                if let item = entries[bundle]?.first(where: { !placed.contains($0) }) { return item }
+                guard entries[bundle] == nil, let name = layout.names?[bundle]?.trimmingCharacters(in: .whitespaces).lowercased() else { return nil }
+                for other in byTitle[name] ?? [] where !recordedBundles.contains(other) {
+                    if let item = entries[other]?.first(where: { !placed.contains($0) }) { return item }
+                }
+                return nil
+            }
             func move(_ item: Int, to parent: Int, ordering: Int) throws {
                 try exec(db, "UPDATE items SET parent_id=\(parent), ordering=\(ordering) WHERE rowid=\(item)")
                 placed.insert(item)

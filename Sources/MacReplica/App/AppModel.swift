@@ -120,6 +120,8 @@ final class AppModel: ObservableObject {
     var pendingDecision: CheckedContinuation<GuidedDecision, Never>?
     /// The confirmation before “Skip All” leaves out every step the guided installation still shows.
     @Published var confirmSkipAll = false
+    /// True while the Dock restarts for Launchpad and MacReplica waits for its database.
+    @Published var restartingDock = false
     var guidedTask: Task<Void, Never>?
     /// Passphrase for restoring encrypted credentials; requested right before the restore.
     @Published var askForRestorePassphrase = false

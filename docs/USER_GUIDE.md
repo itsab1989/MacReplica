@@ -128,6 +128,9 @@
    first.
 8. **Continue with Guided Steps** opens the guided installation (see below), including printers and scanners
    to set up in System Settings. After a restart, choose **Continue** on the start window to get back here.
+   If Launchpad waits because the Dock has no Launchpad database, **Restart the Dock** next to it usually fixes
+   that; MacReplica then arranges Launchpad. Apps whose identifier changed (for example GIMP 2.10 → GIMP 3) go into
+   their old folder by name, and apps you left out of the backup keep their place if you install them anyway.
    Every waiting app and step has **Skip**; **Skip All** leaves out everything the guided installation still shows
    (after a confirmation – nothing on the Mac is changed).
 
