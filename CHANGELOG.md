@@ -8,13 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Fixed
-- **Launchpad when MacReplica runs as another user.** A tester's 1.1.5 log showed neither a Launchpad folder in
-  MacReplica's user folder nor a Dock with Launchpad open for MacReplica's user. Exactly this happens when MacReplica is
-  started as another user – reproduced on macOS 14.8.9 by starting it with `sudo`: it then looks in root's folder and
-  for root's Dock. The Launchpad step now says so (*“MacReplica runs as a different user than the one logged in …
-  open it from the Finder”*), and every restore logs a warning in that case. When Launchpad's database cannot be used,
-  the log names MacReplica's and the logged-in user's IDs, the running Docks and what `lsof` returned (IDs and counts,
-  no names).
+- **Launchpad: more diagnostics, and a clear message when MacReplica runs as another user.** A tester's 1.1.5 log
+  showed neither a Launchpad folder in MacReplica's user folder nor a Dock with Launchpad open for MacReplica's user.
+  One way this happens was reproduced on macOS 14.8.9: MacReplica started as another user (e.g. with `sudo`) looks in
+  that user's folder and for that user's Dock. Whether that applies to the tester is not known. In that case the
+  Launchpad step now says so, and every restore logs a warning. When Launchpad's database cannot be used, the log names
+  MacReplica's and the logged-in user's IDs, the running Docks, what `lsof` returned, which processes of this user have
+  a Launchpad file open, and whether `getconf` reports the same user folder (IDs, counts and system folders only).
 
 ## [1.1.5] - 2026-10-18
 
