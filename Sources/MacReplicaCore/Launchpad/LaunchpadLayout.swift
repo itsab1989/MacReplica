@@ -160,7 +160,7 @@ public struct LaunchpadStore: Sendable {
     }
 
     /// The Launchpad database the current user's Dock has open (`lsof`, read-only, only this user's own Dock).
-    static func openDockDatabase() -> URL? {
+    public static func openDockDatabase() -> URL? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
         process.arguments = ["-a", "-c", "Dock", "-u", String(getuid()), "-Fn"]
