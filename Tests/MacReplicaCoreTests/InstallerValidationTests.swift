@@ -196,9 +196,15 @@ struct InstallerValidationTests {
     @Test func changedImageIsDamagedByItsOwnChecksum() async throws {
         let (sandbox, inspector, _, _, work) = try Self.setup("validate-bitflip")
         let dmg = try await OwnInstallerTests.diskImage(app: "Pen Driver", bundleID: "com.example.pen", version: "4.0.14", in: sandbox, name: "PenFlip")
+        // The layout of a compressed image differs between runs (timestamps, identifiers): a single fixed offset can land
+        // in a stretch no checksum covers, and the 1.1.5 release run failed that way once. Several spread positions in the
+        // data – never the 512-byte trailer – always hit checksummed data.
+        let size = try #require(try FileManager.default.attributesOfItem(atPath: dmg.path)[.size] as? Int)
         let handle = try FileHandle(forUpdating: dmg)
-        try handle.seek(toOffset: 600)
-        try handle.write(contentsOf: Data(repeating: 0xFF, count: 16))
+        for offset in [600, size / 4, size / 2, size * 3 / 4] where offset + 16 < size - 512 {
+            try handle.seek(toOffset: UInt64(offset))
+            try handle.write(contentsOf: Data(repeating: 0xFF, count: 16))
+        }
         try handle.close()
         let selection = await inspector.select(dmg, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("b"))
         guard case .failure(let error) = selection.result else { Issue.record("a changed image was accepted"); return }
