@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: fix/launchpad-dock-database
+          ref: fix/launchpad-user-diagnostics
       - uses: actions/checkout@v7
         with:
           path: repro-branch
@@ -95,6 +95,13 @@ jobs:
           killall -STOP Dock
           mv "$LP.elsewhere" "$LP"; killall -CONT Dock; sleep 2
           ./sim launchpad-locate | tee -a out/11-locate.txt
+          # Hypothesis from the tester's 1.1.5 log: MacReplica started as another user (sudo keeps HOME on macOS).
+          echo "== as root with sudo (HOME kept)" | tee -a out/12-sudo.txt
+          sudo -E env HOME="$HOME" ./sim launchpad-locate 2>&1 | tee -a out/12-sudo.txt
+          echo "== as root with sudo -H" | tee -a out/12-sudo.txt
+          sudo -H ./sim launchpad-locate 2>&1 | tee -a out/12-sudo.txt
+          echo "== as the logged-in user" | tee -a out/12-sudo.txt
+          ./sim launchpad-locate 2>&1 | tee -a out/12-sudo.txt
       - uses: actions/upload-artifact@v7
         if: always()
         with:
