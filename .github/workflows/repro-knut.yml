@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: fix/launchpad-user-diagnostics
+          ref: feature/1.1.7-launchpad-and-selection
       - uses: actions/checkout@v7
         with:
           path: repro-branch
@@ -102,6 +102,27 @@ jobs:
           sudo -H ./sim launchpad-locate 2>&1 | tee -a out/12-sudo.txt
           echo "== as the logged-in user" | tee -a out/12-sudo.txt
           ./sim launchpad-locate 2>&1 | tee -a out/12-sudo.txt
+          # 1.1.7 checks on the real Dock.
+          LP="$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad"
+          echo "== 1.1.7: Dock without database, then a normal Dock restart (what 'Restart the Dock' does)" | tee out/13-117.txt
+          killall -STOP Dock; mv "$LP" "$LP.gone"; killall -KILL Dock; sleep 1; killall -STOP Dock 2>/dev/null
+          ls -la "$LP/db" 2>&1 | head -3 | tee -a out/13-117.txt
+          killall -CONT Dock 2>/dev/null; sleep 8; ls -la "$LP/db" 2>&1 | head -5 | tee -a out/13-117.txt
+          killall -TERM Dock; sleep 10; echo "after killall -TERM:" | tee -a out/13-117.txt; ls -la "$LP/db" 2>&1 | head -5 | tee -a out/13-117.txt
+          echo "== 1.1.7: an app whose identifier changed is placed by its name (real Dock)" | tee -a out/13-117.txt
+          cat > renamed.json <<'JSON'
+          {"macosVersion": "14", "pages": [[{"folder": {"name": "Renamed Test", "pages": [["com.apple.Notes.OLD-ID", "com.apple.TextEdit"]]}}, {"app": "com.apple.mail"}]],
+           "names": {"com.apple.Notes.OLD-ID": "Notes"}}
+          JSON
+          ./sim launchpad-apply renamed.json 2>&1 | tee -a out/13-117.txt
+          python3 - renamed.after.json <<'PY' 2>&1 | tee -a out/13-117.txt
+          import json, sys
+          after = json.load(open(sys.argv[1]))
+          first = after["pages"][0]
+          folder = next((e["folder"] for e in first if "folder" in e), None)
+          print("first page:", json.dumps(first)[:300])
+          print("Notes in 'Renamed Test':", bool(folder and folder["name"] == "Renamed Test" and "com.apple.Notes" in sum(folder["pages"], [])))
+          PY
       - uses: actions/upload-artifact@v7
         if: always()
         with:
