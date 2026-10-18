@@ -34,6 +34,14 @@ python3 tools/mutation/mutate.py --merge r0 r1 r2 r3 r4 r5 --report merged --che
 
 ## Results
 
+**2026-10-19 (1.1.7: Launchpad name fallback, deselected apps keep their place):** changed lines of
+`LaunchpadLayout.swift` and `RestorePlanner.swift`, 3 shards. The first run (27 of 34) showed that arranging and the check
+afterwards could choose different apps when two share a name – fixed (both by identifier) and tested, with tests added
+for the names that are recorded and the file-name fallback. Final: 29 of 34 killed (85.3 %). Remaining, all without
+effect: `<`→`<=` in a sort over unique keys (L73); `&&`→`||` where rows with an empty name or identifier can never match
+(L470) or only extra, unused names would be recorded (L388); `first`→`last` among several copies of the same app
+(L475, L478 – the matching rule the old code used).
+
 **2026-10-17 (1.1.2: tester feedback on 1.1.0):** changed lines only (`--changed-since main`) in 11 modules, 6 shards;
 covering suites now include `TesterFeedback110Tests`. Round 1: 35 of 47 valid mutants killed. Tests were added for the
 waiting card and hint at zero, numbered USB start-up steps, a local copy that cannot be prepared, and
