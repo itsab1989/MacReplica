@@ -7,6 +7,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Launchpad: apps whose identifier changed are placed in their folder.** A tester's GIMP 2.10 (`org.gimp.gimp-2.10`)
+  became GIMP 3 (`org.gimp.gimp`) on the new Mac and ended up after his pages. When an app of the arrangement is not on
+  the new Mac under its identifier, the app with the same name takes its place (never one that has its own place).
+  Backups now record the names Launchpad shows; older backups use the names from their app list. The result is
+  checked against the app that took the place, and repeating the restore changes nothing.
+- **Launchpad: apps left out of the backup keep their place.** Until now they were removed from the recorded
+  arrangement, so apps installed anyway on the new Mac (the tester's Microsoft Defender, OneDrive and DisplayCAL tools)
+  ended up after the arranged pages. Only their identifier and name stay in the backup; if they are not installed, they
+  are left out as before.
+
+### Added
+- **Restart the Dock** for Launchpad: when this Mac has Launchpad but its Dock has no Launchpad database, the waiting
+  step offers to restart the Dock (a normal quit; macOS starts it again at once). That made the tester's Mac create
+  the database again; MacReplica then checks again and arranges Launchpad.
+- **Select All** and **Deselect All** above the parts of the restore (tester's suggestion).
+
 ## [1.1.6] - 2026-10-18
 
 ### Fixed
