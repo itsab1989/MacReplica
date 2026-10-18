@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-10-18
+
 ### Fixed
 - **Launchpad: more diagnostics, and a clear message when MacReplica runs as another user.** A tester's 1.1.5 log
   showed neither a Launchpad folder in MacReplica's user folder nor a Dock with Launchpad open for MacReplica's user.
@@ -511,7 +513,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.5...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.6...HEAD
+[1.1.6]: https://github.com/itsab1989/MacReplica/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/itsab1989/MacReplica/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/itsab1989/MacReplica/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/itsab1989/MacReplica/compare/v1.1.2...v1.1.3
