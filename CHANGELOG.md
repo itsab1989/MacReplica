@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Launchpad was not arranged on a tester's macOS 14 Mac although Launchpad worked.** The 1.1.4 log showed that
+  the folder macOS names for the user (`DARWIN_USER_DIR`) had no Launchpad data at all – access was not refused, the
+  Dock simply keeps its database somewhere else on that Mac. The running Dock keeps its database open (checked on
+  macOS 14.8.9), so MacReplica now uses the database the Dock has open when the user's folder has none, and the log
+  names both locations. If neither is found, the log also says what the Dock has open.
+
 ## [1.1.4] - 2026-10-17
 
 ### Fixed

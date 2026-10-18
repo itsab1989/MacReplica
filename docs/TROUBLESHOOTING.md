@@ -130,8 +130,8 @@ lists them but cannot run them.
 
 - *“Launchpad does not exist on this macOS”* appears only on macOS 26 and later, which replaced Launchpad with the
   Apps view; the old layout stays in the backup's report.
-- *“Not arranged: MacReplica could not find Launchpad's database”*: this macOS has Launchpad, but MacReplica could not
-  use its database; your current arrangement is not changed. The restore log (`~/Library/Logs/MacReplica`) records
+- *“Not arranged: MacReplica could not find Launchpad's database”*: this macOS has Launchpad, but neither the user's
+  folder nor the running Dock showed MacReplica a database it could use; your current arrangement is not changed. The restore log (`~/Library/Logs/MacReplica`) records
   what macOS reported for each folder – please include it when you report this. Choose **Skip** if you do not need it.
 - *“macOS does not let MacReplica read Launchpad's database”*: give MacReplica Full Disk Access, **quit MacReplica and
   open it again** (macOS applies the permission only then), then choose **Continue**.
