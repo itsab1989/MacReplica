@@ -15,6 +15,12 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: fix/launchpad-dock-database
+      - uses: actions/checkout@v7
+        with:
+          path: repro-branch
+      - run: cp -R repro-branch/repro .
       - name: Build MacReplica's Launchpad tool (arm64) and a Finder-style probe app
         run: |
           swift build -c release --arch arm64 --product MacReplicaSimulator
@@ -72,6 +78,15 @@ jobs:
             killall Dock; sleep 8
           done
           echo "computed: $(getconf DARWIN_USER_DIR)com.apple.dock.launchpad/db/db" | tee -a out/10-lsof.txt
+          echo "== MacReplica's lookup, normal case" | tee out/11-locate.txt
+          ./sim launchpad-locate | tee -a out/11-locate.txt; echo "exit=$?" | tee -a out/11-locate.txt
+          # The tester's case: the user's folder has no com.apple.dock.launchpad, but the Dock has its database open.
+          LP="$(getconf DARWIN_USER_DIR)com.apple.dock.launchpad"
+          killall -STOP Dock; mv "$LP" "$LP.elsewhere"
+          echo "== MacReplica's lookup, user's folder without Launchpad" | tee -a out/11-locate.txt
+          ./sim launchpad-locate | tee -a out/11-locate.txt; echo "exit=${PIPESTATUS[0]}" | tee -a out/11-locate.txt
+          mv "$LP.elsewhere" "$LP"; killall -CONT Dock; sleep 2
+          ./sim launchpad-locate | tee -a out/11-locate.txt
       - uses: actions/upload-artifact@v7
         if: always()
         with:
