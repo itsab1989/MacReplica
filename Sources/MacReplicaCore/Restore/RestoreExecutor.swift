@@ -453,6 +453,10 @@ public final class RestoreExecutor: Sendable {
         prepareToolchains(plan: plan, context: &context)
         let total = plan.items.count
         log.info("Restore session \(session.id): \(total) steps, \(session.finishedItemIDs.count) already finished", component: .restore)
+        if layout.simulationRoot == nil, !LaunchpadStore.runsAsLoggedInUser {
+            log.warning("MacReplica runs as uid \(geteuid()), not as the user logged in at the screen (uid \(LaunchpadStore.consoleUserID.map(String.init) ?? "?")) – "
+                        + "settings of the logged-in user (e.g. Launchpad) are out of reach", component: .restore)
+        }
         persist(&session)
 
         for (index, item) in plan.items.enumerated() {

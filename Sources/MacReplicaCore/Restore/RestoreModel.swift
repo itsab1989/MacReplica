@@ -321,6 +321,9 @@ public enum SkipReason: Codable, Equatable, Sendable {
     case launchpadDatabaseMissing
     /// macOS refuses MacReplica access to Launchpad's database (privacy protection); waits, checked again on Continue.
     case launchpadAccessDenied
+    /// MacReplica runs as another user than the one logged in (e.g. started with sudo), so it cannot reach that
+    /// user's Launchpad; waits, checked again on Continue.
+    case launchpadOtherUser
     /// Launchpad was arranged with the apps installed so far; it is arranged again when the restore continues
     /// and the remaining apps are installed.
     case launchpadWaitingForApps(count: Int)
@@ -355,7 +358,7 @@ public enum ItemOutcome: Codable, Equatable, Sendable {
         switch reason {
         case .manualStepRequired, .waitingForManualStep, .postponedByUser, .cancelledByUser, .displayNotConnected,
              .applicationNotInstalled, .applicationVersionOlder, .needsFullDiskAccess, .launchpadWaitingForApps,
-             .launchpadDatabaseMissing, .launchpadAccessDenied: return true
+             .launchpadDatabaseMissing, .launchpadAccessDenied, .launchpadOtherUser: return true
         default: return false
         }
     }

@@ -5,6 +5,9 @@ extension Inspector {
         guard let recorded = item.launchpadLayout, LaunchpadLayout.isSupported(macOSVersion: environment.macOSVersion) else {
             return .willSkip(.launchpadNotAvailable)
         }
+        // Launchpad belongs to the user logged in at the screen: MacReplica started as another user (e.g. with sudo)
+        // looks in that other user's folder and Dock. Never assumed in a simulation.
+        if layout.simulationRoot == nil, !LaunchpadStore.runsAsLoggedInUser { return .willSkip(.launchpadOtherUser) }
         // This macOS has Launchpad: a database that cannot be found is not a missing Launchpad.
         guard let store = layout.launchpadStore, FileManager.default.fileExists(atPath: store.database.path) else {
             return .willSkip(layout.launchpadStore?.accessDenied == true ? .launchpadAccessDenied : .launchpadDatabaseMissing)
@@ -31,9 +34,10 @@ extension RestoreExecutor {
                           onEvent: @escaping @Sendable (RestoreEvent) -> Void) async -> ItemResult {
         switch inspector.predictLaunchpad(item) {
         case .willSkip(let reason):
-            if reason == .launchpadDatabaseMissing || reason == .launchpadAccessDenied {
+            if reason == .launchpadDatabaseMissing || reason == .launchpadAccessDenied || reason == .launchpadOtherUser {
                 // Only on a real Mac: which database the running Dock has open (none, or one MacReplica could not use).
-                let dock = layout.simulationRoot == nil ? "; the Dock has open: " + (LaunchpadStore.openDockDatabase()?.path ?? "none") : ""
+                let dock = layout.simulationRoot == nil
+                    ? "; the Dock has open: " + (LaunchpadStore.openDockDatabase()?.path ?? "none") + "; " + LaunchpadStore.userReport() : ""
                 log.warning("\(item.id): Launchpad database cannot be used – " + (layout.launchpadStore?.locationReport() ?? "no user folder (confstr failed)") + dock,
                             component: .restore)
             }

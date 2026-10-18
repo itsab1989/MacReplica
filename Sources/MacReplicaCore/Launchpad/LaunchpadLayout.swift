@@ -161,16 +161,61 @@ public struct LaunchpadStore: Sendable {
 
     /// The Launchpad database the current user's Dock has open (`lsof`, read-only, only this user's own Dock).
     public static func openDockDatabase() -> URL? {
+        openDatabase(inLsofOutput: lsofDock().output)
+    }
+
+    /// `lsof -a -c Dock -u <this user> -Fn`: its output, exit status and first error line.
+    static func lsofDock() -> (output: String, status: Int32, error: String) {
+        run("/usr/sbin/lsof", ["-a", "-c", "Dock", "-u", String(getuid()), "-Fn"])
+    }
+
+    static func run(_ executable: String, _ arguments: [String]) -> (output: String, status: Int32, error: String) {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
-        process.arguments = ["-a", "-c", "Dock", "-u", String(getuid()), "-Fn"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        guard (try? process.run()) != nil else { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        let out = Pipe(), err = Pipe()
+        process.standardOutput = out
+        process.standardError = err
+        guard (try? process.run()) != nil else { return ("", -1, "could not start \(executable)") }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        let errors = err.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        return openDatabase(inLsofOutput: String(decoding: data, as: UTF8.self))
+        let firstError = String(decoding: errors, as: UTF8.self).split(whereSeparator: \.isNewline).first.map(String.init) ?? ""
+        return (String(decoding: data, as: UTF8.self), process.terminationStatus, firstError)
+    }
+
+    /// The user MacReplica runs as, compared with the user logged in at the screen (owner of /dev/console).
+    public static var runsAsLoggedInUser: Bool {
+        guard let console = consoleUserID else { return true }
+        return geteuid() == console
+    }
+
+    static var consoleUserID: uid_t? {
+        var info = stat()
+        return stat("/dev/console", &info) == 0 ? info.st_uid : nil
+    }
+
+    /// The running Docks as “pid/uid” from `ps -A -o pid=,uid=,comm=`.
+    static func dockProcesses(inPsOutput output: String) -> [String] {
+        output.split(whereSeparator: \.isNewline).compactMap { line in
+            let parts = line.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+            guard parts.count == 3, parts[2].hasSuffix("/Dock") || parts[2] == "Dock" else { return nil }
+            return "\(parts[0])/uid \(parts[1])"
+        }
+    }
+
+    /// For the log when Launchpad's database cannot be used: who MacReplica runs as, who is logged in, which Docks run
+    /// and what `lsof` returned. User IDs and counts only – no names, no home folder.
+    public static func userReport() -> String {
+        let console = consoleUserID.map(String.init) ?? "unknown"
+        let docks = dockProcesses(inPsOutput: run("/bin/ps", ["-A", "-o", "pid=,uid=,comm="]).output)
+        let lsof = lsofDock()
+        let lines = lsof.output.split(whereSeparator: \.isNewline)
+        let files = lines.filter { $0.hasPrefix("n") }.count
+        let launchpadFiles = lines.filter { $0.hasPrefix("n") && $0.lowercased().contains("launchpad") }.count
+        return "MacReplica uid \(getuid()) euid \(geteuid()); logged-in user uid \(console); Docks: \(docks.isEmpty ? "none" : docks.joined(separator: ", ")); "
+            + "lsof exit \(lsof.status), \(files) open files of this user's Dock, \(launchpadFiles) with launchpad"
+            + (lsof.error.isEmpty ? "" : ", error: \(lsof.error.prefix(120))")
     }
 
     /// From `lsof -Fn` output (one `n<path>` line per open file): the Launchpad database itself (`…/db/db` in a folder
