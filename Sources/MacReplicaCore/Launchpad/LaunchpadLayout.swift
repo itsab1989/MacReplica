@@ -136,15 +136,50 @@ public enum LaunchpadError: Error, Equatable, Sendable {
 /// not in the layout follow on the last pages. The Dock is restarted afterwards so it loads the arrangement.
 public struct LaunchpadStore: Sendable {
     public var database: URL
+    /// Where the user's folder says the database is (`DARWIN_USER_DIR`), when the database in use was found otherwise.
+    public var computedDatabase: URL?
 
-    public init(database: URL) { self.database = database }
+    public init(database: URL, computedDatabase: URL? = nil) {
+        self.database = database
+        self.computedDatabase = computedDatabase
+    }
 
-    /// The live database of the current user.
+    /// The live database of the current user: in the user's folder (`DARWIN_USER_DIR`), or – when there is none –
+    /// the database the user's running Dock has open. On a tester's macOS 14 Mac the computed folder had no
+    /// `com.apple.dock.launchpad` at all while Launchpad worked (1.1.4 log, 2026-10-18); the Dock keeps its database
+    /// open all the time (shown with `lsof` on macOS 14.8.9), so that is the file the Dock really uses.
     public static func live() -> LaunchpadStore? {
         var buffer = [CChar](repeating: 0, count: Int(PATH_MAX))
-        guard confstr(_CS_DARWIN_USER_DIR, &buffer, buffer.count) > 0 else { return nil }
-        let folder = URL(fileURLWithPath: String(cString: buffer)).appendingPathComponent("com.apple.dock.launchpad/db/db")
-        return LaunchpadStore(database: folder)
+        let computed = confstr(_CS_DARWIN_USER_DIR, &buffer, buffer.count) > 0
+            ? URL(fileURLWithPath: String(cString: buffer)).appendingPathComponent("com.apple.dock.launchpad/db/db") : nil
+        if let computed, FileManager.default.fileExists(atPath: computed.path) { return LaunchpadStore(database: computed) }
+        if let open = openDockDatabase(), FileManager.default.fileExists(atPath: open.path) {
+            return LaunchpadStore(database: open, computedDatabase: computed)
+        }
+        return computed.map { LaunchpadStore(database: $0) }
+    }
+
+    /// The Launchpad database the current user's Dock has open (`lsof`, read-only, only this user's own Dock).
+    static func openDockDatabase() -> URL? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+        process.arguments = ["-a", "-c", "Dock", "-u", String(getuid()), "-Fn"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return openDatabase(inLsofOutput: String(decoding: data, as: UTF8.self))
+    }
+
+    /// From `lsof -Fn` output (one `n<path>` line per open file): the Launchpad database itself, not its `-wal`/`-shm`.
+    static func openDatabase(inLsofOutput output: String) -> URL? {
+        for line in output.split(whereSeparator: \.isNewline) where line.hasPrefix("n/") {
+            let path = String(line.dropFirst())
+            if path.hasSuffix("/com.apple.dock.launchpad/db/db") { return URL(fileURLWithPath: path) }
+        }
+        return nil
     }
 
     static let pageCapacity = 35
@@ -158,6 +193,13 @@ public struct LaunchpadStore: Sendable {
         let files = (try? FileManager.default.contentsOfDirectory(atPath: db.path))?.sorted().joined(separator: ", ") ?? "-"
         return "user folder: \(state(user)); \(launchpad.lastPathComponent): \(state(launchpad)); db folder: \(state(db)) [\(files)]; "
             + "database file: \(state(database))"
+    }
+
+    /// For the log: which database is used and why, with both locations when the Dock's differs from the computed one.
+    /// Only system folders under /var/folders appear, never a home folder or user name.
+    public var sourceReport: String {
+        guard let computedDatabase else { return "database in the user's folder" }
+        return "database the Dock has open: \(database.path); the user's folder points to \(computedDatabase.path), which has none"
     }
 
     /// The `errno` of `stat` for the path, or nil if it succeeds.

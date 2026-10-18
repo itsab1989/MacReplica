@@ -223,6 +223,18 @@ if arguments.first == "real-appdata-restore", arguments.count >= 2 {
     }
     exit(0)
 }
+// Where Launchpad's database is: the user's folder, the file the running Dock has open, and what MacReplica uses.
+//   MacReplicaSimulator launchpad-locate
+if arguments.first == "launchpad-locate" {
+    var buffer = [CChar](repeating: 0, count: Int(PATH_MAX))
+    let computed = confstr(_CS_DARWIN_USER_DIR, &buffer, buffer.count) > 0 ? String(cString: buffer) + "com.apple.dock.launchpad/db/db" : "-"
+    print("computed: \(computed) exists=\(FileManager.default.fileExists(atPath: computed))")
+    print("dock has open: \(LaunchpadStore.openDockDatabase()?.path ?? "-")")
+    let store = LaunchpadStore.live()
+    print("used: \(store?.database.path ?? "-") (\(store?.sourceReport ?? "-"))")
+    exit(store.map { FileManager.default.fileExists(atPath: $0.database.path) } == true ? 0 : 1)
+}
+
 // Launchpad on macOS 13–15: export the current user's layout, or rebuild a layout, restart the Dock and verify.
 //   MacReplicaSimulator launchpad-export <file.json>
 //   MacReplicaSimulator launchpad-apply <file.json>     (prints MATCH when the Dock shows the layout afterwards)

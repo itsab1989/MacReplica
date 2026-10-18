@@ -41,6 +41,7 @@ extension RestoreExecutor {
         guard let recorded = item.launchpadLayout, let store = layout.launchpadStore else {
             return ItemResult(itemID: item.id, outcome: .skipped(.launchpadDatabaseMissing))
         }
+        if store.computedDatabase != nil { log.info("\(item.id): \(store.sourceReport)", component: .restore) }
         let recordedApps = Set(recorded.appEntryCounts.keys)
         let appKinds: Set<RestoreItemKind> = [.cask, .appStoreApp, .manualApp]
         let appItems = plan.items.filter { appKinds.contains($0.kind) && $0.bundleIdentifier.map(recordedApps.contains) == true }
