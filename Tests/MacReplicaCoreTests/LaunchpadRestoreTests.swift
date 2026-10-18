@@ -121,11 +121,19 @@ struct LaunchpadRestoreTests {
         environment.macOSVersion = "14.8.9"
         environment.launchpadSettleTimeout = 0
         let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.launchpad]))
-        _ = await run(plan, environment, c)
+        let session = await run(plan, environment, c)
+        #expect(session.results[RestoreItem.launchpadID]?.outcome == .succeeded, "verified against the app that took the place")
         let pages = try self.layout(db, c).pages
         #expect(pages.first == [.app(Self.page[0]), .app(Self.page[1]),
                                 .folder(name: "Other", pages: [["com.example.quillwriter3", "com.example.ledgerlite", "com.example.studiomixer"]])])
         #expect(pages.dropFirst().joined().contains(.app("com.example.pixelforge-beta")), "not taken from its namesake")
+        // Arranged: the preview says so, and repeating the restore changes nothing.
+        let dry = await RestoreExecutor(environment: environment, backupRoot: c.backup, sessionStore: nil)
+            .dryRun(plan: plan, selection: RestoreSelection(components: [.launchpad]))
+        #expect(dry.first?.prediction == .alreadyPresent(version: nil))
+        let again = await run(plan, environment, c)
+        #expect(again.results[RestoreItem.launchpadID]?.outcome == .succeeded)
+        #expect(try self.layout(db, c).pages == pages)
     }
 
     /// Backups made before 1.1.7 have no names in the layout: they come from the backup's app list.

@@ -261,15 +261,16 @@ if arguments.first == "launchpad-export" || arguments.first == "launchpad-apply"
     if let written {
         try encoder.encode(written).write(to: file.deletingPathExtension().appendingPathExtension("written.json"))
         print("written (before the Dock restart): \(written.pages.count) pages, folders: \(written.folderNames); "
-              + (layout.matches(written, installed: written.appEntryCounts) ? "as recorded" : "differs"))
+              + (layout.resolving(against: written).matches(written, installed: written.appEntryCounts) ? "as recorded" : "differs"))
     }
     try await Task.sleep(nanoseconds: 10_000_000_000)
     let after = try store.read(macOSVersion: SystemInfo.macOSVersion, work: work)
     try encoder.encode(after).write(to: file.deletingPathExtension().appendingPathExtension("after.json"))
     let installed = after.appEntryCounts
     print("placed \(placed) apps; after the Dock restart: \(after.pages.count) pages, folders: \(after.folderNames)")
-    print(layout.matches(after, installed: installed) ? "MATCH" : "MISMATCH")
-    exit(layout.matches(after, installed: installed) ? 0 : 1)
+    let resolved = layout.resolving(against: after)
+    print(resolved.matches(after, installed: installed) ? "MATCH" : "MISMATCH")
+    exit(resolved.matches(after, installed: installed) ? 0 : 1)
 }
 
 // Checks the live ColorSync access without changing anything visible: every connected display that has a

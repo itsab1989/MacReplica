@@ -63,6 +63,41 @@ public struct LaunchpadLayout: Codable, Equatable, Hashable, Sendable {
         })
     }
 
+    /// The layout as it applies to `actual`: each recorded identifier `actual` does not contain is replaced by the app of
+    /// the same name in `actual` that the layout does not contain itself – the rule `apply` places apps by. Used to
+    /// verify an arrangement in which an app with a changed identifier took its place.
+    public func resolving(against actual: LaunchpadLayout) -> LaunchpadLayout {
+        guard let names, !names.isEmpty else { return self }
+        let present = actual.bundleIdentifiers, mine = bundleIdentifiers
+        var byTitle: [String: [String]] = [:]
+        for (bundle, title) in (actual.names ?? [:]).sorted(by: { $0.key < $1.key }) where !mine.contains(bundle) {
+            byTitle[title.trimmingCharacters(in: .whitespaces).lowercased(), default: []].append(bundle)
+        }
+        var used = Set<String>(), map: [String: String] = [:]
+        let ordered = pages.flatMap { $0 }.flatMap { entry -> [String] in
+            if case .folder(_, let pages) = entry { return pages.flatMap { $0 } }
+            if case .app(let bundle) = entry { return [bundle] }
+            return []
+        }
+        for bundle in ordered where !present.contains(bundle) && map[bundle] == nil {
+            guard let name = names[bundle]?.trimmingCharacters(in: .whitespaces).lowercased(),
+                  let other = byTitle[name]?.first(where: { !used.contains($0) }) else { continue }
+            map[bundle] = other
+            used.insert(other)
+        }
+        guard !map.isEmpty else { return self }
+        var copy = self
+        copy.pages = pages.map { page in
+            page.map { entry in
+                switch entry {
+                case .app(let bundle): return .app(map[bundle] ?? bundle)
+                case .folder(let name, let pages): return .folder(name: name, pages: pages.map { $0.map { map[$0] ?? $0 } })
+                }
+            }
+        }
+        return copy
+    }
+
     /// The layout with names added for apps it has none for (e.g. from the backup's app list).
     public func withNames(_ fallback: [String: String]) -> LaunchpadLayout {
         var copy = self
