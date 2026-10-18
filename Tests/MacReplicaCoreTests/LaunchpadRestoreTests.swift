@@ -136,6 +136,40 @@ struct LaunchpadRestoreTests {
         #expect(try self.layout(db, c).pages == pages)
     }
 
+    /// Two apps that are not in the layout share the name of a renamed one: rearranging and the check afterwards pick the
+    /// same one (the first by identifier), so the result is not reported as different.
+    @Test func namesakesArePickedTheSameWayWhenArrangingAndChecking() async throws {
+        let c = try await backup("launchpad-namesakes")
+        var manifest = c.manifest
+        manifest.launchpadLayout?.names = ["com.example.quillwriter": "Quill Writer"]
+        let apps = [Self.page[0], Self.page[1], "com.example.zz-quill", "com.example.aa-quill", "com.example.ledgerlite", "com.example.studiomixer"]
+        let titles = ["com.example.zz-quill": "Quill Writer", "com.example.aa-quill": "Quill Writer"]
+        let (fresh, target) = try TestEnvironment.freshMac(c.sandbox)
+        let db = try SyntheticLaunchpad.create(at: fresh.state.appendingPathComponent("launchpad/db/db"), apps: apps, titles: titles)
+        var environment = TestEnvironment.restoreEnvironment(target)
+        environment.macOSVersion = "14.8.9"
+        environment.launchpadSettleTimeout = 0
+        let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.launchpad]))
+        let session = await run(plan, environment, c)
+        #expect(session.results[RestoreItem.launchpadID]?.outcome == .succeeded)
+        let first = try self.layout(db, c).pages.first
+        #expect(first?.contains(.folder(name: "Other", pages: [["com.example.aa-quill", "com.example.ledgerlite", "com.example.studiomixer"]])) == true)
+        // Names are recorded only for apps of the layout.
+        let recorded = try self.layout(db, c)
+        let namedApps = Set((recorded.names ?? [:]).keys)
+        #expect(namedApps.isSubset(of: recorded.bundleIdentifiers))
+    }
+
+    /// An app without a name in the backup's list is named by its file name.
+    @Test func anAppWithoutANameIsNamedByItsFile() async throws {
+        let c = try await backup("launchpad-filename")
+        var manifest = c.manifest
+        manifest.launchpadLayout?.names = nil
+        if let index = manifest.applications.firstIndex(where: { $0.bundleIdentifier == "com.example.quillwriter" }) { manifest.applications[index].name = "" }
+        let plan = RestorePlanner().plan(manifest: manifest, selection: RestoreSelection(components: [.launchpad]))
+        #expect(plan.items.first { $0.kind == .launchpadLayout }?.launchpadLayout?.names?["com.example.quillwriter"] == "Quill Writer")
+    }
+
     /// Backups made before 1.1.7 have no names in the layout: they come from the backup's app list.
     @Test func olderBackupsTakeNamesFromTheirAppList() async throws {
         let c = try await backup("launchpad-oldnames")

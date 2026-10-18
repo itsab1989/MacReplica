@@ -466,7 +466,8 @@ public struct LaunchpadStore: Sendable {
             /// of the app with the same name that is not itself part of the layout (an identifier that changed).
             let recordedBundles = layout.bundleIdentifiers
             var byTitle: [String: [String]] = [:]
-            for row in try rows(db, "SELECT IFNULL(bundleid,''), IFNULL(title,'') FROM apps") where !row[1].isEmpty && !row[0].isEmpty {
+            // Sorted by identifier – the same choice `resolving(against:)` makes when two apps share a name.
+            for row in try rows(db, "SELECT IFNULL(bundleid,''), IFNULL(title,'') FROM apps ORDER BY bundleid") where !row[1].isEmpty && !row[0].isEmpty {
                 let key = row[1].trimmingCharacters(in: .whitespaces).lowercased()
                 if !(byTitle[key]?.contains(row[0]) ?? false) { byTitle[key, default: []].append(row[0]) }
             }
