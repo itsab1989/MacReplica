@@ -173,11 +173,15 @@ public struct LaunchpadStore: Sendable {
         return openDatabase(inLsofOutput: String(decoding: data, as: UTF8.self))
     }
 
-    /// From `lsof -Fn` output (one `n<path>` line per open file): the Launchpad database itself, not its `-wal`/`-shm`.
+    /// From `lsof -Fn` output (one `n<path>` line per open file): the Launchpad database itself (`…/db/db` in a folder
+    /// whose name contains “launchpad”, wherever it is), not its `-wal`/`-shm`. Whether it really is Launchpad's
+    /// database is checked when it is read (its tables).
     static func openDatabase(inLsofOutput output: String) -> URL? {
         for line in output.split(whereSeparator: \.isNewline) where line.hasPrefix("n/") {
-            let path = String(line.dropFirst())
-            if path.hasSuffix("/com.apple.dock.launchpad/db/db") { return URL(fileURLWithPath: path) }
+            let url = URL(fileURLWithPath: String(line.dropFirst()))
+            let folder = url.deletingLastPathComponent(), owner = folder.deletingLastPathComponent()
+            if url.lastPathComponent == "db", folder.lastPathComponent == "db",
+               owner.lastPathComponent.lowercased().contains("launchpad") { return url }
         }
         return nil
     }

@@ -188,6 +188,10 @@ struct LaunchpadRestoreTests {
         #expect(LaunchpadStore.openDatabase(inLsofOutput: output)?.path == "/private/var/folders/s6/abc/0/com.apple.dock.launchpad/db/db")
         #expect(LaunchpadStore.openDatabase(inLsofOutput: "p681\nn/private/var/folders/x/0/com.apple.dock.launchpad/db/db-wal\n") == nil)
         #expect(LaunchpadStore.openDatabase(inLsofOutput: "") == nil)
+        // Found wherever the Dock keeps it (seen on macOS 14.8.9 with the folder moved while the Dock had it open).
+        #expect(LaunchpadStore.openDatabase(inLsofOutput: "n/private/var/folders/s6/abc/0/com.apple.dock.launchpad.elsewhere/db/db-shm\n"
+                                            + "n/private/var/folders/s6/abc/0/com.apple.dock.launchpad.elsewhere/db/db\n")?.lastPathComponent == "db")
+        #expect(LaunchpadStore.openDatabase(inLsofOutput: "n/Users/x/Library/Caches/other/db/db\n") == nil, "not a Launchpad folder")
         let store = LaunchpadStore(database: URL(fileURLWithPath: "/private/var/folders/b/0/com.apple.dock.launchpad/db/db"),
                                    computedDatabase: URL(fileURLWithPath: "/var/folders/a/0/com.apple.dock.launchpad/db/db"))
         #expect(store.sourceReport.contains("/private/var/folders/b/0/") && store.sourceReport.contains("/var/folders/a/0/"))
