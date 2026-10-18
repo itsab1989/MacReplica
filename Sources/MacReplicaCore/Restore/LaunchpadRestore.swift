@@ -32,7 +32,9 @@ extension RestoreExecutor {
         switch inspector.predictLaunchpad(item) {
         case .willSkip(let reason):
             if reason == .launchpadDatabaseMissing || reason == .launchpadAccessDenied {
-                log.warning("\(item.id): Launchpad database cannot be used – " + (layout.launchpadStore?.locationReport() ?? "no user folder (confstr failed)"),
+                // Only on a real Mac: which database the running Dock has open (none, or one MacReplica could not use).
+                let dock = layout.simulationRoot == nil ? "; the Dock has open: " + (LaunchpadStore.openDockDatabase()?.path ?? "none") : ""
+                log.warning("\(item.id): Launchpad database cannot be used – " + (layout.launchpadStore?.locationReport() ?? "no user folder (confstr failed)") + dock,
                             component: .restore)
             }
             return ItemResult(itemID: item.id, outcome: .skipped(reason))
@@ -41,6 +43,7 @@ extension RestoreExecutor {
         guard let recorded = item.launchpadLayout, let store = layout.launchpadStore else {
             return ItemResult(itemID: item.id, outcome: .skipped(.launchpadDatabaseMissing))
         }
+        if store.computedDatabase != nil { log.info("\(item.id): \(store.sourceReport)", component: .restore) }
         let recordedApps = Set(recorded.appEntryCounts.keys)
         let appKinds: Set<RestoreItemKind> = [.cask, .appStoreApp, .manualApp]
         let appItems = plan.items.filter { appKinds.contains($0.kind) && $0.bundleIdentifier.map(recordedApps.contains) == true }
