@@ -213,9 +213,22 @@ public struct LaunchpadStore: Sendable {
         let lines = lsof.output.split(whereSeparator: \.isNewline)
         let files = lines.filter { $0.hasPrefix("n") }.count
         let launchpadFiles = lines.filter { $0.hasPrefix("n") && $0.lowercased().contains("launchpad") }.count
+        // Any process of this user with a Launchpad file open, by command name (the Dock is not the only candidate).
+        let all = run("/usr/sbin/lsof", ["-u", String(getuid()), "-Fcn"]).output
+        var command = "", holders = Set<String>()
+        for line in all.split(whereSeparator: \.isNewline) {
+            if line.hasPrefix("c") { command = String(line.dropFirst()) }
+            if line.hasPrefix("n"), line.lowercased().contains("launchpad") { holders.insert(command) }
+        }
+        // The user folder as a separate process sees it, against MacReplica's own lookup.
+        var buffer = [CChar](repeating: 0, count: Int(PATH_MAX))
+        let own = confstr(_CS_DARWIN_USER_DIR, &buffer, buffer.count) > 0 ? String(cString: buffer) : "?"
+        let child = run("/usr/bin/getconf", ["DARWIN_USER_DIR"]).output.trimmingCharacters(in: .whitespacesAndNewlines)
         return "MacReplica uid \(getuid()) euid \(geteuid()); logged-in user uid \(console); Docks: \(docks.isEmpty ? "none" : docks.joined(separator: ", ")); "
             + "lsof exit \(lsof.status), \(files) open files of this user's Dock, \(launchpadFiles) with launchpad"
             + (lsof.error.isEmpty ? "" : ", error: \(lsof.error.prefix(120))")
+            + "; processes of this user with a Launchpad file open: \(holders.isEmpty ? "none" : holders.sorted().joined(separator: ", "))"
+            + "; user folder from getconf \(child == own ? "is the same" : "differs: \(child)")"
     }
 
     /// From `lsof -Fn` output (one `n<path>` line per open file): the Launchpad database itself (`…/db/db` in a folder
