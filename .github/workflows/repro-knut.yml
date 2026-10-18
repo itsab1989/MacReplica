@@ -85,6 +85,14 @@ jobs:
           killall -STOP Dock; mv "$LP" "$LP.elsewhere"
           echo "== MacReplica's lookup, user's folder without Launchpad" | tee -a out/11-locate.txt
           ./sim launchpad-locate | tee -a out/11-locate.txt; echo "exit=${PIPESTATUS[0]}" | tee -a out/11-locate.txt
+          echo "== raw lsof, Dock paused, folder renamed" | tee -a out/11-locate.txt
+          lsof -a -c Dock -Fn 2>&1 | grep -i -E "launchpad|^p" | tee -a out/11-locate.txt
+          lsof -p "$(pgrep -x Dock)" 2>&1 | grep -i launchpad | tee -a out/11-locate.txt
+          killall -CONT Dock; sleep 1
+          echo "== raw lsof, Dock running, folder still renamed" | tee -a out/11-locate.txt
+          lsof -a -c Dock -Fn 2>&1 | grep -i -E "launchpad|^p" | tee -a out/11-locate.txt
+          ./sim launchpad-locate | tee -a out/11-locate.txt
+          killall -STOP Dock
           mv "$LP.elsewhere" "$LP"; killall -CONT Dock; sleep 2
           ./sim launchpad-locate | tee -a out/11-locate.txt
       - uses: actions/upload-artifact@v7
