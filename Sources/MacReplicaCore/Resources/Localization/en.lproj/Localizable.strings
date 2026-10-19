@@ -1633,7 +1633,7 @@
 "guided.devices.heading.other" = "%1$d steps for displays, printers and scanners";
 "guided.devices.message" = "These are set up in System Settings (and with the manufacturer's driver where needed). Do each one, then click Check Again – MacReplica checks the result.";
 "home.tools.title" = "Tools";
-"home.tools.subtitle" = "Check app security, update preferences and window appearance on this Mac.";
+"home.tools.subtitle" = "Check app security, update preferences and window appearance, or create a bootable macOS installer.";
 "tools.title" = "Tools";
 "tools.subtitle" = "macOS %1$@ on %2$@";
 "tools.arch.arm64" = "Apple silicon";
@@ -2404,3 +2404,5 @@
 "installMedia.stage.erasingAndCreating" = "Erasing the partition and writing the installer";
 "installMedia.check.otherPartitionsUntouched" = "Other partitions unchanged";
 "installMedia.protect.notReadable" = "macOS has not let MacReplica look inside “%1$@” yet (a permission question may be waiting). Allow access, then click Check Again.";
+"installMedia.drive.changedTitle" = "The drive changed";
+"installMedia.drive.changedMessage" = "A drive was connected, removed or changed while you were confirming. Nothing was erased. Choose the drive again.";

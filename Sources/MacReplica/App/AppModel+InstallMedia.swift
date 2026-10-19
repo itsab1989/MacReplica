@@ -34,6 +34,8 @@ struct InstallMediaState {
     var failure: InstallMediaError?
     /// Whether the drive was erased before the failure (then it holds no installer).
     var driveErased = false
+    /// The confirmed drive changed or disappeared while the confirmation was open.
+    var confirmedDriveChanged = false
     var task: Task<Void, Never>?
 
     var confirmedCandidate: DriveCandidate? { drives.first { $0.id == selectedDrive && $0.isEligible } }
@@ -87,6 +89,38 @@ extension AppModel {
         installMedia.task?.cancel()
         installMedia = InstallMediaState()
         goHome()
+    }
+
+    /// Starts watching for connected and removed drives on the drive and confirm steps, stops everywhere else.
+    func updateDriveWatcher() {
+        let watching = screen == .installMedia && (installMedia.step == .drive || installMedia.step == .confirm)
+        if watching, driveWatcher == nil {
+            let watcher = DriveWatcher { [weak self] in self?.drivesChanged() }
+            watcher.start()
+            driveWatcher = watcher
+        } else if !watching, let watcher = driveWatcher {
+            watcher.stop()
+            driveWatcher = nil
+        }
+    }
+
+    /// A drive was connected, removed or changed: read the drives again. If the drive being confirmed is no longer
+    /// exactly the same, go back to the list (the check right before erasing would stop anyway).
+    func drivesChanged() {
+        guard installMedia.step == .drive || installMedia.step == .confirm, !installMedia.scanningDrives else { return }
+        appLog.info("Install media: a drive was connected, removed or changed; reading the drives again", component: .tools)
+        let confirming = installMedia.step == .confirm ? installMedia.confirmedCandidate : nil
+        scanDrives { [weak self] in
+            guard let self, let confirming, self.installMedia.step == .confirm else { return }
+            let now = self.installMedia.drives.first { $0.id == confirming.id }
+            if now == nil || now?.drive.fingerprint != confirming.drive.fingerprint || now?.partition != confirming.partition || now?.isEligible != true {
+                self.installMedia.selectedDrive = nil
+                self.installMedia.understood = false
+                self.installMedia.understoodInternal = false
+                self.installMedia.confirmedDriveChanged = true
+                self.installMedia.step = .drive
+            }
+        }
     }
 
     func setShowInternalPartitions(_ on: Bool) {
@@ -201,7 +235,7 @@ extension AppModel {
         scanDrives()
     }
 
-    func scanDrives() {
+    func scanDrives(then done: (@MainActor () -> Void)? = nil) {
         guard let report = installMedia.report else { return }
         installMedia.scanningDrives = true
         installMedia.driveProblem = nil
@@ -217,6 +251,7 @@ extension AppModel {
                 installMedia.driveProblem = installMediaMessage(error)
             }
             installMedia.scanningDrives = false
+            done?()
             appLog.info("Install media: drives \(installMedia.drives.map { "\($0.id)=\($0.isEligible ? "eligible" : "protected")" }.joined(separator: ","))",
                         component: .tools)
         }
@@ -224,6 +259,7 @@ extension AppModel {
 
     func continueToConfirm() {
         guard installMedia.confirmedDrive != nil else { return }
+        installMedia.confirmedDriveChanged = false
         installMedia.understood = false
         installMedia.understoodInternal = false
         installMedia.step = .confirm

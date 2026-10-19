@@ -1631,7 +1631,7 @@
 "guided.devices.heading.other" = "%1$d étapes pour moniteurs, imprimantes et scanners";
 "guided.devices.message" = "Ils se configurent dans Réglages Système (avec le pilote du fabricant si nécessaire). Effectue chaque étape, puis clique sur Vérifier à nouveau – MacReplica vérifie le résultat.";
 "home.tools.title" = "Outils";
-"home.tools.subtitle" = "Vérifie la sécurité des apps, les préférences de mise à jour et l’apparence des fenêtres sur ce Mac.";
+"home.tools.subtitle" = "Vérifie la sécurité des apps, les préférences de mise à jour et l’apparence des fenêtres, ou crée un installateur macOS démarrable.";
 "tools.title" = "Outils";
 "tools.subtitle" = "macOS %1$@ sur %2$@";
 "tools.arch.arm64" = "puce Apple";
@@ -2402,3 +2402,5 @@
 "installMedia.stage.erasingAndCreating" = "Effacement de la partition et écriture de l'installateur";
 "installMedia.check.otherPartitionsUntouched" = "Autres partitions inchangées";
 "installMedia.protect.notReadable" = "macOS n'a pas encore laissé MacReplica regarder dans « %1$@ » (une demande d'autorisation attend peut-être). Autorise l'accès, puis clique sur Vérifier à nouveau.";
+"installMedia.drive.changedTitle" = "Le disque a changé";
+"installMedia.drive.changedMessage" = "Un disque a été branché, retiré ou modifié pendant la confirmation. Rien n'a été effacé. Choisis à nouveau le disque.";

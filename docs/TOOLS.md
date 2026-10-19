@@ -1,6 +1,6 @@
 # Tools: Gatekeeper, macOS updates, window corners, macOS installer
 
-The fourth option on MacReplica's start screen. Three independent tools for this Mac. Each one shows what it finds,
+The fourth option on MacReplica's start screen. Four independent tools for this Mac. Each one shows what it finds,
 explains what a change would do, asks before anything changes, checks the real state afterwards and records the
 change in a short history. None of them runs during an inventory, backup or restore, and none adds a permission for
 users who don't open them.

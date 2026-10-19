@@ -1631,7 +1631,7 @@
 "guided.devices.heading.other" = "%1$d stappen voor beeldschermen, printers en scanners";
 "guided.devices.message" = "Deze stel je in via Systeeminstellingen (waar nodig met het stuurprogramma van de fabrikant). Voer elke stap uit en klik daarna op Opnieuw controleren – MacReplica controleert het resultaat.";
 "home.tools.title" = "Hulpmiddelen";
-"home.tools.subtitle" = "Controleer app-beveiliging, updatevoorkeuren en vensterweergave op deze Mac.";
+"home.tools.subtitle" = "Controleer app-beveiliging, updatevoorkeuren en vensterweergave, of maak een opstartbare macOS-installer.";
 "tools.title" = "Hulpmiddelen";
 "tools.subtitle" = "macOS %1$@ op %2$@";
 "tools.arch.arm64" = "Apple silicon";
@@ -2402,3 +2402,5 @@
 "installMedia.stage.erasingAndCreating" = "Partitie wordt gewist en installer wordt geschreven";
 "installMedia.check.otherPartitionsUntouched" = "Andere partities ongewijzigd";
 "installMedia.protect.notReadable" = "macOS heeft MacReplica nog niet in '%1$@' laten kijken (mogelijk wacht er een toestemmingsvraag). Sta toegang toe en klik daarna op 'Controleer opnieuw'.";
+"installMedia.drive.changedTitle" = "De schijf is veranderd";
+"installMedia.drive.changedMessage" = "Tijdens het bevestigen werd een schijf aangesloten, verwijderd of gewijzigd. Er is niets gewist. Kies de schijf opnieuw.";

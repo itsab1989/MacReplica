@@ -402,6 +402,10 @@ struct InstallMediaDriveView: View {
                     .disabled(state.scanningDrives)
                     .accessibilityIdentifier("installMedia.drives.refresh")
             }
+            if state.confirmedDriveChanged {
+                NoticeView(style: .warning, title: l.t("installMedia.drive.changedTitle"), message: l.t("installMedia.drive.changedMessage"))
+                    .accessibilityIdentifier("installMedia.drive.changed")
+            }
             if let problem = state.driveProblem {
                 NoticeView(style: .error, title: l.t("installMedia.drive.listFailed"), message: problem)
             }

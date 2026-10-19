@@ -1631,7 +1631,7 @@
 "guided.devices.heading.other" = "%1$d passaggi per monitor, stampanti e scanner";
 "guided.devices.message" = "Si configurano in Impostazioni di Sistema (con il driver del produttore dove serve). Esegui ogni passaggio, poi fai clic su Controlla di nuovo: MacReplica verifica il risultato.";
 "home.tools.title" = "Strumenti";
-"home.tools.subtitle" = "Controlla sicurezza delle app, preferenze di aggiornamento e aspetto delle finestre su questo Mac.";
+"home.tools.subtitle" = "Controlla sicurezza delle app, preferenze di aggiornamento e aspetto delle finestre, o crea un installer avviabile di macOS.";
 "tools.title" = "Strumenti";
 "tools.subtitle" = "macOS %1$@ su %2$@";
 "tools.arch.arm64" = "Apple silicon";
@@ -2402,3 +2402,5 @@
 "installMedia.stage.erasingAndCreating" = "Inizializzazione della partizione e scrittura dell'installer";
 "installMedia.check.otherPartitionsUntouched" = "Altre partizioni invariate";
 "installMedia.protect.notReadable" = "macOS non ha ancora permesso a MacReplica di guardare dentro «%1$@» (forse c'è una richiesta di autorizzazione in attesa). Consenti l'accesso, poi fai clic su Controlla di nuovo.";
+"installMedia.drive.changedTitle" = "Il disco è cambiato";
+"installMedia.drive.changedMessage" = "Durante la conferma un disco è stato collegato, rimosso o modificato. Non è stato cancellato nulla. Scegli di nuovo il disco.";

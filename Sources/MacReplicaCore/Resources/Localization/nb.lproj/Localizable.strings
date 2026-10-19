@@ -1631,7 +1631,7 @@
 "guided.devices.heading.other" = "%1$d trinn for skjermer, skrivere og skannere";
 "guided.devices.message" = "Disse settes opp i Systeminnstillinger (med produsentens driver der det trengs). Gjør hvert trinn, og klikk deretter Sjekk på nytt – MacReplica kontrollerer resultatet.";
 "home.tools.title" = "Verktøy";
-"home.tools.subtitle" = "Sjekk appsikkerhet, oppdateringsvalg og vindusutseende på denne Macen.";
+"home.tools.subtitle" = "Sjekk appsikkerhet, oppdateringsvalg og vindusutseende, eller lag en oppstartbar macOS-installerer.";
 "tools.title" = "Verktøy";
 "tools.subtitle" = "macOS %1$@ på %2$@";
 "tools.arch.arm64" = "Apple silicon";
@@ -2402,3 +2402,5 @@
 "installMedia.stage.erasingAndCreating" = "Sletter partisjonen og skriver installereren";
 "installMedia.check.otherPartitionsUntouched" = "Andre partisjoner uendret";
 "installMedia.protect.notReadable" = "macOS har ennå ikke latt MacReplica se inn i «%1$@» (et tillatelsesspørsmål venter kanskje). Gi tilgang, og klikk så Sjekk igjen.";
+"installMedia.drive.changedTitle" = "Disken er endret";
+"installMedia.drive.changedMessage" = "En disk ble koblet til, fjernet eller endret mens du bekreftet. Ingenting ble slettet. Velg disken på nytt.";

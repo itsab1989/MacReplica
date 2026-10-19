@@ -1631,7 +1631,7 @@
 "guided.devices.heading.other" = "%1$d Schritte für Bildschirme, Drucker und Scanner";
 "guided.devices.message" = "Diese richtest du in den Systemeinstellungen ein (wo nötig mit dem Treiber des Herstellers). Erledige jeden Schritt und klicke dann auf „Erneut prüfen“ – MacReplica prüft das Ergebnis.";
 "home.tools.title" = "Werkzeuge";
-"home.tools.subtitle" = "Prüfe App-Sicherheit, Update-Einstellungen und Fensterdarstellung auf diesem Mac.";
+"home.tools.subtitle" = "Prüfe App-Sicherheit, Update-Einstellungen und Fensterdarstellung oder erstelle einen startfähigen macOS-Installer.";
 "tools.title" = "Werkzeuge";
 "tools.subtitle" = "macOS %1$@ auf %2$@";
 "tools.arch.arm64" = "Apple Silicon";
@@ -2402,3 +2402,5 @@
 "installMedia.stage.erasingAndCreating" = "Partition wird gelöscht und Installer geschrieben";
 "installMedia.check.otherPartitionsUntouched" = "Andere Partitionen unverändert";
 "installMedia.protect.notReadable" = "macOS hat MacReplica noch nicht in „%1$@“ schauen lassen (eventuell wartet eine Berechtigungsfrage). Erlaube den Zugriff und klicke dann auf „Erneut prüfen“.";
+"installMedia.drive.changedTitle" = "Das Laufwerk hat sich verändert";
+"installMedia.drive.changedMessage" = "Während der Bestätigung wurde ein Laufwerk angeschlossen, entfernt oder verändert. Es wurde nichts gelöscht. Wähle das Laufwerk erneut.";
