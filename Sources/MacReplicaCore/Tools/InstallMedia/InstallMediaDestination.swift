@@ -2,10 +2,11 @@ import Foundation
 
 /// A drive a bootable installer could be written to, as `diskutil` describes it.
 ///
-/// Only whole external physical drives are ever offered. The startup disk, internal disks, disk images, drives with
-/// a Time Machine backup or a MacReplica backup and drives MacReplica or the installer itself run from are shown as
-/// protected with the reason, and can never be chosen. Creating an installer on a partition of the internal disk is
-/// deliberately not offered (see docs/USER_GUIDE.md, “Why not on the internal disk”).
+/// Normally only whole removable or external physical drives are offered: external drives, and cards in a built-in
+/// reader (which macOS calls internal but removable). The startup disk, internal disks, disk images, drives with a
+/// Time Machine backup or a MacReplica backup and drives MacReplica or the installer itself run from are shown as
+/// protected with the reason, and can never be chosen. As an expert option, an **empty, separate partition** of an
+/// internal disk can be chosen; only that partition is erased (see `partitionProtections`).
 public struct InstallMediaDrive: Equatable, Sendable, Identifiable {
     public struct Volume: Equatable, Sendable {
         public var device: String
@@ -13,12 +14,18 @@ public struct InstallMediaDrive: Equatable, Sendable, Identifiable {
         public var mountPoint: String?
         public var uuid: String?
         public var content: String
-        public init(device: String, name: String, mountPoint: String? = nil, uuid: String? = nil, content: String = "") {
+        /// The partition's GPT identifier (`DiskUUID`): stays the same when the partition is erased or renumbered.
+        public var partitionUUID: String?
+        public var sizeBytes: Int64
+        public init(device: String, name: String, mountPoint: String? = nil, uuid: String? = nil, content: String = "",
+                    partitionUUID: String? = nil, sizeBytes: Int64 = 0) {
             self.device = device
             self.name = name
             self.mountPoint = mountPoint
             self.uuid = uuid
             self.content = content
+            self.partitionUUID = partitionUUID
+            self.sizeBytes = sizeBytes
         }
     }
 
@@ -27,20 +34,23 @@ public struct InstallMediaDrive: Equatable, Sendable, Identifiable {
     /// `SanDisk Ultra` – what the drive calls itself.
     public var mediaName: String
     public var sizeBytes: Int64
-    /// `USB`, `Thunderbolt`, `Disk Image`, …
+    /// `USB`, `Thunderbolt`, `Secure Digital`, `Disk Image`, …
     public var busProtocol: String
     public var isInternal: Bool
+    /// Removable media (a card in a built-in reader is internal but removable).
+    public var isRemovable: Bool
     public var isVirtual: Bool
     public var isWritable: Bool
     public var volumes: [Volume]
 
-    public init(device: String, mediaName: String, sizeBytes: Int64, busProtocol: String, isInternal: Bool, isVirtual: Bool,
-                isWritable: Bool, volumes: [Volume]) {
+    public init(device: String, mediaName: String, sizeBytes: Int64, busProtocol: String, isInternal: Bool, isRemovable: Bool = false,
+                isVirtual: Bool, isWritable: Bool, volumes: [Volume]) {
         self.device = device
         self.mediaName = mediaName
         self.sizeBytes = sizeBytes
         self.busProtocol = busProtocol
         self.isInternal = isInternal
+        self.isRemovable = isRemovable
         self.isVirtual = isVirtual
         self.isWritable = isWritable
         self.volumes = volumes
@@ -51,16 +61,25 @@ public struct InstallMediaDrive: Equatable, Sendable, Identifiable {
     /// What identifies this drive: if any of it differs right before erasing, MacReplica stops. Device numbers are
     /// reused when drives are plugged in and out, so the number alone is never enough.
     public var fingerprint: String {
-        ([device, mediaName, String(sizeBytes), busProtocol] + volumes.map { "\($0.device)|\($0.uuid ?? "-")|\($0.name)" }).joined(separator: ";")
+        ([device, mediaName, String(sizeBytes), busProtocol] + volumes.map { "\($0.device)|\($0.uuid ?? "-")|\($0.partitionUUID ?? "-")|\($0.name)" })
+            .joined(separator: ";")
     }
+
+    /// Internal and not removable: the Mac's own disk. Only its empty partitions can be chosen, as an expert option.
+    public var isFixedInternal: Bool { isInternal && !isRemovable }
 
     /// Only `disk` followed by a number: what may be handed to `diskutil`.
     public static func isWholeDiskIdentifier(_ text: String) -> Bool {
         text.range(of: #"^disk[0-9]{1,3}$"#, options: .regularExpression) != nil
     }
+
+    /// A GPT partition identifier as diskutil prints it.
+    public static func isPartitionUUID(_ text: String) -> Bool {
+        text.range(of: #"^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$"#, options: .regularExpression) != nil
+    }
 }
 
-/// Why a drive cannot be chosen. Each is shown next to the drive.
+/// Why a drive or partition cannot be chosen. Each is shown next to it.
 public enum DriveProtection: Equatable, Sendable {
     case startupDisk
     case internalDisk
@@ -70,13 +89,33 @@ public enum DriveProtection: Equatable, Sendable {
     case holdsProtectedVolume(String)
     case timeMachine(String)
     case tooSmall(required: Int64)
+    // Partitions of an internal disk (expert option):
+    /// APFS volumes share their container's space with the Mac's own data; MacReplica never erases one.
+    case apfsVolume
+    /// EFI, Recovery, boot helpers and other partitions macOS needs.
+    case systemPartition
+    case unsupportedFormat(String)
+    /// Not mounted, so MacReplica cannot see whether it is empty.
+    case notMounted
+    /// Holds this many visible items.
+    case notEmpty(Int)
 }
 
 public struct DriveCandidate: Equatable, Sendable, Identifiable {
     public var drive: InstallMediaDrive
+    /// The partition to erase, for the expert option; nil for the whole drive.
+    public var partition: InstallMediaDrive.Volume?
     public var protections: [DriveProtection]
-    public var id: String { drive.id }
+
+    public init(drive: InstallMediaDrive, partition: InstallMediaDrive.Volume? = nil, protections: [DriveProtection]) {
+        self.drive = drive
+        self.partition = partition
+        self.protections = protections
+    }
+
+    public var id: String { partition?.device ?? drive.id }
     public var isEligible: Bool { protections.isEmpty }
+    public var isPartition: Bool { partition != nil }
 }
 
 public enum InstallMediaDriveError: Error, Equatable, Sendable {
@@ -94,12 +133,19 @@ public struct InstallMediaDriveScanner: Sendable {
     public var allowsDiskImages: Bool
     /// Mount points of volumes that must survive: MacReplica itself, the installer, the last backup.
     public var protectedPaths: [URL]
+    /// Expert option: also list the partitions of internal disks (only empty, separate ones can be chosen).
+    public var includeInternalPartitions: Bool
+    /// For MacReplica's own tests on a disk image: treat its partitions like those of an internal disk.
+    public var partitionsOfDiskImages: Bool
 
-    public init(layout: SystemLayout, runner: CommandRunning, allowsDiskImages: Bool = false, protectedPaths: [URL] = []) {
+    public init(layout: SystemLayout, runner: CommandRunning, allowsDiskImages: Bool = false, protectedPaths: [URL] = [],
+                includeInternalPartitions: Bool = false, partitionsOfDiskImages: Bool = false) {
         self.layout = layout
         self.runner = runner
         self.allowsDiskImages = allowsDiskImages
         self.protectedPaths = protectedPaths
+        self.includeInternalPartitions = includeInternalPartitions
+        self.partitionsOfDiskImages = partitionsOfDiskImages
     }
 
     func plist(_ arguments: [String]) async throws -> [String: Any] {
@@ -128,10 +174,12 @@ public struct InstallMediaDriveScanner: Sendable {
         return String(device[match])
     }
 
-    /// Every external drive with what protects it. `required` is the space the installer needs.
+    /// Every drive that could hold an installer, with what protects it. `required` is the space the installer needs.
+    /// Internal, non-removable disks are not offered as a whole; with the expert option their partitions are listed.
     public func scan(required: Int64) async throws -> [DriveCandidate] {
         let startup = try await startupDisks()
-        let list = try await plist(["list", "-plist", "external"])
+        // All disks: a card in a built-in reader is listed as internal, so `list external` would miss it.
+        let list = try await plist(["list", "-plist"])
         let entries = list["AllDisksAndPartitions"] as? [[String: Any]] ?? []
         // An APFS container is listed as a disk of its own (“synthesized”); its volumes belong to the drive it lives on.
         var containerVolumes: [String: [String: Any]] = [:]
@@ -150,13 +198,27 @@ public struct InstallMediaDriveScanner: Sendable {
             var listed = entry
             listed["APFSVolumes"] = (entry["APFSVolumes"] as? [[String: Any]] ?? []) + (containerVolumes[device]?["APFSVolumes"] as? [[String: Any]] ?? [])
             let drive = Self.drive(device: device, list: listed, info: info)
+            let partitionsHere = drive.isVirtual ? partitionsOfDiskImages : (includeInternalPartitions && drive.isFixedInternal)
+            if partitionsHere {
+                for partition in drive.volumes where Self.isPartition(partition, of: drive) {
+                    candidates.append(DriveCandidate(drive: drive, partition: partition,
+                                                     protections: partitionProtections(of: partition, on: drive, startup: startup, required: required)))
+                }
+                continue
+            }
+            if drive.isFixedInternal && !drive.isVirtual { continue }
             candidates.append(DriveCandidate(drive: drive, protections: protections(of: drive, startup: startup, required: required)))
         }
-        return candidates.sorted { $0.drive.device.localizedStandardCompare($1.drive.device) == .orderedAscending }
+        return candidates.sorted { $0.id.localizedStandardCompare($1.id) == .orderedAscending }
     }
 
     static func isAPFSContainer(_ entry: [String: Any]) -> Bool {
         ["Apple_APFS_Container", "EF57347C-0000-11AA-AA11-00306543ECAC"].contains(entry["Content"] as? String ?? "") || entry["APFSPhysicalStores"] != nil
+    }
+
+    /// A partition of this disk itself (`disk0s4`), not an APFS volume of a container on it (`disk3s1`).
+    static func isPartition(_ volume: InstallMediaDrive.Volume, of drive: InstallMediaDrive) -> Bool {
+        volume.device.range(of: "^\(drive.device)s[0-9]+$", options: .regularExpression) != nil
     }
 
     static func drive(device: String, list: [String: Any], info: [String: Any]) -> InstallMediaDrive {
@@ -164,13 +226,15 @@ public struct InstallMediaDriveScanner: Sendable {
         for partition in (list["Partitions"] as? [[String: Any]] ?? []) + (list["APFSVolumes"] as? [[String: Any]] ?? []) {
             guard let id = partition["DeviceIdentifier"] as? String else { continue }
             volumes.append(.init(device: id, name: partition["VolumeName"] as? String ?? "", mountPoint: partition["MountPoint"] as? String,
-                                 uuid: partition["VolumeUUID"] as? String, content: partition["Content"] as? String ?? ""))
+                                 uuid: partition["VolumeUUID"] as? String, content: partition["Content"] as? String ?? "",
+                                 partitionUUID: partition["DiskUUID"] as? String, sizeBytes: (partition["Size"] as? NSNumber)?.int64Value ?? 0))
         }
         return InstallMediaDrive(device: device, mediaName: (info["MediaName"] as? String) ?? (info["IORegistryEntryName"] as? String) ?? "",
                                  sizeBytes: (info["TotalSize"] as? NSNumber)?.int64Value ?? (list["Size"] as? NSNumber)?.int64Value ?? 0,
                                  busProtocol: info["BusProtocol"] as? String ?? "",
-                                 // Unknown counts as internal: only what diskutil calls external is ever offered.
+                                 // Unknown counts as internal and not removable: such a disk is never offered whole.
                                  isInternal: (info["Internal"] as? Bool) ?? true,
+                                 isRemovable: (info["RemovableMedia"] as? Bool) ?? false,
                                  isVirtual: (info["VirtualOrPhysical"] as? String) != "Physical",
                                  isWritable: (info["WritableMedia"] as? Bool) ?? false, volumes: volumes)
     }
@@ -178,26 +242,65 @@ public struct InstallMediaDriveScanner: Sendable {
     public func protections(of drive: InstallMediaDrive, startup: Set<String>, required: Int64) -> [DriveProtection] {
         var result: [DriveProtection] = []
         if startup.contains(drive.device) { result.append(.startupDisk) }
-        if drive.isInternal { result.append(.internalDisk) }
+        if drive.isFixedInternal { result.append(.internalDisk) }
         if drive.isVirtual && !allowsDiskImages { result.append(.diskImage) }
         if !drive.isWritable { result.append(.readOnly) }
-        let home = layout.homeDirectory.standardizedFileURL.path
-        let protected = protectedPaths.map { $0.standardizedFileURL.resolvingSymlinksInPath().path } + [home]
-        for volume in drive.volumes {
-            guard let mount = volume.mountPoint, !mount.isEmpty else { continue }
-            if mount == "/" { result.append(.startupDisk); continue }
-            if let path = protected.first(where: { $0 == mount || $0.hasPrefix(mount + "/") }) {
-                result.append(.holdsProtectedVolume(volume.name.isEmpty ? layout.redact(path) : volume.name))
-            }
-            let root = URL(fileURLWithPath: mount)
-            let backup = FileManager.default.fileExists(atPath: root.appendingPathComponent("Backups.backupdb").path)
-                || FileManager.default.fileExists(atPath: root.appendingPathComponent(".com.apple.timemachine.supported").path)
-                || volume.content.lowercased().contains("backup")
-            if backup { result.append(.timeMachine(volume.name)) }
-            if Self.holdsMacReplicaBackup(root) { result.append(.holdsProtectedVolume(volume.name)) }
-        }
+        for volume in drive.volumes { result += contentProtections(of: volume) }
         if drive.sizeBytes < required { result.append(.tooSmall(required: required)) }
         return result
+    }
+
+    /// What a mounted volume holds that must never be erased.
+    func contentProtections(of volume: InstallMediaDrive.Volume) -> [DriveProtection] {
+        guard let mount = volume.mountPoint, !mount.isEmpty else { return [] }
+        if mount == "/" { return [.startupDisk] }
+        var result: [DriveProtection] = []
+        let home = layout.homeDirectory.standardizedFileURL.path
+        let protected = protectedPaths.map { $0.standardizedFileURL.resolvingSymlinksInPath().path } + [home]
+        if let path = protected.first(where: { $0 == mount || $0.hasPrefix(mount + "/") }) {
+            result.append(.holdsProtectedVolume(volume.name.isEmpty ? layout.redact(path) : volume.name))
+        }
+        let root = URL(fileURLWithPath: mount)
+        let backup = FileManager.default.fileExists(atPath: root.appendingPathComponent("Backups.backupdb").path)
+            || FileManager.default.fileExists(atPath: root.appendingPathComponent(".com.apple.timemachine.supported").path)
+            || volume.content.lowercased().contains("backup")
+        if backup { result.append(.timeMachine(volume.name)) }
+        if Self.holdsMacReplicaBackup(root) { result.append(.holdsProtectedVolume(volume.name)) }
+        return result
+    }
+
+    /// Partition formats that can be separate, plain partitions; `createinstallmedia` replaces them with Mac OS
+    /// Extended. Everything APFS, and every partition macOS needs, is refused.
+    static let plainPartitionContents: Set<String> = ["Apple_HFS", "Apple_HFSX", "Microsoft Basic Data", "Windows_FAT_32", "DOS_FAT_32",
+                                                      "Windows_FAT_16", "DOS_FAT_16", "Windows_NTFS", "ExFAT"]
+    static let systemPartitionContents: Set<String> = ["EFI", "Apple_Boot", "Apple_APFS_Recovery", "Apple_KernelCoreDump", "Apple_CoreStorage",
+                                                       "Apple_partition_map", "Apple_Free", "Microsoft Reserved", "Windows Recovery"]
+
+    /// Expert option: only an empty, separate, plain partition that holds nothing MacReplica protects.
+    public func partitionProtections(of partition: InstallMediaDrive.Volume, on drive: InstallMediaDrive, startup: Set<String>,
+                                     required: Int64) -> [DriveProtection] {
+        var result: [DriveProtection] = []
+        if partition.content.hasPrefix("Apple_APFS") { result.append(.apfsVolume) }
+        else if Self.systemPartitionContents.contains(partition.content) { result.append(.systemPartition) }
+        else if !Self.plainPartitionContents.contains(partition.content) { result.append(.unsupportedFormat(partition.content)) }
+        if drive.isVirtual && !allowsDiskImages { result.append(.diskImage) }
+        if !drive.isWritable { result.append(.readOnly) }
+        if partition.partitionUUID.map(InstallMediaDrive.isPartitionUUID) != true, result.isEmpty { result.append(.systemPartition) }
+        guard result.isEmpty else { return result }
+        guard let mount = partition.mountPoint, !mount.isEmpty else { return [.notMounted] }
+        result += contentProtections(of: partition)
+        let visible = Self.visibleItems(in: URL(fileURLWithPath: mount))
+        if visible > 0 { result.append(.notEmpty(visible)) }
+        if partition.sizeBytes < required { result.append(.tooSmall(required: required)) }
+        return result
+    }
+
+    /// Items a user put there: everything except the hidden bookkeeping macOS and Windows create on every volume.
+    static func visibleItems(in folder: URL) -> Int {
+        let ignored: Set<String> = ["System Volume Information", "$RECYCLE.BIN", "Desktop DB", "Desktop DF"]
+        // An unreadable folder counts as not empty.
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: folder.path) else { return 1 }
+        return items.filter { !$0.hasPrefix(".") && !ignored.contains($0) }.count
     }
 
     /// A MacReplica backup directly on the volume or one folder down (`MacReplica Backup/MacReplica-Backup-…`).
@@ -218,11 +321,19 @@ public struct InstallMediaDriveScanner: Sendable {
         return false
     }
 
-    /// Reads the drive again right before erasing. Throws unless it is the same drive and still eligible.
-    public func revalidate(_ confirmed: InstallMediaDrive, required: Int64) async throws -> InstallMediaDrive {
-        let current = try await scan(required: required).first { $0.drive.device == confirmed.device }
-        guard let current, current.drive.fingerprint == confirmed.fingerprint else { throw InstallMediaDriveError.driveChanged }
+    /// Reads the drive again right before erasing. Throws unless it is the same drive (and the same partition) and
+    /// still eligible.
+    public func revalidate(_ confirmed: DriveCandidate, required: Int64) async throws -> DriveCandidate {
+        let current = try await scan(required: required).first { $0.id == confirmed.id }
+        guard let current, current.drive.fingerprint == confirmed.drive.fingerprint, current.partition == confirmed.partition else {
+            throw InstallMediaDriveError.driveChanged
+        }
         guard current.isEligible else { throw InstallMediaDriveError.driveNotEligible(current.protections) }
-        return current.drive
+        return current
+    }
+
+    /// The whole-drive form, as before.
+    public func revalidate(_ confirmed: InstallMediaDrive, required: Int64) async throws -> InstallMediaDrive {
+        try await revalidate(DriveCandidate(drive: confirmed, protections: []), required: required).drive
     }
 }

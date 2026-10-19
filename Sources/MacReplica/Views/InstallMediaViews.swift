@@ -42,6 +42,11 @@ struct InstallMediaView: View {
                 .padding(.bottom, 20)
             }
         } buttons: {
+            // Back to the start screen from every step; while the drive is written it cannot be left safely.
+            Button(l.t("installMedia.mainMenu")) { model.installMediaGoHome() }
+                .disabled(state.step == .working)
+                .help(state.step == .working ? l.t("installMedia.mainMenu.busy") : (state.downloading ? l.t("installMedia.mainMenu.download") : ""))
+                .accessibilityIdentifier("installMedia.home")
             if state.step != .working {
                 Button(state.step == .finished ? l.t("common.done") : (state.step == .choose ? l.t("installMedia.backToTools") : l.t("common.back"))) {
                     state.step == .finished ? model.closeInstallMedia() : model.installMediaBack()
@@ -70,9 +75,19 @@ struct InstallMediaView: View {
                 .disabled(state.confirmedDrive == nil || state.scanningDrives)
                 .accessibilityIdentifier("installMedia.continue")
         case .confirm:
-            Button(role: .destructive) { model.createInstallMedia() } label: { Text(l.t("installMedia.create")) }
-                .disabled(!state.understood)
-                .accessibilityIdentifier("installMedia.create")
+            Button(role: .destructive) { model.requestCreateInstallMedia() } label: {
+                Text(l.t(state.confirmedCandidate?.isPartition == true ? "installMedia.create.partition" : "installMedia.create"))
+            }
+            .disabled(!state.readyToCreate)
+            .accessibilityIdentifier("installMedia.create")
+            .confirmationDialog(l.t("installMedia.final.title", state.confirmedCandidate?.partition?.name.ifEmpty(state.confirmedCandidate?.partition?.device ?? "") ?? ""),
+                                isPresented: $model.installMedia.askingFinalConfirmation) {
+                Button(l.t("installMedia.final.erase"), role: .destructive) { model.createInstallMedia() }
+                    .accessibilityIdentifier("installMedia.final.erase")
+                Button(l.t("common.cancel"), role: .cancel) {}
+            } message: {
+                Text(l.t("installMedia.final.message"))
+            }
         case .finished:
             Button(l.t("installMedia.another")) { model.openInstallMedia() }
                 .accessibilityIdentifier("installMedia.another")
@@ -397,8 +412,24 @@ struct InstallMediaDriveView: View {
             ForEach(state.drives) { candidate in
                 InstallMediaDriveRow(candidate: candidate, selected: state.selectedDrive == candidate.id)
             }
-            Label(l.t("installMedia.drive.internalExcluded"), systemImage: "info.circle").font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Card {
+                Toggle(isOn: Binding(get: { model.installMedia.showInternalPartitions }, set: { model.setShowInternalPartitions($0) })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(l.t("installMedia.expert.toggle")).fontWeight(.medium)
+                        Text(l.t("installMedia.expert.hint")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .toggleStyle(.checkbox)
+                .accessibilityIdentifier("installMedia.expert")
+                if state.showInternalPartitions {
+                    NoticeView(style: .warning, title: l.t("installMedia.expert.warningTitle"), message: l.t("installMedia.expert.warning"))
+                        .accessibilityIdentifier("installMedia.expert.warning")
+                    if !state.scanningDrives && !state.drives.contains(where: { $0.isPartition && $0.isEligible }) {
+                        Text(l.t("installMedia.expert.none")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("installMedia.expert.none")
+                    }
+                }
+            }
         }
     }
 }
@@ -418,12 +449,19 @@ struct InstallMediaDriveRow: View {
                 Image(systemName: candidate.isEligible ? (selected ? "largecircle.fill.circle" : "circle") : "lock.fill")
                     .foregroundStyle(candidate.isEligible ? Color.accentColor : Color.secondary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(drive.mediaName.ifEmpty(drive.device)).fontWeight(.medium)
-                    Text([l.fileSize(drive.sizeBytes), drive.busProtocol, drive.device].filter { !$0.isEmpty }.joined(separator: " · "))
-                        .font(.caption).foregroundStyle(.secondary)
-                    let names = drive.volumes.map(\.name).filter { !$0.isEmpty && $0 != "EFI" }
-                    if !names.isEmpty {
-                        Text(l.t("installMedia.drive.volumes", names.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary)
+                    if let partition = candidate.partition {
+                        Text(l.t("installMedia.partition.title", partition.name.ifEmpty(partition.device))).fontWeight(.medium)
+                        Text([l.fileSize(partition.sizeBytes), partition.content, partition.device, l.t("installMedia.partition.on", drive.mediaName.ifEmpty(drive.device))]
+                            .filter { !$0.isEmpty }.joined(separator: " · "))
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text(drive.mediaName.ifEmpty(drive.device)).fontWeight(.medium)
+                        Text([l.fileSize(drive.sizeBytes), drive.busProtocol, drive.device].filter { !$0.isEmpty }.joined(separator: " · "))
+                            .font(.caption).foregroundStyle(.secondary)
+                        let names = drive.volumes.map(\.name).filter { !$0.isEmpty && $0 != "EFI" }
+                        if !names.isEmpty {
+                            Text(l.t("installMedia.drive.volumes", names.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                     ForEach(Array(candidate.protections.enumerated()), id: \.offset) { _, protection in
                         Text(protectionText(protection)).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
@@ -437,7 +475,7 @@ struct InstallMediaDriveRow: View {
         }
         .buttonStyle(.plain)
         .disabled(!candidate.isEligible)
-        .accessibilityIdentifier("installMedia.drive.\(drive.device)")
+        .accessibilityIdentifier("installMedia.drive.\(candidate.id)")
         .accessibilityValue(candidate.isEligible ? (selected ? "selected" : "eligible") : "protected")
     }
 
@@ -451,6 +489,11 @@ struct InstallMediaDriveRow: View {
         case .holdsProtectedVolume(let name): return l.t("installMedia.protect.protectedVolume", name)
         case .timeMachine(let name): return l.t("installMedia.protect.timeMachine", name)
         case .tooSmall(let required): return l.t("installMedia.protect.tooSmall", l.fileSize(required))
+        case .apfsVolume: return l.t("installMedia.protect.apfs")
+        case .systemPartition: return l.t("installMedia.protect.system")
+        case .unsupportedFormat(let format): return l.t("installMedia.protect.format", format)
+        case .notMounted: return l.t("installMedia.protect.notMounted")
+        case .notEmpty(let count): return l.p("installMedia.protect.notEmpty", count)
         }
     }
 }
@@ -463,34 +506,59 @@ struct InstallMediaConfirmView: View {
     var body: some View {
         let l = model.l
         let state = model.installMedia
-        if let drive = state.confirmedDrive, let report = state.report {
+        if let candidate = state.confirmedCandidate, let report = state.report {
+            let drive = candidate.drive
+            let target = candidate.partition.map { $0.name.ifEmpty($0.device) } ?? drive.mediaName.ifEmpty(drive.device)
             VStack(alignment: .leading, spacing: 12) {
-                NoticeView(style: .warning, title: l.t("installMedia.confirm.title", drive.mediaName.ifEmpty(drive.device)),
-                           message: l.t("installMedia.confirm.message"))
+                NoticeView(style: .warning, title: l.t("installMedia.confirm.title", target),
+                           message: l.t(candidate.isPartition ? "installMedia.confirm.partitionMessage" : "installMedia.confirm.message"))
                     .accessibilityIdentifier("installMedia.confirm.warning")
+                if candidate.isPartition {
+                    NoticeView(style: .error, title: l.t("installMedia.confirm.internalTitle"),
+                               message: l.t(model.tools.environment.architecture == .arm64 ? "installMedia.confirm.internalAppleSilicon" : "installMedia.confirm.internalIntel"))
+                        .accessibilityIdentifier("installMedia.confirm.internal")
+                }
                 Card {
                     ToolStateRow(symbol: "externaldrive", color: .secondary, label: l.t("installMedia.confirm.drive"),
                                  value: "\(drive.mediaName.ifEmpty(drive.device)) · \(l.fileSize(drive.sizeBytes)) · \(drive.busProtocol) · \(drive.device)",
                                  id: "installMedia.confirm.drive")
-                    let names = drive.volumes.map(\.name).filter { !$0.isEmpty && $0 != "EFI" }
-                    ToolStateRow(symbol: "trash", color: .red, label: l.t("installMedia.confirm.erased"),
-                                 value: names.isEmpty ? l.t("installMedia.confirm.noVolumes") : names.joined(separator: ", "),
-                                 id: "installMedia.confirm.volumes")
+                    if let partition = candidate.partition {
+                        ToolStateRow(symbol: "trash", color: .red, label: l.t("installMedia.confirm.erased"),
+                                     value: "\(partition.name.ifEmpty(partition.device)) · \(l.fileSize(partition.sizeBytes)) · \(partition.device)",
+                                     id: "installMedia.confirm.volumes")
+                        let kept = drive.volumes.filter { $0.device.hasPrefix(drive.device + "s") && $0.device != partition.device }
+                            .map { $0.name.ifEmpty($0.content) }
+                        ToolStateRow(symbol: "lock", color: .green, label: l.t("installMedia.confirm.kept"),
+                                     value: kept.isEmpty ? "–" : kept.joined(separator: ", "), id: "installMedia.confirm.kept")
+                    } else {
+                        let names = drive.volumes.map(\.name).filter { !$0.isEmpty && $0 != "EFI" }
+                        ToolStateRow(symbol: "trash", color: .red, label: l.t("installMedia.confirm.erased"),
+                                     value: names.isEmpty ? l.t("installMedia.confirm.noVolumes") : names.joined(separator: ", "),
+                                     id: "installMedia.confirm.volumes")
+                    }
                     ToolStateRow(symbol: "app", color: .secondary, label: l.t("installMedia.confirm.installer"),
                                  value: [report.app.lastPathComponent, report.macOSVersion].compactMap { $0 }.joined(separator: " · "))
                 }
                 Card {
                     Text(l.t("installMedia.confirm.what")).font(.headline)
+                    let prefix = candidate.isPartition ? "installMedia.confirm.partitionStep" : "installMedia.confirm.step"
                     ForEach(1...4, id: \.self) { index in
-                        Label(l.t("installMedia.confirm.step\(index)"), systemImage: "\(index).circle").font(.callout)
+                        Label(l.t("\(prefix)\(index)"), systemImage: "\(index).circle").font(.callout)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Toggle(isOn: $model.installMedia.understood) {
-                    Text(l.t("installMedia.confirm.understood", drive.mediaName.ifEmpty(drive.device))).fixedSize(horizontal: false, vertical: true)
+                    Text(l.t("installMedia.confirm.understood", target)).fixedSize(horizontal: false, vertical: true)
                 }
                 .toggleStyle(.checkbox)
                 .accessibilityIdentifier("installMedia.understood")
+                if candidate.isPartition {
+                    Toggle(isOn: $model.installMedia.understoodInternal) {
+                        Text(l.t("installMedia.confirm.understoodInternal", target)).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .toggleStyle(.checkbox)
+                    .accessibilityIdentifier("installMedia.understoodInternal")
+                }
             }
         }
     }
@@ -507,8 +575,10 @@ struct InstallMediaWorkingView: View {
         VStack(alignment: .leading, spacing: 12) {
             NoticeView(style: .info, title: l.t("installMedia.working.title"), message: l.t("installMedia.working.message"))
             Card {
-                let stages: [(InstallMediaStage, String)] = [(.checkingInstaller, "checkingInstaller"), (.checkingDrive, "checkingDrive"),
-                                                             (.erasing, "erasing"), (.creating, "creating"), (.verifying, "verifying")]
+                let middle: [(InstallMediaStage, String)] = state.confirmedCandidate?.isPartition == true
+                    ? [(.erasingAndCreating, "erasingAndCreating")] : [(.erasing, "erasing"), (.creating, "creating")]
+                let stages: [(InstallMediaStage, String)] = [(.checkingInstaller, "checkingInstaller"), (.checkingDrive, "checkingDrive")]
+                    + middle + [(.verifying, "verifying")]
                 let current = stages.firstIndex { $0.0 == state.stage } ?? -1
                 ForEach(Array(stages.enumerated()), id: \.offset) { offset, item in
                     HStack(spacing: 8) {
@@ -527,7 +597,7 @@ struct InstallMediaWorkingView: View {
                             .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
                     }
                 }
-                if state.stage == .creating {
+                if state.stage == .creating || state.stage == .erasingAndCreating {
                     Text(l.t("installMedia.working.creatingHint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }

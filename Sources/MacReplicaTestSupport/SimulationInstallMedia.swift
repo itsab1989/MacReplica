@@ -5,8 +5,8 @@ import MacReplicaCore
 /// drives and Apple's `createinstallmedia` – all stand-ins working on folders inside the simulated Mac, so the whole
 /// flow, erase included, can be driven on screen without touching a real disk.
 ///
-/// Drives live in `state/drives/<disk>/` (`media`, `size`, `bus`, `volume`, `content`, `uuid`); a drive's volume is
-/// mounted when `Volumes/<volume>` exists. Switches: `state/erase-fails`, `state/createinstallmedia-fails` (their
+/// Drives live in `state/drives/<disk>/` (`media`, `size`, `bus`, `volume`, `content`, `uuid`, `partuuid`, optional
+/// `internal` and `removable`); each has one partition `<disk>s2`, mounted when `Volumes/<volume>` exists. Switches: `state/erase-fails`, `state/createinstallmedia-fails` (their
 /// text is the error), `state/unsigned` (the installer's signature fails), `state/offline` (Software Update fails).
 extension SimulationRoot {
     public func addInstallMedia() throws {
@@ -23,16 +23,29 @@ extension SimulationRoot {
                                     executable: false)
         // Far too small for any installer (the simulated installer is small, so the stick is smaller still).
         try addDrive("disk6", media: "Kingston DataTraveler", size: 1_000_000_000, volume: "KINGSTON")
+        // A card in the built-in reader: macOS calls it internal, but it is removable.
+        try addDrive("disk7", media: "Built In SDXC Reader", size: 63_864_569_856, volume: "EOS_DIGITAL", bus: "Secure Digital",
+                     isInternal: true, removable: true, content: "Windows_NTFS")
+        try SimulationBuilder.write("x", to: url.appendingPathComponent("Volumes/EOS_DIGITAL/DCIM/100CANON/IMG_0001.JPG"), executable: false)
+        // The Mac's own second SSD with one empty ExFAT partition (the expert option).
+        try addDrive("disk8", media: "APPLE SSD AP0512Z", size: 500_277_790_720, volume: "SPARE", bus: "Apple Fabric", isInternal: true,
+                     content: "Microsoft Basic Data")
     }
 
-    public func addDrive(_ disk: String, media: String, size: Int64, volume: String?, mounted: Bool = true) throws {
+    public func addDrive(_ disk: String, media: String, size: Int64, volume: String?, mounted: Bool = true, bus: String = "USB",
+                         isInternal: Bool = false, removable: Bool = false, content: String = "Apple_HFS") throws {
         let folder = state.appendingPathComponent("drives/\(disk)")
         try SimulationBuilder.write(media, to: folder.appendingPathComponent("media"), executable: false)
         try SimulationBuilder.write(String(size), to: folder.appendingPathComponent("size"), executable: false)
-        try SimulationBuilder.write("USB", to: folder.appendingPathComponent("bus"), executable: false)
+        try SimulationBuilder.write(bus, to: folder.appendingPathComponent("bus"), executable: false)
         try SimulationBuilder.write(volume ?? "", to: folder.appendingPathComponent("volume"), executable: false)
-        try SimulationBuilder.write("Apple_HFS", to: folder.appendingPathComponent("content"), executable: false)
+        try SimulationBuilder.write(content, to: folder.appendingPathComponent("content"), executable: false)
         try SimulationBuilder.write(UUID().uuidString, to: folder.appendingPathComponent("uuid"), executable: false)
+        try SimulationBuilder.write(UUID().uuidString, to: folder.appendingPathComponent("partuuid"), executable: false)
+        for (flag, on) in [("internal", isInternal), ("removable", removable)] {
+            let file = folder.appendingPathComponent(flag)
+            if on { try SimulationBuilder.write("1", to: file, executable: false) } else { try? FileManager.default.removeItem(at: file) }
+        }
         if let volume, mounted {
             try FileManager.default.createDirectory(at: url.appendingPathComponent("Volumes/\(volume)"), withIntermediateDirectories: true)
         }
@@ -133,8 +146,8 @@ enum FakeInstallMedia {
     partitions() {
       local d="$1" name; name="$(val "$d" volume)"
       [ -n "$name" ] || return 0
-      printf '<dict><key>DeviceIdentifier</key><string>%ss2</string><key>Content</key><string>%s</string><key>VolumeName</key><string>%s</string><key>VolumeUUID</key><string>%s</string>' \
-        "$d" "$(val "$d" content)" "$(printf '%s' "$name" | esc)" "$(val "$d" uuid)"
+      printf '<dict><key>DeviceIdentifier</key><string>%ss2</string><key>Content</key><string>%s</string><key>VolumeName</key><string>%s</string><key>VolumeUUID</key><string>%s</string><key>DiskUUID</key><string>%s</string><key>Size</key><integer>%s</integer>' \
+        "$d" "$(val "$d" content)" "$(printf '%s' "$name" | esc)" "$(val "$d" uuid)" "$(val "$d" partuuid)" "$(val "$d" size)"
       if [ -d "$V/$name" ]; then printf '<key>MountPoint</key><string>%s</string>' "$(printf '%s' "$V/$name" | esc)"; fi
       printf '</dict>'
     }
@@ -146,7 +159,7 @@ enum FakeInstallMedia {
     case "${1:-}" in
       list)
         head_plist; printf '<dict><key>AllDisksAndPartitions</key><array>'
-        if [ "${3:-}" = external ]; then for d in $(ls "$D" 2>/dev/null); do entry "$d"; done
+        if [ -z "${3:-}" ] || [ "${3:-}" = external ]; then for d in $(ls "$D" 2>/dev/null); do entry "$d"; done
         elif [ -n "${3:-}" ] && [ -d "$D/${3}" ]; then entry "$3"; fi
         printf '</array></dict></plist>\n' ;;
       info)
@@ -158,8 +171,25 @@ enum FakeInstallMedia {
         fi
         [ -n "$disk" ] && [ -d "$D/$disk" ] || { echo "Could not find disk: $disk" >&2; exit 1; }
         head_plist
-        printf '<dict><key>DeviceIdentifier</key><string>%s</string><key>MediaName</key><string>%s</string><key>TotalSize</key><integer>%s</integer><key>BusProtocol</key><string>%s</string><key>Internal</key><false/><key>VirtualOrPhysical</key><string>Physical</string><key>WritableMedia</key><true/><key>WholeDisk</key><true/></dict></plist>\n' \
-          "$disk" "$(val "$disk" media | esc)" "$(val "$disk" size)" "$(val "$disk" bus)" ;;
+        internal='<false/>'; [ -f "$D/$disk/internal" ] && internal='<true/>'
+        removable='<false/>'; [ -f "$D/$disk/removable" ] && removable='<true/>'
+        printf '<dict><key>DeviceIdentifier</key><string>%s</string><key>MediaName</key><string>%s</string><key>TotalSize</key><integer>%s</integer><key>BusProtocol</key><string>%s</string><key>Internal</key>%s<key>RemovableMedia</key>%s<key>VirtualOrPhysical</key><string>Physical</string><key>WritableMedia</key><true/><key>WholeDisk</key><true/></dict></plist>\n' \
+          "$disk" "$(val "$disk" media | esc)" "$(val "$disk" size)" "$(val "$disk" bus)" "$internal" "$removable" ;;
+      eraseVolume)
+        # eraseVolume JHFS+ <name> <partition UUID>: only the partition with that identifier.
+        name="${3:-}"; target="${4:-}"
+        for d in $(ls "$D" 2>/dev/null); do
+          if [ "$(val "$d" partuuid)" = "$target" ]; then
+            echo "Started erase on ${d}s2"
+            if [ -f "$S/erase-fails" ]; then cat "$S/erase-fails" >&2; exit 1; fi
+            old="$(val "$d" volume)"; if [ -n "$old" ]; then rm -rf "$V/$old"; fi
+            printf '%s' "$name" > "$D/$d/volume"; printf 'Apple_HFS' > "$D/$d/content"; uuidgen > "$D/$d/uuid"
+            mkdir -p "$V/$name"
+            echo "Finished erase on ${d}s2 ($name)"
+            exit 0
+          fi
+        done
+        echo "Could not find disk: $target" >&2; exit 1 ;;
       eraseDisk)
         name="${3:-}"; disk="${5:-}"
         [ -n "$disk" ] && [ -d "$D/$disk" ] || { echo "Could not find disk: $disk" >&2; exit 1; }

@@ -25,6 +25,9 @@ public enum PrivilegedOperation: Equatable, Sendable {
     /// Apple's `createinstallmedia` of an installer in Applications, onto the volume MacReplica just erased
     /// (see `isInstallMediaTool`, `isInstallMediaVolume`).
     case createInstallMedia(tool: URL, volume: URL, applicationPath: URL?)
+    /// Expert option: erases one partition – addressed by its partition UUID, which no other partition has – as Mac
+    /// OS Extended with MacReplica's random name. Only directly before `createInstallMedia` on that name.
+    case eraseVolumeForInstaller(partitionUUID: String, name: String)
 
     /// The executable and arguments for this operation. Only these fixed system tools can ever be run with
     /// administrator rights.
@@ -44,6 +47,7 @@ public enum PrivilegedOperation: Equatable, Sendable {
         case .requireInstallMediaMarker(let url): return ["/bin/test", "-f", url.path]
         case .createInstallMedia(let tool, let volume, let applicationPath):
             return [tool.path, "--volume", volume.path, "--nointeraction"] + (applicationPath.map { ["--applicationpath", $0.path] } ?? [])
+        case .eraseVolumeForInstaller(let uuid, let name): return ["/usr/sbin/diskutil", "eraseVolume", "JHFS+", name, uuid]
         }
     }
 
@@ -55,6 +59,7 @@ public enum PrivilegedOperation: Equatable, Sendable {
         case .forgetLoaderReceipt: return []
         case .requireInstallMediaMarker(let url): return [url]
         case .createInstallMedia(let tool, let volume, let applicationPath): return [tool, volume] + (applicationPath.map { [$0] } ?? [])
+        case .eraseVolumeForInstaller: return []
         }
     }
 }
@@ -116,13 +121,22 @@ extension PrivilegedOperation {
         url.standardizedFileURL.path == tool.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().standardizedFileURL.path
     }
 
-    /// `createinstallmedia` only directly after the marker check of the same volume.
+    /// `createinstallmedia` only directly after the marker check of the same volume, or directly after erasing the
+    /// partition that gets that volume's name; and a partition is erased only directly before `createinstallmedia`.
     static func checkInstallMediaOrder(_ operations: [PrivilegedOperation]) throws {
         for (index, operation) in operations.enumerated() {
-            guard case .createInstallMedia(_, let volume, _) = operation else { continue }
-            guard index > 0, case .requireInstallMediaMarker(let marker) = operations[index - 1],
-                  marker.deletingLastPathComponent().standardizedFileURL.path == volume.standardizedFileURL.path else {
-                throw PrivilegedError.invalidPath(volume.path)
+            switch operation {
+            case .createInstallMedia(_, let volume, _):
+                guard index > 0 else { throw PrivilegedError.invalidPath(volume.path) }
+                switch operations[index - 1] {
+                case .requireInstallMediaMarker(let marker)
+                    where marker.deletingLastPathComponent().standardizedFileURL.path == volume.standardizedFileURL.path: continue
+                case .eraseVolumeForInstaller(_, let name) where volume.lastPathComponent == name: continue
+                default: throw PrivilegedError.invalidPath(volume.path)
+                }
+            case .eraseVolumeForInstaller(let uuid, _):
+                guard index + 1 < operations.count, case .createInstallMedia = operations[index + 1] else { throw PrivilegedError.invalidPath(uuid) }
+            default: continue
             }
         }
     }
@@ -137,6 +151,8 @@ extension PrivilegedOperation {
         case .createInstallMedia(let tool, let volume, let applicationPath):
             return Self.isInstallMediaTool(tool, applicationFolders: applicationFolders) && Self.isInstallMediaVolume(volume, volumesRoot: volumesRoot)
                 && (applicationPath.map { Self.isInstallMediaApplication($0, tool: tool) } ?? true)
+        case .eraseVolumeForInstaller(let uuid, let name):
+            return InstallMediaDrive.isPartitionUUID(uuid) && Self.isInstallMediaVolumeName(name)
         default: return true
         }
     }
@@ -199,7 +215,7 @@ public struct AppleScriptPrivilegedExecutor: PrivilegedExecuting {
             for url in operation.paths {
                 try validate(url)
             }
-            guard operation.isAllowed() else { throw PrivilegedError.invalidPath(operation.paths.first?.path ?? "") }
+            guard operation.isAllowed() else { throw PrivilegedError.invalidPath(operation.paths.first?.path ?? "\(operation)") }
             let argv = operation.argv
             arguments.append(String(argv.count))
             arguments.append(contentsOf: argv)
@@ -243,15 +259,18 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
     /// The simulated Mac's `/Volumes` and Applications folders, which the install-media operations are checked against.
     public var volumesRoot: URL
     public var applicationFolders: [URL]
+    /// The simulated Mac's diskutil stand-in, which erases a simulated partition.
+    public var diskutil: String
 
     public init(packageInstaller: (@Sendable (URL) throws -> Void)? = nil, serviceStarter: (@Sendable (URL) throws -> Void)? = nil,
                 toolRunner: (@Sendable ([String]) throws -> Void)? = nil, volumesRoot: URL = URL(fileURLWithPath: "/Volumes"),
-                applicationFolders: [URL] = [URL(fileURLWithPath: "/Applications")]) {
+                applicationFolders: [URL] = [URL(fileURLWithPath: "/Applications")], diskutil: String = "/usr/sbin/diskutil") {
         self.packageInstaller = packageInstaller
         self.serviceStarter = serviceStarter
         self.toolRunner = toolRunner
         self.volumesRoot = volumesRoot
         self.applicationFolders = applicationFolders
+        self.diskutil = diskutil
     }
 
     public func run(_ operations: [PrivilegedOperation], reason: String) async throws {
@@ -291,6 +310,10 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
                 }
                 guard let toolRunner else { throw PrivilegedError.failed("no tool runner") }
                 try toolRunner(operation.argv)
+            case .eraseVolumeForInstaller(let uuid, _):
+                guard operation.isAllowed(volumesRoot: volumesRoot, applicationFolders: applicationFolders) else { throw PrivilegedError.invalidPath(uuid) }
+                guard let toolRunner else { throw PrivilegedError.failed("no tool runner") }
+                try toolRunner([diskutil] + operation.argv.dropFirst())
             }
         }
     }

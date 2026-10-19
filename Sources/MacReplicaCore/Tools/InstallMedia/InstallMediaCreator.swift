@@ -10,6 +10,9 @@ public enum InstallMediaStage: Equatable, Sendable {
     case erasing
     /// The password dialog, then Apple's `createinstallmedia` (it reports no progress MacReplica could show).
     case creating
+    /// Expert option (a partition): the password dialog, then erasing the partition and `createinstallmedia`, in one
+    /// administrator step.
+    case erasingAndCreating
     case verifying
 }
 
@@ -30,7 +33,7 @@ public enum InstallMediaError: Error, Equatable, Sendable {
 
 /// One check of the finished drive.
 public struct InstallMediaCheck: Equatable, Sendable {
-    public enum Item: String, Sendable { case volumeOnDrive, format, installerApp, installerVersion, startupFiles, blessed, signature }
+    public enum Item: String, Sendable { case volumeOnDrive, format, installerApp, installerVersion, startupFiles, blessed, signature, otherPartitionsUntouched }
     public var item: Item
     public var passed: Bool
     public var detail: String
@@ -105,6 +108,12 @@ public struct InstallMediaCreator: Sendable {
 
     public func create(installer report: InstallerAppReport, on confirmed: InstallMediaDrive,
                        stage: @escaping @Sendable (InstallMediaStage) -> Void) async throws -> InstallMediaResult {
+        try await create(installer: report, on: DriveCandidate(drive: confirmed, protections: []), stage: stage)
+    }
+
+    /// The whole drive, or – the expert option – only the candidate's partition.
+    public func create(installer report: InstallerAppReport, on confirmed: DriveCandidate,
+                       stage: @escaping @Sendable (InstallMediaStage) -> Void) async throws -> InstallMediaResult {
         // A simulated Mac never reaches the real diskutil or a real drive.
         if layout.isSimulation, layout.diskutil == SystemLayout.realDiskutil {
             throw InstallMediaError.refused("simulated Mac without a stand-in diskutil")
@@ -114,39 +123,77 @@ public struct InstallMediaCreator: Sendable {
         guard problems.isEmpty, let tool = report.createInstallMedia else { throw InstallMediaError.installerUnusable(problems) }
 
         stage(.checkingDrive)
-        let drive: InstallMediaDrive
-        do { drive = try await scanner.revalidate(confirmed, required: report.requiredBytes) } catch let error as InstallMediaDriveError {
+        let current: DriveCandidate
+        do { current = try await scanner.revalidate(confirmed, required: report.requiredBytes) } catch let error as InstallMediaDriveError {
             throw InstallMediaError.drive(error)
         }
+        let drive = current.drive
         guard InstallMediaDrive.isWholeDiskIdentifier(drive.device) else { throw InstallMediaError.drive(.driveChanged) }
 
-        stage(.erasing)
         let name = Self.makeVolumeName()
-        let erase = try await runner.run(Command(executable: layout.diskutil, arguments: ["eraseDisk", "JHFS+", name, "GPT", drive.device],
-                                                 environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 900))
-        guard erase.succeeded else {
-            throw InstallMediaError.eraseFailed(layout.redact(ErrorClassifier.technicalDetail(erase.combinedOutput, layout: layout, maxLines: 3)))
-        }
         let volume = layout.volumesRoot.appendingPathComponent(name)
-        guard try await volumeMount(named: name, on: drive.device) == volume.path else { throw InstallMediaError.volumeMissing }
-        let marker = volume.appendingPathComponent(".MacReplicaInstallTarget-\(UUID().uuidString)")
-        do { try Data().write(to: marker) } catch { throw InstallMediaError.volumeMissing }
-
-        stage(.creating)
         let applicationPath = report.needsApplicationPath ? report.app : nil
-        do {
-            try await privileged.run([.requireInstallMediaMarker(marker), .createInstallMedia(tool: tool, volume: volume, applicationPath: applicationPath)],
-                                     reason: "MacReplica wants to create a bootable macOS installer on “\(drive.mediaName)”.")
-        } catch PrivilegedError.denied {
-            throw InstallMediaError.passwordDenied
-        } catch PrivilegedError.failed(let output) {
-            throw InstallMediaError.createFailed(layout.redact(ErrorClassifier.technicalDetail(output, layout: layout, maxLines: 4)))
-        } catch {
-            throw InstallMediaError.createFailed(layout.redact(String(describing: error)))
+        let create = PrivilegedOperation.createInstallMedia(tool: tool, volume: volume, applicationPath: applicationPath)
+        let operations: [PrivilegedOperation]
+        let reason: String
+        if let partition = current.partition {
+            // Only this partition, by the identifier no other partition has; erased in the same administrator step
+            // that runs createinstallmedia, so nothing else can take its place in between.
+            guard let uuid = partition.partitionUUID, InstallMediaDrive.isPartitionUUID(uuid) else { throw InstallMediaError.drive(.driveChanged) }
+            stage(.erasingAndCreating)
+            operations = [.eraseVolumeForInstaller(partitionUUID: uuid, name: name), create]
+            reason = "MacReplica wants to erase the partition “\(partition.name)” and create a bootable macOS installer on it."
+        } else {
+            stage(.erasing)
+            let erase = try await runner.run(Command(executable: layout.diskutil, arguments: ["eraseDisk", "JHFS+", name, "GPT", drive.device],
+                                                     environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 900))
+            guard erase.succeeded else {
+                throw InstallMediaError.eraseFailed(layout.redact(ErrorClassifier.technicalDetail(erase.combinedOutput, layout: layout, maxLines: 3)))
+            }
+            guard try await volumeMount(named: name, on: drive.device) == volume.path else { throw InstallMediaError.volumeMissing }
+            let marker = volume.appendingPathComponent(".MacReplicaInstallTarget-\(UUID().uuidString)")
+            do { try Data().write(to: marker) } catch { throw InstallMediaError.volumeMissing }
+            stage(.creating)
+            operations = [.requireInstallMediaMarker(marker), create]
+            reason = "MacReplica wants to create a bootable macOS installer on “\(drive.mediaName)”."
         }
+
+        // createinstallmedia (as root) leaves the installer's own disk image attached (seen with macOS 14's tool);
+        // MacReplica detaches what was not attached before, as the user.
+        let image = report.app.appendingPathComponent("Contents/SharedSupport/SharedSupport.dmg").path
+        let environment = layout.processEnvironment(homebrewPrefix: nil, askpass: nil)
+        let attachedBefore = Set(await DownloadInstaller.attachments(of: image, runner: runner, hdiutil: layout.hdiutil, environment: environment).map(\.device))
+        var failure: InstallMediaError?
+        do {
+            try await privileged.run(operations, reason: reason)
+        } catch PrivilegedError.denied {
+            failure = .passwordDenied
+        } catch PrivilegedError.failed(let output) {
+            failure = .createFailed(layout.redact(ErrorClassifier.technicalDetail(output, layout: layout, maxLines: 4)))
+        } catch {
+            failure = .createFailed(layout.redact(String(describing: error)))
+        }
+        await DownloadInstaller.detachAttachments(of: image, keeping: attachedBefore, runner: runner, hdiutil: layout.hdiutil, environment: environment)
+        if let failure { throw failure }
 
         stage(.verifying)
-        return await verify(drive: drive, installer: report)
+        return await verify(drive: drive, partition: current.partition, installer: report)
+    }
+
+    /// After a failure: whether the drive (or the partition) was erased – its volumes are no longer the ones it had.
+    public func wasErased(_ confirmed: DriveCandidate) async -> Bool {
+        guard let now = try? await partitions(of: confirmed.drive.device) else { return true }
+        if let partition = confirmed.partition {
+            guard let after = now.first(where: { $0.partitionUUID == partition.partitionUUID }) else { return true }
+            return after.name != partition.name || after.content != partition.content
+        }
+        let before = confirmed.drive.volumes.filter { InstallMediaDriveScanner.isPartition($0, of: confirmed.drive) }
+        return Self.partitionSummary(before) != Self.partitionSummary(now.filter { InstallMediaDriveScanner.isPartition($0, of: confirmed.drive) })
+    }
+
+    /// The partitions as they matter for “unchanged”: identifier, partition UUID, format and name.
+    static func partitionSummary(_ volumes: [InstallMediaDrive.Volume]) -> [String] {
+        volumes.map { "\($0.device)|\($0.partitionUUID ?? "-")|\($0.content)|\($0.name)" }.sorted()
     }
 
     /// The mount point of the volume called `name` on `device`, read from diskutil.
@@ -165,10 +212,21 @@ public struct InstallMediaCreator: Sendable {
     /// Reads the finished drive: Apple's installer volume on the confirmed drive, Mac OS Extended, the installer app
     /// in the version that was used, its startup files, the startup folder set, and Apple's signature intact. A
     /// drive can only really be proven by starting a Mac from it; this is everything short of that.
-    public func verify(drive: InstallMediaDrive, installer: InstallerAppReport) async -> InstallMediaResult {
+    public func verify(drive: InstallMediaDrive, partition: InstallMediaDrive.Volume? = nil, installer: InstallerAppReport) async -> InstallMediaResult {
         var checks: [InstallMediaCheck] = []
         let volumes = (try? await partitions(of: drive.device)) ?? []
-        let installerVolume = volumes.first { $0.name == installer.displayName && $0.mountPoint != nil }
+        // For a partition: the installer must be on exactly that partition, and every other partition unchanged.
+        let installerVolume = volumes.first { $0.name == installer.displayName && $0.mountPoint != nil
+            && (partition == nil || $0.partitionUUID == partition?.partitionUUID) }
+        if let partition {
+            let others = { (list: [InstallMediaDrive.Volume]) in
+                list.filter { InstallMediaDriveScanner.isPartition($0, of: drive) && $0.partitionUUID != partition.partitionUUID }
+            }
+            let before = Self.partitionSummary(others(drive.volumes))
+            let after = Self.partitionSummary(others(volumes))
+            checks.append(.init(item: .otherPartitionsUntouched, passed: !volumes.isEmpty && before == after,
+                                detail: "\(after.count) / \(before.count)"))
+        }
         checks.append(.init(item: .volumeOnDrive, passed: installerVolume != nil,
                             detail: installerVolume.map { "\($0.device): \($0.name)" } ?? "no volume “\(installer.displayName)” on \(drive.device)"))
         guard let installerVolume, let mount = installerVolume.mountPoint else {

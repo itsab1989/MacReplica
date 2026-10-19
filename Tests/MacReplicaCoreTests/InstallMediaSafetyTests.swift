@@ -19,22 +19,45 @@ final class FakeDrives: @unchecked Sendable {
     var blessOutput = "finderinfo[0]:      2 => Blessed System Folder is /Volumes/Install macOS Sonoma/System/Library/CoreServices"
     var codesignFails = false
     private(set) var erased: [(device: String, name: String)] = []
+    private(set) var erasedPartitions: [String] = []
 
     init(volumesRoot: URL) { self.volumesRoot = volumesRoot }
 
     static func usbStick(_ device: String = "disk4", name: String = "SanDisk Ultra", size: Int64 = 32_000_000_000, isInternal: Bool = false,
-                         virtual: Bool = false, writable: Bool = true, bus: String = "USB") -> [String: Any] {
-        ["DeviceIdentifier": device, "MediaName": name, "TotalSize": size, "BusProtocol": bus, "Internal": isInternal,
+                         removable: Bool = false, virtual: Bool = false, writable: Bool = true, bus: String = "USB") -> [String: Any] {
+        ["DeviceIdentifier": device, "MediaName": name, "TotalSize": size, "BusProtocol": bus, "Internal": isInternal, "RemovableMedia": removable,
          "VirtualOrPhysical": virtual ? "Virtual" : "Physical", "WritableMedia": writable, "WholeDisk": true]
     }
 
-    func add(_ device: String, info: [String: Any], volumes: [(name: String, mount: String?, content: String)] = []) {
+    func add(_ device: String, info: [String: Any], volumes: [(name: String, mount: String?, content: String)] = [], partitionSize: Int64 = 30_000_000_000) {
         disks[device] = Disk(info: info, partitions: volumes.enumerated().map { index, volume in
             var partition: [String: Any] = ["DeviceIdentifier": "\(device)s\(index + 1)", "VolumeName": volume.name, "Content": volume.content,
-                                            "VolumeUUID": UUID().uuidString]
+                                            "VolumeUUID": UUID().uuidString, "DiskUUID": UUID().uuidString, "Size": partitionSize]
             if let mount = volume.mount { partition["MountPoint"] = mount }
             return partition
         })
+    }
+
+    /// `diskutil eraseVolume JHFS+ <name> <partition UUID>`, as the administrator step runs it.
+    func eraseVolume(_ argv: [String]) throws {
+        lock.lock(); defer { lock.unlock() }
+        guard argv.count == 5, argv[1] == "eraseVolume", argv[2] == "JHFS+" else { throw PrivilegedError.failed("usage") }
+        let name = argv[3], uuid = argv[4]
+        for (device, disk) in disks {
+            guard let index = disk.partitions.firstIndex(where: { $0["DiskUUID"] as? String == uuid }) else { continue }
+            var partition = disk.partitions[index]
+            if let old = partition["MountPoint"] as? String { try? FileManager.default.removeItem(atPath: old) }
+            let mount = volumesRoot.appendingPathComponent(name)
+            try FileManager.default.createDirectory(at: mount, withIntermediateDirectories: true)
+            partition["VolumeName"] = name
+            partition["Content"] = "Apple_HFS"
+            partition["MountPoint"] = mount.path
+            partition["VolumeUUID"] = UUID().uuidString
+            disks[device]?.partitions[index] = partition
+            erasedPartitions.append(uuid)
+            return
+        }
+        throw PrivilegedError.failed("Could not find disk: \(uuid)")
     }
 
     func xml(_ object: Any) -> String {
@@ -57,7 +80,7 @@ final class FakeDrives: @unchecked Sendable {
             guard let disk = disks[args.last ?? ""] else { return CommandResult(exitCode: 1, stdout: "", stderr: "Could not find disk") }
             return CommandResult(exitCode: 0, stdout: xml(disk.info), stderr: "")
         case "list":
-            let wanted = args.last == "external" ? nil : args.last
+            let wanted = args.count >= 3 && args[2] != "external" ? args[2] : nil
             var entries: [[String: Any]] = disks.filter { wanted == nil || $0.key == wanted }.map { device, disk in
                 ["DeviceIdentifier": device, "Content": "GUID_partition_scheme", "Size": disk.info["TotalSize"] ?? 0, "Partitions": disk.partitions]
             }
@@ -157,12 +180,13 @@ struct InstallMediaSafetyTests {
         let candidates = try await s.scanner.scan(required: 16 * Self.gib)
         let byDevice = Dictionary(uniqueKeysWithValues: candidates.map { ($0.drive.device, $0.protections) })
         #expect(byDevice["disk4"] == [])
-        #expect(byDevice["disk5"] == [.internalDisk])
+        // The Mac's own disks are not offered as a whole (only their empty partitions, as the expert option).
+        #expect(byDevice["disk5"] == nil)
         #expect(byDevice["disk6"] == [.diskImage])
         #expect(byDevice["disk7"] == [.readOnly])
         #expect(byDevice["disk8"] == [.tooSmall(required: 16 * Self.gib)])
         #expect(byDevice["disk0"] == [.startupDisk])
-        #expect(byDevice["disk9"] == [.internalDisk])
+        #expect(byDevice["disk9"] == nil)
         #expect(candidates.filter(\.isEligible).map(\.drive.device) == ["disk4"])
         #expect(candidates.first { $0.id == "disk4" }?.drive.mediaName == "SanDisk Ultra")
 
@@ -299,7 +323,9 @@ struct InstallMediaSafetyTests {
         s.drives.add("disk4", info: FakeDrives.usbStick("disk4"), volumes: [("STICK", nil, "Apple_HFS")])
         try prepare(s)
         let drives = s.drives
-        let direct = DirectPrivilegedExecutor(toolRunner: { argv in try drives.createInstallMedia(argv, installerName: "Install macOS Sonoma", appVersion: "19.8.9") },
+        let direct = DirectPrivilegedExecutor(toolRunner: { argv in
+                                                  if argv.count > 1, argv[1] == "eraseVolume" { try drives.eraseVolume(argv) }
+                                                  else { try drives.createInstallMedia(argv, installerName: "Install macOS Sonoma", appVersion: "19.8.9") } },
                                               volumesRoot: s.layout.volumesRoot, applicationFolders: s.layout.applicationFolders)
         let recorder = PrivilegedRecorder(direct)
         let inspector = InstallerInspector(layout: s.layout, runner: s.runner, environment: ToolEnvironment(macOSVersion: "27.0.1", architecture: .arm64), hasRosetta: false)
@@ -331,7 +357,7 @@ struct InstallMediaSafetyTests {
         guard case .requireInstallMediaMarker(let marker) = f.recorder.calls[0][0],
               case .createInstallMedia(_, let volume, let applicationPath) = f.recorder.calls[0][1] else { Issue.record("steps"); return }
         #expect(volume.lastPathComponent == erase.arguments[2])
-        #expect(marker.deletingLastPathComponent() == volume)
+        #expect(marker.deletingLastPathComponent().path == volume.path)
         #expect(applicationPath == nil)
         #expect(result.verification == .verified)
         #expect(result.checks.allSatisfy { $0.passed })

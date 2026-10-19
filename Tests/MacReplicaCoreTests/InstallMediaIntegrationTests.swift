@@ -59,7 +59,10 @@ struct InstallMediaIntegrationTests {
         #expect(creator.inspector.problems(of: report) == [])
 
         let drives = try await creator.scanner.scan(required: report.requiredBytes)
-        #expect(drives.map(\.id) == ["disk4", "disk5", "disk6"])
+        // disk7 is a card in the built-in reader (internal but removable); disk8, the Mac's own second SSD, is not
+        // offered as a whole.
+        #expect(drives.map(\.id) == ["disk4", "disk5", "disk6", "disk7"])
+        #expect(drives[3].isEligible && drives[3].drive.isRemovable)
         #expect(drives[0].isEligible)
         #expect(drives[1].protections == [.holdsProtectedVolume("Backup")])
         #expect(drives[2].protections == [.tooSmall(required: report.requiredBytes)])
@@ -118,5 +121,26 @@ struct InstallMediaIntegrationTests {
         let offline = try Self.mac("im-offline")
         try offline.root.setFlag("offline", true)
         await #expect(throws: InstallMediaError.self) { try await offline.creator.download(Self.sonoma, progress: { _ in }) }
+    }
+
+    /// The expert option end to end on the simulated Mac: only the empty partition of its internal SSD is erased.
+    @Test func anEmptyInternalPartitionBecomesAnInstaller() async throws {
+        let mac = try Self.mac("im-partition")
+        var creator = mac.creator
+        creator.scanner.includeInternalPartitions = true
+        let app = try await creator.download(Self.sonoma, progress: { _ in })
+        let report = await creator.inspector.inspect(app)
+        let candidates = try await creator.scanner.scan(required: report.requiredBytes)
+        let spare = try #require(candidates.first { $0.id == "disk8s2" })
+        #expect(spare.isPartition && spare.isEligible)
+        let result = try await creator.create(installer: report, on: spare, stage: { _ in })
+        #expect(result.verification == .verified)
+        #expect(result.checks.contains { $0.item == .otherPartitionsUntouched && $0.passed })
+        let calls = try String(contentsOf: mac.root.url.appendingPathComponent("state/calls.log"), encoding: .utf8)
+        #expect(calls.contains("diskutil eraseVolume JHFS+ MRINSTALL-"))
+        #expect(!calls.contains("eraseDisk"))
+        // The other drives are untouched.
+        #expect(FileManager.default.fileExists(atPath: mac.layout.volumesRoot.appendingPathComponent("STICK").path))
+        #expect(FileManager.default.fileExists(atPath: mac.layout.volumesRoot.appendingPathComponent("EOS_DIGITAL/DCIM/100CANON/IMG_0001.JPG").path))
     }
 }

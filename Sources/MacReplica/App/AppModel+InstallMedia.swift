@@ -21,7 +21,13 @@ struct InstallMediaState {
     var scanningDrives = false
     var driveProblem: String?
     var selectedDrive: String?
+    /// Expert option: list empty partitions of internal disks.
+    var showInternalPartitions = false
     var understood = false
+    /// The second confirmation an internal partition needs.
+    var understoodInternal = false
+    /// The final question before erasing an internal partition.
+    var askingFinalConfirmation = false
     var stage: InstallMediaStage?
     var startedAt: Date?
     var result: InstallMediaResult?
@@ -30,7 +36,10 @@ struct InstallMediaState {
     var driveErased = false
     var task: Task<Void, Never>?
 
-    var confirmedDrive: InstallMediaDrive? { drives.first { $0.id == selectedDrive && $0.isEligible }?.drive }
+    var confirmedCandidate: DriveCandidate? { drives.first { $0.id == selectedDrive && $0.isEligible } }
+    var confirmedDrive: InstallMediaDrive? { confirmedCandidate?.drive }
+    /// Everything needed before “Erase and Create Installer” can be pressed.
+    var readyToCreate: Bool { understood && (confirmedCandidate?.isPartition == true ? understoodInternal : true) }
 }
 
 extension AppModel {
@@ -43,7 +52,8 @@ extension AppModel {
         var protected = [Bundle.main.bundleURL]
         if let app = installMedia.report?.app { protected.append(app) }
         if let backup = defaults.string(forKey: "lastBackup") { protected.append(URL(fileURLWithPath: backup)) }
-        return InstallMediaDriveScanner(layout: services.layout, runner: services.runner, protectedPaths: protected)
+        return InstallMediaDriveScanner(layout: services.layout, runner: services.runner, protectedPaths: protected,
+                                        includeInternalPartitions: installMedia.showInternalPartitions)
     }
 
     var installMediaCreator: InstallMediaCreator {
@@ -69,6 +79,20 @@ extension AppModel {
         installMedia.catalog = installerCatalogLoader.cached()
         screen = .installMedia
         refreshInstallerCatalog()
+    }
+
+    /// Back to the start screen from any step except while the drive is written (that cannot be stopped safely).
+    func installMediaGoHome() {
+        guard installMedia.step != .working else { return }
+        installMedia.task?.cancel()
+        installMedia = InstallMediaState()
+        goHome()
+    }
+
+    func setShowInternalPartitions(_ on: Bool) {
+        installMedia.showInternalPartitions = on
+        installMedia.selectedDrive = nil
+        scanDrives()
     }
 
     func closeInstallMedia() {
@@ -201,6 +225,7 @@ extension AppModel {
     func continueToConfirm() {
         guard installMedia.confirmedDrive != nil else { return }
         installMedia.understood = false
+        installMedia.understoodInternal = false
         installMedia.step = .confirm
     }
 
@@ -216,9 +241,17 @@ extension AppModel {
     }
 
     /// Erases the confirmed drive and creates the installer – once; a failure is shown, never retried by itself.
+    /// The button: an internal partition gets one more question first.
+    func requestCreateInstallMedia() {
+        guard installMedia.readyToCreate, let candidate = installMedia.confirmedCandidate else { return }
+        if candidate.isPartition { installMedia.askingFinalConfirmation = true } else { createInstallMedia() }
+    }
+
     func createInstallMedia() {
-        guard installMedia.understood, let drive = installMedia.confirmedDrive, let report = installMedia.report,
+        installMedia.askingFinalConfirmation = false
+        guard installMedia.readyToCreate, let candidate = installMedia.confirmedCandidate, let report = installMedia.report,
               let release = installMedia.selected else { return }
+        let drive = candidate.drive
         installMedia.step = .working
         installMedia.stage = nil
         installMedia.startedAt = Date()
@@ -226,40 +259,41 @@ extension AppModel {
         installMedia.failure = nil
         installMedia.driveErased = false
         let creator = installMediaCreator
-        appLog.info("Install media: creating \(report.app.lastPathComponent) on \(drive.device) (\(drive.busProtocol), \(drive.sizeBytes) bytes)", component: .tools)
+        appLog.info("Install media: creating \(report.app.lastPathComponent) on \(candidate.partition?.device ?? drive.device) (\(candidate.isPartition ? "partition of internal disk" : drive.busProtocol), \(candidate.partition?.sizeBytes ?? drive.sizeBytes) bytes)", component: .tools)
         // The Mac must not go to sleep while the drive is written.
         let activity = ProcessInfo.processInfo.beginActivity(options: [.idleSystemSleepDisabled, .userInitiated], reason: "Creating a macOS installer")
         installMedia.task = Task {
             defer { ProcessInfo.processInfo.endActivity(activity) }
             do {
-                let result = try await creator.create(installer: report, on: drive) { stage in
-                    Task { @MainActor in
-                        self.installMedia.stage = stage
-                        if stage == .creating { self.installMedia.driveErased = true }
-                    }
+                let result = try await creator.create(installer: report, on: candidate) { stage in
+                    Task { @MainActor in self.installMedia.stage = stage }
                 }
                 installMedia.result = result
                 installMedia.step = .finished
-                recordInstallMedia(release: release, report: report, drive: drive, result: result.verification == .failed ? .failed : .succeeded,
+                recordInstallMedia(release: release, report: report, drive: drive, partition: candidate.isPartition, result: result.verification == .failed ? .failed : .succeeded,
                                    verification: result.verification)
                 appLog.info("Install media: finished, \(result.verification.rawValue); \(result.checks.map { "\($0.item.rawValue)=\($0.passed)" }.joined(separator: ","))",
                             component: .tools)
             } catch {
                 let failure = (error as? InstallMediaError) ?? .createFailed(services.layout.redact(String(describing: error)))
                 installMedia.failure = failure
-                if case .eraseFailed = failure { installMedia.driveErased = true }
+                // Read the drive again rather than guess from the step: was anything erased?
+                if case .drive = failure { installMedia.driveErased = false }
+                else if case .installerUnusable = failure { installMedia.driveErased = false }
+                else if case .refused = failure { installMedia.driveErased = false }
+                else { installMedia.driveErased = await creator.wasErased(candidate) }
                 installMedia.step = .failed
-                recordInstallMedia(release: release, report: report, drive: drive, result: failure == .passwordDenied ? .cancelled : .failed,
+                recordInstallMedia(release: release, report: report, drive: drive, partition: candidate.isPartition, result: failure == .passwordDenied ? .cancelled : .failed,
                                    verification: .notVerified)
                 appLog.info("Install media: failed: \(installMediaMessage(error))", component: .tools)
             }
         }
     }
 
-    private func recordInstallMedia(release: MacOSRelease, report: InstallerAppReport, drive: InstallMediaDrive, result: ToolHistoryEntry.Result,
+    private func recordInstallMedia(release: MacOSRelease, report: InstallerAppReport, drive: InstallMediaDrive, partition: Bool, result: ToolHistoryEntry.Result,
                                     verification: ToolVerification) {
         // No drive or volume names (they can be personal): the macOS version, the connection and the size.
-        let state = "macOS=\(report.macOSVersion ?? release.version ?? release.major);build=\(report.build ?? release.build ?? "?");drive=\(drive.busProtocol) \(drive.sizeBytes / 1_000_000_000) GB"
+        let state = "macOS=\(report.macOSVersion ?? release.version ?? release.major);build=\(report.build ?? release.build ?? "?");drive=\(drive.busProtocol) \(drive.sizeBytes / 1_000_000_000) GB" + (partition ? ";target=internalPartition" : "")
         try? toolHistory.append(ToolHistoryEntry(tool: "installMedia", change: "installMedia.create", previousState: nil, resultingState: state,
                                                  macOSVersion: tools.environment.macOSVersion, result: result, verification: verification,
                                                  revertAvailable: false))
