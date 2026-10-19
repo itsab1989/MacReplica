@@ -24,6 +24,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   partition is unchanged.
 
 ### Fixed
+- **Launchpad: the result names apps the backup has no place for.** Apps on the new Mac that the backup's arrangement
+  does not contain end up after the arranged pages; the result said only “succeeded”. It now names them and explains
+  why: backups made before 1.1.7 left out the apps deselected for the backup – a new backup of the old Mac keeps their
+  places (tester's report on 1.1.8).
 - **Progress of external tools arrives while they run.** MacReplica read a tool's output in 64 KB blocks, so lines
   reached it only at the end (found when the installer download's percentage stayed empty). Progress redrawn with a
   carriage return now counts as a line, too.
