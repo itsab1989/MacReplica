@@ -294,9 +294,12 @@ public struct MacOSInstallerCatalogLoader: Sendable {
         request.timeoutInterval = 30
         request.setValue("en-US", forHTTPHeaderField: "Accept-Language")
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 5_000_000 else {
-            throw MacOSInstallerCatalogError.pageUnavailable("HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
-        }
+        return try page(status: (response as? HTTPURLResponse)?.statusCode ?? 0, data: data)
+    }
+
+    /// Only a complete answer (HTTP 200) of a reasonable size (the real page: 174 KB) is read.
+    static func page(status: Int, data: Data) throws -> String {
+        guard status == 200, data.count < 5_000_000 else { throw MacOSInstallerCatalogError.pageUnavailable("HTTP \(status)") }
         return String(decoding: data, as: UTF8.self)
     }
 

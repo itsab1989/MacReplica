@@ -128,7 +128,8 @@
       "tests": [
         "SecurityTests",
         "CommandRunnerEdgeTests",
-        "InstallMediaSafetyTests"
+        "InstallMediaSafetyTests",
+        "InstallMediaBoundaryTests"
       ],
       "area": "Security",
       "threshold": 70
@@ -143,7 +144,9 @@
         "ToolsCornerEdgeTests",
         "PluginLoaderTests",
         "CornerPluginSetupTests",
-        "InstallMediaSafetyTests"
+        "InstallMediaSafetyTests",
+        "InstallMediaBoundaryTests",
+        "InstallMediaPartitionTests"
       ],
       "area": "Security"
     },
@@ -553,6 +556,9 @@
     {
       "file": "Tools/InstallMedia/MacOSInstallerCatalog.swift",
       "tests": [
+        "InstallMediaBoundaryTests",
+        "InstallMediaPartitionTests",
+        "InstallMediaInspectorEdgeTests",
         "InstallMediaCatalogTests",
         "InstallMediaIntegrationTests"
       ],
@@ -561,6 +567,9 @@
     {
       "file": "Tools/InstallMedia/InstallMediaDestination.swift",
       "tests": [
+        "InstallMediaBoundaryTests",
+        "InstallMediaPartitionTests",
+        "InstallMediaInspectorEdgeTests",
         "InstallMediaSafetyTests",
         "InstallMediaIntegrationTests"
       ],
@@ -569,6 +578,9 @@
     {
       "file": "Tools/InstallMedia/InstallerInspector.swift",
       "tests": [
+        "InstallMediaBoundaryTests",
+        "InstallMediaPartitionTests",
+        "InstallMediaInspectorEdgeTests",
         "InstallMediaSafetyTests",
         "InstallMediaIntegrationTests"
       ],
@@ -577,6 +589,9 @@
     {
       "file": "Tools/InstallMedia/InstallMediaCreator.swift",
       "tests": [
+        "InstallMediaBoundaryTests",
+        "InstallMediaPartitionTests",
+        "InstallMediaInspectorEdgeTests",
         "InstallMediaSafetyTests",
         "InstallMediaIntegrationTests"
       ],
@@ -1098,6 +1113,76 @@
       "file": "Tools/CornerPlugin.swift",
       "pattern": "_dyld_get_image_name",
       "reason": "Defensive nil-guard for a dyld image name that is never nil in a real process; the false return cannot be forced from a test (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PrivilegedExecutor.swift",
+      "pattern": "standardizedFileURL\\.path == volume\\.standardizedFileURL\\.path: continue",
+      "operator": "remove continue",
+      "reason": "The last statement of the loop body: leaving the switch continues the loop just the same (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PrivilegedExecutor.swift",
+      "pattern": "default: continue",
+      "operator": "remove continue",
+      "reason": "The last statement of the loop body: leaving the switch continues the loop just the same (equivalent mutant)."
+    },
+    {
+      "file": "Restore/PrivilegedExecutor.swift",
+      "pattern": "operation\\.paths\\.first\\?\\.path \\?\\? ",
+      "operator": "first \u2192 last",
+      "reason": "Only the text of the error for a refused operation (which path is named); refusing is tested."
+    },
+    {
+      "file": "System/CommandRunner.swift",
+      "pattern": "if count < 0 && errno == EINTR",
+      "reason": "read(2) returns 0 only at the end of the output, where errno is not EINTR; the variants differ only for a stale errno at end of output (equivalent in practice)."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallerInspector.swift",
+      "pattern": "var toolSigned = false",
+      "operator": "false \u2192 true",
+      "reason": "Always assigned before it is read when the tool exists; without a tool it is not used (equivalent mutant)."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallerInspector.swift",
+      "pattern": "\\.sorted \\{ \\$0\\.lastPathComponent < \\$1\\.lastPathComponent \\}",
+      "operator": "< \u2192 <=",
+      "reason": "Names in one folder are unique (equivalent mutant)."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallerInspector.swift",
+      "pattern": "installedInstallers\\(\\)\\.first \\{ \\$0\\.lastPathComponent == release\\.installerAppName \\}",
+      "operator": "first \u2192 last",
+      "reason": "Differs only when /Applications and ~/Applications both hold the same installer; either is checked the same way before use."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallMediaCreator.swift",
+      "pattern": "now\\.first\\(where: \\{ \\$0\\.partitionUUID == partition\\.partitionUUID \\}\\)",
+      "operator": "first \u2192 last",
+      "reason": "Partition UUIDs are unique on a disk (equivalent mutant)."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallMediaCreator.swift",
+      "pattern": "partitions\\(of: device\\)\\.first \\{ \\$0\\.name == name \\}",
+      "operator": "first \u2192 last",
+      "reason": "The random MRINSTALL name exists once (equivalent mutant)."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallMediaCreator.swift",
+      "pattern": "\\.first \\{ \\$0\\[\\\"DeviceIdentifier\\\"\\] as\\? String == device \\}",
+      "operator": "first \u2192 last",
+      "reason": "diskutil lists each disk once (equivalent mutant)."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallMediaCreator.swift",
+      "pattern": "let installerVolume = volumes\\.first \\{",
+      "operator": "first \u2192 last",
+      "reason": "One drive holds one volume with the installer's name after createinstallmedia (equivalent mutant)."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallMediaDestination.swift",
+      "pattern": "\\.notReadable\\(partition\\.name\\.isEmpty \\? partition\\.device : partition\\.name\\)",
+      "reason": "Only which label the message shows; that the partition is protected is tested."
     }
   ]
 }
