@@ -84,6 +84,7 @@ extension Localizer {
         case .unreadable: return t("ownInstaller.problem.unreadable")
         case .damaged(.checksumMismatch): return t("ownInstaller.problem.damaged")
         case .damaged(.truncated): return t("ownInstaller.problem.truncated")
+        case .damaged(.directoryDamaged): return t("ownInstaller.problem.directoryDamaged")
         case .notAnInstaller(let format): return t("ownInstaller.problem.notAnInstaller", t("ownInstaller.format.\(format.rawValue)"))
         case .notRecognised: return t("ownInstaller.problem.notRecognised")
         case .nothingInside: return t("ownInstaller.problem.nothingInside")

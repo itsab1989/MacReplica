@@ -53,6 +53,80 @@ struct InstallerValidationTests {
 
     // MARK: Intact images that cannot be inspected are kept
 
+    /// Answers `hdiutil verify` like a busy disk-image service ("Resource temporarily unavailable", exit 1, no report)
+    /// for the first `busy` calls; everything else runs the real tool.
+    final class BusyVerifyRunner: CommandRunning, @unchecked Sendable {
+        let base: CommandRunning
+        private let lock = NSLock()
+        private var remaining: Int
+        private(set) var verifyCalls = 0
+        init(_ base: CommandRunning, busy: Int) { self.base = base; remaining = busy }
+        func run(_ command: Command, onOutputLine: (@Sendable (String) -> Void)?) async throws -> CommandResult {
+            if command.arguments.first == "verify" {
+                let busy: Bool = lock.withLock { verifyCalls += 1; if remaining > 0 { remaining -= 1; return true }; return false }
+                if busy { return CommandResult(exitCode: 1, stdout: "", stderr: "hdiutil: verify failed - Resource temporarily unavailable\n", timedOut: false) }
+            }
+            return try await base.run(command, onOutputLine: onOutputLine)
+        }
+    }
+
+    func intactUnmountableImage(_ sandbox: Sandbox) async throws -> URL {
+        let raw = sandbox.url.appendingPathComponent("blank.dmg")
+        let image = sandbox.url.appendingPathComponent("Busy Installer.dmg")
+        #expect(try await Self.hdiutil(["create", "-quiet", "-size", "2m", "-layout", "NONE", raw.path]).succeeded)
+        #expect(try await Self.hdiutil(["convert", "-quiet", raw.path, "-format", "UDZO", "-o", image.path]).succeeded)
+        return image
+    }
+
+    /// The 1.1.7 release run: an intact image was called damaged because `hdiutil verify` failed while the service was
+    /// busy. Without a checksum report there is no proof: it is tried again and the image is kept, never “damaged”.
+    @Test func aBusyVerifyIsNoProofOfDamage() async throws {
+        let (sandbox, _, _, layout, work) = try Self.setup("validate-busy")
+        let image = try await intactUnmountableImage(sandbox)
+        let busy = BusyVerifyRunner(ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]), busy: 99)
+        var inspector = InstallerArchiveInspector(layout: layout, runner: busy)
+        inspector.retryPause = 10_000_000
+        let selection = await inspector.select(image, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("bundles"))
+        let archive = try selection.result.get().archive
+        #expect(archive.contentsLimit == .notMountable)
+        #expect(archive.inspectionNote?.contains("checksum not checked – hdiutil verify: exit 1") == true, "\(archive.inspectionNote ?? "-")")
+        #expect(archive.inspectionNote?.contains("checksum verified") == false, "never claimed")
+        #expect(busy.verifyCalls == 3, "tried three times")
+    }
+
+    @Test func aVerifyThatSucceedsOnRetryCounts() async throws {
+        let (sandbox, _, _, layout, work) = try Self.setup("validate-busy-once")
+        let image = try await intactUnmountableImage(sandbox)
+        let busy = BusyVerifyRunner(ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]), busy: 1)
+        var inspector = InstallerArchiveInspector(layout: layout, runner: busy)
+        inspector.retryPause = 10_000_000
+        let archive = try await inspector.select(image, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("bundles")).result.get().archive
+        #expect(archive.inspectionNote?.contains("checksum verified") == true)
+        #expect(busy.verifyCalls == 2)
+    }
+
+    /// `hdiutil verify -plist` (macOS 27, all image formats): calculated and expected checksum; English keys whatever the
+    /// user's language.
+    @Test func checksumsAreReadFromTheVerifyReport() {
+        func report(_ calculated: String, _ expected: String) -> String {
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0"><dict>
+            <key>calculated</key><dict><key>Checksum Type</key><string>CRC32</string><key>Checksum Value</key><string>\(calculated)</string></dict>
+            <key>expected</key><dict><key>Checksum Type</key><string>CRC32</string><key>Checksum Value</key><string>\(expected)</string></dict>
+            </dict></plist>
+            """
+        }
+        let same = InstallerArchiveInspector.checksums(inVerifyOutput: report("$409D9D0F", "$409D9D0F"))
+        #expect(same?.calculated == "CRC32 $409D9D0F" && same?.expected == "CRC32 $409D9D0F")
+        let differs = InstallerArchiveInspector.checksums(inVerifyOutput: "verifying…\n" + report("$85FB4511", "$409D9D0F"))
+        #expect(differs?.calculated != differs?.expected)
+        #expect(InstallerArchiveInspector.checksums(inVerifyOutput: "") == nil)
+        #expect(InstallerArchiveInspector.checksums(inVerifyOutput: "hdiutil: verify failed - Resource temporarily unavailable") == nil)
+        #expect(InstallerArchiveInspector.checksums(inVerifyOutput: report("", "$409D9D0F")) == nil, "an empty value is no report")
+    }
+
     /// The regression: an intact disk image that macOS does not mount here ("no mountable file systems" – the same
     /// message an attach gets when its folder disappears) was "damaged". Its own checksum is intact, so it is kept.
     @Test func intactImageThatDoesNotMountIsKeptNotCalledDamaged() async throws {
@@ -193,19 +267,78 @@ struct InstallerValidationTests {
         #expect(!runner.commands.dropFirst(before).contains { $0.executable.hasSuffix("pkgutil") })
     }
 
-    @Test func changedImageIsDamagedByItsOwnChecksum() async throws {
-        let (sandbox, inspector, _, _, work) = try Self.setup("validate-bitflip")
-        let dmg = try await OwnInstallerTests.diskImage(app: "Pen Driver", bundleID: "com.example.pen", version: "4.0.14", in: sandbox, name: "PenFlip")
+    /// Where a UDIF image keeps its data and its list of contents, from its own trailer (koly block, big-endian).
+    static func udifRegions(_ dmg: URL) throws -> (data: Range<Int>, xml: Range<Int>) {
+        let bytes = try Data(contentsOf: dmg)
+        let trailer = bytes.suffix(512)
+        func u64(_ offset: Int) -> Int { trailer.dropFirst(offset).prefix(8).reduce(0) { $0 << 8 | Int($1) } }
+        return (u64(24)..<(u64(24) + u64(32)), u64(216)..<(u64(216) + u64(224)))
+    }
+
+    static func overwrite(_ dmg: URL, at offset: Int) throws {
         let handle = try FileHandle(forUpdating: dmg)
-        try handle.seek(toOffset: 600)
+        try handle.seek(toOffset: UInt64(offset))
         try handle.write(contentsOf: Data(repeating: 0xFF, count: 16))
         try handle.close()
+    }
+
+    /// Changed data: `hdiutil verify` reports a calculated checksum that differs – damage proven. The image has no file
+    /// system, so the mount always fails and the checksum always decides (an image with an app may mount despite the
+    /// damage, read only where needed – which made this test accept the changed image on a build machine once).
+    @Test func changedImageIsDamagedByItsOwnChecksum() async throws {
+        let (sandbox, inspector, _, _, work) = try Self.setup("validate-bitflip")
+        let dmg = try await intactUnmountableImage(sandbox)
+        let regions = try Self.udifRegions(dmg)
+        try Self.overwrite(dmg, at: regions.data.lowerBound + regions.data.count / 2)
+        #expect(FileFormatEvidence.examine(dmg) == .udif(hasChecksum: true), "the list of contents is intact")
         let selection = await inspector.select(dmg, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("b"))
         guard case .failure(let error) = selection.result else { Issue.record("a changed image was accepted"); return }
         #expect(error == .damaged(.checksumMismatch))
-        #expect(selection.note?.contains("hdiutil verify: exit") == true)
+        #expect(selection.note?.contains("hdiutil verify: calculated CRC32 $") == true, "\(selection.note ?? "-")")
         #expect(await !Self.isAttached(dmg))
         #expect(TestEnvironment.english.installerProblemText(error).contains("damaged"))
+    }
+
+    /// An image without an XML list of contents (older images keep it in a resource fork) is not called damaged: only a
+    /// list that exists and cannot be read proves damage.
+    @Test func anImageWithoutAnXMLListIsNotDamaged() throws {
+        let sandbox = try Sandbox("validate-noxml")
+        func be64(_ v: UInt64) -> [UInt8] { (0..<8).map { UInt8(v >> (56 - 8 * $0) & 0xFF) } }
+        func be32(_ v: UInt32) -> [UInt8] { (0..<4).map { UInt8(v >> (24 - 8 * $0) & 0xFF) } }
+        let data = [UInt8](repeating: 0x5A, count: 4096)
+        var koly = [UInt8](repeating: 0, count: 512)
+        koly.replaceSubrange(0..<4, with: Array("koly".utf8))
+        koly.replaceSubrange(4..<8, with: be32(4)); koly.replaceSubrange(8..<12, with: be32(512))
+        koly.replaceSubrange(24..<32, with: be64(0)); koly.replaceSubrange(32..<40, with: be64(UInt64(data.count)))
+        koly.replaceSubrange(216..<224, with: be64(0)); koly.replaceSubrange(224..<232, with: be64(0))   // no XML list
+        koly.replaceSubrange(352..<356, with: be32(2))                                                    // master checksum CRC32
+        let file = sandbox.url.appendingPathComponent("old.dmg")
+        try Data(data + koly).write(to: file)
+        #expect(FileFormatEvidence.examine(file) == .udif(hasChecksum: true))
+        // With a list that is not a property list, the same image is damaged.
+        let xml = Array("<?xml version=\"1.0\"?><plist><dict><key>broken".utf8)
+        koly.replaceSubrange(216..<224, with: be64(UInt64(data.count))); koly.replaceSubrange(224..<232, with: be64(UInt64(xml.count)))
+        try Data(data + xml + koly).write(to: file)
+        #expect(FileFormatEvidence.examine(file) == .udifDirectoryDamaged)
+    }
+
+    /// A damaged list of contents: `hdiutil` fails without a checksum report ("error 3840"); MacReplica proves the
+    /// damage from the file's bytes – the list is not a property list.
+    @Test func aDamagedListOfContentsIsProvenFromTheBytes() async throws {
+        let (sandbox, inspector, runner, _, work) = try Self.setup("validate-xml")
+        let dmg = try await intactUnmountableImage(sandbox)
+        let regions = try Self.udifRegions(dmg)
+        #expect(!regions.xml.isEmpty)
+        try Self.overwrite(dmg, at: regions.xml.lowerBound + regions.xml.count / 2)
+        #expect(FileFormatEvidence.examine(dmg) == .udifDirectoryDamaged)
+        let before = runner.commands.count
+        let selection = await inspector.select(dmg, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("b"))
+        guard case .failure(let error) = selection.result else { Issue.record("a damaged image was accepted"); return }
+        #expect(error == .damaged(.directoryDamaged))
+        #expect(!runner.commands.dropFirst(before).contains { $0.executable.hasSuffix("hdiutil") }, "decided without hdiutil")
+        #expect(TestEnvironment.english.installerProblemText(error).contains("damaged"))
+        #expect(FileFormatEvidence.directoryIsReadable(Data("<?xml version=\"1.0\"?><plist version=\"1.0\"><dict/></plist>".utf8)))
+        #expect(!FileFormatEvidence.directoryIsReadable(Data("<?xml version=\"1.0\"?><plist><dict><key>x".utf8)))
     }
 
     @Test func cutShortFilesAreIncomplete() async throws {

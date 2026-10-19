@@ -34,6 +34,14 @@ python3 tools/mutation/mutate.py --merge r0 r1 r2 r3 r4 r5 --report merged --che
 
 ## Results
 
+**2026-10-19 (1.1.8: damage only with proof from `hdiutil verify -plist` or the image's own bytes):** changed lines of
+`InstallerArchive.swift` and `FileFormatEvidence.swift`, 2 shards (real `hdiutil`). Round 1: 6 of 12 – the new tests
+were not registered for `FileFormatEvidence.swift` (added `InstallerValidationTests`), and an image without an XML list
+was not tested (added). Final: 9 of 11 killed (81.8 %), 1 excluded (only the pause before a repeated `verify`). Remaining,
+without effect: `<= 256 MB` → `<` (a list of exactly 256 MB) and `length > 0` → `>= 0` (reading 0 bytes yields no data,
+so the check is skipped either way; the behaviour is covered by `anImageWithoutAnXMLListIsNotDamaged`). A mutant once
+left two test images attached in a mutation copy; they were detached by path, the user's own image was not touched.
+
 **2026-10-19 (1.1.7: Launchpad name fallback, deselected apps keep their place):** changed lines of
 `LaunchpadLayout.swift` and `RestorePlanner.swift`, 3 shards. The first run (27 of 34) showed that arranging and the check
 afterwards could choose different apps when two share a name – fixed (both by identifier) and tested, with tests added

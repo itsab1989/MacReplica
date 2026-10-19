@@ -411,7 +411,8 @@
     {
       "file": "Downloads/FileFormatEvidence.swift",
       "tests": [
-        "InstallerEvidenceTests"
+        "InstallerEvidenceTests",
+        "InstallerValidationTests"
       ],
       "area": "Own installers (offline)"
     },
@@ -635,6 +636,11 @@
     }
   ],
   "exclusions": [
+    {
+      "file": "Downloads/InstallerArchive.swift",
+      "pattern": "retryPause \\* UInt64\\(attempt\\)",
+      "reason": "Only the pause before a repeated hdiutil verify; >= adds a pause before the first attempt (equivalent mutant)."
+    },
     {
       "file": "Restore/RestoreExecutor.swift",
       "pattern": "installed \\+= 1",
