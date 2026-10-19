@@ -370,20 +370,33 @@ but cannot be chosen on them. Everything else is read from the installer itself:
 
 ### Destination safety (`InstallMediaDriveScanner`)
 
-Read-only `diskutil list -plist external`, `diskutil info -plist <disk>` and `diskutil info -plist /`. A drive is
-offered only if it is a whole disk (`disk<N>`), external (`Internal` false – a missing value counts as internal),
-physical (`VirtualOrPhysical` = Physical), writable and large enough (installer size + 2 GiB). Protected, with the
-reason shown: the startup disk (the whole disk of `/` and of its APFS physical store – this also covers a Mac started
-from an external drive), internal disks, disk images, read-only media, drives with a Time Machine backup
-(`Backups.backupdb`, `.com.apple.timemachine.supported` or a backup APFS role) and drives holding MacReplica itself,
-the chosen installer, the home folder or a MacReplica backup (`MacReplica-Backup-*` with a manifest up to three levels
-deep). APFS volumes listed under a synthesized container count for the physical drive they live on. On the test Mac the
-real scan listed only an attached driver disk image, protected as disk image, read-only and too small; the internal
-disk does not appear at all.
+Read-only `diskutil list -plist` (all disks – a card in the built-in SD reader is reported as **internal but
+removable**, so `list external` would miss it; seen with a Canon card in a MacBook Pro's reader), `diskutil info -plist
+<disk>` and `diskutil info -plist /`. A whole drive is offered only if it is a whole disk (`disk<N>`), external or
+removable media, not a disk image (`VirtualOrPhysical` = `Virtual` or bus “Disk Image”; Apple's internal SSD reports
+`Unknown`, which counts as physical), writable and large enough (installer size + 2 GiB). Internal, non-removable
+disks are never offered as a whole (a missing `Internal` value counts as internal). Protected, with the reason shown:
+the startup disk (the whole disk of `/` and of its APFS physical store – this also covers a Mac started from an
+external drive), disk images, read-only media, drives with a Time Machine backup (`Backups.backupdb`,
+`.com.apple.timemachine.supported` or a backup APFS role) and drives holding MacReplica itself, the chosen installer,
+the home folder or a MacReplica backup (`MacReplica-Backup-*` with a manifest up to three levels deep). APFS volumes
+listed under a synthesized container count for the physical drive they live on.
 
-**Why not on the internal disk:** it would need a new partition on the startup disk, i.e. resizing the user's
-partitions – risky for the data and not a method Apple documents for installers. Apple's way for the internal disk is
-macOS Recovery. The tool therefore never offers internal disks or partitions.
+Looking inside a volume can make macOS ask the user for permission (removable volumes, other folders); the read then
+waits until the question is answered – the first real run hung exactly there. Every look is therefore time-limited
+(5 s); a volume MacReplica could not look into is protected (“macOS has not let MacReplica look inside … yet”) and is
+offered after the user allowed access and clicked **Check Again**.
+
+**Expert option – an empty partition of an internal disk.** With **Show empty partitions of the internal disk**, the
+partitions (`disk0s4`, not the APFS volumes of a container) of internal, non-removable disks are listed. Only a
+partition that is a plain format (`Apple_HFS`, `Microsoft Basic Data`/exFAT, FAT, NTFS), has a GPT partition UUID, is
+mounted, holds no visible items (hidden `.`-entries, `System Volume Information` and the like do not count), holds
+nothing protected and is large enough can be chosen. APFS volumes are always refused: they share their container with
+macOS and the user's data, and macOS cannot erase one to Mac OS Extended (`diskutil eraseVolume JHFS+` on an APFS
+volume: “The given file system is not supported on APFS (-69618)”, tested). EFI, Recovery and other system partitions
+are refused. MacReplica never creates, resizes or deletes partitions; a user who wants an internal installer makes an
+empty partition in Disk Utility first. Apple documents installers only on external drives, and Macs with Apple silicon
+may not list an installer on an internal partition at startup (not tested); the confirmation says so.
 
 ### Creation (`InstallMediaCreator`) – each destructive step once, never retried
 
@@ -404,7 +417,22 @@ macOS Recovery. The tool therefore never offers internal disks or partitions.
    `MRINSTALL-<8 hex>` volume directly in `/Volumes`, `--applicationpath` only for that same app, and
    `createinstallmedia` only right after the marker check of the same volume. Passwords are never seen or logged by
    MacReplica.
-6. Verification reads the result: installer volume on the confirmed disk, Mac OS Extended, the installer app in the
+**Partition (expert) path.** Steps 3–5 are replaced by one administrator step of exactly two commands:
+`/usr/sbin/diskutil eraseVolume JHFS+ MRINSTALL-<8 hex> <partition UUID>` and then `createinstallmedia --volume
+/Volumes/MRINSTALL-…`. The partition is addressed by its GPT partition UUID, which stays the same when disks are
+renumbered and belongs to no other partition, and it is erased in the same administrator step, so nothing can take its
+place between the comparison of step 2 and the erase. The privileged-operation checks allow `eraseVolume` only with a
+UUID and a `MRINSTALL-` name, only directly before `createinstallmedia` on `/Volumes/<that name>`, and never on its
+own. Before that the confirmation needs a second checkbox and a final “Erase Partition” question. Verified with a
+two-partition disk image: `eraseVolume` by partition UUID erased only the empty partition and turned it from exFAT into
+Mac OS Extended; the neighbouring partition and its file were untouched.
+
+After `createinstallmedia` (also after a failure) MacReplica detaches the installer's own `SharedSupport.dmg` if the
+tool left it attached and it was not attached before – Apple's 14.8.9 tool, running as root, left it mounted at
+“/Volumes/Shared Support” (`owner-uid 0`); the user can detach it.
+
+6. Verification reads the result: for a partition, that every other partition is unchanged (identifier, partition
+   UUID, format, name); installer volume on the confirmed disk (for a partition, on that partition), Mac OS Extended, the installer app in the
    same version, `System/Library/CoreServices/boot.efi`, `bless --info` (startup folder; macOS does not always allow
    reading it, then the result is “partly checked”), and Apple's signature on the copied app. A drive is only proven
    by starting a Mac from it; the result says so.
@@ -429,9 +457,18 @@ stand-ins working on folders of the simulation (`MacReplicaSimulator install-med
 | Swapped drive, erase failure, password cancelled, tool failure, unsigned installer | Simulated + unit | On screen (swap, tool failure) and in tests; each stops once, nothing retried |
 | Whole flow on screen, 7 languages | Simulated | Simulated Mac: catalog → download → check → drive → confirm → create → 7 checks passed → instructions; German layout checked |
 | Old installer from Apple's page (OS X Mountain Lion 10.8) | Verified | Downloaded from `updates.cdn-apple.com` (4,449,317,520 bytes, as the page's server reports); package “signed by a certificate that has since expired” (`pkgutil`); app extracted as the user without installing: name “Install OS X Mountain Lion.app” as derived from the page, Apple's signature accepted, refused because it has no `createinstallmedia` |
-| Real `createinstallmedia` onto a disposable disk image | See “Real run” below | `MacReplicaSimulator create-installer-on-image` (accepts only a `.sparseimage` it attaches itself in the staging folder) |
+| Real `createinstallmedia` onto a disposable disk image | Verified | `MacReplicaSimulator create-installer-on-image` (only a `.sparseimage` it attaches itself in the staging folder): 14.8.9 written in 88 s, all 7 checks passed incl. `bless --info` “OS X blessed folder is …/CoreServices” |
+| Real removable drive: SD card in the built-in reader (252 GB, the tester's card, contents backed up by the user) | Verified | Real app, real Mac, whole flow on screen: card offered (after the scan fix), erased, written in 4 min 26 s, all 7 checks passed; leftover `SharedSupport.dmg` detached |
+| Partition mode on real hardware | Verified | Disk image with EFI, KEEP (with a file) and an empty exFAT SPARE: EFI refused as system partition, KEEP as not empty, SPARE erased by partition UUID and written in 69 s, 8 checks incl. “other partitions unchanged 2/2”; KEEP's file intact. The second mounted installer was named “Install macOS Sonoma 1” by macOS and still found |
+| Expert option on screen | Simulated | Toggle, warning, partition row, second checkbox (button disabled until both), final dialog, `eraseVolume` with the UUID only, 8 checks |
 | Starting a Mac from the drive | Not verified | Needs a spare Mac and a real USB drive |
-| Physical USB drive | Not verified | No disposable drive was used (never a personal one); the same `diskutil` calls as on the disk image |
+| USB stick | Not verified | The SD card took this role; the same `diskutil` calls |
+| Internal partition of a real internal disk | Not verified | The test Mac has no spare partition and none was created (that would mean resizing its disk); verified on a disk image instead |
+
+**Found in the real runs and fixed:** the built-in SD reader's card was not offered (reported as internal; now:
+removable media count); the scan hung on macOS's removable-volume permission question (now time-limited); Apple's
+internal SSD (`VirtualOrPhysical` = `Unknown`) was taken for a disk image (protected anyway, now classified right);
+Apple's page timed out behind Little Snitch and the error was shown as a raw `NSError` (now one sentence).
 
 **Found on screen and fixed:** the download's percentage only appeared at the end. `ProcessCommandRunner` read output
 with `FileHandle.read(upToCount: 65536)`, which waits for the full 64 KB or the end, so `onOutputLine` got everything

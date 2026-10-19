@@ -17,7 +17,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   images or drives with a backup), reads the drive again right before erasing and stops if it changed, erases it,
   then runs `createinstallmedia` with one administrator password on exactly the volume it erased. Afterwards it checks
   the drive and shows how to start up Macs with Apple silicon and Intel Macs from it. Nothing destructive is retried by
-  itself. No installers on the internal disk (that would mean resizing the startup disk; see the user guide).
+  itself. Cards in the Mac's built-in SD reader can be used too.
+- **Expert option: an empty partition of the internal disk.** Only empty, separate, non-APFS partitions are offered;
+  MacReplica never resizes a disk. It asks twice more before erasing, erases only that partition (found by its
+  partition identifier) in the same administrator step as `createinstallmedia`, and checks afterwards that every other
+  partition is unchanged.
 
 ### Fixed
 - **Progress of external tools arrives while they run.** MacReplica read a tool's output in 64 KB blocks, so lines
