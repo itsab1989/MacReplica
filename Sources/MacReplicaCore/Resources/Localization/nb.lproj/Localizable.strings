@@ -2239,7 +2239,7 @@
 "installMedia.steps.create" = "Lag";
 "installMedia.step.choose" = "Velg macOS-versjonen for installereren.";
 "installMedia.step.installer" = "Hent installereren og la MacReplica kontrollere den.";
-"installMedia.step.drive" = "Velg den eksterne disken som skal slettes.";
+"installMedia.step.drive" = "Velg disken som skal slettes.";
 "installMedia.step.confirm" = "Se hva som slettes, og bekreft.";
 "installMedia.step.working" = "Installereren lages – dette tar en stund.";
 "installMedia.step.finished" = "Ferdig. Dette kontrollerte MacReplica.";
@@ -2401,3 +2401,4 @@
 "installMedia.confirm.understoodInternal" = "Jeg forstår at dette er et ekspertvalg på Macens interne disk og at bare «%1$@» slettes.";
 "installMedia.stage.erasingAndCreating" = "Sletter partisjonen og skriver installereren";
 "installMedia.check.otherPartitionsUntouched" = "Andre partisjoner uendret";
+"installMedia.protect.notReadable" = "macOS har ennå ikke latt MacReplica se inn i «%1$@» (et tillatelsesspørsmål venter kanskje). Gi tilgang, og klikk så Sjekk igjen.";

@@ -328,7 +328,7 @@ public struct MacOSInstallerCatalogLoader: Sendable {
                     : layout.redact(ErrorClassifier.technicalDetail(result.combinedOutput, layout: layout, maxLines: 2))
             }
         } catch {
-            catalog.softwareUpdateProblem = layout.redact(String(describing: error))
+            catalog.softwareUpdateProblem = layout.redact((error as NSError).localizedDescription)
         }
         do {
             let html = try await fetchPage(URL(string: MacOSInstallerCatalog.applePage)!)
@@ -341,7 +341,8 @@ public struct MacOSInstallerCatalogLoader: Sendable {
                 catalog.applePageProblem = nil
             }
         } catch {
-            catalog.applePageProblem = String(describing: error)
+            // One readable sentence (“The request timed out.”), not the whole error object.
+            catalog.applePageProblem = (error as? MacOSInstallerCatalogError).map { "\($0)" } ?? (error as NSError).localizedDescription
         }
         catalog.releases = MacOSInstallerCatalog.merged(softwareUpdate: softwareUpdate, applePage: page)
         try? FileManager.default.createDirectory(at: cacheFile.deletingLastPathComponent(), withIntermediateDirectories: true)

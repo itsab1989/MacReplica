@@ -2239,7 +2239,7 @@
 "installMedia.steps.create" = "Maak";
 "installMedia.step.choose" = "Kies de macOS-versie voor de installer.";
 "installMedia.step.installer" = "Haal de installer op en laat MacReplica hem controleren.";
-"installMedia.step.drive" = "Kies de externe schijf die wordt gewist.";
+"installMedia.step.drive" = "Kies de schijf die wordt gewist.";
 "installMedia.step.confirm" = "Bekijk wat er wordt gewist en bevestig.";
 "installMedia.step.working" = "De installer wordt gemaakt – dit duurt even.";
 "installMedia.step.finished" = "Klaar. Dit heeft MacReplica gecontroleerd.";
@@ -2401,3 +2401,4 @@
 "installMedia.confirm.understoodInternal" = "Ik begrijp dat dit een expertoptie op de interne schijf van de Mac is en dat alleen '%1$@' wordt gewist.";
 "installMedia.stage.erasingAndCreating" = "Partitie wordt gewist en installer wordt geschreven";
 "installMedia.check.otherPartitionsUntouched" = "Andere partities ongewijzigd";
+"installMedia.protect.notReadable" = "macOS heeft MacReplica nog niet in '%1$@' laten kijken (mogelijk wacht er een toestemmingsvraag). Sta toegang toe en klik daarna op 'Controleer opnieuw'.";

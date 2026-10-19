@@ -2239,7 +2239,7 @@
 "installMedia.steps.create" = "Crea";
 "installMedia.step.choose" = "Scegli la versione di macOS per l'installer.";
 "installMedia.step.installer" = "Ottieni l'installer e lascia che MacReplica lo verifichi.";
-"installMedia.step.drive" = "Scegli il disco esterno da inizializzare.";
+"installMedia.step.drive" = "Scegli il disco da inizializzare.";
 "installMedia.step.confirm" = "Controlla cosa verrà cancellato, poi conferma.";
 "installMedia.step.working" = "Creazione dell'installer: ci vuole un po'.";
 "installMedia.step.finished" = "Fatto. Ecco cosa ha verificato MacReplica.";
@@ -2401,3 +2401,4 @@
 "installMedia.confirm.understoodInternal" = "Ho capito che si tratta di un'opzione per esperti sul disco interno del Mac e che viene inizializzata solo «%1$@».";
 "installMedia.stage.erasingAndCreating" = "Inizializzazione della partizione e scrittura dell'installer";
 "installMedia.check.otherPartitionsUntouched" = "Altre partizioni invariate";
+"installMedia.protect.notReadable" = "macOS non ha ancora permesso a MacReplica di guardare dentro «%1$@» (forse c'è una richiesta di autorizzazione in attesa). Consenti l'accesso, poi fai clic su Controlla di nuovo.";

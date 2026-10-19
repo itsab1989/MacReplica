@@ -494,6 +494,7 @@ struct InstallMediaDriveRow: View {
         case .unsupportedFormat(let format): return l.t("installMedia.protect.format", format)
         case .notMounted: return l.t("installMedia.protect.notMounted")
         case .notEmpty(let count): return l.p("installMedia.protect.notEmpty", count)
+        case .notReadable(let name): return l.t("installMedia.protect.notReadable", name)
         }
     }
 }

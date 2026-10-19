@@ -2239,7 +2239,7 @@
 "installMedia.steps.create" = "Erstellen";
 "installMedia.step.choose" = "Wähle die macOS-Version für den Installer.";
 "installMedia.step.installer" = "Installer laden und von MacReplica prüfen lassen.";
-"installMedia.step.drive" = "Wähle das externe Laufwerk, das gelöscht wird.";
+"installMedia.step.drive" = "Wähle das Laufwerk, das gelöscht wird.";
 "installMedia.step.confirm" = "Prüfe, was gelöscht wird, und bestätige dann.";
 "installMedia.step.working" = "Der Installer wird erstellt – das dauert eine Weile.";
 "installMedia.step.finished" = "Fertig. Das hat MacReplica geprüft.";
@@ -2401,3 +2401,4 @@
 "installMedia.confirm.understoodInternal" = "Mir ist klar, dass dies eine Expertenoption auf dem internen Laufwerk des Macs ist und nur „%1$@“ gelöscht wird.";
 "installMedia.stage.erasingAndCreating" = "Partition wird gelöscht und Installer geschrieben";
 "installMedia.check.otherPartitionsUntouched" = "Andere Partitionen unverändert";
+"installMedia.protect.notReadable" = "macOS hat MacReplica noch nicht in „%1$@“ schauen lassen (eventuell wartet eine Berechtigungsfrage). Erlaube den Zugriff und klicke dann auf „Erneut prüfen“.";

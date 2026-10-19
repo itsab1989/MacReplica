@@ -2239,7 +2239,7 @@
 "installMedia.steps.create" = "Créer";
 "installMedia.step.choose" = "Choisis la version de macOS pour l'installateur.";
 "installMedia.step.installer" = "Obtiens l'installateur et laisse MacReplica le vérifier.";
-"installMedia.step.drive" = "Choisis le disque externe à effacer.";
+"installMedia.step.drive" = "Choisis le disque à effacer.";
 "installMedia.step.confirm" = "Vérifie ce qui sera effacé, puis confirme.";
 "installMedia.step.working" = "Création de l'installateur – cela prend un moment.";
 "installMedia.step.finished" = "Terminé. Voici ce que MacReplica a vérifié.";
@@ -2401,3 +2401,4 @@
 "installMedia.confirm.understoodInternal" = "Je comprends qu'il s'agit d'une option experte sur le disque interne du Mac et que seule « %1$@ » est effacée.";
 "installMedia.stage.erasingAndCreating" = "Effacement de la partition et écriture de l'installateur";
 "installMedia.check.otherPartitionsUntouched" = "Autres partitions inchangées";
+"installMedia.protect.notReadable" = "macOS n'a pas encore laissé MacReplica regarder dans « %1$@ » (une demande d'autorisation attend peut-être). Autorise l'accès, puis clique sur Vérifier à nouveau.";

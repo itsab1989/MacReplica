@@ -2241,7 +2241,7 @@
 "installMedia.steps.create" = "Create";
 "installMedia.step.choose" = "Choose the macOS version for the installer.";
 "installMedia.step.installer" = "Get the installer and let MacReplica check it.";
-"installMedia.step.drive" = "Choose the external drive to erase.";
+"installMedia.step.drive" = "Choose the drive to erase.";
 "installMedia.step.confirm" = "Check what will be erased, then confirm.";
 "installMedia.step.working" = "Creating the installer – this takes a while.";
 "installMedia.step.finished" = "Done. Here is what MacReplica checked.";
@@ -2403,3 +2403,4 @@
 "installMedia.confirm.understoodInternal" = "I understand that this is an expert option on the Mac's internal disk and that only “%1$@” is erased.";
 "installMedia.stage.erasingAndCreating" = "Erasing the partition and writing the installer";
 "installMedia.check.otherPartitionsUntouched" = "Other partitions unchanged";
+"installMedia.protect.notReadable" = "macOS has not let MacReplica look inside “%1$@” yet (a permission question may be waiting). Allow access, then click Check Again.";

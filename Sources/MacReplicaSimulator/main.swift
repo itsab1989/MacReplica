@@ -321,7 +321,9 @@ if arguments.first == "scan-installer-drives" {
 // The real createinstallmedia onto a disposable disk image in ~/Desktop/MacReplica-Staging (never a drive): creates
 // and attaches the image, lets the scanner accept only that image, then runs MacReplica's own flow – the
 // administrator password is asked by macOS. Detaches the image afterwards.
-if arguments.first == "create-installer-on-image", arguments.count == 3 {
+if arguments.first == "create-installer-on-image", arguments.count == 3 || (arguments.count == 4 && arguments[3] == "--partition") {
+    // --partition: the image gets two partitions, KEEP (with a file) and an empty SPARE; only SPARE may be erased.
+    let partitionMode = arguments.count == 4
     let layout = SystemLayout.live()
     let staging = layout.homeDirectory.appendingPathComponent("Desktop/MacReplica-Staging").standardizedFileURL.path + "/"
     let image = URL(fileURLWithPath: arguments[2]).standardizedFileURL
@@ -331,8 +333,9 @@ if arguments.first == "create-installer-on-image", arguments.count == 3 {
     let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables),
                                       baseEnvironment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil))
     if !FileManager.default.fileExists(atPath: image.path) {
-        let made = try await runner.run(Command(executable: layout.hdiutil, arguments: ["create", "-size", "20g", "-type", "SPARSE", "-layout", "GPTSPUD",
-                                                                                         "-fs", "JHFS+", "-volname", "MRIMAGE", image.path], timeout: 300))
+        let made = try await runner.run(Command(executable: layout.hdiutil, arguments: ["create", "-size", partitionMode ? "22g" : "20g", "-type", "SPARSE",
+                                                                                         "-layout", "GPTSPUD", "-fs", "JHFS+", "-volname", partitionMode ? "KEEP" : "MRIMAGE",
+                                                                                         image.path], timeout: 300))
         guard made.succeeded else { print(made.combinedOutput); exit(1) }
     }
     let attach = try await runner.run(Command(executable: layout.hdiutil, arguments: ["attach", "-nobrowse", "-plist", image.path], timeout: 300))
@@ -342,10 +345,18 @@ if arguments.first == "create-installer-on-image", arguments.count == 3 {
     guard let node = entities.compactMap({ $0["dev-entry"] as? String }).min(by: { $0.count < $1.count }) else { print(attach.combinedOutput); exit(1) }
     let device = String(node.dropFirst("/dev/".count))
     print("attached \(image.lastPathComponent) as \(device)")
+    if partitionMode, !FileManager.default.fileExists(atPath: "/Volumes/SPARE") {
+        let split = try await runner.run(Command(executable: layout.diskutil, arguments: ["splitPartition", "\(device)s2", "2", "JHFS+", "KEEP", "4g", "ExFAT", "SPARE", "R"],
+                                                 timeout: 300))
+        guard split.succeeded else { print(split.combinedOutput); exit(1) }
+        try Data("must survive\n".utf8).write(to: URL(fileURLWithPath: "/Volumes/KEEP/keep.txt"))
+    }
     let inspector = InstallerInspector(layout: layout, runner: runner, environment: .current, hasRosetta: FileManager.default.fileExists(atPath: layout.rosettaMarker))
     let report = await inspector.inspect(URL(fileURLWithPath: arguments[1]))
-    let scanner = InstallMediaDriveScanner(layout: layout, runner: runner, allowsDiskImages: true)
-    guard let candidate = try await scanner.scan(required: report.requiredBytes).first(where: { $0.drive.device == device }),
+    let scanner = InstallMediaDriveScanner(layout: layout, runner: runner, allowsDiskImages: true, partitionsOfDiskImages: partitionMode)
+    let candidates = try await scanner.scan(required: report.requiredBytes).filter { $0.drive.device == device }
+    for other in candidates { print("candidate \(other.id) eligible=\(other.isEligible) \(other.protections)") }
+    guard let candidate = candidates.first(where: { partitionMode ? $0.partition?.name == "SPARE" : !$0.isPartition }),
           candidate.drive.isVirtual, candidate.drive.busProtocol == "Disk Image", candidate.isEligible else {
         print("the attached image is not an eligible disk image target"); exit(1)
     }
@@ -353,9 +364,13 @@ if arguments.first == "create-installer-on-image", arguments.count == 3 {
                                       scanner: scanner, inspector: inspector)
     let started = Date()
     do {
-        let result = try await creator.create(installer: report, on: candidate.drive) { stage in print("stage \(stage) after \(Int(Date().timeIntervalSince(started))) s") }
+        let result = try await creator.create(installer: report, on: candidate) { stage in print("stage \(stage) after \(Int(Date().timeIntervalSince(started))) s") }
         print("verification=\(result.verification.rawValue) volume=\(result.volume?.path ?? "-") seconds=\(Int(Date().timeIntervalSince(started)))")
         for check in result.checks { print("check \(check.item.rawValue) passed=\(check.passed) \(check.detail)") }
+        if partitionMode {
+            let kept = (try? String(contentsOfFile: "/Volumes/KEEP/keep.txt", encoding: .utf8)) ?? "MISSING"
+            print("KEEP/keep.txt: \(kept.trimmingCharacters(in: .whitespacesAndNewlines))")
+        }
     } catch {
         print("failed: \(error)")
     }

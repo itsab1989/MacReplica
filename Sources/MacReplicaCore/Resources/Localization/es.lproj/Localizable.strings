@@ -2239,7 +2239,7 @@
 "installMedia.steps.create" = "Crear";
 "installMedia.step.choose" = "Elige la versión de macOS para el instalador.";
 "installMedia.step.installer" = "Consigue el instalador y deja que MacReplica lo compruebe.";
-"installMedia.step.drive" = "Elige el disco externo que se borrará.";
+"installMedia.step.drive" = "Elige el disco que se borrará.";
 "installMedia.step.confirm" = "Revisa lo que se borrará y confirma.";
 "installMedia.step.working" = "Creando el instalador; esto tarda un rato.";
 "installMedia.step.finished" = "Listo. Esto es lo que comprobó MacReplica.";
@@ -2401,3 +2401,4 @@
 "installMedia.confirm.understoodInternal" = "Entiendo que es una opción para expertos en el disco interno del Mac y que solo se borra «%1$@».";
 "installMedia.stage.erasingAndCreating" = "Borrando la partición y escribiendo el instalador";
 "installMedia.check.otherPartitionsUntouched" = "Otras particiones sin cambios";
+"installMedia.protect.notReadable" = "macOS aún no ha dejado que MacReplica mire dentro de «%1$@» (puede que haya una pregunta de permiso esperando). Permite el acceso y pulsa Comprobar de nuevo.";

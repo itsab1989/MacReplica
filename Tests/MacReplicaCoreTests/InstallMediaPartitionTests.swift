@@ -165,4 +165,14 @@ struct InstallMediaPartitionTests {
             #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [bad, create], reason: "r") }
         }
     }
+
+    /// Found with the real SD card: reading the card made macOS ask for permission, and the scan waited forever.
+    /// A look that does not finish in time protects the drive instead of hanging.
+    @Test func aLookThatMacOSHoldsBackProtectsTheDriveInsteadOfHanging() {
+        let started = Date()
+        let late: Int? = InstallMediaDriveScanner.withTimeout(0.2) { Thread.sleep(forTimeInterval: 2); return 1 }
+        #expect(late == nil)
+        #expect(Date().timeIntervalSince(started) < 1.5)
+        #expect(InstallMediaDriveScanner.withTimeout(2) { 7 } == 7)
+    }
 }

@@ -99,6 +99,8 @@ public enum DriveProtection: Equatable, Sendable {
     case notMounted
     /// Holds this many visible items.
     case notEmpty(Int)
+    /// macOS has not (yet) let MacReplica look inside this volume (a privacy question may be waiting).
+    case notReadable(String)
 }
 
 public struct DriveCandidate: Equatable, Sendable, Identifiable {
@@ -235,7 +237,8 @@ public struct InstallMediaDriveScanner: Sendable {
                                  // Unknown counts as internal and not removable: such a disk is never offered whole.
                                  isInternal: (info["Internal"] as? Bool) ?? true,
                                  isRemovable: (info["RemovableMedia"] as? Bool) ?? false,
-                                 isVirtual: (info["VirtualOrPhysical"] as? String) != "Physical",
+                                 // Apple's internal SSDs report “Unknown” (macOS 27, Apple Fabric); only “Virtual” is a disk image.
+                                 isVirtual: (info["VirtualOrPhysical"] as? String) == "Virtual" || (info["BusProtocol"] as? String) == "Disk Image",
                                  isWritable: (info["WritableMedia"] as? Bool) ?? false, volumes: volumes)
     }
 
@@ -250,22 +253,43 @@ public struct InstallMediaDriveScanner: Sendable {
         return result
     }
 
+    /// How long a look inside a volume may take. Reading a card or another user's folder can make macOS ask the
+    /// user for permission, and the read waits until it is answered (seen with an SD card on macOS 27).
+    public var lookTimeout: TimeInterval = 5
+
+    /// Runs a file-system look with a time limit; nil if it did not finish (the waiting read finishes on its own
+    /// thread once macOS answers).
+    static func withTimeout<T>(_ seconds: TimeInterval, _ body: @escaping @Sendable () -> T) -> T? {
+        let box = TimeoutBox<T>()
+        let done = DispatchSemaphore(value: 0)
+        Thread {
+            let value = body()
+            box.lock.withLock { box.value = value }
+            done.signal()
+        }.start()
+        guard done.wait(timeout: .now() + seconds) == .success else { return nil }
+        return box.lock.withLock { box.value }
+    }
+
     /// What a mounted volume holds that must never be erased.
     func contentProtections(of volume: InstallMediaDrive.Volume) -> [DriveProtection] {
         guard let mount = volume.mountPoint, !mount.isEmpty else { return [] }
         if mount == "/" { return [.startupDisk] }
+        let name = volume.name.isEmpty ? volume.device : volume.name
+        let root = URL(fileURLWithPath: mount)
+        guard let found = Self.withTimeout(lookTimeout, {
+            (backupdb: FileManager.default.fileExists(atPath: root.appendingPathComponent("Backups.backupdb").path),
+             timeMachine: FileManager.default.fileExists(atPath: root.appendingPathComponent(".com.apple.timemachine.supported").path),
+             macReplica: Self.holdsMacReplicaBackup(root))
+        }) else { return [.notReadable(name)] }
         var result: [DriveProtection] = []
         let home = layout.homeDirectory.standardizedFileURL.path
         let protected = protectedPaths.map { $0.standardizedFileURL.resolvingSymlinksInPath().path } + [home]
         if let path = protected.first(where: { $0 == mount || $0.hasPrefix(mount + "/") }) {
             result.append(.holdsProtectedVolume(volume.name.isEmpty ? layout.redact(path) : volume.name))
         }
-        let root = URL(fileURLWithPath: mount)
-        let backup = FileManager.default.fileExists(atPath: root.appendingPathComponent("Backups.backupdb").path)
-            || FileManager.default.fileExists(atPath: root.appendingPathComponent(".com.apple.timemachine.supported").path)
-            || volume.content.lowercased().contains("backup")
-        if backup { result.append(.timeMachine(volume.name)) }
-        if Self.holdsMacReplicaBackup(root) { result.append(.holdsProtectedVolume(volume.name)) }
+        if found.backupdb || found.timeMachine || volume.content.lowercased().contains("backup") { result.append(.timeMachine(volume.name)) }
+        if found.macReplica { result.append(.holdsProtectedVolume(volume.name)) }
         return result
     }
 
@@ -289,7 +313,10 @@ public struct InstallMediaDriveScanner: Sendable {
         guard result.isEmpty else { return result }
         guard let mount = partition.mountPoint, !mount.isEmpty else { return [.notMounted] }
         result += contentProtections(of: partition)
-        let visible = Self.visibleItems(in: URL(fileURLWithPath: mount))
+        let folder = URL(fileURLWithPath: mount)
+        guard let visible = Self.withTimeout(lookTimeout, { Self.visibleItems(in: folder) }) else {
+            return result + [.notReadable(partition.name.isEmpty ? partition.device : partition.name)]
+        }
         if visible > 0 { result.append(.notEmpty(visible)) }
         if partition.sizeBytes < required { result.append(.tooSmall(required: required)) }
         return result
@@ -336,4 +363,10 @@ public struct InstallMediaDriveScanner: Sendable {
     public func revalidate(_ confirmed: InstallMediaDrive, required: Int64) async throws -> InstallMediaDrive {
         try await revalidate(DriveCandidate(drive: confirmed, protections: []), required: required).drive
     }
+}
+
+/// The result of a look that may outlive its time limit.
+private final class TimeoutBox<T>: @unchecked Sendable {
+    var value: T?
+    let lock = NSLock()
 }
