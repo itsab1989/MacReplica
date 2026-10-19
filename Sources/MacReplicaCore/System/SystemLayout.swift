@@ -44,6 +44,12 @@ public struct SystemLayout: Sendable, Equatable {
     public var codesign: String = "/usr/bin/codesign"
     public var syspolicyCheck: String = "/usr/bin/syspolicy_check"
     public var softwareupdate: String = "/usr/sbin/softwareupdate"
+    /// Lists drives and erases the one the user chose for a bootable installer (Tools › Create macOS Installer).
+    public var diskutil: String = "/usr/sbin/diskutil"
+    /// Read-only: `bless --info <volume>` shows the startup folder `createinstallmedia` set on the installer drive.
+    public var bless: String = "/usr/sbin/bless"
+    /// Where macOS mounts drives; the installer drive's volume appears here.
+    public var volumesRoot: URL = URL(fileURLWithPath: "/Volumes")
     /// Read-only: `nvram boot-args` (whether the Ammonia tweak loader's boot argument is set).
     public var nvram: String = "/usr/sbin/nvram"
     /// The Plugin Playground loader's paths (only used by the corner plugin; MacReplica writes to the tweaks folder
@@ -171,7 +177,7 @@ public struct SystemLayout: Sendable, Equatable {
     public var allowedExecutables: Set<String> {
         let pythons = homebrewPrefixes.flatMap { prefix in PythonVersion.supportedMinors.map { homebrewPython(minor: $0, prefix: prefix) } }
         return Set(brewCandidates + masCandidates + pythons + [xcodeSelect, pkgutil, mdls, osascript, installer, hdiutil, ditto, lpstat, defaults, killall,
-                                                                  spctl, csrutil, profiles, codesign, syspolicyCheck, softwareupdate, nvram,
+                                                                  spctl, csrutil, profiles, codesign, syspolicyCheck, softwareupdate, nvram, diskutil, bless,
                                                                   launchctl, pgrep])
     }
 

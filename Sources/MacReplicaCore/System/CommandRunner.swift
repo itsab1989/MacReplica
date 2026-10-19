@@ -147,9 +147,15 @@ public final class ProcessCommandRunner: CommandRunning, CommandPolicyExtending,
         for (pipe, isError) in [(stdoutPipe, false), (stderrPipe, true)] {
             readers.enter()
             let reader = Thread {
-                let handle = pipe.fileHandleForReading
-                while let data = try? handle.read(upToCount: 65_536), !data.isEmpty {
-                    collector.append(data, isError: isError)
+                // read(2) returns what has arrived so far, so lines reach `onOutputLine` while the tool runs
+                // (FileHandle.read(upToCount:) waits until the whole count or the end of the output).
+                let descriptor = pipe.fileHandleForReading.fileDescriptor
+                var buffer = [UInt8](repeating: 0, count: 65_536)
+                while true {
+                    let count = buffer.withUnsafeMutableBytes { Darwin.read(descriptor, $0.baseAddress, $0.count) }
+                    if count > 0 { collector.append(Data(buffer[0..<count]), isError: isError); continue }
+                    if count < 0 && errno == EINTR { continue }
+                    break
                 }
                 readers.leave()
             }
@@ -213,6 +219,7 @@ private final class OutputCollector: @unchecked Sendable {
     private var stdout = Data()
     private var stderr = Data()
     private var pendingLine = Data()
+    private var endedWithCarriageReturn = false
     private let onLine: (@Sendable (String) -> Void)?
 
     init(onLine: (@Sendable (String) -> Void)?) {
@@ -226,10 +233,16 @@ private final class OutputCollector: @unchecked Sendable {
             if isError { stderr.append(data) } else { stdout.append(data) }
             guard onLine != nil else { return }
             pendingLine.append(data)
-            while let newline = pendingLine.firstIndex(of: 0x0A) {
-                let lineData = pendingLine[pendingLine.startIndex..<newline]
-                lines.append(String(decoding: lineData, as: UTF8.self))
-                pendingLine.removeSubrange(pendingLine.startIndex...newline)
+            // Progress is often redrawn with a carriage return (`softwareupdate`: "Installing: 6.0%\r"), so a
+            // carriage return ends a line too; "\r\n" ends just one.
+            while let end = pendingLine.firstIndex(where: { $0 == 0x0A || $0 == 0x0D }) {
+                let lineData = pendingLine[pendingLine.startIndex..<end]
+                let isLineFeed = pendingLine[end] == 0x0A
+                if !(isLineFeed && lineData.isEmpty && endedWithCarriageReturn) {
+                    lines.append(String(decoding: lineData, as: UTF8.self))
+                }
+                endedWithCarriageReturn = !isLineFeed
+                pendingLine.removeSubrange(pendingLine.startIndex...end)
             }
         }
         for line in lines { onLine?(line) }

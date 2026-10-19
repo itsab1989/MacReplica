@@ -127,7 +127,8 @@
       "file": "System/CommandRunner.swift",
       "tests": [
         "SecurityTests",
-        "CommandRunnerEdgeTests"
+        "CommandRunnerEdgeTests",
+        "InstallMediaSafetyTests"
       ],
       "area": "Security",
       "threshold": 70
@@ -141,7 +142,8 @@
         "ToolsCornerPluginTests",
         "ToolsCornerEdgeTests",
         "PluginLoaderTests",
-        "CornerPluginSetupTests"
+        "CornerPluginSetupTests",
+        "InstallMediaSafetyTests"
       ],
       "area": "Security"
     },
@@ -545,6 +547,38 @@
       "file": "Tools/ToolKit.swift",
       "tests": [
         "ToolsKitTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/InstallMedia/MacOSInstallerCatalog.swift",
+      "tests": [
+        "InstallMediaCatalogTests",
+        "InstallMediaIntegrationTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/InstallMedia/InstallMediaDestination.swift",
+      "tests": [
+        "InstallMediaSafetyTests",
+        "InstallMediaIntegrationTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/InstallMedia/InstallerInspector.swift",
+      "tests": [
+        "InstallMediaSafetyTests",
+        "InstallMediaIntegrationTests"
+      ],
+      "area": "Tools"
+    },
+    {
+      "file": "Tools/InstallMedia/InstallMediaCreator.swift",
+      "tests": [
+        "InstallMediaSafetyTests",
+        "InstallMediaIntegrationTests"
       ],
       "area": "Tools"
     },

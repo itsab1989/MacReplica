@@ -117,7 +117,11 @@ public struct SimulationEnvironment: Sendable {
         // The simulated Mac never asks the real launchd: without stand-ins the loader's daemon reads as not running.
         self.layout.launchctl = root.appendingPathComponent("tools/launchctl").path
         self.layout.pgrep = root.appendingPathComponent("tools/pgrep").path
-        for name in ["spctl", "csrutil", "profiles", "softwareupdate", "nvram"] {
+        // Drives: always the simulated Mac's stand-in, never the real diskutil – nothing in a simulation can erase a disk.
+        self.layout.diskutil = root.appendingPathComponent("tools/diskutil").path
+        self.layout.volumesRoot = root.appendingPathComponent("Volumes")
+        self.layout.bless = root.appendingPathComponent("tools/bless").path
+        for name in ["spctl", "csrutil", "profiles", "softwareupdate", "nvram", "codesign"] {
             let standIn = root.appendingPathComponent("tools/\(name)").path
             guard FileManager.default.isExecutableFile(atPath: standIn) else { continue }
             switch name {
@@ -125,6 +129,7 @@ public struct SimulationEnvironment: Sendable {
             case "csrutil": self.layout.csrutil = standIn
             case "profiles": self.layout.profiles = standIn
             case "nvram": self.layout.nvram = standIn
+            case "codesign": self.layout.codesign = standIn
             default: self.layout.softwareupdate = standIn
             }
         }
@@ -159,6 +164,7 @@ public struct SimulationEnvironment: Sendable {
 
     public func makePrivilegedExecutor() -> PrivilegedExecuting {
         let root = self.root
+        let layout = self.layout
         return DirectPrivilegedExecutor(packageInstaller: { package in
             try SimulationEnvironment.installSimulatedPackage(package, root: root)
         }, serviceStarter: { _ in
@@ -166,7 +172,21 @@ public struct SimulationEnvironment: Sendable {
             let marker = root.appendingPathComponent("state/loader-service-running")
             try FileManager.default.createDirectory(at: marker.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data().write(to: marker)
-        })
+        }, toolRunner: { argv in
+            // The simulated installer's createinstallmedia (a stand-in script inside the simulated Mac).
+            guard let tool = argv.first, tool.hasPrefix(root.standardizedFileURL.path + "/") else { throw PrivilegedError.invalidPath(argv.first ?? "") }
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: tool)
+            process.arguments = Array(argv.dropFirst())
+            process.environment = layout.processEnvironment(homebrewPrefix: nil, askpass: nil).merging(["MACREPLICA_SIMULATION_ROOT": root.path]) { $1 }
+            let output = Pipe()
+            process.standardOutput = output
+            process.standardError = output
+            try process.run()
+            let data = output.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else { throw PrivilegedError.failed(String(decoding: data, as: UTF8.self)) }
+        }, volumesRoot: layout.volumesRoot, applicationFolders: layout.applicationFolders)
     }
 
     /// A simulated installer package is JSON: `{"files": [{"source": "tools/brew", "destination": "opt/homebrew/bin/brew"}]}`.
