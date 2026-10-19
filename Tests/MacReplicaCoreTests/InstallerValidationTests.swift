@@ -267,19 +267,55 @@ struct InstallerValidationTests {
         #expect(!runner.commands.dropFirst(before).contains { $0.executable.hasSuffix("pkgutil") })
     }
 
-    @Test func changedImageIsDamagedByItsOwnChecksum() async throws {
-        let (sandbox, inspector, _, _, work) = try Self.setup("validate-bitflip")
-        let dmg = try await OwnInstallerTests.diskImage(app: "Pen Driver", bundleID: "com.example.pen", version: "4.0.14", in: sandbox, name: "PenFlip")
+    /// Where a UDIF image keeps its data and its list of contents, from its own trailer (koly block, big-endian).
+    static func udifRegions(_ dmg: URL) throws -> (data: Range<Int>, xml: Range<Int>) {
+        let bytes = try Data(contentsOf: dmg)
+        let trailer = bytes.suffix(512)
+        func u64(_ offset: Int) -> Int { trailer.dropFirst(offset).prefix(8).reduce(0) { $0 << 8 | Int($1) } }
+        return (u64(24)..<(u64(24) + u64(32)), u64(216)..<(u64(216) + u64(224)))
+    }
+
+    static func overwrite(_ dmg: URL, at offset: Int) throws {
         let handle = try FileHandle(forUpdating: dmg)
-        try handle.seek(toOffset: 600)
+        try handle.seek(toOffset: UInt64(offset))
         try handle.write(contentsOf: Data(repeating: 0xFF, count: 16))
         try handle.close()
+    }
+
+    /// Changed data: `hdiutil verify` reports a calculated checksum that differs – damage proven. The image has no file
+    /// system, so the mount always fails and the checksum always decides (an image with an app may mount despite the
+    /// damage, read only where needed – which made this test accept the changed image on a build machine once).
+    @Test func changedImageIsDamagedByItsOwnChecksum() async throws {
+        let (sandbox, inspector, _, _, work) = try Self.setup("validate-bitflip")
+        let dmg = try await intactUnmountableImage(sandbox)
+        let regions = try Self.udifRegions(dmg)
+        try Self.overwrite(dmg, at: regions.data.lowerBound + regions.data.count / 2)
+        #expect(FileFormatEvidence.examine(dmg) == .udif(hasChecksum: true), "the list of contents is intact")
         let selection = await inspector.select(dmg, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("b"))
         guard case .failure(let error) = selection.result else { Issue.record("a changed image was accepted"); return }
         #expect(error == .damaged(.checksumMismatch))
         #expect(selection.note?.contains("hdiutil verify: calculated CRC32 $") == true, "\(selection.note ?? "-")")
         #expect(await !Self.isAttached(dmg))
         #expect(TestEnvironment.english.installerProblemText(error).contains("damaged"))
+    }
+
+    /// A damaged list of contents: `hdiutil` fails without a checksum report ("error 3840"); MacReplica proves the
+    /// damage from the file's bytes – the list is not a property list.
+    @Test func aDamagedListOfContentsIsProvenFromTheBytes() async throws {
+        let (sandbox, inspector, runner, _, work) = try Self.setup("validate-xml")
+        let dmg = try await intactUnmountableImage(sandbox)
+        let regions = try Self.udifRegions(dmg)
+        #expect(!regions.xml.isEmpty)
+        try Self.overwrite(dmg, at: regions.xml.lowerBound + regions.xml.count / 2)
+        #expect(FileFormatEvidence.examine(dmg) == .udifDirectoryDamaged)
+        let before = runner.commands.count
+        let selection = await inspector.select(dmg, workFolder: work, bundleStore: sandbox.url.appendingPathComponent("b"))
+        guard case .failure(let error) = selection.result else { Issue.record("a damaged image was accepted"); return }
+        #expect(error == .damaged(.directoryDamaged))
+        #expect(!runner.commands.dropFirst(before).contains { $0.executable.hasSuffix("hdiutil") }, "decided without hdiutil")
+        #expect(TestEnvironment.english.installerProblemText(error).contains("damaged"))
+        #expect(FileFormatEvidence.directoryIsReadable(Data("<?xml version=\"1.0\"?><plist version=\"1.0\"><dict/></plist>".utf8)))
+        #expect(!FileFormatEvidence.directoryIsReadable(Data("<?xml version=\"1.0\"?><plist><dict><key>x".utf8)))
     }
 
     @Test func cutShortFilesAreIncomplete() async throws {

@@ -2219,3 +2219,4 @@
 "restore.deselectAll" = "Tout désélectionner";
 "launchpad.restartDock" = "Redémarrer le Dock";
 "launchpad.restartDock.help" = "Quitte le Dock normalement ; macOS le relance aussitôt (le Dock disparaît un instant) et recrée en général la base de données du Launchpad. Rien n’est supprimé. MacReplica vérifie ensuite à nouveau et organise le Launchpad.";
+"ownInstaller.problem.directoryDamaged" = "L’image disque est endommagée : la liste de son contenu enregistrée à la fin ne peut pas être lue, elle ne peut donc pas être ouverte. MacReplica ne la conserve pas. Télécharge-la à nouveau auprès du développeur.";

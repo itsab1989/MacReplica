@@ -221,6 +221,8 @@ public enum InstallerInspectionError: Error, Equatable, Sendable {
         case checksumMismatch
         /// The file ends too early: the disk image's directory or the zip archive's central directory is missing.
         case truncated
+        /// The disk image's list of contents cannot be read (checked by MacReplica on the file's bytes).
+        case directoryDamaged
     }
 }
 
@@ -460,6 +462,8 @@ public struct InstallerArchiveInspector: Sendable {
             throw InstallerInspectionFailure(.notAnInstaller(other), note: "the file is not a disk image (\(other.rawValue))")
         case .udifTruncated?, .compressedImageWithoutDirectory?:
             throw InstallerInspectionFailure(.damaged(.truncated), note: "the disk image's directory at the end of the file is missing or points past its end")
+        case .udifDirectoryDamaged?:
+            throw InstallerInspectionFailure(.damaged(.directoryDamaged), note: "the disk image's list of contents (property list) cannot be read")
         case .udif?, .rawImage?, .unknown?:
             break
         }

@@ -2219,3 +2219,4 @@
 "restore.deselectAll" = "Deselecteer alles";
 "launchpad.restartDock" = "Dock opnieuw starten";
 "launchpad.restartDock.help" = "Stopt het Dock op de normale manier; macOS start het meteen opnieuw (het Dock verdwijnt even) en maakt daarbij meestal de database van Launchpad opnieuw aan. Er wordt niets verwijderd. MacReplica controleert daarna opnieuw en deelt Launchpad in.";
+"ownInstaller.problem.directoryDamaged" = "De schijfkopie is beschadigd: de inhoudslijst aan het einde kan niet worden gelezen, dus ze kan niet worden geopend. MacReplica bewaart haar niet. Download haar opnieuw bij de ontwikkelaar.";

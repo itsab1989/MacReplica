@@ -2219,3 +2219,4 @@
 "restore.deselectAll" = "Deseleziona tutto";
 "launchpad.restartDock" = "Riavvia il Dock";
 "launchpad.restartDock.help" = "Chiude il Dock normalmente; macOS lo riavvia subito (il Dock scompare per un attimo) e di solito ricrea il database di Launchpad. Non viene eliminato nulla. MacReplica poi controlla di nuovo e dispone Launchpad.";
+"ownInstaller.problem.directoryDamaged" = "L’immagine disco è danneggiata: l’elenco del suo contenuto salvato alla fine non si può leggere, quindi non può essere aperta. MacReplica non la conserva. Scaricala di nuovo dallo sviluppatore.";

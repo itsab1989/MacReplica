@@ -12,6 +12,9 @@ public enum FileFormatEvidence: Equatable, Sendable {
     case udif(hasChecksum: Bool)
     /// A UDIF directory that points past the end of the file: the file was cut short.
     case udifTruncated
+    /// A UDIF image whose list of contents (the XML property list the directory points to) cannot be read: the image
+    /// is damaged. `hdiutil` then fails without a checksum report ("error 3840"), so only the bytes can prove it.
+    case udifDirectoryDamaged
     /// Starts like a compressed disk image, but the directory at the end is missing: an interrupted download.
     case compressedImageWithoutDirectory
     /// A password-protected disk image. `hdiutil` waits for the password (in a dialog) instead of failing, so it is
@@ -39,7 +42,7 @@ public enum FileFormatEvidence: Equatable, Sendable {
     public var provesNotADiskImage: Bool {
         switch self {
         case .udifTruncated, .compressedImageWithoutDirectory, .otherFormat: return true
-        case .udif, .encrypted, .rawImage, .unknown: return false
+        case .udif, .udifDirectoryDamaged, .encrypted, .rawImage, .unknown: return false
         }
     }
 
@@ -60,7 +63,21 @@ public enum FileFormatEvidence: Equatable, Sendable {
             // ISO 9660: "CD001" at byte 1 of the volume descriptor in sector 16.
             if (try? handle.seek(toOffset: 32_769)) != nil { sector16 = (try? handle.read(upToCount: 5)) ?? Data() }
         }
-        return classify(head: head, trailer: trailer, size: size, sector16: sector16)
+        let evidence = classify(head: head, trailer: trailer, size: size, sector16: sector16)
+        // The list of contents must be a readable property list (its position was checked by `classify`).
+        if case .udif = evidence {
+            let offset = readUInt64(trailer, 216), length = readUInt64(trailer, 224)
+            if length > 0, length <= 256 * 1_048_576, (try? handle.seek(toOffset: offset)) != nil,
+               let xml = try? handle.read(upToCount: Int(length)), !directoryIsReadable(xml) {
+                return .udifDirectoryDamaged
+            }
+        }
+        return evidence
+    }
+
+    /// True when the image's list of contents is a property list.
+    static func directoryIsReadable(_ xml: Data) -> Bool {
+        (try? PropertyListSerialization.propertyList(from: xml, format: nil)) != nil
     }
 
     /// The classification of `examine`, on bytes (tested without files).

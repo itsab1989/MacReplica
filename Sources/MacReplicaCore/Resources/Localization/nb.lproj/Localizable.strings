@@ -2219,3 +2219,4 @@
 "restore.deselectAll" = "Opphev alle valg";
 "launchpad.restartDock" = "Start Dock på nytt";
 "launchpad.restartDock.help" = "Avslutter Dock på vanlig måte; macOS starter den igjen med en gang (Dock forsvinner et øyeblikk) og lager da vanligvis Launchpads database på nytt. Ingenting slettes. MacReplica sjekker deretter igjen og ordner Launchpad.";
+"ownInstaller.problem.directoryDamaged" = "Diskbildet er skadet: innholdslisten på slutten av filen kan ikke leses, så det kan ikke åpnes. MacReplica beholder det ikke. Last det ned på nytt fra utvikleren.";
