@@ -2404,3 +2404,4 @@
 "installMedia.protect.notReadable" = "macOS har ennå ikke latt MacReplica se inn i «%1$@» (et tillatelsesspørsmål venter kanskje). Gi tilgang, og klikk så Sjekk igjen.";
 "installMedia.drive.changedTitle" = "Disken er endret";
 "installMedia.drive.changedMessage" = "En disk ble koblet til, fjernet eller endret mens du bekreftet. Ingenting ble slettet. Velg disken på nytt.";
+"note.launchpadAppsNotInBackup" = "%1$d apper på denne Macen er ikke i Launchpad-oppsettet som er lagret i sikkerhetskopien, så macOS la dem etter de ordnede sidene: %2$@. Sikkerhetskopier laget med MacReplica før 1.1.7 utelot apper du valgte bort; en ny sikkerhetskopi av den gamle Macen beholder plassene deres.";

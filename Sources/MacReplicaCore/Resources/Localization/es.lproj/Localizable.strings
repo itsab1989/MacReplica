@@ -2404,3 +2404,4 @@
 "installMedia.protect.notReadable" = "macOS aún no ha dejado que MacReplica mire dentro de «%1$@» (puede que haya una pregunta de permiso esperando). Permite el acceso y pulsa Comprobar de nuevo.";
 "installMedia.drive.changedTitle" = "El disco ha cambiado";
 "installMedia.drive.changedMessage" = "Mientras confirmabas se conectó, quitó o modificó un disco. No se borró nada. Vuelve a elegir el disco.";
+"note.launchpadAppsNotInBackup" = "%1$d apps de este Mac no están en la disposición de Launchpad guardada en la copia de seguridad, así que macOS las colocó tras las páginas ordenadas: %2$@. Las copias hechas con MacReplica antes de la 1.1.7 omitían las apps que deseleccionaste; una nueva copia del Mac antiguo conserva su sitio.";

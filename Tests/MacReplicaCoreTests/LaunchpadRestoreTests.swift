@@ -83,6 +83,29 @@ struct LaunchpadRestoreTests {
         #expect(dry.first?.prediction == .alreadyPresent(version: nil))
     }
 
+    /// The tester's restore with 1.1.8 (2026-10-19): his backup, made before 1.1.7, had no place for the apps he had
+    /// deselected, so they ended up after the arranged pages while the result said only “succeeded”. Such apps are
+    /// now named in the result, with the reason and the way out (a new backup of the old Mac).
+    @Test func appsTheBackupHasNoPlaceForAreNamed() async throws {
+        let c = try await backup("launchpad-outside")
+        let (_, environment, _) = try target(c, apps: Self.folder + Self.page + ["com.apple.Safari", "com.example.extra"])
+        let plan = RestorePlanner().plan(manifest: c.manifest, selection: RestoreSelection(components: [.launchpad]))
+        let session = await run(plan, environment, c)
+        let result = try #require(session.results[RestoreItem.launchpadID])
+        #expect(result.outcome == .succeeded)
+        guard case .launchpadAppsNotInBackup(let count, let names) = result.notes.first else { Issue.record("no note: \(result.notes)"); return }
+        #expect(count == 2 && names.count == 2)
+        let text = TestEnvironment.english.noteText(result.notes[0])
+        #expect(text.hasPrefix("2 apps on this Mac are not in the Launchpad arrangement saved in the backup"))
+        #expect(text.contains("a new backup of the old Mac keeps their places"))
+
+        // Everything on this Mac has its place: no note.
+        let (_, exact, _) = try target(c, apps: Self.folder + Self.page)
+        #expect(await run(plan, exact, c).results[RestoreItem.launchpadID]?.notes.isEmpty == true)
+        #expect(RestoreExecutor.appsNotInArrangement(LaunchpadLayout(pages: [[.app("a")]], macOSVersion: "14"),
+                                                      on: LaunchpadLayout(pages: [[.app("a"), .app("b")]], macOSVersion: "14")) == ["b"])
+    }
+
     /// Since 1.1.7 apps left out of the backup keep their place in the layout: installed anyway on the new Mac, they go
     /// into their folder (a tester's Defender, OneDrive and DisplayCAL tools ended up after his pages, 2026-10-19).
     @Test func appsLeftOutOfTheBackupKeepTheirPlace() async throws {

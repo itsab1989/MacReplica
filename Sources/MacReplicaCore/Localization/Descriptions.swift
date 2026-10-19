@@ -214,6 +214,8 @@ extension Localizer {
         case .requiresRosetta: return t("note.requiresRosetta")
         case .homebrewUpdated(let version): return t("note.homebrewUpdated", version)
         case .reinstalledForThisProcessor(let found): return t("note.reinstalledForThisProcessor", found)
+        case .launchpadAppsNotInBackup(let count, let names):
+            return t("note.launchpadAppsNotInBackup", count, names.joined(separator: ", ") + (count > names.count ? ", …" : ""))
         case .existingFileMovedAside(let path): return t("note.movedAside", path)
         case .identicalFileExists: return t("note.identical")
         case .equivalentFileInstalled: return t("note.equivalentFile")

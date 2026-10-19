@@ -2404,3 +2404,4 @@
 "installMedia.protect.notReadable" = "macOS heeft MacReplica nog niet in '%1$@' laten kijken (mogelijk wacht er een toestemmingsvraag). Sta toegang toe en klik daarna op 'Controleer opnieuw'.";
 "installMedia.drive.changedTitle" = "De schijf is veranderd";
 "installMedia.drive.changedMessage" = "Tijdens het bevestigen werd een schijf aangesloten, verwijderd of gewijzigd. Er is niets gewist. Kies de schijf opnieuw.";
+"note.launchpadAppsNotInBackup" = "%1$d apps op deze Mac staan niet in de Launchpad-indeling die in de reservekopie is bewaard, dus macOS zette ze na de geordende pagina's: %2$@. Reservekopieën gemaakt met MacReplica vóór 1.1.7 lieten apps weg die je had uitgevinkt; een nieuwe reservekopie van de oude Mac behoudt hun plaats.";
