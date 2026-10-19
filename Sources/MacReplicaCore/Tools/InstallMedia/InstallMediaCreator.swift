@@ -188,7 +188,8 @@ public struct InstallMediaCreator: Sendable {
         let blessed = bless.map { $0.succeeded && $0.stdout.contains("CoreServices") } ?? false
         checks.append(.init(item: .blessed, passed: blessed,
                             detail: bless.map { layout.redact(ErrorClassifier.technicalDetail($0.combinedOutput, layout: layout, maxLines: 2)) } ?? "bless could not be run"))
-        let signature = try? await runner.run(Command(executable: layout.codesign, arguments: ["--verify", "--strict", "-R=anchor apple", app.path], timeout: 1800))
+        let signature = try? await runner.run(Command(executable: layout.codesign, arguments: ["--verify", "--no-strict", "-R=" + InstallerInspector.appleRequirement, app.path],
+                                                                timeout: 1800))
         checks.append(.init(item: .signature, passed: signature?.succeeded ?? false,
                             detail: signature.map { $0.succeeded ? "codesign: valid, signed by Apple"
                                 : layout.redact(ErrorClassifier.technicalDetail($0.combinedOutput, layout: layout, maxLines: 2)) } ?? "codesign could not be run"))

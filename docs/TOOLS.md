@@ -1,4 +1,4 @@
-# Tools: Gatekeeper, macOS updates, window corners
+# Tools: Gatekeeper, macOS updates, window corners, macOS installer
 
 The fourth option on MacReplica's start screen. Three independent tools for this Mac. Each one shows what it finds,
 explains what a change would do, asks before anything changes, checks the real state afterwards and records the
@@ -19,6 +19,7 @@ page).
 | Software Update: settings, support status | `Tools/UpdatePreferencesTool.swift` |
 | Profiles (Gatekeeper off, major-upgrade deferral) | `Tools/ConfigurationProfiles.swift` |
 | Window corners | `Tools/WindowCornersTool.swift` |
+| macOS installer: catalog, drives, installer check, creation, verification | `Tools/InstallMedia/` (`MacOSInstallerCatalog.swift`, `InstallMediaDestination.swift`, `InstallerInspector.swift`, `InstallMediaCreator.swift`); UI `AppModel+InstallMedia.swift`, `Views/InstallMediaViews.swift` |
 | UI and flow (confirmation → change → re-read → history) | `Sources/MacReplica/App/AppModel+Tools.swift`, `Views/ToolsViews.swift` |
 
 Capability states: Supported, Supported with limits, Experimental, Your step in System Settings, Needs administrator
@@ -313,6 +314,130 @@ Real, with the plugin active (macOS 27.0.1, SIP off): Finder toolbar (pills → 
 | Relaunch needed | – | – | apps | apps |
 | Survives macOS update | – | – | not guaranteed | not guaranteed; the plugin switches itself off |
 | Revert | – | – | exact previous values | exact previous values |
+
+## D. Create macOS Installer (1.1.9)
+
+A bootable USB installer, made with Apple's own `createinstallmedia` (support.apple.com/101578). Research date
+2026-10-19, test Mac macOS 27.0.1 (26A434), Apple silicon.
+
+### Where the versions come from (nothing built in)
+
+MacReplica ships **no list of macOS versions**. Each time the screen opens (and on **Check Again**) it reads:
+
+1. `softwareupdate --list-full-installers` – Apple's catalog of full installers for the Mac it runs on. Line format
+   (macOS 27): `* Title: macOS Sonoma, Version: 14.8.9, Size: 13334756KiB, Build: 23J631, Deferred: NO`. Lines that do
+   not parse, names with characters other than letters, digits, spaces and dots, and versions that are not numbers are
+   dropped. This is the only source MacReplica downloads from (`softwareupdate --fetch-full-installer
+   --full-installer-version <v>`, as the user, no administrator password; progress `Installing: N.N%`, which ended at
+   89 % in the real 14.8.9 download before “Install finished successfully”). A new macOS version appears here by itself.
+2. Apple's page “How to download and install macOS” (`https://support.apple.com/en-us/102662`), fetched live. Only two
+   kinds of links are taken: App Store links on `apps.apple.com` (`macappstores://…/id<number>`) and `.dmg` files on
+   Apple's update CDN. The page's `http://updates-http.cdn-apple.com/…` links are rewritten to
+   `https://updates.cdn-apple.com/…` (same files and sizes, checked 2026-10-19). Everything else on the page is ignored;
+   if the page changes so that nothing is recognised, its entries are kept from the last good read with the problem
+   shown.
+
+The two are merged: page entries are shown only for major releases Software Update does not offer. Grouping: major
+release (`14`, `10.15`), newest first; inside, versions newest first by number (26.10 > 26.7.1). Both sources keep their
+last good result with the time it was read (`~/Library/Caches/MacReplica/macos-installers.json`); a failing source
+shows its error instead of made-up entries. The installer app's name follows Apple's rule “Install ” + the catalog
+title (“Install macOS 27 Golden Gate.app”, “Install OS X El Capitan.app”).
+
+The only built-in rule: Macs with Apple silicon start up only from macOS 11 or later, so earlier releases are listed
+but cannot be chosen on them. Everything else is read from the installer itself:
+
+### Installer check (`InstallerInspector`)
+
+- Display name, the app's version, the macOS version and build inside (`SharedSupport/InstallInfo.plist` for Catalina
+  and earlier; for Big Sur and later `SharedSupport.dmg` is attached read-only and hidden, its
+  `com_apple_MobileAsset_MacSoftwareUpdate.xml` read, and detached again). Real 14.8.9 installer: app 19.8.62, macOS
+  14.8.9, build 23J631, 13.7 GB.
+- `createinstallmedia` present; its processors (Mach-O header; an Intel-only tool on Apple silicon needs Rosetta).
+- Signatures: `codesign --verify --strict` on `createinstallmedia` (the binary that later runs as root) and
+  `codesign --verify --no-strict` on the app, both with the requirement
+  `anchor apple or (anchor apple generic and certificate leaf[subject.O] = "Apple Inc.")`: Apple's own signing
+  (today's installers; 14.8.9: “Software Signing”) or a certificate Apple issued to Apple Inc. under its root, which
+  older App Store installers carry (the real OS X Mountain Lion app: “3rd Party Mac Developer Application: Apple Inc.” –
+  plain `anchor apple` rejected it). Other developers' certificates never name Apple Inc. as their organisation; a
+  third-party app failed the requirement in the test. `--strict` is not used for the app because Apple's installer apps
+  use old-style resource rules that `--strict` rejects (“resource envelope is obsolete (custom omit rules)”, seen on the
+  real 14.8.9 installer); the seal is still verified. The installer's disk image itself is checked by macOS when it
+  installs.
+- The tool's options come from the tool: only after its signature passed, `createinstallmedia` is run without
+  arguments as the user (it prints its usage and exits 0, changing nothing). `--nointeraction` must be offered;
+  `--applicationpath` is passed when the tool names it but not `--downloadassets` (El Capitan, Sierra and High
+  Sierra). Lion and Mountain Lion have no `createinstallmedia` and are refused.
+
+### Destination safety (`InstallMediaDriveScanner`)
+
+Read-only `diskutil list -plist external`, `diskutil info -plist <disk>` and `diskutil info -plist /`. A drive is
+offered only if it is a whole disk (`disk<N>`), external (`Internal` false – a missing value counts as internal),
+physical (`VirtualOrPhysical` = Physical), writable and large enough (installer size + 2 GiB). Protected, with the
+reason shown: the startup disk (the whole disk of `/` and of its APFS physical store – this also covers a Mac started
+from an external drive), internal disks, disk images, read-only media, drives with a Time Machine backup
+(`Backups.backupdb`, `.com.apple.timemachine.supported` or a backup APFS role) and drives holding MacReplica itself,
+the chosen installer, the home folder or a MacReplica backup (`MacReplica-Backup-*` with a manifest up to three levels
+deep). APFS volumes listed under a synthesized container count for the physical drive they live on. On the test Mac the
+real scan listed only an attached driver disk image, protected as disk image, read-only and too small; the internal
+disk does not appear at all.
+
+**Why not on the internal disk:** it would need a new partition on the startup disk, i.e. resizing the user's
+partitions – risky for the data and not a method Apple documents for installers. Apple's way for the internal disk is
+macOS Recovery. The tool therefore never offers internal disks or partitions.
+
+### Creation (`InstallMediaCreator`) – each destructive step once, never retried
+
+1. The installer check must have no problem.
+2. The drive is read again and compared with what the user confirmed: device, media name, size, connection and every
+   volume's identifier and name. Device numbers are reused when drives are replugged, so the number alone never
+   counts. Any difference stops before anything is erased (“Nothing was erased”).
+3. `diskutil eraseDisk JHFS+ MRINSTALL-<8 hex> GPT disk<N>` **as the user** – macOS lets the console user erase
+   external drives without administrator rights (verified on a disk image), so the comparison in step 2 happens
+   directly before the erase with no password dialog in between.
+4. The new volume must appear at `/Volumes/MRINSTALL-…` on that same disk; a random marker file
+   `.MacReplicaInstallTarget-<UUID>` is written onto it.
+5. One administrator dialog (macOS's own) runs exactly two fixed commands: `/bin/test -f <marker>` and then
+   `<installer>/Contents/Resources/createinstallmedia --volume /Volumes/MRINSTALL-… --nointeraction
+   [--applicationpath <installer>]`. Even if drives change while the dialog is open, the chain stops unless the marker
+   is on the volume, so `createinstallmedia` can only reach the volume MacReplica just erased. The privileged-operation
+   checks allow only `Install *.app/Contents/Resources/createinstallmedia` directly in Applications, only a
+   `MRINSTALL-<8 hex>` volume directly in `/Volumes`, `--applicationpath` only for that same app, and
+   `createinstallmedia` only right after the marker check of the same volume. Passwords are never seen or logged by
+   MacReplica.
+6. Verification reads the result: installer volume on the confirmed disk, Mac OS Extended, the installer app in the
+   same version, `System/Library/CoreServices/boot.efi`, `bless --info` (startup folder; macOS does not always allow
+   reading it, then the result is “partly checked”), and Apple's signature on the copied app. A drive is only proven
+   by starting a Mac from it; the result says so.
+
+The Mac is kept awake while the drive is written. A download can be cancelled; erase and `createinstallmedia` cannot
+(interrupting would leave a half-written drive). After a failure the screen states whether the drive was left
+untouched or erased without an installer; **Try Again** requires a new confirmation. History entries hold the macOS
+version, build, connection and size – no drive or volume names.
+
+In a simulated Mac (`--simulation-root`) `diskutil`, `bless`, `codesign`, `softwareupdate` and `createinstallmedia` are
+stand-ins working on folders of the simulation (`MacReplicaSimulator install-media <folder>`), and the real
+`/usr/sbin/diskutil` is refused outright.
+
+### Verification (2026-10-19, 1.1.9)
+
+| Capability | Status | Evidence |
+|---|---|---|
+| Live catalog, grouping, sources and their times, failures | Verified | Real `softwareupdate` list on macOS 27 (16 installers 27.0.1 … 14.8.7) and the live page (13 releases 15 … 10.7); fixture of the page's real anchors in the tests |
+| Download through Software Update with live progress | Verified | Real `--fetch-full-installer 14.8.9` (exit 0, app in Applications); progress on screen in the simulation after fixing the runner (below) |
+| Installer check | Verified | Real 14.8.9 installer: version/build from SharedSupport.dmg, both signatures, tool options from its usage, image detached afterwards |
+| Drive scan and protection | Verified (read-only) + simulated | Real scan on the test Mac (internal disk absent, disk image protected); every protection in unit tests and on screen |
+| Swapped drive, erase failure, password cancelled, tool failure, unsigned installer | Simulated + unit | On screen (swap, tool failure) and in tests; each stops once, nothing retried |
+| Whole flow on screen, 7 languages | Simulated | Simulated Mac: catalog → download → check → drive → confirm → create → 7 checks passed → instructions; German layout checked |
+| Old installer from Apple's page (OS X Mountain Lion 10.8) | Verified | Downloaded from `updates.cdn-apple.com` (4,449,317,520 bytes, as the page's server reports); package “signed by a certificate that has since expired” (`pkgutil`); app extracted as the user without installing: name “Install OS X Mountain Lion.app” as derived from the page, Apple's signature accepted, refused because it has no `createinstallmedia` |
+| Real `createinstallmedia` onto a disposable disk image | See “Real run” below | `MacReplicaSimulator create-installer-on-image` (accepts only a `.sparseimage` it attaches itself in the staging folder) |
+| Starting a Mac from the drive | Not verified | Needs a spare Mac and a real USB drive |
+| Physical USB drive | Not verified | No disposable drive was used (never a personal one); the same `diskutil` calls as on the disk image |
+
+**Found on screen and fixed:** the download's percentage only appeared at the end. `ProcessCommandRunner` read output
+with `FileHandle.read(upToCount: 65536)`, which waits for the full 64 KB or the end, so `onOutputLine` got everything
+at once. It now reads with `read(2)` (whatever has arrived) and also ends a line at a carriage return, which
+`softwareupdate` uses to redraw its progress. Regression test: `outputLinesArriveWhileTheToolRuns` (fails on the old
+reader: first line after 2 s instead of at once).
 
 ## Verification (2026-10-13)
 

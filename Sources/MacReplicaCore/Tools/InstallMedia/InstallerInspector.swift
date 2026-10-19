@@ -18,7 +18,7 @@ public struct InstallerAppReport: Equatable, Sendable {
     public var needsApplicationPath: Bool
     /// The tool's processors; an Intel-only tool needs Rosetta on Apple silicon.
     public var toolArchitectures: [CPUArchitecture]
-    /// `codesign --verify --strict -R "anchor apple"`: signed by Apple itself, nothing changed.
+    /// Apple's signature on the app and on its `createinstallmedia` (see `InstallerInspector.appleRequirement`).
     public var signedByApple: Bool
     public var signatureDetail: String
     /// Big Sur and later keep the installer in `SharedSupport/SharedSupport.dmg`; older ones in `InstallESD.dmg`.
@@ -72,6 +72,12 @@ public struct InstallerInspector: Sendable {
         self.hasRosetta = hasRosetta
     }
 
+    /// Signed by Apple: Apple's own signing (`anchor apple`, today's installers, e.g. 14.8.9: “Software Signing”) or a
+    /// certificate Apple issued to Apple Inc. under its root – older installers from the App Store are signed that way
+    /// (OS X Mountain Lion: “3rd Party Mac Developer Application: Apple Inc.”). Other developers' certificates never
+    /// carry Apple Inc. as their organisation.
+    public static let appleRequirement = #"anchor apple or (anchor apple generic and certificate leaf[subject.O] = "Apple Inc.")"#
+
     /// `Install *.app` directly in the Applications folders.
     public func installedInstallers() -> [URL] {
         let fm = FileManager.default
@@ -103,7 +109,8 @@ public struct InstallerInspector: Sendable {
             report.createInstallMedia = tool
             report.toolArchitectures = MachO.architectures(ofFile: tool)
             // The tool runs as root later, so it must be Apple's own, unchanged.
-            let check = try? await runner.run(Command(executable: layout.codesign, arguments: ["--verify", "--strict", "-R=anchor apple", tool.path], timeout: 120))
+            let check = try? await runner.run(Command(executable: layout.codesign, arguments: ["--verify", "--strict", "-R=" + Self.appleRequirement, tool.path],
+                                                      timeout: 120))
             toolSigned = check?.succeeded ?? false
             toolDetail = check.map { layout.redact(ErrorClassifier.technicalDetail($0.combinedOutput, layout: layout, maxLines: 2)) } ?? "codesign could not be run"
             if toolSigned {
@@ -131,7 +138,7 @@ public struct InstallerInspector: Sendable {
         }
         // Apple's installer apps keep an old form of resource rules that `--strict` rejects ("resource envelope is
         // obsolete", seen with macOS 14's installer); the seal and Apple's signature are still checked without it.
-        let signature = try? await runner.run(Command(executable: layout.codesign, arguments: ["--verify", "--no-strict", "-R=anchor apple", app.path],
+        let signature = try? await runner.run(Command(executable: layout.codesign, arguments: ["--verify", "--no-strict", "-R=" + Self.appleRequirement, app.path],
                                                       timeout: 900))
         let appSigned = signature?.succeeded ?? false
         report.signedByApple = appSigned && (report.createInstallMedia == nil || toolSigned)

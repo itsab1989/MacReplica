@@ -7,6 +7,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Tools › Create macOS Installer**: a bootable USB installer for a macOS version Apple offers, made with Apple's
+  own `createinstallmedia`. The versions are read live on the Mac – Software Update's full installers for this Mac and
+  Apple's page “How to download and install macOS” – so new macOS versions appear without a MacReplica update; grouped
+  by major release, newest first, with the time each source was read. MacReplica downloads Software Update's
+  installers itself and opens Apple's App Store page or download for older ones. It checks Apple's signature on the
+  installer and its `createinstallmedia`, offers only external drives (never the startup disk, internal disks, disk
+  images or drives with a backup), reads the drive again right before erasing and stops if it changed, erases it,
+  then runs `createinstallmedia` with one administrator password on exactly the volume it erased. Afterwards it checks
+  the drive and shows how to start up Macs with Apple silicon and Intel Macs from it. Nothing destructive is retried by
+  itself. No installers on the internal disk (that would mean resizing the startup disk; see the user guide).
+
+### Fixed
+- **Progress of external tools arrives while they run.** MacReplica read a tool's output in 64 KB blocks, so lines
+  reached it only at the end (found when the installer download's percentage stayed empty). Progress redrawn with a
+  carriage return now counts as a line, too.
+
 ## [1.1.8] - 2026-10-19
 
 ### Fixed

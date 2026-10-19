@@ -482,4 +482,55 @@ struct InstallMediaSafetyTests {
         #expect(first.1.timeIntervalSince(started) < 1.5)
         #expect(arrivals.all.map(\.0) == ["Installing: 1.0%", "Installing: 2.0%"])
     }
+
+    /// The installer check asks codesign for Apple's signature on the tool (strict) and on the app (not strict:
+    /// Apple's installer apps use resource rules `--strict` rejects), runs the tool only after its signature passed,
+    /// and reads its options from what it prints.
+    @Test func theInstallerCheckUsesApplesRequirementAndTheToolsOwnUsage() async throws {
+        let sandbox = try Sandbox("inspect")
+        let layout = toolchainLayout(sandbox)
+        let app = try sandbox.folder("Applications/Install macOS Sonoma.app")
+        try sandbox.file("Applications/Install macOS Sonoma.app/Contents/Info.plist", """
+        <?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleDisplayName</key><string>Install macOS Sonoma</string>\
+        <key>CFBundleShortVersionString</key><string>19.8.62</string></dict></plist>
+        """)
+        try sandbox.file("Applications/Install macOS Sonoma.app/Contents/SharedSupport/InstallInfo.plist", """
+        <?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>System Image Info</key><dict><key>version</key><string>14.8.9</string></dict></dict></plist>
+        """)
+        try sandbox.file("Applications/Install macOS Sonoma.app/Contents/SharedSupport/SharedSupport.dmg", "x")
+        let tool = try sandbox.file("Applications/Install macOS Sonoma.app/Contents/Resources/createinstallmedia", "#!/bin/sh\n", executable: true)
+        final class Answers: @unchecked Sendable { var toolSigned = true; var usage = "--volume\n--nointeraction\n--downloadassets" }
+        let answers = Answers()
+        let runner = ScriptedRunner { command in
+            if command.executable == layout.codesign {
+                let ok = command.arguments.last == tool.path ? answers.toolSigned : true
+                return CommandResult(exitCode: ok ? 0 : 1, stdout: "", stderr: ok ? "" : "invalid signature (code or signature have been modified)")
+            }
+            if command.executable == tool.path { return CommandResult(exitCode: 0, stdout: answers.usage, stderr: "") }
+            return CommandResult(exitCode: 1, stdout: "", stderr: "unexpected")
+        }
+        let inspector = InstallerInspector(layout: layout, runner: runner, environment: ToolEnvironment(macOSVersion: "27.0.1", architecture: .arm64), hasRosetta: false)
+        let report = await inspector.inspect(app)
+        let signatureChecks = runner.commands.filter { $0.executable == layout.codesign }.map(\.arguments)
+        #expect(signatureChecks == [["--verify", "--strict", "-R=" + InstallerInspector.appleRequirement, tool.path],
+                                    ["--verify", "--no-strict", "-R=" + InstallerInspector.appleRequirement, app.path]])
+        #expect(InstallerInspector.appleRequirement == #"anchor apple or (anchor apple generic and certificate leaf[subject.O] = "Apple Inc.")"#)
+        #expect(runner.commands.filter { $0.executable == tool.path }.map(\.arguments) == [[]])
+        #expect(report.signedByApple && report.supportsNoInteraction && !report.needsApplicationPath)
+        #expect(report.macOSVersion == "14.8.9" && report.appVersion == "19.8.62" && report.displayName == "Install macOS Sonoma")
+        #expect(inspector.problems(of: report) == [])
+
+        // High Sierra and older: --applicationpath without --downloadassets.
+        answers.usage = "--volume\n--applicationpath\n--nointeraction"
+        #expect(await inspector.inspect(app).needsApplicationPath)
+        // A tool that is not Apple's is never run.
+        answers.toolSigned = false
+        let before = runner.commands.filter { $0.executable == tool.path }.count
+        let tampered = await inspector.inspect(app)
+        #expect(runner.commands.filter { $0.executable == tool.path }.count == before)
+        #expect(!tampered.signedByApple && !tampered.supportsNoInteraction)
+        #expect(tampered.signatureDetail.hasPrefix("createinstallmedia: "))
+        #expect(inspector.installer(for: MacOSRelease(name: "macOS Sonoma", major: "14", source: .softwareUpdate, provenance: ""))?.lastPathComponent == "Install macOS Sonoma.app")
+        #expect(inspector.installer(for: MacOSRelease(name: "macOS Tahoe", major: "26", source: .softwareUpdate, provenance: "")) == nil)
+    }
 }
