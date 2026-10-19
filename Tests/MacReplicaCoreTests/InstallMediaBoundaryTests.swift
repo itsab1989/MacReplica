@@ -142,7 +142,7 @@ struct InstallMediaBoundaryTests {
         try await executor.run([.requireInstallMediaMarker(volume.appendingPathComponent(".MacReplicaInstallTarget-\(UUID().uuidString)")),
                                 .createInstallMedia(tool: tool, volume: volume, applicationPath: nil)], reason: "r")
         try await executor.run([.createFolder(URL(fileURLWithPath: "/Library/Fonts/x"))], reason: "r")
-        #expect(runner.commands.map(\.timeout) == [3 * 3600, 1800])
+        #expect(runner.commands.map(\.timeout) == [TimeInterval(3 * 3600), TimeInterval(1800)])
         // A volume path that climbs out of /Volumes is never an installer volume.
         #expect(!PrivilegedOperation.isInstallMediaVolume(URL(fileURLWithPath: "/Volumes/../Volumes/MRINSTALL-0A1B2C3D")))
         #expect(!PrivilegedOperation.isInstallMediaVolume(URL(fileURLWithPath: "/Volumes/MRINSTALL-0A1B2C3D/..")))
