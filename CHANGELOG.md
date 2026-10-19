@@ -7,6 +7,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Intact installers could be called damaged when macOS was busy with disk images.** MacReplica counted every failed
+  `hdiutil verify` as a checksum mismatch – also “Resource temporarily unavailable”, which only means the disk-image
+  service was busy (seen in a release run of 1.1.7). Damage now needs proof: `verify`'s own report of two different
+  checksums (read as data, so independent of the user's language), or a list of contents inside the image that
+  MacReplica cannot read as a property list. Any other failure is tried again three times; if it stays, the installer
+  is kept with *checksum not checked* and the tool's own words, as for other installers MacReplica cannot look into.
+- The details of such an installer no longer say *“checksum verified”* when the check could not run.
+
 ## [1.1.7] - 2026-10-18
 
 ### Fixed

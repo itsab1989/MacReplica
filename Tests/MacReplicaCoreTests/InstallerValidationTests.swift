@@ -299,6 +299,29 @@ struct InstallerValidationTests {
         #expect(TestEnvironment.english.installerProblemText(error).contains("damaged"))
     }
 
+    /// An image without an XML list of contents (older images keep it in a resource fork) is not called damaged: only a
+    /// list that exists and cannot be read proves damage.
+    @Test func anImageWithoutAnXMLListIsNotDamaged() throws {
+        let sandbox = try Sandbox("validate-noxml")
+        func be64(_ v: UInt64) -> [UInt8] { (0..<8).map { UInt8(v >> (56 - 8 * $0) & 0xFF) } }
+        func be32(_ v: UInt32) -> [UInt8] { (0..<4).map { UInt8(v >> (24 - 8 * $0) & 0xFF) } }
+        let data = [UInt8](repeating: 0x5A, count: 4096)
+        var koly = [UInt8](repeating: 0, count: 512)
+        koly.replaceSubrange(0..<4, with: Array("koly".utf8))
+        koly.replaceSubrange(4..<8, with: be32(4)); koly.replaceSubrange(8..<12, with: be32(512))
+        koly.replaceSubrange(24..<32, with: be64(0)); koly.replaceSubrange(32..<40, with: be64(UInt64(data.count)))
+        koly.replaceSubrange(216..<224, with: be64(0)); koly.replaceSubrange(224..<232, with: be64(0))   // no XML list
+        koly.replaceSubrange(352..<356, with: be32(2))                                                    // master checksum CRC32
+        let file = sandbox.url.appendingPathComponent("old.dmg")
+        try Data(data + koly).write(to: file)
+        #expect(FileFormatEvidence.examine(file) == .udif(hasChecksum: true))
+        // With a list that is not a property list, the same image is damaged.
+        let xml = Array("<?xml version=\"1.0\"?><plist><dict><key>broken".utf8)
+        koly.replaceSubrange(216..<224, with: be64(UInt64(data.count))); koly.replaceSubrange(224..<232, with: be64(UInt64(xml.count)))
+        try Data(data + xml + koly).write(to: file)
+        #expect(FileFormatEvidence.examine(file) == .udifDirectoryDamaged)
+    }
+
     /// A damaged list of contents: `hdiutil` fails without a checksum report ("error 3840"); MacReplica proves the
     /// damage from the file's bytes – the list is not a property list.
     @Test func aDamagedListOfContentsIsProvenFromTheBytes() async throws {
