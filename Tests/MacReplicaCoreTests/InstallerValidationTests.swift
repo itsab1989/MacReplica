@@ -846,3 +846,16 @@ struct InstallerValidationUnderLoadTests {
         #expect(await !InstallerValidationTests.isAttached(dmg), "still attached after inspecting")
     }
 }
+
+extension InstallerValidationUnderLoadTests {
+    /// Detaching after a normal inspection costs no waiting: nothing attached, it returns at once – even with a long
+    /// pause set (the watch for late attachments is only for a failed attach).
+    @Test func anImageThatIsGoneIsNotWaitedFor() async throws {
+        let sandbox = try Sandbox("load-no-wait")
+        let dmg = try await Self.image(sandbox)
+        let runner = ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: ["/usr/bin/hdiutil"]), baseEnvironment: [:])
+        let started = Date()
+        await DownloadInstaller.detachAttachments(of: dmg.path, runner: runner, hdiutil: "/usr/bin/hdiutil", environment: [:], watch: 4, pause: 2_000_000_000)
+        #expect(Date().timeIntervalSince(started) < 1.5)
+    }
+}
