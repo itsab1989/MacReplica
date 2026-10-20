@@ -340,6 +340,7 @@
     {
       "file": "Downloads/DownloadInstaller.swift",
       "tests": [
+        "InstallerValidationUnderLoadTests",
         "DownloadInstallerTests",
         "GuidedInstallationTests",
         "DownloadEdgeTests",
@@ -405,6 +406,7 @@
     {
       "file": "Downloads/InstallerArchive.swift",
       "tests": [
+        "InstallerValidationUnderLoadTests",
         "OwnInstallerTests",
         "InstallerDescriptionTests",
         "InstallerArchiveEdgeTests",
