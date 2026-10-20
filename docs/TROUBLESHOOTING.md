@@ -182,6 +182,36 @@ tool and what it reported.
 
 An installer that is open in Finder can be chosen; it stays open. See [INSTALLER_VALIDATION.md](INSTALLER_VALIDATION.md).
 
+## Creating a macOS installer
+
+- **A version is missing or the list is empty.** MacReplica shows only what Software Update offers this Mac and what
+  Apple's support page links to, read at that moment (the top shows when and what failed). Check the internet
+  connection and click **Check Again**. Software Update never offers versions older than the one a Mac came with.
+- **A release cannot be chosen.** Macs with Apple silicon start up only from macOS 11 or later; earlier releases can
+  only be made on an Intel Mac.
+- **“Not confirmed as Apple's”.** The installer in Applications is damaged or not Apple's. Delete it and download it
+  again from Apple.
+- **My drive is not offered.** Only external drives with enough space are offered. A drive is also protected if it
+  holds a Time Machine backup, a MacReplica backup, MacReplica itself or the installer; the reason is shown next to it.
+  Copy what you need, erase it in Disk Utility, then click **Check Again**.
+- **“The drive is no longer the one you confirmed.”** The drive was unplugged, replaced or changed between choosing
+  and erasing. Nothing was erased; go back and choose it again.
+- **The password dialog was cancelled, or createinstallmedia stopped.** The drive was already erased but holds no
+  installer. Click **Try Again** (with a new confirmation) or erase it in Disk Utility.
+- **A drive says macOS has not let MacReplica look inside it.** macOS is asking (or was asked) whether MacReplica may
+  access a removable volume. Allow it (System Settings › Privacy & Security › Files and Folders › MacReplica ›
+  Removable Volumes), then click **Check Again**.
+- **“Apple's support page” shows “The request timed out.”** Something between MacReplica and support.apple.com held
+  the connection – often a firewall such as Little Snitch waiting for your answer. Allow MacReplica to reach
+  support.apple.com and click **Check Again**. Software Update's versions are listed anyway.
+- **No internal partition is offered (expert option).** Only empty, separate partitions that are not APFS can be used.
+  Create one in Disk Utility (select the internal disk › Partition › +, for example ExFAT, at least the size shown),
+  leave it empty and click **Check Again**.
+- **The new volume is called “Install macOS Sonoma 1”.** Another drive with the same name was connected; macOS adds the
+  number. The installer is fine.
+- **“Startup folder set” could not be checked.** macOS does not let every drive be read this way; the other checks
+  passed, and the drive is usually fine. Starting a Mac from it is the final proof.
+
 ## The update check cannot reach GitHub
 
 Check the internet connection or try later. Nothing else depends on the update check.

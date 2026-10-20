@@ -21,6 +21,7 @@ struct RootView: View {
             case .verificationResult: VerificationResultView()
             case .problem: ProblemView()
             case .tools: ToolsView()
+            case .installMedia: InstallMediaView()
             }
         }
         .frame(minWidth: 700, idealWidth: 760, minHeight: 540, idealHeight: 600)

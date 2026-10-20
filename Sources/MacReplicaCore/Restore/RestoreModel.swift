@@ -392,6 +392,9 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case homebrewUpdated(version: String)
     /// Homebrew's copy had code only for another processor (`found`) and was reinstalled for this Mac.
     case reinstalledForThisProcessor(found: String)
+    /// Launchpad: apps on this Mac that are not in the arrangement saved in the backup (left out of a backup made
+    /// before 1.1.7, or installed later); macOS puts them after the arranged pages. `names`: at most a few.
+    case launchpadAppsNotInBackup(count: Int, names: [String])
     case identicalFileExists
     /// The same font or profile is already installed (same identity and version), possibly under another file name.
     case equivalentFileInstalled

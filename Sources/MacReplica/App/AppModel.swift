@@ -18,6 +18,7 @@ enum Screen: Equatable {
     case verificationResult
     case problem
     case tools
+    case installMedia
 }
 
 /// A friendly explanation for something that stopped a whole workflow.
@@ -53,6 +54,9 @@ final class AppModel: ObservableObject {
     @Published var screen: Screen = .home
     /// The Tools section (Gatekeeper, updates, window corners); see AppModel+Tools.
     @Published var tools = ToolsState()
+    @Published var installMedia = InstallMediaState() { didSet { updateDriveWatcher() } }
+    /// Watches for drives being connected or removed while the installer tool shows its drives.
+    var driveWatcher: DriveWatcher?
     @Published var problem: ProblemInfo?
 
     // Inventory

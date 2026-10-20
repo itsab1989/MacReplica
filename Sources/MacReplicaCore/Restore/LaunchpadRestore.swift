@@ -79,7 +79,22 @@ extension RestoreExecutor {
             return failed(item, .verificationFailed, "Launchpad arrangement differs after rebuilding")
         }
         log.info("\(item.id): Launchpad arranged (\(after.pages.count) pages, \(after.folderNames.count) folders)", component: .restore)
-        if stillWaiting > 0 { return ItemResult(itemID: item.id, outcome: .skipped(.launchpadWaitingForApps(count: stillWaiting))) }
-        return ItemResult(itemID: item.id, outcome: .succeeded)
+        // Apps the backup's arrangement does not know end up after the arranged pages; say so instead of a plain
+        // “done” (a tester's apps left out of a backup made before 1.1.7 looked like a failed arrangement).
+        let outside = Self.appsNotInArrangement(recorded.resolving(against: after), on: after)
+        var notes: [ResultNote] = []
+        if !outside.isEmpty {
+            log.info("\(item.id): \(outside.count) apps on this Mac are not in the backup's arrangement: " + outside.joined(separator: ", "), component: .restore)
+            notes.append(.launchpadAppsNotInBackup(count: outside.count, names: Array(outside.map { after.names?[$0] ?? $0 }.prefix(8))))
+        }
+        if stillWaiting > 0 { return ItemResult(itemID: item.id, outcome: .skipped(.launchpadWaitingForApps(count: stillWaiting)), notes: notes) }
+        return ItemResult(itemID: item.id, outcome: .succeeded, notes: notes)
+    }
+
+    /// Bundle identifiers on this Mac's Launchpad that the recorded arrangement has no place for, sorted by name.
+    static func appsNotInArrangement(_ recorded: LaunchpadLayout, on actual: LaunchpadLayout) -> [String] {
+        let known = Set(recorded.appEntryCounts.keys)
+        return actual.appEntryCounts.keys.filter { !known.contains($0) }
+            .sorted { (actual.names?[$0] ?? $0).localizedStandardCompare(actual.names?[$1] ?? $1) == .orderedAscending }
     }
 }

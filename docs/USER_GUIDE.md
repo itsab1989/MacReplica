@@ -239,6 +239,41 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
 - **Restore previous** returns every setting exactly to how it was; **Restore macOS default appearance …** removes
   them all. The picture area inside Quick Look keeps its own corners in any case.
 
+**Create macOS Installer** (a bootable USB installer, with Apple's own tools)
+- **Open …** lists the macOS versions Apple offers right now, newest first, grouped by major release. MacReplica
+  reads them each time from Software Update (`softwareupdate --list-full-installers`, the full installers Apple offers
+  this Mac) and from Apple's page “How to download and install macOS” (support.apple.com/102662). No version list is
+  built into MacReplica, so a new macOS version appears without a MacReplica update. The top shows when each source
+  was last read and what failed; **Check Again** reads both again.
+- Versions from Software Update are downloaded by MacReplica (no password needed). For older releases MacReplica opens
+  Apple's App Store page or Apple's disk image; download it there, then click **Check Again**. Macs with Apple silicon
+  start up only from macOS 11 or later, so older releases are shown but cannot be chosen on them.
+- MacReplica checks the installer: the macOS version inside, Apple's signature on the app and on its
+  `createinstallmedia`, and the options that tool has. Installers without `createinstallmedia` (OS X Lion and Mountain
+  Lion) cannot make a bootable drive.
+- Choose an **external** drive or a card (also in the Mac's built-in SD reader) with enough space (32 GB is enough for
+  every installer). The startup disk, internal disks, disk images, read-only drives and drives holding a Time Machine
+  backup, a MacReplica backup, MacReplica itself or the installer are listed with the reason and cannot be chosen. If
+  macOS asks whether MacReplica may access a removable volume, allow it; until then that drive is shown as protected.
+- The confirmation lists the drive and every volume on it that will be erased; tick **I understand …** and click
+  **Erase and Create Installer**. MacReplica reads the drive again and stops if it is not exactly the confirmed drive,
+  erases it as one Mac OS Extended (Journaled) volume, asks macOS for the administrator password and runs Apple's
+  `createinstallmedia` on exactly that volume. This often takes 10 to 30 minutes (longer with USB 2); the Mac does not
+  sleep meanwhile. Nothing is retried by itself: after a failure, **Try Again** starts over with a new confirmation.
+- Afterwards MacReplica checks the drive (installer volume on the chosen drive, Mac OS Extended, the installer app in
+  the same version, startup files, startup folder, Apple's signature on the copy) and shows how to start up an
+  Apple-silicon Mac (hold the power button) and an Intel Mac (hold Option) from it. Whether a particular Mac starts up
+  from the drive is only shown by trying it.
+- **Internal disk (expert):** tick **Show empty partitions of the internal disk** to use an empty, separate partition
+  of the Mac's own disk instead of a USB drive. Only partitions that hold nothing and are not APFS are offered – APFS
+  volumes share their space with macOS and your data, and macOS cannot turn one into the Mac OS Extended volume an
+  installer needs. MacReplica never resizes a disk; to get such a partition, use Disk Utility › Partition and leave the
+  new partition empty. The confirmation then asks twice more (a second checkbox and a final question), and only that
+  partition is erased; afterwards MacReplica checks that every other partition is unchanged. Apple documents installers
+  only on external drives; Macs with Apple silicon may not list an installer on an internal partition at startup.
+- **Main Menu** leaves the tool from every step (it cancels a running download). While the drive is erased and
+  written it is unavailable, because stopping Apple's tool halfway would leave the drive unusable.
+
 ## The backup folder
 
 ```

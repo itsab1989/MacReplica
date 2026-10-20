@@ -113,7 +113,7 @@ All screenshots show MacReplica 1.1.0 with a simulated Mac and synthetic test da
 | <img src="docs/images/macreplica-dry-run.png" alt="Preview listing what would be installed or copied, nothing changed" width="420"> | <img src="docs/images/macreplica-conflicts.png" alt="Dialog with fonts and a colour profile that already exist on the new Mac, each with a choice such as keep this Mac's version or keep both" width="420"> |
 | **Preview (Dry Run)** – nothing is changed | **Decisions** – nothing is overwritten without your choice |
 | <img src="docs/images/macreplica-restore-complete.png" alt="Summary with successful, failed, skipped and waiting counts, guided steps for an App Store app and developer tools, and notes per item" width="420"> | <img src="docs/images/macreplica-tools.png" alt="Tools: Gatekeeper state with a check for one app, and macOS update settings" width="420"> |
-| **Summary** – what worked and what is left for you | **Tools** – Gatekeeper, macOS updates, window corners |
+| **Summary** – what worked and what is left for you | **Tools** – Gatekeeper, macOS updates, window corners, macOS installer |
 
 <details>
 <summary>More screenshots</summary>
@@ -196,7 +196,7 @@ update, download the new disk image and replace the app.
 5. Read the summary: what worked, what failed and what to do about it, apps to install yourself
    and services to sign in to again. **Retry Failed Items** runs only the failed steps again.
 
-**Tools** (fourth option on the start screen): three independent tools for this Mac. Each one shows what it
+**Tools** (fourth option on the start screen): four independent tools for this Mac. Each one shows what it
 finds, asks before changing anything and checks the real result afterwards ([details](docs/TOOLS.md)):
 - **Gatekeeper and app security:** why apps are or are not checked, a check of one app with Apple's “Open Anyway”,
   opening it or removing its quarantine mark on request, and – after a warning – a profile that turns app
@@ -211,6 +211,11 @@ finds, asks before changing anything and checks the real result afterwards ([det
   system-wide change: to reach Apple's own apps it runs your arm64e apps from unsigned `/tmp` copies and can crash or
   break some; it is behind strong warnings, a one-click setup, a blocklist and a full undo. See
   [docs/TOOLS.md](docs/TOOLS.md).
+- **Create macOS Installer:** a bootable USB installer (or SD card) for any macOS version Apple currently offers,
+  read live from Software Update and Apple's support page – so new versions appear without a MacReplica update. Made
+  with Apple's own `createinstallmedia` after a signature check; only external drives and cards are offered, the
+  drive is checked again right before erasing, and the finished drive is verified. Expert option: an empty, separate
+  partition of the internal disk (never APFS, never resized), behind two extra confirmations.
 
 The backup folder also contains `restore/RESTORE_INSTRUCTIONS.html` — a readable guide with the
 same steps, including commands for restoring by hand. Step-by-step instructions and the backup

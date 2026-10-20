@@ -18,6 +18,7 @@ struct ToolsView: View {
                     GatekeeperToolCard()
                     UpdatesToolCard()
                     WindowCornersToolCard()
+                    InstallMediaToolCard()
                     if !model.tools.history.isEmpty { ToolHistoryView() }
                 }
                 .padding(.horizontal, 28)
