@@ -207,6 +207,10 @@ An installer that is open in Finder can be chosen; it stays open. See [INSTALLER
 - **No internal partition is offered (expert option).** Only empty, separate partitions that are not APFS can be used.
   Create one in Disk Utility (select the internal disk › Partition › +, for example ExFAT, at least the size shown),
   leave it empty and click **Check Again**.
+- **Moving an installer to the Trash asks for a password.** Installers from Software Update – and any installer
+  MacReplica has used once – belong to the system; macOS asks before moving them. Empty the Trash to free the space.
+- **“Choose Installer…” says there is not enough space.** The installer is copied into Applications, which needs its
+  size plus 1 GB on the startup disk. Free space, or move the installer into Applications yourself in the Finder.
 - **The new volume is called “Install macOS Sonoma 1”.** Another drive with the same name was connected; macOS adds the
   number. The installer is fine.
 - **“Startup folder set” could not be checked.** macOS does not let every drive be read this way; the other checks

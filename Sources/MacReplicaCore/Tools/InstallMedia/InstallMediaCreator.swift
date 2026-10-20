@@ -57,6 +57,8 @@ public struct InstallMediaCreator: Sendable {
     public var privileged: PrivilegedExecuting
     public var scanner: InstallMediaDriveScanner
     public var inspector: InstallerInspector
+    /// Whether an installer already belongs to root alone (replaced in tests, where nothing can be root's).
+    public var isLockedForRoot: @Sendable (URL) -> Bool = InstallerFiles.isLockedForRoot
 
     public init(layout: SystemLayout, runner: CommandRunning, privileged: PrivilegedExecuting, scanner: InstallMediaDriveScanner,
                 inspector: InstallerInspector) {
@@ -134,7 +136,7 @@ public struct InstallMediaCreator: Sendable {
         let volume = layout.volumesRoot.appendingPathComponent(name)
         let applicationPath = report.needsApplicationPath ? report.app : nil
         let create = PrivilegedOperation.createInstallMedia(tool: tool, volume: volume, applicationPath: applicationPath)
-        let operations: [PrivilegedOperation]
+        var operations: [PrivilegedOperation]
         let reason: String
         if let partition = current.partition {
             // Only this partition, by the identifier no other partition has; erased in the same administrator step
@@ -157,6 +159,13 @@ public struct InstallMediaCreator: Sendable {
             operations = [.requireInstallMediaMarker(marker), create]
             reason = "MacReplica wants to create a bootable macOS installer on “\(drive.mediaName)”."
         }
+
+        // createinstallmedia runs as root: first the installer becomes the system's own (unless it already is, as from
+        // Software Update), then its tool's signature is checked again as root – nothing the user's programs could
+        // change remains between that check and the start.
+        let lock: [PrivilegedOperation] = isLockedForRoot(report.app) ? []
+            : [.lockInstallerOwner(report.app), .lockInstallerPermissions(report.app)]
+        operations = lock + [.verifyInstallerTool(tool)] + operations
 
         // createinstallmedia (as root) leaves the installer's own disk image attached (seen with macOS 14's tool);
         // MacReplica detaches what was not attached before, as the user.

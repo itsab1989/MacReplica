@@ -368,6 +368,28 @@ but cannot be chosen on them. Everything else is read from the installer itself:
   `--applicationpath` is passed when the tool names it but not `--downloadassets` (El Capitan, Sierra and High
   Sierra). Lion and Mountain Lion have no `createinstallmedia` and are refused.
 
+### Installers on this Mac (1.1.10, `InstallerFiles`)
+
+- The Apple installers in Applications (`Install ….app` with a `com.apple.InstallAssistant…` bundle identifier – a
+  third-party app named “Install …” is never listed) are checked like a downloaded one and listed with version, build
+  and size; each can be used directly (a catalog entry of its own, `Source.onThisMac`) or moved to the Trash.
+- **Choose Installer…**: an installer elsewhere is copied into the first Applications folder with `ditto`, as the
+  user, after checking that its size plus 1 GiB is free; a name that already exists is never overwritten, and a copy
+  that fails is removed.
+- **Move to Trash**: only an Apple installer directly in Applications, into `~/.Trash` (a free name if one exists). An
+  installer the user owns is moved directly; one that belongs to root (Software Update installs them as root) through
+  one administrator step `/bin/mv <installer> ~/.Trash/<name>`, allowed only for exactly that kind of source and
+  destination. Offered on the first step and after a drive was created; never automatic.
+
+**Running an installer as root (1.1.10).** An installer that belongs to the user – one the user dragged into
+Applications, or one copied there by MacReplica – could be replaced by any program running as the user between
+MacReplica's signature check and `createinstallmedia` starting as root. Unless the installer already belongs to root
+alone (as Software Update leaves it), the administrator step therefore begins with `chown -R root:wheel <installer>` and
+`chmod -R go-w <installer>`; then, always, `codesign --verify --strict -R=<Apple requirement> <createinstallmedia>` as
+root; only then the marker check (or the partition erase) and `createinstallmedia`. The privileged-operation checks
+refuse `createinstallmedia` unless that signature check of the same tool comes earlier in the same step. Afterwards the
+installer stays the system's own; moving it to the Trash then needs the password, which the Trash step asks for.
+
 ### Destination safety (`InstallMediaDriveScanner`)
 
 Read-only `diskutil list -plist` (all disks – a card in the built-in SD reader is reported as **internal but
@@ -462,6 +484,7 @@ stand-ins working on folders of the simulation (`MacReplicaSimulator install-med
 | Partition mode on real hardware | Verified | Disk image with EFI, KEEP (with a file) and an empty exFAT SPARE: EFI refused as system partition, KEEP as not empty, SPARE erased by partition UUID and written in 69 s, 8 checks incl. “other partitions unchanged 2/2”; KEEP's file intact. The second mounted installer was named “Install macOS Sonoma 1” by macOS and still found |
 | Expert option on screen | Simulated | Toggle, warning, partition row, second checkbox (button disabled until both), final dialog, `eraseVolume` with the UUID only, 8 checks |
 | Mutation testing of the new and changed code | Verified | `tools/mutation/mutate.py --changed-since main` on the four `InstallMedia` files, `CommandRunner.swift` and `PrivilegedExecutor.swift` (3 shards), then the survivors again: every mutant killed except 12 documented as equivalent in `tools/mutation/config.json` |
+| Installers on this Mac, Choose Installer (copy), Move to Trash, locking for root | Unit + simulated | `InstallerFilesTests`, `aChosenInstallerIsCopiedUsedAndTrashed` (simulated Mac: copied from Downloads, used, signature checked again before the tool, moved to the Trash). On screen and the real administrator step: see the 1.1.10 release notes |
 | Starting a Mac from the drive | Not verified | Needs a spare Mac and a real USB drive |
 | USB stick | Not verified | The SD card took this role; the same `diskutil` calls |
 | Internal partition of a real internal disk | Not verified | The test Mac has no spare partition and none was created (that would mean resizing its disk); verified on a disk image instead |

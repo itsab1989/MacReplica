@@ -143,4 +143,38 @@ struct InstallMediaIntegrationTests {
         #expect(FileManager.default.fileExists(atPath: mac.layout.volumesRoot.appendingPathComponent("STICK").path))
         #expect(FileManager.default.fileExists(atPath: mac.layout.volumesRoot.appendingPathComponent("EOS_DIGITAL/DCIM/100CANON/IMG_0001.JPG").path))
     }
+
+    /// 1.1.10 on the simulated Mac: an installer chosen from Downloads is copied into Applications, used from there
+    /// (locked and checked again as root inside the administrator step), and moved to the Trash afterwards.
+    @Test func aChosenInstallerIsCopiedUsedAndTrashed() async throws {
+        let mac = try Self.mac("im-local")
+        let creator = mac.creator
+        let downloaded = try await creator.download(Self.sonoma, progress: { _ in })
+        // The user had the installer in Downloads instead.
+        let downloads = mac.layout.homeDirectory.appendingPathComponent("Downloads")
+        try FileManager.default.createDirectory(at: downloads, withIntermediateDirectories: true)
+        let chosen = downloads.appendingPathComponent(downloaded.lastPathComponent)
+        try FileManager.default.moveItem(at: downloaded, to: chosen)
+        #expect(creator.inspector.installedInstallers().isEmpty)
+
+        let files = InstallerFiles(layout: mac.layout, runner: mac.simulation.makeRunner(), privileged: mac.simulation.makePrivilegedExecutor())
+        let copied = try await files.copyIntoApplications(chosen)
+        #expect(creator.inspector.installedInstallers().map(\.lastPathComponent) == ["Install macOS Sonoma.app"])
+        let report = await creator.inspector.inspect(copied)
+        let release = InstallerFiles.release(from: report)
+        #expect(release.source == .onThisMac(path: copied.path) && release.version == "14.8.9")
+
+        let stick = try #require(try await creator.scanner.scan(required: report.requiredBytes).first)
+        let result = try await creator.create(installer: report, on: stick.drive, stage: { _ in })
+        #expect(result.verification == .verified)
+        let calls = try String(contentsOf: mac.root.url.appendingPathComponent("state/calls.log"), encoding: .utf8)
+        // The signature was checked again (the simulated root step uses the codesign stand-in) before the tool ran.
+        let check = try #require(calls.range(of: "codesign --verify --strict -R=anchor apple", options: .backwards))
+        let run = try #require(calls.range(of: "createinstallmedia --volume", options: .backwards))
+        #expect(check.lowerBound < run.lowerBound)
+
+        try await files.moveToTrash(copied)
+        #expect(creator.inspector.installedInstallers().isEmpty)
+        #expect(FileManager.default.fileExists(atPath: mac.layout.homeDirectory.appendingPathComponent(".Trash/Install macOS Sonoma.app").path))
+    }
 }

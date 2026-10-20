@@ -105,8 +105,10 @@ struct InstallMediaPartitionTests {
         // No whole-disk erase, ever; one administrator step: the partition by its UUID, then createinstallmedia.
         #expect(f.setup.runner.commands.allSatisfy { $0.arguments.first != "eraseDisk" })
         #expect(f.recorder.calls.count == 1)
-        guard case .eraseVolumeForInstaller(let uuid, let name) = f.recorder.calls[0][0],
-              case .createInstallMedia(_, let volume, _) = f.recorder.calls[0][1] else { Issue.record("steps"); return }
+        let steps = Array(f.recorder.calls[0].drop { if case .eraseVolumeForInstaller = $0 { return false }; return true })
+        #expect(f.recorder.calls[0].contains(.verifyInstallerTool(f.report.createInstallMedia!)))
+        guard steps.count == 2, case .eraseVolumeForInstaller(let uuid, let name) = steps[0],
+              case .createInstallMedia(_, let volume, _) = steps[1] else { Issue.record("steps"); return }
         #expect(uuid == spare.partition?.partitionUUID)
         #expect(volume.lastPathComponent == name && PrivilegedOperation.isInstallMediaVolumeName(name))
         #expect(f.setup.drives.erasedPartitions == [uuid])
@@ -151,18 +153,19 @@ struct InstallMediaPartitionTests {
         let erase = PrivilegedOperation.eraseVolumeForInstaller(partitionUUID: uuid, name: "MRINSTALL-0A1B2C3D")
         let create = PrivilegedOperation.createInstallMedia(tool: tool, volume: URL(fileURLWithPath: "/Volumes/MRINSTALL-0A1B2C3D"), applicationPath: nil)
         #expect(erase.argv == ["/usr/sbin/diskutil", "eraseVolume", "JHFS+", "MRINSTALL-0A1B2C3D", uuid])
-        let arguments = try AppleScriptPrivilegedExecutor.arguments(for: [erase, create], reason: "r")
+        let verify = PrivilegedOperation.verifyInstallerTool(tool)
+        let arguments = try AppleScriptPrivilegedExecutor.arguments(for: [verify, erase, create], reason: "r")
         #expect(Array(arguments.suffix(11)) == ["5", "/usr/sbin/diskutil", "eraseVolume", "JHFS+", "MRINSTALL-0A1B2C3D", uuid,
                                                 "4", tool.path, "--volume", "/Volumes/MRINSTALL-0A1B2C3D", "--nointeraction"])
         // Never on its own, never followed by something else, never for another name, never a disk or a made-up identifier.
         #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [erase], reason: "r") }
         #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [erase, .createFolder(URL(fileURLWithPath: "/tmp/x"))], reason: "r") }
         let other = PrivilegedOperation.createInstallMedia(tool: tool, volume: URL(fileURLWithPath: "/Volumes/MRINSTALL-FFFFFFFF"), applicationPath: nil)
-        #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [erase, other], reason: "r") }
+        #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [verify, erase, other], reason: "r") }
         for bad in [PrivilegedOperation.eraseVolumeForInstaller(partitionUUID: "disk0", name: "MRINSTALL-0A1B2C3D"),
                     .eraseVolumeForInstaller(partitionUUID: uuid, name: "Macintosh HD")] {
             #expect(!bad.isAllowed())
-            #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [bad, create], reason: "r") }
+            #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [verify, bad, create], reason: "r") }
         }
     }
 

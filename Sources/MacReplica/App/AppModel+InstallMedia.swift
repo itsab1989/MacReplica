@@ -1,6 +1,7 @@
 import AppKit
 import MacReplicaCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Tools › Create macOS Installer: choose a release, get its installer, choose a drive, confirm, create, check.
 struct InstallMediaState {
@@ -37,6 +38,21 @@ struct InstallMediaState {
     /// The confirmed drive changed or disappeared while the confirmation was open.
     var confirmedDriveChanged = false
     var task: Task<Void, Never>?
+    /// The Apple installers in Applications, checked.
+    var localInstallers: [InstallerAppReport] = []
+    var checkingLocal = false
+    /// An installer the user chose outside Applications, waiting for “Copy”.
+    var pendingCopy: URL?
+    /// Its size (measured in the background) plus room, and the free space in Applications.
+    var pendingCopyNeeded: Int64?
+    var copying = false
+    var copyProblem: String?
+    /// An installer waiting for the Trash confirmation.
+    var trashCandidate: URL?
+    var trashCandidateSize: Int64?
+    var trashing = false
+    var trashMessage: String?
+    var trashFailed = false
 
     var confirmedCandidate: DriveCandidate? { drives.first { $0.id == selectedDrive && $0.isEligible } }
     var confirmedDrive: InstallMediaDrive? { confirmedCandidate?.drive }
@@ -56,6 +72,10 @@ extension AppModel {
         if let backup = defaults.string(forKey: "lastBackup") { protected.append(URL(fileURLWithPath: backup)) }
         return InstallMediaDriveScanner(layout: services.layout, runner: services.runner, protectedPaths: protected,
                                         includeInternalPartitions: installMedia.showInternalPartitions)
+    }
+
+    var installerFiles: InstallerFiles {
+        InstallerFiles(layout: services.layout, runner: services.runner, privileged: services.privileged)
     }
 
     var installMediaCreator: InstallMediaCreator {
@@ -81,6 +101,137 @@ extension AppModel {
         installMedia.catalog = installerCatalogLoader.cached()
         screen = .installMedia
         refreshInstallerCatalog()
+        refreshLocalInstallers()
+    }
+
+    /// Reads the Apple installers in Applications (version, signature, tool).
+    func refreshLocalInstallers() {
+        let inspector = installMediaInspector
+        installMedia.checkingLocal = true
+        Task {
+            var reports: [InstallerAppReport] = []
+            for app in inspector.installedInstallers() where InstallerFiles.isAppleInstaller(app) {
+                reports.append(await inspector.inspect(app))
+            }
+            installMedia.localInstallers = reports.sorted { VersionComparison.compare($0.macOSVersion ?? "0", $1.macOSVersion ?? "0") == .orderedDescending }
+            installMedia.checkingLocal = false
+            appLog.info("Install media: installers on this Mac: \(reports.map { "\($0.app.lastPathComponent) \($0.macOSVersion ?? "?")" }.joined(separator: ", "))",
+                        component: .tools)
+        }
+    }
+
+    /// Continues with an installer that is already on this Mac.
+    func useLocalInstaller(_ report: InstallerAppReport) {
+        installMedia.selected = InstallerFiles.release(from: report)
+        installMedia.report = report
+        installMedia.downloadProblem = nil
+        installMedia.openedExternally = false
+        installMedia.step = .installer
+    }
+
+    /// An installer from anywhere: used where it is if it is in Applications, otherwise copied there after a question.
+    func chooseInstallerFile() {
+        installMedia.copyProblem = nil
+        let url: URL
+        if services.simulationRoot != nil, defaults.bool(forKey: "stagingSkipPanels"), let path = defaults.string(forKey: "stagingInstallerApp") {
+            url = URL(fileURLWithPath: path)
+        } else {
+            let panel = NSOpenPanel()
+            panel.canChooseFiles = true
+            panel.canChooseDirectories = false
+            panel.allowsMultipleSelection = false
+            panel.treatsFilePackagesAsDirectories = false
+            panel.allowedContentTypes = [.application]
+            panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            panel.message = l.t("installMedia.local.panel")
+            guard panel.runModal() == .OK, let chosen = panel.url else { return }
+            url = chosen
+        }
+        guard InstallerFiles.isAppleInstaller(url) else {
+            installMedia.copyProblem = l.t("installMedia.copy.notAnInstaller")
+            return
+        }
+        if PrivilegedOperation.isInstallerApp(url, applicationFolders: services.layout.applicationFolders) {
+            useInstallerAt(url)
+        } else {
+            installMedia.pendingCopy = url
+            installMedia.pendingCopyNeeded = nil
+            Task.detached { [weak self] in
+                let needed = InstallerInspector.allocatedSize(of: url) + 1_073_741_824
+                await MainActor.run { if self?.installMedia.pendingCopy == url { self?.installMedia.pendingCopyNeeded = needed } }
+            }
+        }
+    }
+
+    private func useInstallerAt(_ url: URL) {
+        let inspector = installMediaInspector
+        installMedia.inspecting = true
+        Task {
+            let report = await inspector.inspect(url)
+            installMedia.inspecting = false
+            useLocalInstaller(report)
+            refreshLocalInstallers()
+        }
+    }
+
+    func cancelCopy() { installMedia.pendingCopy = nil }
+
+    func confirmCopy() {
+        guard let source = installMedia.pendingCopy else { return }
+        installMedia.copying = true
+        installMedia.copyProblem = nil
+        let files = installerFiles
+        appLog.info("Install media: copying \(source.lastPathComponent) into Applications", component: .tools)
+        Task {
+            do {
+                let copied = try await files.copyIntoApplications(source)
+                installMedia.copying = false
+                installMedia.pendingCopy = nil
+                useInstallerAt(copied)
+            } catch {
+                installMedia.copying = false
+                installMedia.copyProblem = installerFilesMessage(error)
+            }
+        }
+    }
+
+    func askToTrash(_ app: URL, size: Int64?) {
+        installMedia.trashMessage = nil
+        installMedia.trashCandidateSize = size
+        installMedia.trashCandidate = app
+    }
+
+    func confirmTrash() {
+        guard let app = installMedia.trashCandidate else { return }
+        installMedia.trashCandidate = nil
+        installMedia.trashing = true
+        let files = installerFiles
+        Task {
+            do {
+                try await files.moveToTrash(app)
+                installMedia.trashFailed = false
+                installMedia.trashMessage = l.t("installMedia.trash.done", app.lastPathComponent)
+                appLog.info("Install media: moved \(app.lastPathComponent) to the Trash", component: .tools)
+            } catch {
+                installMedia.trashFailed = true
+                installMedia.trashMessage = installerFilesMessage(error)
+                appLog.info("Install media: could not move \(app.lastPathComponent) to the Trash: \(error)", component: .tools)
+            }
+            installMedia.trashing = false
+            refreshLocalInstallers()
+        }
+    }
+
+    func installerFilesMessage(_ error: Error) -> String {
+        switch error as? InstallerFilesError {
+        case .notAnInstaller: return l.t("installMedia.copy.notAnInstaller")
+        case .alreadyInApplications(let name): return l.t("installMedia.copy.already", name)
+        case .notEnoughSpace(let needed, let available): return l.t("installMedia.copy.space", l.fileSize(needed), l.fileSize(available))
+        case .copyFailed(let detail): return l.t("installMedia.copy.failedDetail", detail)
+        case .trashFailed(let detail): return l.t("installMedia.trash.failed", detail)
+        case .passwordDenied: return l.t("installMedia.trash.password")
+        case nil: return services.layout.redact(String(describing: error))
+        }
     }
 
     /// Back to the start screen from any step except while the drive is written (that cannot be stopped safely).
@@ -167,7 +318,11 @@ extension AppModel {
     func checkForInstaller() {
         guard let release = installMedia.selected else { return }
         let inspector = installMediaInspector
-        guard let app = inspector.installer(for: release) else {
+        var found = inspector.installer(for: release)
+        if case .onThisMac(let path) = release.source {
+            found = FileManager.default.fileExists(atPath: path) ? URL(fileURLWithPath: path) : nil
+        }
+        guard let app = found else {
             installMedia.report = nil
             return
         }
@@ -222,7 +377,7 @@ extension AppModel {
         switch release.source {
         case .appStore(_, let url): link = url
         case .appleDiskImage(let url): link = url
-        case .softwareUpdate: return
+        case .softwareUpdate, .onThisMac: return
         }
         installMedia.openedExternally = true
         appLog.info("Install media: opened Apple's link for \(release.name) \(release.major)", component: .tools)

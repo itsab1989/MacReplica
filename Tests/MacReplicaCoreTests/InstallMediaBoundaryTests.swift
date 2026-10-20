@@ -144,7 +144,7 @@ struct InstallMediaBoundaryTests {
         let executor = AppleScriptPrivilegedExecutor(runner: runner)
         let volume = URL(fileURLWithPath: "/Volumes/MRINSTALL-0A1B2C3D")
         let tool = URL(fileURLWithPath: "/Applications/Install macOS Sonoma.app/Contents/Resources/createinstallmedia")
-        try await executor.run([.requireInstallMediaMarker(volume.appendingPathComponent(".MacReplicaInstallTarget-\(UUID().uuidString)")),
+        try await executor.run([.verifyInstallerTool(tool), .requireInstallMediaMarker(volume.appendingPathComponent(".MacReplicaInstallTarget-\(UUID().uuidString)")),
                                 .createInstallMedia(tool: tool, volume: volume, applicationPath: nil)], reason: "r")
         try await executor.run([.createFolder(URL(fileURLWithPath: "/Library/Fonts/x"))], reason: "r")
         #expect(runner.commands.map(\.timeout) == [TimeInterval(3 * 3600), TimeInterval(1800)])

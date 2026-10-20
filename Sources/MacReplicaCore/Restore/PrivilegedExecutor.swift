@@ -25,6 +25,15 @@ public enum PrivilegedOperation: Equatable, Sendable {
     /// Apple's `createinstallmedia` of an installer in Applications, onto the volume MacReplica just erased
     /// (see `isInstallMediaTool`, `isInstallMediaVolume`).
     case createInstallMedia(tool: URL, volume: URL, applicationPath: URL?)
+    /// Makes an installer in Applications the system's own (as Software Update leaves it), so that nothing running as
+    /// the user can change it between the signature check and `createinstallmedia` running as root.
+    case lockInstallerOwner(URL)
+    /// Removes write access for everyone but its owner (root) – the second half of locking the installer.
+    case lockInstallerPermissions(URL)
+    /// Apple's signature on `createinstallmedia`, checked again as root right before it runs.
+    case verifyInstallerTool(URL)
+    /// Moves an installer from Applications into the user's Trash (installers from Software Update belong to root).
+    case trashInstaller(app: URL, destination: URL)
     /// Expert option: erases one partition – addressed by its partition UUID, which no other partition has – as Mac
     /// OS Extended with MacReplica's random name. Only directly before `createInstallMedia` on that name.
     case eraseVolumeForInstaller(partitionUUID: String, name: String)
@@ -48,6 +57,10 @@ public enum PrivilegedOperation: Equatable, Sendable {
         case .createInstallMedia(let tool, let volume, let applicationPath):
             return [tool.path, "--volume", volume.path, "--nointeraction"] + (applicationPath.map { ["--applicationpath", $0.path] } ?? [])
         case .eraseVolumeForInstaller(let uuid, let name): return ["/usr/sbin/diskutil", "eraseVolume", "JHFS+", name, uuid]
+        case .lockInstallerOwner(let app): return ["/usr/sbin/chown", "-R", "root:wheel", app.path]
+        case .lockInstallerPermissions(let app): return ["/bin/chmod", "-R", "go-w", app.path]
+        case .verifyInstallerTool(let tool): return ["/usr/bin/codesign", "--verify", "--strict", "-R=" + InstallerInspector.appleRequirement, tool.path]
+        case .trashInstaller(let app, let destination): return ["/bin/mv", app.path, destination.path]
         }
     }
 
@@ -60,6 +73,9 @@ public enum PrivilegedOperation: Equatable, Sendable {
         case .requireInstallMediaMarker(let url): return [url]
         case .createInstallMedia(let tool, let volume, let applicationPath): return [tool, volume] + (applicationPath.map { [$0] } ?? [])
         case .eraseVolumeForInstaller: return []
+        case .lockInstallerOwner(let app), .lockInstallerPermissions(let app): return [app]
+        case .verifyInstallerTool(let tool): return [tool]
+        case .trashInstaller(let app, let destination): return [app, destination]
         }
     }
 }
@@ -116,18 +132,38 @@ extension PrivilegedOperation {
         return applicationFolders.map { $0.standardizedFileURL.path }.contains(app.deletingLastPathComponent().standardizedFileURL.path)
     }
 
+    /// An `Install ….app` directly in an Applications folder.
+    public static func isInstallerApp(_ url: URL, applicationFolders: [URL] = [URL(fileURLWithPath: "/Applications")]) -> Bool {
+        guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/.."), url.pathExtension == "app",
+              url.lastPathComponent.hasPrefix("Install ") else { return false }
+        return applicationFolders.map { $0.standardizedFileURL.path }.contains(url.deletingLastPathComponent().standardizedFileURL.path)
+    }
+
+    /// A free name for an installer directly in the user's Trash.
+    public static func isTrashedInstaller(_ url: URL, trash: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash")) -> Bool {
+        guard url.isFileURL, !url.path.contains("/../"), !url.path.hasSuffix("/.."), url.pathExtension == "app",
+              url.lastPathComponent.hasPrefix("Install ") else { return false }
+        return url.deletingLastPathComponent().standardizedFileURL.path == trash.standardizedFileURL.path
+    }
+
     /// The installer app the tool belongs to (what `--applicationpath` may name).
     static func isInstallMediaApplication(_ url: URL, tool: URL) -> Bool {
         url.standardizedFileURL.path == tool.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().standardizedFileURL.path
     }
 
     /// `createinstallmedia` only directly after the marker check of the same volume, or directly after erasing the
-    /// partition that gets that volume's name; and a partition is erased only directly before `createinstallmedia`.
+    /// partition that gets that volume's name, and only after its own signature was checked again as root earlier in
+    /// the same step; a partition is erased only directly before `createinstallmedia`.
     static func checkInstallMediaOrder(_ operations: [PrivilegedOperation]) throws {
         for (index, operation) in operations.enumerated() {
             switch operation {
-            case .createInstallMedia(_, let volume, _):
+            case .createInstallMedia(let tool, let volume, _):
                 guard index > 0 else { throw PrivilegedError.invalidPath(volume.path) }
+                let verified = operations[..<index].contains {
+                    if case .verifyInstallerTool(let checked) = $0 { return checked.standardizedFileURL.path == tool.standardizedFileURL.path }
+                    return false
+                }
+                guard verified else { throw PrivilegedError.invalidPath(tool.path) }
                 switch operations[index - 1] {
                 case .requireInstallMediaMarker(let marker)
                     where marker.deletingLastPathComponent().standardizedFileURL.path == volume.standardizedFileURL.path: continue
@@ -142,7 +178,8 @@ extension PrivilegedOperation {
     }
 
     /// Whether this operation may run: the checks of the operations that are narrowed to fixed items.
-    func isAllowed(volumesRoot: URL = URL(fileURLWithPath: "/Volumes"), applicationFolders: [URL] = [URL(fileURLWithPath: "/Applications")]) -> Bool {
+    func isAllowed(volumesRoot: URL = URL(fileURLWithPath: "/Volumes"), applicationFolders: [URL] = [URL(fileURLWithPath: "/Applications")],
+                   trash: URL? = nil) -> Bool {
         switch self {
         case .removePluginFile(let url): return Self.isRemovablePlugin(url)
         case .removeSystemItem(let url): return Self.isRemovableLoaderItem(url)
@@ -153,6 +190,13 @@ extension PrivilegedOperation {
                 && (applicationPath.map { Self.isInstallMediaApplication($0, tool: tool) } ?? true)
         case .eraseVolumeForInstaller(let uuid, let name):
             return InstallMediaDrive.isPartitionUUID(uuid) && Self.isInstallMediaVolumeName(name)
+        case .lockInstallerOwner(let app), .lockInstallerPermissions(let app):
+            return Self.isInstallerApp(app, applicationFolders: applicationFolders)
+        case .verifyInstallerTool(let tool):
+            return Self.isInstallMediaTool(tool, applicationFolders: applicationFolders)
+        case .trashInstaller(let app, let destination):
+            return Self.isInstallerApp(app, applicationFolders: applicationFolders)
+                && Self.isTrashedInstaller(destination, trash: trash ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash"))
         default: return true
         }
     }
@@ -261,16 +305,22 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
     public var applicationFolders: [URL]
     /// The simulated Mac's diskutil stand-in, which erases a simulated partition.
     public var diskutil: String
+    /// The simulated Mac's codesign stand-in and Trash.
+    public var codesign: String
+    public var trash: URL?
 
     public init(packageInstaller: (@Sendable (URL) throws -> Void)? = nil, serviceStarter: (@Sendable (URL) throws -> Void)? = nil,
                 toolRunner: (@Sendable ([String]) throws -> Void)? = nil, volumesRoot: URL = URL(fileURLWithPath: "/Volumes"),
-                applicationFolders: [URL] = [URL(fileURLWithPath: "/Applications")], diskutil: String = "/usr/sbin/diskutil") {
+                applicationFolders: [URL] = [URL(fileURLWithPath: "/Applications")], diskutil: String = "/usr/sbin/diskutil",
+                codesign: String = "/usr/bin/codesign", trash: URL? = nil) {
         self.packageInstaller = packageInstaller
         self.serviceStarter = serviceStarter
         self.toolRunner = toolRunner
         self.volumesRoot = volumesRoot
         self.applicationFolders = applicationFolders
         self.diskutil = diskutil
+        self.codesign = codesign
+        self.trash = trash
     }
 
     public func run(_ operations: [PrivilegedOperation], reason: String) async throws {
@@ -314,6 +364,19 @@ public struct DirectPrivilegedExecutor: PrivilegedExecuting {
                 guard operation.isAllowed(volumesRoot: volumesRoot, applicationFolders: applicationFolders) else { throw PrivilegedError.invalidPath(uuid) }
                 guard let toolRunner else { throw PrivilegedError.failed("no tool runner") }
                 try toolRunner([diskutil] + operation.argv.dropFirst())
+            case .lockInstallerOwner(let app), .lockInstallerPermissions(let app):
+                // Without root nothing can be handed to root; the paths are still checked.
+                guard operation.isAllowed(volumesRoot: volumesRoot, applicationFolders: applicationFolders) else { throw PrivilegedError.invalidPath(app.path) }
+            case .verifyInstallerTool(let tool):
+                guard operation.isAllowed(volumesRoot: volumesRoot, applicationFolders: applicationFolders) else { throw PrivilegedError.invalidPath(tool.path) }
+                guard let toolRunner else { throw PrivilegedError.failed("no tool runner") }
+                try toolRunner([codesign] + operation.argv.dropFirst())
+            case .trashInstaller(let app, let destination):
+                guard operation.isAllowed(volumesRoot: volumesRoot, applicationFolders: applicationFolders, trash: trash) else {
+                    throw PrivilegedError.invalidPath(app.path)
+                }
+                try fm.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try fm.moveItem(at: app, to: destination)
             }
         }
     }

@@ -19,6 +19,8 @@ public struct MacOSRelease: Codable, Equatable, Hashable, Sendable, Identifiable
         case appStore(id: Int, url: String)
         /// A disk image on Apple's update CDN with a package that places the installer in Applications.
         case appleDiskImage(url: String)
+        /// An installer that is already on this Mac (in Applications, or chosen by the user and copied there).
+        case onThisMac(path: String)
     }
 
     /// e.g. "macOS Sonoma", "macOS 27 Golden Gate", "OS X El Capitan".
@@ -49,6 +51,7 @@ public struct MacOSRelease: Codable, Equatable, Hashable, Sendable, Identifiable
         case .softwareUpdate: return "su-\(version ?? major)-\(build ?? "")"
         case .appStore(let id, _): return "appstore-\(id)"
         case .appleDiskImage(let url): return "dmg-\(major)-\(url.split(separator: "/").suffix(2).joined(separator: "-"))"
+        case .onThisMac(let path): return "local-\(path)"
         }
     }
 
@@ -78,6 +81,8 @@ public enum InstallerSuitability: Equatable, Sendable {
     /// Apple silicon Macs start only macOS 11 or later (Apple), so this Mac can neither download nor create it in a
     /// supported way. An Intel Mac can.
     case intelMacsOnly
+    /// Already on this Mac; nothing to download.
+    case onThisMac
 }
 
 public enum MacOSInstallerCatalogError: Error, Equatable, Sendable {
@@ -150,6 +155,7 @@ public struct MacOSInstallerCatalog: Codable, Equatable, Sendable {
         case .softwareUpdate: return .downloadHere
         case .appStore: return .appStore
         case .appleDiskImage: return .appleDiskImage
+        case .onThisMac: return .onThisMac
         }
     }
 

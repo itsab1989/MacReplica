@@ -7,6 +7,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Installers already on this Mac.** Tools › Create macOS Installer lists the macOS installers in Applications with
+  version and size; use one without downloading, or move it to the Trash to free its space (also offered after a drive
+  was created – never automatic). **Choose Installer…** takes one from Downloads or a drive and copies it into
+  Applications first, after checking the free space.
+
+### Security
+- **The installer is locked before it runs as administrator.** An installer that belongs to the user could be changed
+  between MacReplica's signature check and Apple's `createinstallmedia` starting as root. In the same administrator
+  step MacReplica now first makes it the system's own (as Software Update leaves it) and checks Apple's signature again
+  as root; only then does the tool run.
+
 ## [1.1.9] - 2026-10-20
 
 ### Added

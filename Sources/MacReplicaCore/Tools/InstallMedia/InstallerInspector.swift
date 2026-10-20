@@ -185,7 +185,7 @@ public struct InstallerInspector: Sendable {
         return try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
     }
 
-    static func allocatedSize(of folder: URL) -> Int64 {
+    public static func allocatedSize(of folder: URL) -> Int64 {
         let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
         guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: keys) else { return 0 }
         var total: Int64 = 0

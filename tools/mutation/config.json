@@ -146,6 +146,7 @@
         "CornerPluginSetupTests",
         "InstallMediaSafetyTests",
         "InstallMediaBoundaryTests",
+        "InstallerFilesTests",
         "InstallMediaPartitionTests"
       ],
       "area": "Security"
@@ -554,8 +555,17 @@
       "area": "Tools"
     },
     {
+      "file": "Tools/InstallMedia/InstallerFiles.swift",
+      "tests": [
+        "InstallerFilesTests",
+        "InstallMediaIntegrationTests"
+      ],
+      "area": "Tools"
+    },
+    {
       "file": "Tools/InstallMedia/MacOSInstallerCatalog.swift",
       "tests": [
+        "InstallerFilesTests",
         "InstallMediaBoundaryTests",
         "InstallMediaPartitionTests",
         "InstallMediaInspectorEdgeTests",
@@ -589,6 +599,7 @@
     {
       "file": "Tools/InstallMedia/InstallMediaCreator.swift",
       "tests": [
+        "InstallerFilesTests",
         "InstallMediaBoundaryTests",
         "InstallMediaPartitionTests",
         "InstallMediaInspectorEdgeTests",
