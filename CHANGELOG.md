@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.10] - 2026-10-20
+
 ### Added
 - **Installers already on this Mac.** Tools › Create macOS Installer lists the macOS installers in Applications with
   version and size; use one without downloading, or move it to the Trash to free its space (also offered after a drive
@@ -596,7 +598,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.9...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.10...HEAD
+[1.1.10]: https://github.com/itsab1989/MacReplica/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/itsab1989/MacReplica/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/itsab1989/MacReplica/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/itsab1989/MacReplica/compare/v1.1.6...v1.1.7
