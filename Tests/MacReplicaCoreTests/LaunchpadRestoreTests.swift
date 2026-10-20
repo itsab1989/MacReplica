@@ -321,7 +321,15 @@ struct LaunchpadRestoreTests {
         """
         #expect(LaunchpadStore.dockProcesses(inPsOutput: output) == ["1755/uid 501", "2001/uid 502"])
         #expect(LaunchpadStore.dockProcesses(inPsOutput: "") == [])
-        // In tests MacReplica runs as the user at the screen.
+        // The comparison itself, independent of whether the test Mac is locked.
+        #expect(LaunchpadStore.runsAsLoggedInUser(euid: 501, console: 501))
+        #expect(!LaunchpadStore.runsAsLoggedInUser(euid: 501, console: 502))
+        #expect(!LaunchpadStore.runsAsLoggedInUser(euid: 0, console: 501), "started with sudo")
+        // Login window (console root): nobody at the screen – fine, unless MacReplica itself runs as root.
+        #expect(LaunchpadStore.runsAsLoggedInUser(euid: 501, console: 0))
+        #expect(!LaunchpadStore.runsAsLoggedInUser(euid: 0, console: 0))
+        #expect(LaunchpadStore.runsAsLoggedInUser(euid: 501, console: nil))
+        // The tests themselves do not run as root, so the live answer is true locked or not.
         #expect(LaunchpadStore.runsAsLoggedInUser)
         let report = LaunchpadStore.userReport()
         #expect(report.contains("MacReplica uid \(getuid())") && !report.contains(NSUserName()) && !report.contains(NSHomeDirectory()))

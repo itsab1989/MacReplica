@@ -2435,3 +2435,10 @@
 "installMedia.from.onThisMac" = "Op deze Mac";
 "installMedia.suitability.onThisMac" = "Al op deze Mac.";
 "installMedia.confirm.lockNote" = "Voordat Apples hulpmiddel als beheerder draait, maakt MacReplica de installer eigendom van het systeem (zoals Software-update), zodat niets hem tussendoor kan wijzigen.";
+"sleep.reason.inventory" = "MacReplica leest deze Mac voor een reservekopie";
+"sleep.reason.backup" = "MacReplica bewaart een reservekopie";
+"sleep.reason.verification" = "MacReplica controleert een reservekopie";
+"sleep.reason.restore" = "MacReplica zet deze Mac terug";
+"sleep.reason.installerDownload" = "MacReplica downloadt een macOS-installer";
+"sleep.reason.installerCopy" = "MacReplica kopieert een macOS-installer";
+"sleep.reason.installerWrite" = "MacReplica schrijft een macOS-installer naar een schijf";

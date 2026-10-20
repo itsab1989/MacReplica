@@ -2435,3 +2435,10 @@
 "installMedia.from.onThisMac" = "En este Mac";
 "installMedia.suitability.onThisMac" = "Ya está en este Mac.";
 "installMedia.confirm.lockNote" = "Antes de que la herramienta de Apple se ejecute como administrador, MacReplica hace que el instalador pertenezca al sistema (como Actualización de software), para que nada pueda cambiarlo entretanto.";
+"sleep.reason.inventory" = "MacReplica está leyendo este Mac para una copia de seguridad";
+"sleep.reason.backup" = "MacReplica está guardando una copia de seguridad";
+"sleep.reason.verification" = "MacReplica está comprobando una copia de seguridad";
+"sleep.reason.restore" = "MacReplica está restaurando este Mac";
+"sleep.reason.installerDownload" = "MacReplica está descargando un instalador de macOS";
+"sleep.reason.installerCopy" = "MacReplica está copiando un instalador de macOS";
+"sleep.reason.installerWrite" = "MacReplica está escribiendo un instalador de macOS en un disco";

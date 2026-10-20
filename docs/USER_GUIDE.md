@@ -281,6 +281,10 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
 - **Main Menu** leaves the tool from every step (it cancels a running download). While the drive is erased and
   written it is unavailable, because stopping Apple's tool halfway would leave the drive unusable.
 
+**Sleep.** While MacReplica reads the Mac, saves or checks a backup, restores, or downloads, copies or writes a macOS
+installer, the Mac does not go to sleep on its own (Activity Monitor › Energy › Preventing Sleep names what
+MacReplica is doing). The display may still turn off; closing the lid still puts the Mac to sleep.
+
 ## The backup folder
 
 ```

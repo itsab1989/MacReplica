@@ -156,9 +156,10 @@ extension AppModel {
         } else {
             installMedia.pendingCopy = url
             installMedia.pendingCopyNeeded = nil
-            Task.detached { [weak self] in
-                let needed = InstallerInspector.allocatedSize(of: url) + 1_073_741_824
-                await MainActor.run { if self?.installMedia.pendingCopy == url { self?.installMedia.pendingCopyNeeded = needed } }
+            Task {
+                // Measured off the main thread; the answer is used only if the same installer is still waiting.
+                let needed = await Task.detached { InstallerInspector.allocatedSize(of: url) + 1_073_741_824 }.value
+                if installMedia.pendingCopy == url { installMedia.pendingCopyNeeded = needed }
             }
         }
     }
@@ -451,10 +452,8 @@ extension AppModel {
         installMedia.driveErased = false
         let creator = installMediaCreator
         appLog.info("Install media: creating \(report.app.lastPathComponent) on \(candidate.partition?.device ?? drive.device) (\(candidate.isPartition ? "partition of internal disk" : drive.busProtocol), \(candidate.partition?.sizeBytes ?? drive.sizeBytes) bytes)", component: .tools)
-        // The Mac must not go to sleep while the drive is written.
-        let activity = ProcessInfo.processInfo.beginActivity(options: [.idleSystemSleepDisabled, .userInitiated], reason: "Creating a macOS installer")
+        // The Mac stays awake while the drive is written (`updateSleepPrevention`, from the working step).
         installMedia.task = Task {
-            defer { ProcessInfo.processInfo.endActivity(activity) }
             do {
                 let result = try await creator.create(installer: report, on: candidate) { stage in
                     Task { @MainActor in self.installMedia.stage = stage }

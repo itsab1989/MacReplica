@@ -247,9 +247,13 @@ public struct LaunchpadStore: Sendable {
     }
 
     /// The user MacReplica runs as, compared with the user logged in at the screen (owner of /dev/console).
-    public static var runsAsLoggedInUser: Bool {
-        guard let console = consoleUserID else { return true }
-        return geteuid() == console
+    public static var runsAsLoggedInUser: Bool { runsAsLoggedInUser(euid: geteuid(), console: consoleUserID) }
+
+    /// The console belongs to root while the login window shows (screen locked, nobody logged in at the screen): then
+    /// only MacReplica itself running as root (`sudo`) is “another user”.
+    static func runsAsLoggedInUser(euid: uid_t, console: uid_t?) -> Bool {
+        guard let console, console != 0 else { return euid != 0 }
+        return euid == console
     }
 
     static var consoleUserID: uid_t? {

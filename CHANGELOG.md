@@ -13,6 +13,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   was created – never automatic). **Choose Installer…** takes one from Downloads or a drive and copies it into
   Applications first, after checking the free space.
 
+- **The Mac stays awake while MacReplica works.** Reading the Mac for a backup, saving and checking a backup,
+  restoring, and downloading, copying or writing a macOS installer now keep the Mac from going to sleep when idle
+  (the display may still turn off; closing the lid still sleeps). It shows in Activity Monitor › Energy with what
+  MacReplica is doing, and ends with the operation. Until now only writing an installer drive did this.
+
+### Fixed
+- **No false “another user” warning when the Mac is locked.** While the login window shows, the console belongs to
+  root; MacReplica took that for a different user. Only MacReplica itself running as root now counts as that.
+
 ### Security
 - **The installer is locked before it runs as administrator.** An installer that belongs to the user could be changed
   between MacReplica's signature check and Apple's `createinstallmedia` starting as root. In the same administrator

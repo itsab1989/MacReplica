@@ -183,4 +183,22 @@ struct InstallerFilesTests {
         await #expect(throws: InstallerFilesError.copyFailed("ditto: No space left on device")) { try await s.files.copyIntoApplications(source) }
         #expect(!FileManager.default.fileExists(atPath: s.files.applications.appendingPathComponent("Install macOS Sonoma.app").path))
     }
+
+    @Test func whatTheUserCanMoveAndWhereCopiesGo() throws {
+        let sandbox = try Sandbox("movable")
+        let app = try Self.installer(sandbox)
+        #expect(InstallerFiles.isMovableByUser(app))
+        // The user's installer in a folder the user may not change: not movable without the password.
+        let folder = app.deletingLastPathComponent()
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path) }
+        #expect(!InstallerFiles.isMovableByUser(app))
+        // Root's, in a folder the user may change (the user's own home): not movable either.
+        #expect(!InstallerFiles.isMovableByUser(URL(fileURLWithPath: "/System/Applications/Calculator.app")))
+        // Copies go into the first Applications folder.
+        var layout = toolchainLayout(sandbox)
+        layout.applicationFolders = [sandbox.url.appendingPathComponent("Applications"), sandbox.url.appendingPathComponent("home/Applications")]
+        let files = InstallerFiles(layout: layout, runner: ScriptedRunner { _ in CommandResult(exitCode: 0, stdout: "", stderr: "") }, privileged: DirectPrivilegedExecutor())
+        #expect(files.applications.path == sandbox.url.appendingPathComponent("Applications").path)
+    }
 }

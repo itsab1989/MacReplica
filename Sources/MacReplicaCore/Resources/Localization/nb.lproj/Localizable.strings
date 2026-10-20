@@ -2435,3 +2435,10 @@
 "installMedia.from.onThisMac" = "På denne Macen";
 "installMedia.suitability.onThisMac" = "Allerede på denne Macen.";
 "installMedia.confirm.lockNote" = "Før Apples verktøy kjører som administrator, gjør MacReplica installereren eid av systemet (slik Programvareoppdatering gjør), så ingenting kan endre den i mellomtiden.";
+"sleep.reason.inventory" = "MacReplica leser denne Macen for en sikkerhetskopi";
+"sleep.reason.backup" = "MacReplica lagrer en sikkerhetskopi";
+"sleep.reason.verification" = "MacReplica kontrollerer en sikkerhetskopi";
+"sleep.reason.restore" = "MacReplica gjenoppretter denne Macen";
+"sleep.reason.installerDownload" = "MacReplica laster ned en macOS-installerer";
+"sleep.reason.installerCopy" = "MacReplica kopierer en macOS-installerer";
+"sleep.reason.installerWrite" = "MacReplica skriver en macOS-installerer til en disk";
