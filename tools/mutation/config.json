@@ -1201,6 +1201,16 @@
       "file": "Tools/InstallMedia/InstallMediaDestination.swift",
       "pattern": "\\.notReadable\\(partition\\.name\\.isEmpty \\? partition\\.device : partition\\.name\\)",
       "reason": "Only which label the message shows; that the partition is protected is tested."
+    },
+    {
+      "file": "Launchpad/LaunchpadLayout.swift",
+      "pattern": "SCDynamicStoreCopyConsoleUser\\(nil, &uid, nil\\) != nil",
+      "reason": "Reads the live console-user record of the Mac the tests run on; the comparison it feeds (runsAsLoggedInUser(euid:console:)) is tested with given values."
+    },
+    {
+      "file": "Tools/InstallMedia/InstallerFiles.swift",
+      "pattern": "guard let first = volume\\(a\\), let second = volume\\(b\\) else \\{ return false \\}",
+      "reason": "volume(_:) walks up to an existing folder and always reaches /, so it never returns nil (equivalent mutant)."
     }
   ]
 }

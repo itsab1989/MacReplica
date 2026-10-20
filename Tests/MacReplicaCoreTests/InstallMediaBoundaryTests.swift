@@ -254,4 +254,38 @@ struct InstallMediaBoundaryTests {
         #expect(await f.creator.usedBytes(onVolume: "disk4s2") == nil)
         #expect(await f.creator.usedBytes(onVolume: "disk99") == nil)
     }
+
+    @Test func writtenAmountBoundaries() async throws {
+        let f = try await Safety.flow("written-bounds")
+        // Empty volume: nothing written yet.
+        f.setup.drives.volumeTotal = 31_000_000_000; f.setup.drives.volumeUsed = 0
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == 0)
+        // Full volume: everything.
+        f.setup.drives.volumeUsed = 31_000_000_000
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == 31_000_000_000)
+        // A volume reported with no size tells nothing.
+        f.setup.drives.volumeTotal = 0; f.setup.drives.volumeUsed = 0
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == nil)
+    }
+
+    @Test func aToolThatAnswersLeavesNoProblemOneThatDoesNotIsReported() async throws {
+        let sandbox = try Sandbox("usage-answer")
+        let layout = toolchainLayout(sandbox)
+        try sandbox.file("Applications/Install macOS Sonoma.app/Contents/Info.plist", "<plist/>")
+        let tool = try sandbox.file("Applications/Install macOS Sonoma.app/Contents/Resources/createinstallmedia", "#!/bin/sh\n", executable: true)
+        final class Answer: @unchecked Sendable { var text = "Usage: createinstallmedia --volume <path>\n--nointeraction" }
+        let answer = Answer()
+        let runner = ScriptedRunner { command in
+            command.executable == tool.path ? CommandResult(exitCode: 0, stdout: answer.text, stderr: "") : CommandResult(exitCode: 0, stdout: "", stderr: "")
+        }
+        let inspector = InstallerInspector(layout: layout, runner: runner, environment: ToolEnvironment(macOSVersion: "27.0.1", architecture: .arm64), hasRosetta: false)
+        let app = sandbox.url.appendingPathComponent("Applications/Install macOS Sonoma.app")
+        #expect(await inspector.inspect(app).toolUsageProblem == nil)
+        // Something else came back (no list of options): the reason is kept and shown, not read as “needs questions”.
+        answer.text = "Segmentation fault"
+        let broken = await inspector.inspect(app)
+        #expect(broken.toolUsageProblem == "exit 0: Segmentation fault")
+        #expect(inspector.problems(of: broken).contains(.toolDidNotAnswer("exit 0: Segmentation fault")))
+        #expect(!inspector.problems(of: broken).contains(.toolNeedsInteraction))
+    }
 }
