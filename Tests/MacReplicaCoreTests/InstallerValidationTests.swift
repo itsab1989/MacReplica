@@ -223,8 +223,8 @@ struct InstallerValidationTests {
         let dmg = sandbox.url.appendingPathComponent("Deep Layout.dmg")
         try await OwnInstallerTests.createImage(source: source, name: "Deep", at: dmg)
         let fromImage = try await inspector.inspect(dmg, workFolder: work)
-        #expect(fromImage.contentsLimit == .notRecognised && fromImage.containedApps.isEmpty)
-        #expect(await !Self.isAttached(dmg))
+        #expect(fromImage.contentsLimit == .notRecognised && fromImage.containedApps.isEmpty, "got \(String(describing: fromImage.contentsLimit)), apps \(fromImage.containedApps.count)")
+        #expect(await !Self.isAttached(dmg), "still attached after inspecting")
         let zip = sandbox.url.appendingPathComponent("Deep.zip")
         try OwnInstallerTests.run("/usr/bin/ditto", ["-c", "-k", source.path, zip.path])
         #expect(try await inspector.inspect(zip, workFolder: work).contentsLimit == .notRecognised)
@@ -755,5 +755,95 @@ extension FileFormatEvidence.OtherFormat {
     /// Every "something else" proves the file is no disk image (used by `evidenceComesFromTheFileItself`).
     static var allCasesProveNothingButOtherFormat: Bool {
         [FileFormatEvidence.OtherFormat.empty, .webPage, .zipArchive, .installerPackage, .pdf].allSatisfy { FileFormatEvidence.otherFormat($0).provesNotADiskImage }
+    }
+}
+
+/// A CI run on 2026-10-20 (main, after the 1.1.10 release) left a test image attached and read it as "not mountable":
+/// under heavy load the disk-image service can finish an attachment after `hdiutil attach` reported failure, and can
+/// refuse a detach. Reproduced here with the real `hdiutil` behind a runner that behaves like that busy service.
+@Suite("Installer validation under load", .serialized)
+struct InstallerValidationUnderLoadTests {
+    /// `attach` reports "Resource temporarily unavailable" at once and really attaches a moment later (once);
+    /// `detach` is refused as busy the first `busyDetaches` times.
+    final class BusyServiceRunner: CommandRunning, @unchecked Sendable {
+        let base: CommandRunning
+        private let lock = NSLock()
+        private var lateAttachesLeft: Int
+        private var busyDetachesLeft: Int
+        private(set) var detaches = 0
+        init(_ base: CommandRunning, lateAttaches: Int, busyDetaches: Int) { self.base = base; lateAttachesLeft = lateAttaches; busyDetachesLeft = busyDetaches }
+
+        static let started = Date()
+        func log(_ text: String) {
+            if ProcessInfo.processInfo.environment["MACREPLICA_LOAD_TRACE"] != nil {
+                print(String(format: "TRACE %.2f ", Date().timeIntervalSince(Self.started)) + text)
+            }
+        }
+
+        func run(_ command: Command, onOutputLine: (@Sendable (String) -> Void)?) async throws -> CommandResult {
+            log(command.arguments.prefix(2).joined(separator: " "))
+            switch command.arguments.first {
+            case "attach":
+                // Fails while attempts are left; the last failing one completes late in the background.
+                let (fails, completesLate): (Bool, Bool) = lock.withLock {
+                    guard lateAttachesLeft > 0 else { return (false, false) }
+                    lateAttachesLeft -= 1
+                    return (true, lateAttachesLeft == 0)
+                }
+                if fails {
+                    let base = self.base
+                    if completesLate { Task.detached { [self] in
+                        try? await Task.sleep(nanoseconds: 150_000_000)
+                        let result = try? await base.run(command, onOutputLine: nil)
+                        log("late attach finished: exit \(result?.exitCode ?? -1)")
+                    } }
+                    return CommandResult(exitCode: 1, stdout: "", stderr: "hdiutil: attach failed - Resource temporarily unavailable\n")
+                }
+            case "detach":
+                let busy: Bool = lock.withLock { detaches += 1; if busyDetachesLeft > 0 { busyDetachesLeft -= 1; return true }; return false }
+                if busy { return CommandResult(exitCode: 16, stdout: "", stderr: "hdiutil: couldn't unmount \"disk9\" - Resource busy\n") }
+            default: break
+            }
+            return try await base.run(command, onOutputLine: onOutputLine)
+        }
+    }
+
+    static func image(_ sandbox: Sandbox) async throws -> URL {
+        let source = try sandbox.folder("content")
+        try Data("%PDF-1.4".utf8).write(to: source.appendingPathComponent("Manual.pdf"))
+        let dmg = sandbox.url.appendingPathComponent("Manual.dmg")
+        try await OwnInstallerTests.createImage(source: source, name: "Manual", at: dmg)
+        return dmg
+    }
+
+    @Test func anAttachmentThatArrivesAfterTheFailureIsDetached() async throws {
+        let (sandbox, _, _, layout, work) = try InstallerValidationTests.setup("load-late-attach")
+        let dmg = try await Self.image(sandbox)
+        defer { Task { await InstallerValidationTests.detachAll(dmg) } }
+        // All five attempts fail; the last one attaches late anyway.
+        let busy = BusyServiceRunner(ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]),
+                                     lateAttaches: 5, busyDetaches: 0)
+        var inspector = InstallerArchiveInspector(layout: layout, runner: busy)
+        // The watch lasts ten pauses (ten seconds in the app); 0.4 s here, as the late attachment can take seconds.
+        inspector.retryPause = 400_000_000
+        let archive = try await inspector.inspect(dmg, workFolder: work)
+        #expect(archive.contentsLimit == .notMountable, "macOS kept refusing to open it")
+        // Give the last late attachment time to land, then nothing of it may remain.
+        try await Task.sleep(nanoseconds: 300_000_000)
+        #expect(await !InstallerValidationTests.isAttached(dmg), "a late attachment stayed behind")
+    }
+
+    @Test func aDetachTheBusyServiceRefusesIsRepeatedUntilTheImageIsGone() async throws {
+        let (sandbox, _, _, layout, work) = try InstallerValidationTests.setup("load-busy-detach")
+        let dmg = try await Self.image(sandbox)
+        defer { Task { await InstallerValidationTests.detachAll(dmg) } }
+        let busy = BusyServiceRunner(ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]),
+                                     lateAttaches: 0, busyDetaches: 3)
+        var inspector = InstallerArchiveInspector(layout: layout, runner: busy)
+        inspector.retryPause = 100_000_000
+        let archive = try await inspector.inspect(dmg, workFolder: work)
+        #expect(archive.contentsLimit == .notRecognised, "opened and read: no app inside")
+        #expect(busy.detaches > 3)
+        #expect(await !InstallerValidationTests.isAttached(dmg), "still attached after inspecting")
     }
 }

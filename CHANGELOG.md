@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **No disk image is left attached when macOS is busy.** Under heavy load macOS's disk-image service can finish
+  opening an image after reporting that it could not, and can refuse to close one. MacReplica now watches for such a
+  late attachment for about ten seconds after a failed attempt and closes it, and checks after closing an image that
+  it is really gone (seen in a CI run, reproduced with the real `hdiutil`).
+
 ## [1.1.10] - 2026-10-20
 
 ### Added
