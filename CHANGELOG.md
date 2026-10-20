@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.9] - 2026-10-20
+
 ### Added
 - **Tools › Create macOS Installer**: a bootable USB installer for a macOS version Apple offers, made with Apple's
   own `createinstallmedia`. The versions are read live on the Mac – Software Update's full installers for this Mac and
@@ -568,7 +570,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.8...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.9...HEAD
+[1.1.9]: https://github.com/itsab1989/MacReplica/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/itsab1989/MacReplica/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/itsab1989/MacReplica/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/itsab1989/MacReplica/compare/v1.1.5...v1.1.6
