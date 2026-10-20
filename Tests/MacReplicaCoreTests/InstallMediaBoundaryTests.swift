@@ -24,12 +24,17 @@ struct InstallMediaBoundaryTests {
 
     @Test func softwareUpdateComesFirstAndNamesTheGroup() {
         let page = MacOSRelease(name: "macOS 27", major: "27", source: .appStore(id: 1, url: "macappstores://apps.apple.com/app/id1?mt=12"), provenance: "")
-        let su = MacOSRelease(name: "macOS 27 Golden Gate", major: "27", version: "27", build: "26A1", source: .softwareUpdate, provenance: "")
+        // No build either, so only the source can decide the order.
+        let su = MacOSRelease(name: "macOS 27 Golden Gate", major: "27", version: "27", build: nil, source: .softwareUpdate, provenance: "")
         for releases in [[page, su], [su, page]] {
             let group = MacOSInstallerCatalog(releases: releases).grouped[0]
             #expect(group.releases.first?.source == .softwareUpdate)
             #expect(group.name == "macOS 27 Golden Gate")
         }
+        // The newest Software Update entry names the group.
+        let older = MacOSRelease(name: "macOS 27 Beta", major: "27", version: "27.0", build: "26A1", source: .softwareUpdate, provenance: "")
+        let newer = MacOSRelease(name: "macOS 27 Golden Gate", major: "27", version: "27.0.1", build: "26A2", source: .softwareUpdate, provenance: "")
+        #expect(MacOSInstallerCatalog(releases: [older, newer, page]).grouped[0].name == "macOS 27 Golden Gate")
         // Without Software Update the page's name is used.
         #expect(MacOSInstallerCatalog(releases: [page]).grouped.first?.name == "macOS 27")
     }
@@ -173,8 +178,49 @@ struct InstallMediaBoundaryTests {
         // The partition is gone, or the disk cannot be read: assume the worst.
         f.setup.drives.disks["disk0"]?.partitions.remove(at: index)
         #expect(await f.creator.wasErased(spare))
-        f.setup.drives.disks = [:]
+        // diskutil cannot list the disk at all.
+        f.setup.drives.listFails = true
         #expect(await f.creator.wasErased(spare))
+    }
+
+    @Test func aDiskImagesPartitionsAreListedInsteadOfTheImage() async throws {
+        let s = try Safety.setup("image-partitions")
+        _ = try s.sandbox.folder("Volumes/SPARE")
+        s.drives.add("disk5", info: FakeDrives.usbStick("disk5", virtual: true, bus: "Disk Image"),
+                     volumes: [("KEEP", nil, "Apple_HFS"), ("SPARE", s.layout.volumesRoot.appendingPathComponent("SPARE").path, "Microsoft Basic Data")])
+        var tests = s.scanner
+        tests.allowsDiskImages = true
+        tests.partitionsOfDiskImages = true
+        let candidates = try await tests.scan(required: 0)
+        #expect(candidates.map(\.id) == ["disk5s1", "disk5s2"])
+        #expect(candidates.allSatisfy { $0.isPartition })
+    }
+
+    @Test func anUnreadableDiskConfirmsNothing() async throws {
+        let (f, spare) = try await InstallMediaPartitionTests.partitionFlow("unreadable-alone")
+        // A disk that has only the target partition: before and after would both be “no other partitions”.
+        let partition = try #require(spare.partition)
+        let alone = InstallMediaDrive(device: "disk9", mediaName: "SSD", sizeBytes: 1, busProtocol: "", isInternal: true, isVirtual: false,
+                                      isWritable: true, volumes: [partition])
+        let result = await f.creator.verify(drive: alone, partition: partition, installer: f.report)
+        #expect(result.checks.first { $0.item == .otherPartitionsUntouched }?.passed == false)
+    }
+
+    @Test func anUnmountedInstallerVolumeIsNotReplacedByAnotherVolume() async throws {
+        let f = try await Safety.flow("unmounted-installer")
+        _ = try await f.creator.create(installer: f.report, on: f.drive, stage: { _ in })
+        // The installer volume is not mounted, but the EFI partition is.
+        let volumesRoot = f.setup.layout.volumesRoot.path
+        let changed = (f.setup.drives.disks["disk4"]?.partitions ?? []).map { partition in
+            var partition = partition
+            if partition["VolumeName"] as? String == "EFI" { partition["MountPoint"] = volumesRoot }
+            else { partition.removeValue(forKey: "MountPoint") }
+            return partition
+        }
+        f.setup.drives.disks["disk4"]?.partitions = changed
+        let result = await f.creator.verify(drive: f.drive, installer: f.report)
+        #expect(result.verification == .failed)
+        #expect(result.checks.map(\.item) == [.volumeOnDrive])
     }
 
     @Test func otherPartitionsCannotBeConfirmedWithoutReadingTheDisk() async throws {

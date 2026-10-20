@@ -16,6 +16,7 @@ final class FakeDrives: @unchecked Sendable {
     var startupStores = ["disk0s2"]
     var volumesRoot: URL
     var eraseFails: String?
+    var listFails = false
     var blessOutput = "finderinfo[0]:      2 => Blessed System Folder is /Volumes/Install macOS Sonoma/System/Library/CoreServices"
     var codesignFails = false
     private(set) var erased: [(device: String, name: String)] = []
@@ -80,6 +81,7 @@ final class FakeDrives: @unchecked Sendable {
             guard let disk = disks[args.last ?? ""] else { return CommandResult(exitCode: 1, stdout: "", stderr: "Could not find disk") }
             return CommandResult(exitCode: 0, stdout: xml(disk.info), stderr: "")
         case "list":
+            if listFails { return CommandResult(exitCode: 1, stdout: "", stderr: "Unable to list disks") }
             let wanted = args.count >= 3 && args[2] != "external" ? args[2] : nil
             var entries: [[String: Any]] = disks.filter { wanted == nil || $0.key == wanted }.map { device, disk in
                 ["DeviceIdentifier": device, "Content": "GUID_partition_scheme", "Size": disk.info["TotalSize"] ?? 0, "Partitions": disk.partitions]
