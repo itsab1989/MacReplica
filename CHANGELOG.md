@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.11] - 2026-10-20
+
 ### Fixed
 - **No disk image is left attached when macOS is busy.** Under heavy load macOS's disk-image service can finish
   opening an image after reporting that it could not, and can refuse to close one. MacReplica now watches for such a
@@ -604,7 +606,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.10...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.11...HEAD
+[1.1.11]: https://github.com/itsab1989/MacReplica/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/itsab1989/MacReplica/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/itsab1989/MacReplica/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/itsab1989/MacReplica/compare/v1.1.7...v1.1.8
