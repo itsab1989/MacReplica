@@ -376,6 +376,17 @@ but cannot be chosen on them. Everything else is read from the installer itself:
 - **Choose Installer…**: an installer elsewhere is copied into the first Applications folder with `ditto`, as the
   user, after checking that its size plus 1 GiB is free; a name that already exists is never overwritten, and a copy
   that fails is removed.
+- Same volume (`st_dev` of the nearest existing folder) means `ditto` clones the files – 14.8 GB in 0.2 s on the test
+  Mac, no space used – so the free-space check applies only to copies from another volume. External drives usually
+  ignore ownership, which is why an installer there is copied rather than locked in place; one in Downloads could be
+  locked in place, but would then belong to the system inside the user's folder. A name already in Applications is
+  never overwritten: the user chooses “Use the One in Applications” or “Replace It” (Trash, then copy).
+- The tool's options are read from its usage output with a 120 s limit; if it does not start or answer, the reason is
+  shown (`InstallerAppProblem.toolDidNotAnswer`) with Check Again – it is never read as “no `--nointeraction`”. (Seen
+  once in the real app right after a copy; not reproducible afterwards.)
+- **Progress**: while `createinstallmedia` runs, `diskutil info -plist <volume>` is read every 3 s; total minus free
+  space against the installer's size is shown as a bar, capped at 99 % until the tool has finished (measured on a
+  disk image: 15.1 of ~15 GB used shortly before the end).
 - **Move to Trash**: only an Apple installer directly in Applications, into `~/.Trash` (a free name if one exists). An
   installer the user owns is moved directly; one that belongs to root (Software Update installs them as root) through
   one administrator step `/bin/mv <installer> ~/.Trash/<name>`, allowed only for exactly that kind of source and
@@ -484,7 +495,8 @@ stand-ins working on folders of the simulation (`MacReplicaSimulator install-med
 | Partition mode on real hardware | Verified | Disk image with EFI, KEEP (with a file) and an empty exFAT SPARE: EFI refused as system partition, KEEP as not empty, SPARE erased by partition UUID and written in 69 s, 8 checks incl. “other partitions unchanged 2/2”; KEEP's file intact. The second mounted installer was named “Install macOS Sonoma 1” by macOS and still found |
 | Expert option on screen | Simulated | Toggle, warning, partition row, second checkbox (button disabled until both), final dialog, `eraseVolume` with the UUID only, 8 checks |
 | Mutation testing of the new and changed code | Verified | `tools/mutation/mutate.py --changed-since main` on the four `InstallMedia` files, `CommandRunner.swift` and `PrivilegedExecutor.swift` (3 shards), then the survivors again: every mutant killed except 12 documented as equivalent in `tools/mutation/config.json` |
-| Installers on this Mac, Choose Installer (copy), Move to Trash, locking for root | Unit + simulated | `InstallerFilesTests`, `aChosenInstallerIsCopiedUsedAndTrashed` (simulated Mac: copied from Downloads, used, signature checked again before the tool, moved to the Trash). On screen and the real administrator step: see the 1.1.10 release notes |
+| Installers on this Mac, Choose Installer (copy), Move to Trash, locking for root | Verified | Real app on the test Mac: list, Move to Trash of Software Update's root-owned installer (password), Choose Installer from Downloads (clone, sleep assertion “MacReplica is copying a macOS installer” seen in `pmset -g assertions`), user-owned copy then written to a disk image with the real tool: before `Basti:staff`, after `root:wheel`, all 7 checks passed. Simulated: same-name choice, Replace It, progress bar 0 → 50 → 99 %, sleep assertion while writing and released after |
+| Installers on this Mac in tests | Unit + simulated | `InstallerFilesTests`, `aChosenInstallerIsCopiedUsedAndTrashed` (simulated Mac: copied from Downloads, used, signature checked again before the tool, moved to the Trash) |
 | Starting a Mac from the drive | Not verified | Needs a spare Mac and a real USB drive |
 | USB stick | Not verified | The SD card took this role; the same `diskutil` calls |
 | Internal partition of a real internal disk | Not verified | The test Mac has no spare partition and none was created (that would mean resizing its disk); verified on a disk image instead |

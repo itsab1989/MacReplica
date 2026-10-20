@@ -125,7 +125,8 @@ enum FakeInstallMedia {
     <?xml version="1.0" encoding="UTF-8"?>
     <plist version="1.0"><dict><key>System Image Info</key><dict><key>version</key><string>$version</string></dict></dict></plist>
     PLIST
-        printf 'simulated installer payload' > "$app/Contents/SharedSupport/SharedSupport.dmg"
+        dd if=/dev/zero of="$app/Contents/SharedSupport/SharedSupport.dmg" bs=1m count=12 2>/dev/null
+        dd if=/dev/zero of="$app/Contents/SharedSupport/BaseSystem.dmg" bs=1m count=12 2>/dev/null
         cp "$ROOT/tools/createinstallmedia" "$app/Contents/Resources/createinstallmedia"
         chmod 755 "$app/Contents/Resources/createinstallmedia"
         echo "Install finished successfully" ;;
@@ -169,6 +170,18 @@ enum FakeInstallMedia {
           printf '<dict><key>ParentWholeDisk</key><string>disk3</string><key>MountPoint</key><string>/</string><key>APFSPhysicalStores</key><array><dict><key>APFSPhysicalStore</key><string>disk0s2</string></dict></array></dict></plist>\n'
           exit 0
         fi
+        case "$disk" in
+          disk*s2)
+            # A volume: its size and how much is on it (what MacReplica measures while an installer is written).
+            parent="${disk%s2}"
+            [ -d "$D/$parent" ] || { echo "Could not find disk: $disk" >&2; exit 1; }
+            name="$(val "$parent" volume)"; total="$(val "$parent" size)"; used=0
+            if [ -n "$name" ] && [ -d "$V/$name" ]; then used=$(( $(du -sk "$V/$name" | cut -f1) * 1024 )); fi
+            head_plist
+            printf '<dict><key>DeviceIdentifier</key><string>%s</string><key>VolumeName</key><string>%s</string><key>TotalSize</key><integer>%s</integer><key>FreeSpace</key><integer>%s</integer></dict></plist>\n' \
+              "$disk" "$(printf '%s' "$name" | esc)" "$total" "$(( total - used ))"
+            exit 0 ;;
+        esac
         [ -n "$disk" ] && [ -d "$D/$disk" ] || { echo "Could not find disk: $disk" >&2; exit 1; }
         head_plist
         internal='<false/>'; [ -f "$D/$disk/internal" ] && internal='<true/>'
@@ -274,6 +287,11 @@ enum FakeInstallMedia {
     pause; echo "Copying essential files..."
     mkdir -p "$new/$name.app/Contents/Resources" "$new/System/Library/CoreServices"
     cp "$app/Contents/Info.plist" "$new/$name.app/Contents/Info.plist"
+    # The installer's data, in two halves with a pause between (so the progress shows on screen).
+    if [ -d "$app/Contents/SharedSupport" ]; then
+      mkdir -p "$new/$name.app/Contents/SharedSupport"
+      for f in "$app/Contents/SharedSupport"/*; do pause; cp "$f" "$new/$name.app/Contents/SharedSupport/"; done
+    fi
     printf 'efi' > "$new/System/Library/CoreServices/boot.efi"
     pause; echo "Making disk bootable..."
     echo "Copying boot files..."

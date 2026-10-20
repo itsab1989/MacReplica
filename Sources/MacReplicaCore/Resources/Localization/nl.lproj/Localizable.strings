@@ -2289,7 +2289,7 @@
 "installMedia.problem.notFound" = "De installer staat niet in Apps.";
 "installMedia.problem.notSigned" = "De installer is niet bevestigd als ondertekend door Apple (%1$@). Download hem opnieuw bij Apple.";
 "installMedia.problem.noTool" = "Deze installer heeft geen createinstallmedia (Apple voegde het toe met OS X Mavericks). Hij kan geen opstartbare schijf maken.";
-"installMedia.problem.interaction" = "De createinstallmedia van deze installer werkt niet zonder vragen in Terminal, dus MacReplica kan hem niet gebruiken.";
+"installMedia.problem.interaction" = "De createinstallmedia van deze installer werkt niet zonder vragen te stellen, dus MacReplica kan hem niet gebruiken. Download de installer opnieuw bij Apple.";
 "installMedia.problem.rosetta" = "De createinstallmedia van deze installer is alleen voor Intel en heeft Rosetta nodig. Installeer eerst Rosetta.";
 "installMedia.problem.payload" = "De installer is onvolledig (zijn installatiegegevens ontbreken). Download hem opnieuw.";
 "installMedia.problem.incomplete" = "De installer is onvolledig: %1$@";
@@ -2321,7 +2321,7 @@
 "installMedia.working.title" = "Laat de schijf aangesloten";
 "installMedia.working.message" = "Koppel de schijf niet los en stop MacReplica niet. De Mac gaat niet in de sluimerstand terwijl de installer wordt geschreven.";
 "installMedia.working.elapsed" = "Tijd tot nu toe: %1$@";
-"installMedia.working.creatingHint" = "Apples createinstallmedia meldt geen voortgang die MacReplica kan tonen. Het is nog bezig; deze stap duurt het langst.";
+"installMedia.working.creatingHint" = "Apples createinstallmedia meldt zijn voortgang pas aan het eind; de balk toont wat er al op de schijf staat. Deze stap duurt het langst.";
 "installMedia.stage.checkingInstaller" = "Installer wordt gecontroleerd";
 "installMedia.stage.checkingDrive" = "Schijf wordt opnieuw gecontroleerd";
 "installMedia.stage.erasing" = "Schijf wordt gewist";
@@ -2442,3 +2442,10 @@
 "sleep.reason.installerDownload" = "MacReplica downloadt een macOS-installer";
 "sleep.reason.installerCopy" = "MacReplica kopieert een macOS-installer";
 "sleep.reason.installerWrite" = "MacReplica schrijft een macOS-installer naar een schijf";
+"installMedia.problem.noAnswer" = "MacReplica kon de createinstallmedia van deze installer niet vragen welke opties hij heeft (%1$@). Klik op 'Controleer opnieuw'; blijft dit zo, verplaats de installer dan naar de prullenmand en haal hem opnieuw op.";
+"installMedia.copy.nameTaken" = "'%1$@' staat al in Apps";
+"installMedia.copy.nameTakenHint" = "Gebruik de bestaande, of vervang hem: MacReplica verplaatst hem naar de prullenmand en kopieert de gekozen installer.";
+"installMedia.copy.replace" = "Vervang";
+"installMedia.copy.useExisting" = "Gebruik die in Apps";
+"installMedia.copy.clone" = "Hij staat op dezelfde schijf, dus de kopie neemt geen extra ruimte in (de bestanden worden gedeeld tot er een verandert).";
+"installMedia.working.written" = "%1$@ van ongeveer %2$@ geschreven";

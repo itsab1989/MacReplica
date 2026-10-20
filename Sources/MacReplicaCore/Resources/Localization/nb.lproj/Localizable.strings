@@ -2289,7 +2289,7 @@
 "installMedia.problem.notFound" = "Installereren ligger ikke i Programmer.";
 "installMedia.problem.notSigned" = "Installereren er ikke bekreftet som signert av Apple (%1$@). Last den ned på nytt fra Apple.";
 "installMedia.problem.noTool" = "Denne installereren har ikke createinstallmedia (Apple la det til med OS X Mavericks). Den kan ikke lage en oppstartbar disk.";
-"installMedia.problem.interaction" = "createinstallmedia i denne installereren kan ikke kjøre uten spørsmål i Terminal, så MacReplica kan ikke bruke den.";
+"installMedia.problem.interaction" = "createinstallmedia i denne installereren kan ikke kjøre uten å stille spørsmål, så MacReplica kan ikke bruke den. Last ned installereren på nytt fra Apple.";
 "installMedia.problem.rosetta" = "createinstallmedia i denne installereren er bare for Intel og trenger Rosetta. Installer Rosetta først.";
 "installMedia.problem.payload" = "Installereren er ufullstendig (installasjonsdataene mangler). Last den ned på nytt.";
 "installMedia.problem.incomplete" = "Installereren er ufullstendig: %1$@";
@@ -2321,7 +2321,7 @@
 "installMedia.working.title" = "La disken være tilkoblet";
 "installMedia.working.message" = "Ikke koble fra disken og ikke avslutt MacReplica. Macen går ikke i dvale mens installereren skrives.";
 "installMedia.working.elapsed" = "Tid så langt: %1$@";
-"installMedia.working.creatingHint" = "Apples createinstallmedia rapporterer ingen fremdrift MacReplica kan vise. Det jobber fortsatt; dette trinnet tar lengst tid.";
+"installMedia.working.creatingHint" = "Apples createinstallmedia rapporterer egen fremdrift først til slutt; linjen viser hva som allerede er på disken. Dette trinnet tar lengst tid.";
 "installMedia.stage.checkingInstaller" = "Kontrollerer installereren";
 "installMedia.stage.checkingDrive" = "Kontrollerer disken på nytt";
 "installMedia.stage.erasing" = "Sletter disken";
@@ -2442,3 +2442,10 @@
 "sleep.reason.installerDownload" = "MacReplica laster ned en macOS-installerer";
 "sleep.reason.installerCopy" = "MacReplica kopierer en macOS-installerer";
 "sleep.reason.installerWrite" = "MacReplica skriver en macOS-installerer til en disk";
+"installMedia.problem.noAnswer" = "MacReplica kunne ikke spørre createinstallmedia i denne installereren hvilke valg den har (%1$@). Klikk Sjekk igjen; hvis det vedvarer, flytt installereren til papirkurven og hent den på nytt.";
+"installMedia.copy.nameTaken" = "«%1$@» ligger allerede i Programmer";
+"installMedia.copy.nameTakenHint" = "Bruk den som ligger der, eller erstatt den: MacReplica flytter den til papirkurven og kopierer den du valgte.";
+"installMedia.copy.replace" = "Erstatt";
+"installMedia.copy.useExisting" = "Bruk den i Programmer";
+"installMedia.copy.clone" = "Den ligger på samme disk, så kopien tar ingen ekstra plass (filene deles til en av dem endres).";
+"installMedia.working.written" = "%1$@ av omtrent %2$@ skrevet";

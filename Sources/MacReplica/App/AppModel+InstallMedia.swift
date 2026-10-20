@@ -31,6 +31,8 @@ struct InstallMediaState {
     var askingFinalConfirmation = false
     var stage: InstallMediaStage?
     var startedAt: Date?
+    /// How much is on the target volume while createinstallmedia writes (measured every few seconds).
+    var writtenBytes: Int64?
     var result: InstallMediaResult?
     var failure: InstallMediaError?
     /// Whether the drive was erased before the failure (then it holds no installer).
@@ -47,6 +49,8 @@ struct InstallMediaState {
     var pendingCopyNeeded: Int64?
     var copying = false
     var copyProblem: String?
+    /// The chosen installer has the name of one already in Applications: use that one, or replace it.
+    var copyNameTaken: URL?
     /// An installer waiting for the Trash confirmation.
     var trashCandidate: URL?
     var trashCandidateSize: Int64?
@@ -156,9 +160,13 @@ extension AppModel {
         } else {
             installMedia.pendingCopy = url
             installMedia.pendingCopyNeeded = nil
+            let applications = installerFiles.applications
             Task {
                 // Measured off the main thread; the answer is used only if the same installer is still waiting.
-                let needed = await Task.detached { InstallerInspector.allocatedSize(of: url) + 1_073_741_824 }.value
+                // On the same disk the copy is a clone and needs no space (0).
+                let needed = await Task.detached {
+                    InstallerFiles.isSameVolume(url, applications) ? 0 : InstallerInspector.allocatedSize(of: url) + 1_073_741_824
+                }.value
                 if installMedia.pendingCopy == url { installMedia.pendingCopyNeeded = needed }
             }
         }
@@ -175,7 +183,38 @@ extension AppModel {
         }
     }
 
-    func cancelCopy() { installMedia.pendingCopy = nil }
+    func cancelCopy() {
+        installMedia.pendingCopy = nil
+        installMedia.copyNameTaken = nil
+    }
+
+    /// Same name already in Applications: continue with that one instead of copying.
+    func useExistingInsteadOfCopy() {
+        guard let existing = installMedia.copyNameTaken else { return }
+        installMedia.copyNameTaken = nil
+        installMedia.pendingCopy = nil
+        installMedia.copyProblem = nil
+        useInstallerAt(existing)
+    }
+
+    /// Same name already in Applications: move that one to the Trash (the password may be needed), then copy.
+    func replaceExistingAndCopy() {
+        guard let existing = installMedia.copyNameTaken else { return }
+        installMedia.copyNameTaken = nil
+        installMedia.copyProblem = nil
+        installMedia.copying = true
+        let files = installerFiles
+        Task {
+            do {
+                try await files.moveToTrash(existing)
+                installMedia.copying = false
+                confirmCopy()
+            } catch {
+                installMedia.copying = false
+                installMedia.copyProblem = installerFilesMessage(error)
+            }
+        }
+    }
 
     func confirmCopy() {
         guard let source = installMedia.pendingCopy else { return }
@@ -189,6 +228,9 @@ extension AppModel {
                 installMedia.copying = false
                 installMedia.pendingCopy = nil
                 useInstallerAt(copied)
+            } catch InstallerFilesError.alreadyInApplications {
+                installMedia.copying = false
+                installMedia.copyNameTaken = files.applications.appendingPathComponent(source.lastPathComponent)
             } catch {
                 installMedia.copying = false
                 installMedia.copyProblem = installerFilesMessage(error)
@@ -447,6 +489,7 @@ extension AppModel {
         installMedia.step = .working
         installMedia.stage = nil
         installMedia.startedAt = Date()
+        installMedia.writtenBytes = nil
         installMedia.result = nil
         installMedia.failure = nil
         installMedia.driveErased = false
@@ -455,9 +498,11 @@ extension AppModel {
         // The Mac stays awake while the drive is written (`updateSleepPrevention`, from the working step).
         installMedia.task = Task {
             do {
-                let result = try await creator.create(installer: report, on: candidate) { stage in
+                let result = try await creator.create(installer: report, on: candidate, stage: { stage in
                     Task { @MainActor in self.installMedia.stage = stage }
-                }
+                }, written: { bytes in
+                    Task { @MainActor in self.installMedia.writtenBytes = bytes }
+                })
                 installMedia.result = result
                 installMedia.step = .finished
                 recordInstallMedia(release: release, report: report, drive: drive, partition: candidate.isPartition, result: result.verification == .failed ? .failed : .succeeded,

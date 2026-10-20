@@ -1181,7 +1181,7 @@
     },
     {
       "file": "Tools/InstallMedia/InstallMediaCreator.swift",
-      "pattern": "partitions\\(of: device\\)\\.first \\{ \\$0\\.name == name \\}",
+      "pattern": "partitions\\(of: drive\\.device\\)\\.first \\{ \\$0\\.name == name \\}",
       "operator": "first \u2192 last",
       "reason": "The random MRINSTALL name exists once (equivalent mutant)."
     },

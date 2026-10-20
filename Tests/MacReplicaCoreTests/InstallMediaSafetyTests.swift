@@ -17,6 +17,8 @@ final class FakeDrives: @unchecked Sendable {
     var volumesRoot: URL
     var eraseFails: String?
     var listFails = false
+    var volumeTotal: Int64 = 31_000_000_000
+    var volumeUsed: Int64 = 6_000_000_000
     var blessOutput = "finderinfo[0]:      2 => Blessed System Folder is /Volumes/Install macOS Sonoma/System/Library/CoreServices"
     var codesignFails = false
     private(set) var erased: [(device: String, name: String)] = []
@@ -77,6 +79,9 @@ final class FakeDrives: @unchecked Sendable {
         case "info" where args.last == "/":
             return CommandResult(exitCode: 0, stdout: xml(["ParentWholeDisk": startupParent, "MountPoint": "/",
                                                             "APFSPhysicalStores": startupStores.map { ["APFSPhysicalStore": $0] }]), stderr: "")
+        case "info" where (args.last ?? "").range(of: #"^disk[0-9]+s[0-9]+$"#, options: .regularExpression) != nil:
+            // A volume while it is written: total and free space.
+            return CommandResult(exitCode: 0, stdout: xml(["DeviceIdentifier": args.last ?? "", "TotalSize": volumeTotal, "FreeSpace": volumeTotal - volumeUsed]), stderr: "")
         case "info":
             guard let disk = disks[args.last ?? ""] else { return CommandResult(exitCode: 1, stdout: "", stderr: "Could not find disk") }
             return CommandResult(exitCode: 0, stdout: xml(disk.info), stderr: "")

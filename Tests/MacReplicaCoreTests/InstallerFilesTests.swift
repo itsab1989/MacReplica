@@ -170,6 +170,8 @@ struct InstallerFilesTests {
         let source = try Self.installer(s.sandbox, "Downloads")
         let needed = InstallerInspector.allocatedSize(of: source) + 1_073_741_824
         s.files.freeSpace = { _ in needed - 1 }
+        // From another drive: the space is checked.
+        s.files.sameVolume = { _, _ in false }
         await #expect(throws: InstallerFilesError.notEnoughSpace(needed: needed, available: needed - 1)) { try await s.files.copyIntoApplications(source) }
         #expect(!FileManager.default.fileExists(atPath: s.files.applications.appendingPathComponent("Install macOS Sonoma.app").path))
         s.files.freeSpace = { _ in needed }
@@ -200,5 +202,16 @@ struct InstallerFilesTests {
         layout.applicationFolders = [sandbox.url.appendingPathComponent("Applications"), sandbox.url.appendingPathComponent("home/Applications")]
         let files = InstallerFiles(layout: layout, runner: ScriptedRunner { _ in CommandResult(exitCode: 0, stdout: "", stderr: "") }, privileged: DirectPrivilegedExecutor())
         #expect(files.applications.path == sandbox.url.appendingPathComponent("Applications").path)
+    }
+
+    @Test func onTheSameDiskACopyNeedsNoSpace() async throws {
+        var s = try Self.setup("copy-clone")
+        let source = try Self.installer(s.sandbox, "Downloads")
+        #expect(InstallerFiles.isSameVolume(source, s.files.applications))
+        // Another volume (devfs).
+        #expect(!InstallerFiles.isSameVolume(source, URL(fileURLWithPath: "/dev")))
+        s.files.freeSpace = { _ in 0 }
+        let copied = try await s.files.copyIntoApplications(source)
+        #expect(InstallerFiles.isAppleInstaller(copied))
     }
 }

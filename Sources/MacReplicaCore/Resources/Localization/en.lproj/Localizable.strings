@@ -2291,7 +2291,7 @@
 "installMedia.problem.notFound" = "The installer is not in Applications.";
 "installMedia.problem.notSigned" = "The installer is not confirmed as signed by Apple (%1$@). Download it again from Apple.";
 "installMedia.problem.noTool" = "This installer has no createinstallmedia (Apple added it with OS X Mavericks). It cannot make a bootable drive.";
-"installMedia.problem.interaction" = "This installer's createinstallmedia cannot run without questions in Terminal, so MacReplica cannot use it.";
+"installMedia.problem.interaction" = "This installer's createinstallmedia cannot run without asking questions, so MacReplica cannot use it. Download the installer again from Apple.";
 "installMedia.problem.rosetta" = "This installer's createinstallmedia is for Intel only and needs Rosetta. Install Rosetta first.";
 "installMedia.problem.payload" = "The installer is incomplete (its installation data is missing). Download it again.";
 "installMedia.problem.incomplete" = "The installer is incomplete: %1$@";
@@ -2323,7 +2323,7 @@
 "installMedia.working.title" = "Keep the drive connected";
 "installMedia.working.message" = "Do not unplug the drive or quit MacReplica. The Mac does not go to sleep while the installer is written.";
 "installMedia.working.elapsed" = "Time so far: %1$@";
-"installMedia.working.creatingHint" = "Apple's createinstallmedia reports no progress MacReplica could show. It is still working; this step takes the longest.";
+"installMedia.working.creatingHint" = "Apple's createinstallmedia reports its own progress only at the end; the bar shows what is already on the drive. This step takes the longest.";
 "installMedia.stage.checkingInstaller" = "Checking the installer";
 "installMedia.stage.checkingDrive" = "Checking the drive again";
 "installMedia.stage.erasing" = "Erasing the drive";
@@ -2444,3 +2444,10 @@
 "sleep.reason.installerDownload" = "MacReplica is downloading a macOS installer";
 "sleep.reason.installerCopy" = "MacReplica is copying a macOS installer";
 "sleep.reason.installerWrite" = "MacReplica is writing a macOS installer to a drive";
+"installMedia.problem.noAnswer" = "MacReplica could not ask this installer's createinstallmedia which options it has (%1$@). Click Check Again; if this stays, move the installer to the Trash and get it again.";
+"installMedia.copy.nameTaken" = "“%1$@” is already in Applications";
+"installMedia.copy.nameTakenHint" = "Use the one that is there, or replace it: MacReplica moves it to the Trash and copies the one you chose.";
+"installMedia.copy.replace" = "Replace It";
+"installMedia.copy.useExisting" = "Use the One in Applications";
+"installMedia.copy.clone" = "It is on the same disk, so the copy takes no extra space (the files are shared until one of them changes).";
+"installMedia.working.written" = "%1$@ of about %2$@ written";

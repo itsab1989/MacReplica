@@ -2289,7 +2289,7 @@
 "installMedia.problem.notFound" = "El instalador no está en Aplicaciones.";
 "installMedia.problem.notSigned" = "No se ha confirmado que el instalador esté firmado por Apple (%1$@). Descárgalo de nuevo de Apple.";
 "installMedia.problem.noTool" = "Este instalador no tiene createinstallmedia (Apple lo añadió con OS X Mavericks). No puede crear un disco de arranque.";
-"installMedia.problem.interaction" = "El createinstallmedia de este instalador no funciona sin preguntas en Terminal, así que MacReplica no puede usarlo.";
+"installMedia.problem.interaction" = "El createinstallmedia de este instalador no funciona sin hacer preguntas, así que MacReplica no puede usarlo. Vuelve a descargar el instalador de Apple.";
 "installMedia.problem.rosetta" = "El createinstallmedia de este instalador es solo para Intel y necesita Rosetta. Instala Rosetta primero.";
 "installMedia.problem.payload" = "El instalador está incompleto (faltan sus datos de instalación). Descárgalo de nuevo.";
 "installMedia.problem.incomplete" = "El instalador está incompleto: %1$@";
@@ -2321,7 +2321,7 @@
 "installMedia.working.title" = "Mantén el disco conectado";
 "installMedia.working.message" = "No desconectes el disco ni cierres MacReplica. El Mac no entra en reposo mientras se escribe el instalador.";
 "installMedia.working.elapsed" = "Tiempo transcurrido: %1$@";
-"installMedia.working.creatingHint" = "createinstallmedia de Apple no informa de un progreso que MacReplica pueda mostrar. Sigue trabajando; este paso es el más largo.";
+"installMedia.working.creatingHint" = "createinstallmedia de Apple solo informa de su progreso al final; la barra muestra lo que ya está en el disco. Este paso es el más largo.";
 "installMedia.stage.checkingInstaller" = "Comprobando el instalador";
 "installMedia.stage.checkingDrive" = "Volviendo a comprobar el disco";
 "installMedia.stage.erasing" = "Borrando el disco";
@@ -2442,3 +2442,10 @@
 "sleep.reason.installerDownload" = "MacReplica está descargando un instalador de macOS";
 "sleep.reason.installerCopy" = "MacReplica está copiando un instalador de macOS";
 "sleep.reason.installerWrite" = "MacReplica está escribiendo un instalador de macOS en un disco";
+"installMedia.problem.noAnswer" = "MacReplica no pudo preguntar al createinstallmedia de este instalador qué opciones tiene (%1$@). Pulsa Comprobar de nuevo; si sigue así, mueve el instalador a la Papelera y vuelve a obtenerlo.";
+"installMedia.copy.nameTaken" = "«%1$@» ya está en Aplicaciones";
+"installMedia.copy.nameTakenHint" = "Usa el que ya está o sustitúyelo: MacReplica lo mueve a la Papelera y copia el que elegiste.";
+"installMedia.copy.replace" = "Sustituir";
+"installMedia.copy.useExisting" = "Usar el de Aplicaciones";
+"installMedia.copy.clone" = "Está en el mismo disco, así que la copia no ocupa espacio adicional (los archivos se comparten hasta que uno cambie).";
+"installMedia.working.written" = "%1$@ de unos %2$@ escritos";

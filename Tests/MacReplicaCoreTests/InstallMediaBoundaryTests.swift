@@ -230,4 +230,28 @@ struct InstallMediaBoundaryTests {
         #expect(result.checks.first { $0.item == .otherPartitionsUntouched }?.passed == false)
         #expect(result.verification == .failed)
     }
+
+    /// The progress bar: while createinstallmedia runs, how much is on the target volume is reported every few seconds.
+    @Test func whatIsWrittenIsReportedWhileTheToolRuns() async throws {
+        let f = try await Safety.flow("written")
+        final class Seen: @unchecked Sendable { let lock = NSLock(); var all: [Int64] = []
+            func add(_ value: Int64) { lock.withLock { all.append(value) } } }
+        let seen = Seen()
+        // The tool takes a moment, as the real one does.
+        struct Slow: PrivilegedExecuting { let inner: PrivilegedExecuting
+            func run(_ operations: [PrivilegedOperation], reason: String) async throws {
+                try await Task.sleep(nanoseconds: 700_000_000)
+                try await inner.run(operations, reason: reason)
+            } }
+        var creator = f.creator
+        creator.privileged = Slow(inner: f.recorder)
+        let result = try await creator.create(installer: f.report, on: DriveCandidate(drive: f.drive, protections: []), stage: { _ in }, written: seen.add)
+        #expect(result.verification == .verified)
+        #expect(seen.all.first == 6_000_000_000)
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == 6_000_000_000)
+        // Unreadable or nonsensical answers are not reported.
+        f.setup.drives.volumeUsed = 40_000_000_000
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == nil)
+        #expect(await f.creator.usedBytes(onVolume: "disk99") == nil)
+    }
 }

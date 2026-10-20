@@ -11,7 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Installers already on this Mac.** Tools › Create macOS Installer lists the macOS installers in Applications with
   version and size; use one without downloading, or move it to the Trash to free its space (also offered after a drive
   was created – never automatic). **Choose Installer…** takes one from Downloads or a drive and copies it into
-  Applications first, after checking the free space.
+  Applications first (on the same disk that is a clone and takes no extra space; from another drive the free space is
+  checked). If an installer of that name is already there, MacReplica asks: use that one, or replace it.
+- **Progress while the installer is written.** A bar shows how much is already on the drive (Apple's tool reports its
+  own progress only when it has finished).
 
 - **The Mac stays awake while MacReplica works.** Reading the Mac for a backup, saving and checking a backup,
   restoring, and downloading, copying or writing a macOS installer now keep the Mac from going to sleep when idle
@@ -19,8 +22,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   MacReplica is doing, and ends with the operation. Until now only writing an installer drive did this.
 
 ### Fixed
-- **No false “another user” warning when the Mac is locked.** While the login window shows, the console belongs to
-  root; MacReplica took that for a different user. Only MacReplica itself running as root now counts as that.
+- **No false “another user” warning.** MacReplica read the logged-in user from `/dev/console`, which on macOS 27 stays
+  root's after the screen was locked and unlocked again. It now asks the system who is logged in at the screen.
+- **An installer whose options could not be read was called one that “cannot run without questions in Terminal”.**
+  The reason (did not start, did not answer) is now shown with **Check Again**, and the tool gets 120 s to answer.
 
 ### Security
 - **The installer is locked before it runs as administrator.** An installer that belongs to the user could be changed

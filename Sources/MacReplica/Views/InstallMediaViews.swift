@@ -367,6 +367,10 @@ struct InstallMediaReportCard: View {
                 NoticeView(style: .error, title: problemText(problem), message: nil)
             }
             .accessibilityIdentifier("installMedia.installer.problems")
+            if !problems.isEmpty {
+                Button(l.t("installMedia.checkAgain")) { model.checkForInstaller() }
+                    .accessibilityIdentifier("installMedia.installer.recheck")
+            }
             if problems.isEmpty {
                 Label(l.t("installMedia.installer.ready"), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                     .accessibilityIdentifier("installMedia.installer.ready")
@@ -382,6 +386,7 @@ struct InstallMediaReportCard: View {
         case .notSignedByApple(let detail): return l.t("installMedia.problem.notSigned", detail)
         case .noCreateInstallMedia: return l.t("installMedia.problem.noTool")
         case .toolNeedsInteraction: return l.t("installMedia.problem.interaction")
+        case .toolDidNotAnswer(let detail): return l.t("installMedia.problem.noAnswer", detail)
         case .needsRosetta: return l.t("installMedia.problem.rosetta")
         case .payloadMissing: return l.t("installMedia.problem.payload")
         case .incomplete(let detail): return l.t("installMedia.problem.incomplete", detail)
@@ -617,6 +622,16 @@ struct InstallMediaWorkingView: View {
                     }
                 }
                 if state.stage == .creating || state.stage == .erasingAndCreating {
+                    if let written = state.writtenBytes, let total = state.report?.sizeBytes, total > 0 {
+                        // Measured on the drive: what is there so far, against the installer's size (never 100 % before
+                        // Apple's tool has finished).
+                        ProgressView(value: min(Double(written) / Double(total), 0.99)) {
+                            Text(l.t("installMedia.working.written", l.fileSize(min(written, total)), l.fileSize(total)))
+                                .font(.callout.monospacedDigit())
+                        }
+                        .accessibilityIdentifier("installMedia.working.progress")
+                        .accessibilityValue("\(Int(min(Double(written) / Double(total), 0.99) * 100))")
+                    }
                     Text(l.t("installMedia.working.creatingHint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -725,6 +740,9 @@ struct InstallMediaLocalCard: View {
                 Text(l.t("installMedia.local.title")).font(.headline)
                 Spacer()
                 if state.checkingLocal || state.inspecting { ProgressView().controlSize(.small) }
+                Button(l.t("installMedia.checkAgain")) { model.refreshLocalInstallers() }
+                    .disabled(state.checkingLocal)
+                    .accessibilityIdentifier("installMedia.local.refresh")
                 Button(l.t("installMedia.local.choose")) { model.chooseInstallerFile() }
                     .disabled(state.copying)
                     .accessibilityIdentifier("installMedia.local.choose")
@@ -761,7 +779,17 @@ struct InstallMediaLocalCard: View {
                 .accessibilityIdentifier("installMedia.local.\(report.app.lastPathComponent)")
             }
             Text(l.t("installMedia.local.chooseHint")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            if let source = state.pendingCopy {
+            if let existing = state.copyNameTaken {
+                NoticeView(style: .warning, title: l.t("installMedia.copy.nameTaken", existing.lastPathComponent), message: l.t("installMedia.copy.nameTakenHint"))
+                    .accessibilityIdentifier("installMedia.copy.nameTaken")
+                HStack {
+                    Button(l.t("common.cancel")) { model.cancelCopy() }
+                    Button(l.t("installMedia.copy.replace")) { model.replaceExistingAndCopy() }
+                        .accessibilityIdentifier("installMedia.copy.replace")
+                    Button(l.t("installMedia.copy.useExisting")) { model.useExistingInsteadOfCopy() }
+                        .accessibilityIdentifier("installMedia.copy.useExisting")
+                }
+            } else if let source = state.pendingCopy {
                 InstallMediaCopyQuestion(source: source)
             }
             if state.copying {
@@ -789,7 +817,8 @@ struct InstallMediaCopyQuestion: View {
         let needed = model.installMedia.pendingCopyNeeded
         let free = InstallerFiles.availableSpace(model.installerFiles.applications)
         NoticeView(style: .info, title: l.t("installMedia.copy.title", source.lastPathComponent),
-                   message: l.t("installMedia.copy.message", needed.map { l.fileSize($0) } ?? "…", free.map { l.fileSize($0) } ?? "?"))
+                   message: needed == 0 ? l.t("installMedia.copy.clone")
+                       : l.t("installMedia.copy.message", needed.map { l.fileSize($0) } ?? "…", free.map { l.fileSize($0) } ?? "?"))
             .accessibilityIdentifier("installMedia.copy.question")
         HStack {
             Button(l.t("common.cancel")) { model.cancelCopy() }
