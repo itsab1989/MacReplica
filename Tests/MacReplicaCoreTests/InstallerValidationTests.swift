@@ -763,41 +763,42 @@ extension FileFormatEvidence.OtherFormat {
 /// refuse a detach. Reproduced here with the real `hdiutil` behind a runner that behaves like that busy service.
 @Suite("Installer validation under load", .serialized)
 struct InstallerValidationUnderLoadTests {
-    /// `attach` reports "Resource temporarily unavailable" at once and really attaches a moment later (once);
-    /// `detach` is refused as busy the first `busyDetaches` times.
+    /// `attach` reports "Resource temporarily unavailable" `lateAttaches` times; the last of those attaches anyway –
+    /// not at once, but only after MacReplica has looked once and found nothing (it is attached during the second look
+    /// after the failure), so the test does not depend on how fast the runner is. `detach` is refused as busy the first
+    /// `busyDetaches` times.
     final class BusyServiceRunner: CommandRunning, @unchecked Sendable {
         let base: CommandRunning
         private let lock = NSLock()
         private var lateAttachesLeft: Int
         private var busyDetachesLeft: Int
+        private var pendingAttach: Command?
+        private var looksSincePending = 0
         private(set) var detaches = 0
+        private(set) var lateAttached = false
         init(_ base: CommandRunning, lateAttaches: Int, busyDetaches: Int) { self.base = base; lateAttachesLeft = lateAttaches; busyDetachesLeft = busyDetaches }
 
-        static let started = Date()
-        func log(_ text: String) {
-            if ProcessInfo.processInfo.environment["MACREPLICA_LOAD_TRACE"] != nil {
-                print(String(format: "TRACE %.2f ", Date().timeIntervalSince(Self.started)) + text)
-            }
-        }
-
         func run(_ command: Command, onOutputLine: (@Sendable (String) -> Void)?) async throws -> CommandResult {
-            log(command.arguments.prefix(2).joined(separator: " "))
             switch command.arguments.first {
             case "attach":
-                // Fails while attempts are left; the last failing one completes late in the background.
-                let (fails, completesLate): (Bool, Bool) = lock.withLock {
-                    guard lateAttachesLeft > 0 else { return (false, false) }
+                let fails: Bool = lock.withLock {
+                    guard lateAttachesLeft > 0 else { return false }
                     lateAttachesLeft -= 1
-                    return (true, lateAttachesLeft == 0)
+                    if lateAttachesLeft == 0 { pendingAttach = command; looksSincePending = 0 }
+                    return true
                 }
-                if fails {
-                    let base = self.base
-                    if completesLate { Task.detached { [self] in
-                        try? await Task.sleep(nanoseconds: 150_000_000)
-                        let result = try? await base.run(command, onOutputLine: nil)
-                        log("late attach finished: exit \(result?.exitCode ?? -1)")
-                    } }
-                    return CommandResult(exitCode: 1, stdout: "", stderr: "hdiutil: attach failed - Resource temporarily unavailable\n")
+                if fails { return CommandResult(exitCode: 1, stdout: "", stderr: "hdiutil: attach failed - Resource temporarily unavailable\n") }
+            case "info":
+                let late: Command? = lock.withLock {
+                    guard let pending = pendingAttach else { return nil }
+                    looksSincePending += 1
+                    guard looksSincePending == 2 else { return nil }
+                    pendingAttach = nil
+                    return pending
+                }
+                if let late {
+                    let result = try await base.run(late, onOutputLine: nil)
+                    lock.withLock { lateAttached = result.succeeded }
                 }
             case "detach":
                 let busy: Bool = lock.withLock { detaches += 1; if busyDetachesLeft > 0 { busyDetachesLeft -= 1; return true }; return false }
@@ -824,12 +825,10 @@ struct InstallerValidationUnderLoadTests {
         let busy = BusyServiceRunner(ProcessCommandRunner(policy: CommandPolicy(allowedExecutables: layout.allowedExecutables), baseEnvironment: [:]),
                                      lateAttaches: 5, busyDetaches: 0)
         var inspector = InstallerArchiveInspector(layout: layout, runner: busy)
-        // The watch lasts ten pauses (ten seconds in the app); 0.4 s here, as the late attachment can take seconds.
-        inspector.retryPause = 400_000_000
+        inspector.retryPause = 50_000_000
         let archive = try await inspector.inspect(dmg, workFolder: work)
         #expect(archive.contentsLimit == .notMountable, "macOS kept refusing to open it")
-        // Give the last late attachment time to land, then nothing of it may remain.
-        try await Task.sleep(nanoseconds: 300_000_000)
+        #expect(busy.lateAttached, "MacReplica did not look again after the failure, so a late attachment would stay")
         #expect(await !InstallerValidationTests.isAttached(dmg), "a late attachment stayed behind")
     }
 

@@ -198,7 +198,7 @@ public struct DownloadInstaller: Sendable {
         if !result.succeeded, let image {
             // Under load the disk-image service can finish an attachment after `hdiutil attach` already reported
             // failure (a CI run left an image attached this way, 2026-10-20; in a reproduction the late attachment
-            // landed about a second after the failure): watch for about ten seconds and detach whatever appears.
+            // landed 1.6 s after the failure): watch for about ten seconds and detach whatever appears.
             await detachAttachments(of: image, keeping: before, runner: runner, hdiutil: hdiutil, environment: environment, watch: 10, pause: pause, waitForLate: true)
         }
         return result
