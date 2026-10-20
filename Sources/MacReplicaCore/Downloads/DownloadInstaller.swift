@@ -196,7 +196,10 @@ public struct DownloadInstaller: Sendable {
             result = try await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: arguments, environment: environment, timeout: 300))
         }
         if !result.succeeded, let image {
-            await detachAttachments(of: image, keeping: before, runner: runner, hdiutil: hdiutil, environment: environment)
+            // Under load the disk-image service can finish an attachment after `hdiutil attach` already reported
+            // failure (a CI run left an image attached this way, 2026-10-20; in a reproduction the late attachment
+            // landed 1.6 s after the failure): watch for about ten seconds and detach whatever appears.
+            await detachAttachments(of: image, keeping: before, runner: runner, hdiutil: hdiutil, environment: environment, watch: 10, pause: pause, waitForLate: true)
         }
         return result
     }
@@ -221,10 +224,20 @@ public struct DownloadInstaller: Sendable {
         }
     }
 
-    /// Detaches the attachments of the image at `path` except those in `keeping`.
-    static func detachAttachments(of path: String, keeping: Set<String> = [], runner: CommandRunning, hdiutil: String, environment: [String: String]) async {
-        for attachment in await attachments(of: path, runner: runner, hdiutil: hdiutil, environment: environment) where !keeping.contains(attachment.device) {
-            _ = try? await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: ["detach", attachment.device, "-force"], environment: environment, timeout: 120))
+    /// Detaches the attachments of the image at `path` except those in `keeping`. With `watch`, it looks again that many
+    /// times: a detach the busy disk-image service refused is repeated (stopping once nothing is left), and with
+    /// `waitForLate` every look is made, so an attachment that lands late is detached too.
+    static func detachAttachments(of path: String, keeping: Set<String> = [], runner: CommandRunning, hdiutil: String, environment: [String: String],
+                                  watch: Int = 0, pause: UInt64 = 1_000_000_000, waitForLate: Bool = false) async {
+        for look in 0...max(watch, 0) {
+            // Waiting for a late attachment: every look, at a steady pace (it can land at any moment). Otherwise only
+            // until a look finds nothing left, with growing pauses for a busy service.
+            if look > 0 { try? await Task.sleep(nanoseconds: waitForLate ? pause : pause * UInt64(look)) }
+            let left = await attachments(of: path, runner: runner, hdiutil: hdiutil, environment: environment).filter { !keeping.contains($0.device) }
+            if left.isEmpty, !waitForLate { return }
+            for attachment in left {
+                _ = try? await DiskImageCommands.run(runner, Command(executable: hdiutil, arguments: ["detach", attachment.device, "-force"], environment: environment, timeout: 120))
+            }
         }
     }
 

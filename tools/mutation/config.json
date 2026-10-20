@@ -340,6 +340,7 @@
     {
       "file": "Downloads/DownloadInstaller.swift",
       "tests": [
+        "InstallerValidationUnderLoadTests",
         "DownloadInstallerTests",
         "GuidedInstallationTests",
         "DownloadEdgeTests",
@@ -405,6 +406,7 @@
     {
       "file": "Downloads/InstallerArchive.swift",
       "tests": [
+        "InstallerValidationUnderLoadTests",
         "OwnInstallerTests",
         "InstallerDescriptionTests",
         "InstallerArchiveEdgeTests",
@@ -1211,6 +1213,12 @@
       "file": "Tools/InstallMedia/InstallerFiles.swift",
       "pattern": "guard let first = volume\\(a\\), let second = volume\\(b\\) else \\{ return false \\}",
       "reason": "volume(_:) walks up to an existing folder and always reaches /, so it never returns nil (equivalent mutant)."
+    },
+    {
+      "file": "Downloads/DownloadInstaller.swift",
+      "pattern": "if look > 0 \\{ try\\? await Task\\.sleep",
+      "operator": "> \u2192 >=",
+      "reason": "A sleep before the first look is pause × 0 = 0 without waitForLate; with it, the first of ten looks only moves one pause later (equivalent in effect)."
     }
   ]
 }

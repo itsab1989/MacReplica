@@ -519,10 +519,10 @@ public struct InstallerArchiveInspector: Sendable {
         do {
             try await describeContents(of: mountPoint, into: &archive, work: work, depth: depth + 1)
         } catch {
-            await detach(mountPoint)
+            await detach(mountPoint, image: file)
             throw error
         }
-        await detach(mountPoint)
+        await detach(mountPoint, image: file)
     }
 
     /// After a failed step, the image's own checksum decides. Damage needs proof: `hdiutil verify -plist` reporting a
@@ -584,11 +584,14 @@ public struct InstallerArchiveInspector: Sendable {
         return "\(step): exit \(result.exitCode)" + (message.map { " – " + $0 } ?? "")
     }
 
-    private func detach(_ mountPoint: URL) async {
+    /// Detaches what MacReplica attached and checks that it is gone: a busy disk-image service can refuse a detach
+    /// (the image was not attached before MacReplica opened it, so every attachment of it is MacReplica's).
+    private func detach(_ mountPoint: URL, image: URL) async {
         let result = try? await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["detach", mountPoint.path], environment: environment, timeout: 120))
         if result?.succeeded != true {
             _ = try? await DiskImageCommands.run(runner, Command(executable: layout.hdiutil, arguments: ["detach", "-force", mountPoint.path], environment: environment, timeout: 120))
         }
+        await DownloadInstaller.detachAttachments(of: image.path, runner: runner, hdiutil: layout.hdiutil, environment: environment, watch: 4, pause: retryPause)
     }
 
     /// Records every app; the main app (identity, version, signature) is the one whose bundle identifier the others
