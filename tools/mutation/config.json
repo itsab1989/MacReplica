@@ -555,6 +555,13 @@
       "area": "Tools"
     },
     {
+      "file": "System/SleepPrevention.swift",
+      "tests": [
+        "SleepPreventionTests"
+      ],
+      "area": "System"
+    },
+    {
       "file": "Tools/InstallMedia/InstallerFiles.swift",
       "tests": [
         "InstallerFilesTests",
