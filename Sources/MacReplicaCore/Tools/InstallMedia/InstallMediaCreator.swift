@@ -57,6 +57,8 @@ public struct InstallMediaCreator: Sendable {
     public var privileged: PrivilegedExecuting
     public var scanner: InstallMediaDriveScanner
     public var inspector: InstallerInspector
+    /// Whether an installer already belongs to root alone (replaced in tests, where nothing can be root's).
+    public var isLockedForRoot: @Sendable (URL) -> Bool = InstallerFiles.isLockedForRoot
 
     public init(layout: SystemLayout, runner: CommandRunning, privileged: PrivilegedExecuting, scanner: InstallMediaDriveScanner,
                 inspector: InstallerInspector) {
@@ -111,9 +113,20 @@ public struct InstallMediaCreator: Sendable {
         try await create(installer: report, on: DriveCandidate(drive: confirmed, protections: []), stage: stage)
     }
 
+    /// How much is on a volume: `diskutil info` total minus free space.
+    public func usedBytes(onVolume device: String) async -> Int64? {
+        guard let info = try? await scanner.plist(["info", "-plist", device]),
+              let total = (info["TotalSize"] as? NSNumber)?.int64Value, let free = (info["FreeSpace"] as? NSNumber)?.int64Value,
+              total > 0, free >= 0, free <= total else { return nil }
+        return total - free
+    }
+
     /// The whole drive, or – the expert option – only the candidate's partition.
+    /// `written` is called every few seconds while `createinstallmedia` runs with how much is on the target volume
+    /// (macOS passes the tool's own progress to MacReplica only when the administrator step has ended).
     public func create(installer report: InstallerAppReport, on confirmed: DriveCandidate,
-                       stage: @escaping @Sendable (InstallMediaStage) -> Void) async throws -> InstallMediaResult {
+                       stage: @escaping @Sendable (InstallMediaStage) -> Void,
+                       written: (@Sendable (Int64) -> Void)? = nil) async throws -> InstallMediaResult {
         // A simulated Mac never reaches the real diskutil or a real drive.
         if layout.isSimulation, layout.diskutil == SystemLayout.realDiskutil {
             throw InstallMediaError.refused("simulated Mac without a stand-in diskutil")
@@ -134,13 +147,16 @@ public struct InstallMediaCreator: Sendable {
         let volume = layout.volumesRoot.appendingPathComponent(name)
         let applicationPath = report.needsApplicationPath ? report.app : nil
         let create = PrivilegedOperation.createInstallMedia(tool: tool, volume: volume, applicationPath: applicationPath)
-        let operations: [PrivilegedOperation]
+        var operations: [PrivilegedOperation]
         let reason: String
+        // The volume being written: the erased partition, or the volume the whole-drive erase created.
+        var targetDevice: String?
         if let partition = current.partition {
             // Only this partition, by the identifier no other partition has; erased in the same administrator step
             // that runs createinstallmedia, so nothing else can take its place in between.
             guard let uuid = partition.partitionUUID, InstallMediaDrive.isPartitionUUID(uuid) else { throw InstallMediaError.drive(.driveChanged) }
             stage(.erasingAndCreating)
+            targetDevice = partition.device
             operations = [.eraseVolumeForInstaller(partitionUUID: uuid, name: name), create]
             reason = "MacReplica wants to erase the partition “\(partition.name)” and create a bootable macOS installer on it."
         } else {
@@ -150,7 +166,9 @@ public struct InstallMediaCreator: Sendable {
             guard erase.succeeded else {
                 throw InstallMediaError.eraseFailed(layout.redact(ErrorClassifier.technicalDetail(erase.combinedOutput, layout: layout, maxLines: 3)))
             }
-            guard try await volumeMount(named: name, on: drive.device) == volume.path else { throw InstallMediaError.volumeMissing }
+            let erased = try await partitions(of: drive.device).first { $0.name == name }
+            guard erased?.mountPoint == volume.path else { throw InstallMediaError.volumeMissing }
+            targetDevice = erased?.device
             let marker = volume.appendingPathComponent(".MacReplicaInstallTarget-\(UUID().uuidString)")
             do { try Data().write(to: marker) } catch { throw InstallMediaError.volumeMissing }
             stage(.creating)
@@ -158,12 +176,28 @@ public struct InstallMediaCreator: Sendable {
             reason = "MacReplica wants to create a bootable macOS installer on “\(drive.mediaName)”."
         }
 
+        // createinstallmedia runs as root: first the installer becomes the system's own (unless it already is, as from
+        // Software Update), then its tool's signature is checked again as root – nothing the user's programs could
+        // change remains between that check and the start.
+        let lock: [PrivilegedOperation] = isLockedForRoot(report.app) ? []
+            : [.lockInstallerOwner(report.app), .lockInstallerPermissions(report.app)]
+        operations = lock + [.verifyInstallerTool(tool)] + operations
+
         // createinstallmedia (as root) leaves the installer's own disk image attached (seen with macOS 14's tool);
         // MacReplica detaches what was not attached before, as the user.
         let image = report.app.appendingPathComponent("Contents/SharedSupport/SharedSupport.dmg").path
         let environment = layout.processEnvironment(homebrewPrefix: nil, askpass: nil)
         let attachedBefore = Set(await DownloadInstaller.attachments(of: image, runner: runner, hdiutil: layout.hdiutil, environment: environment).map(\.device))
         var failure: InstallMediaError?
+        let device = targetDevice
+        let watcher = Task { [self] in
+            guard let written, let device else { return }
+            while !Task.isCancelled {
+                if let used = await usedBytes(onVolume: device) { written(used) }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            }
+        }
+        defer { watcher.cancel() }
         do {
             try await privileged.run(operations, reason: reason)
         } catch PrivilegedError.denied {
@@ -194,11 +228,6 @@ public struct InstallMediaCreator: Sendable {
     /// The partitions as they matter for “unchanged”: identifier, partition UUID, format and name.
     static func partitionSummary(_ volumes: [InstallMediaDrive.Volume]) -> [String] {
         volumes.map { "\($0.device)|\($0.partitionUUID ?? "-")|\($0.content)|\($0.name)" }.sorted()
-    }
-
-    /// The mount point of the volume called `name` on `device`, read from diskutil.
-    func volumeMount(named name: String, on device: String) async throws -> String? {
-        try await partitions(of: device).first { $0.name == name }?.mountPoint
     }
 
     func partitions(of device: String) async throws -> [InstallMediaDrive.Volume] {

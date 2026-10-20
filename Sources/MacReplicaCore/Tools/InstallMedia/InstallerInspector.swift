@@ -23,6 +23,9 @@ public struct InstallerAppReport: Equatable, Sendable {
     public var signatureDetail: String
     /// Big Sur and later keep the installer in `SharedSupport/SharedSupport.dmg`; older ones in `InstallESD.dmg`.
     public var hasInstallerPayload: Bool
+    /// Why the tool could not be asked for its options (it did not start, did not answer in time, or failed); nil if
+    /// it answered.
+    public var toolUsageProblem: String?
 
     public init(app: URL, displayName: String, appVersion: String? = nil, macOSVersion: String? = nil, build: String? = nil,
                 sizeBytes: Int64 = 0, createInstallMedia: URL? = nil, supportsNoInteraction: Bool = false, needsApplicationPath: Bool = false,
@@ -53,6 +56,8 @@ public enum InstallerAppProblem: Equatable, Sendable {
     case noCreateInstallMedia
     /// The tool cannot run without asking a question MacReplica cannot answer.
     case toolNeedsInteraction
+    /// The tool could not be asked which options it has (it did not start, did not answer, or failed).
+    case toolDidNotAnswer(String)
     case needsRosetta
     case payloadMissing
     case incomplete(String)
@@ -115,7 +120,8 @@ public struct InstallerInspector: Sendable {
             toolDetail = check.map { layout.redact(ErrorClassifier.technicalDetail($0.combinedOutput, layout: layout, maxLines: 2)) } ?? "codesign could not be run"
             if toolSigned {
                 // Without arguments the tool only prints its options (checked with macOS 14's tool: exit 0, no change).
-                let usage = await self.usage(of: tool)
+                let (usage, problem) = await self.usage(of: tool)
+                report.toolUsageProblem = problem
                 report.supportsNoInteraction = usage.contains("--nointeraction")
                 // El Capitan and Sierra need the installer named again (Apple, support.apple.com/101578): their
                 // tools list `--applicationpath` but not `--downloadassets`, which came with Mojave. High Sierra's
@@ -171,7 +177,9 @@ public struct InstallerInspector: Sendable {
         var problems: [InstallerAppProblem] = []
         if !report.signedByApple { problems.append(.notSignedByApple(report.signatureDetail)) }
         guard report.createInstallMedia != nil else { return problems + [.noCreateInstallMedia] }
-        if !report.supportsNoInteraction { problems.append(.toolNeedsInteraction) }
+        if !report.supportsNoInteraction {
+            problems.append(report.toolUsageProblem.map(InstallerAppProblem.toolDidNotAnswer) ?? .toolNeedsInteraction)
+        }
         // Only a Mach-O tool built for Intel alone needs Rosetta; a script or an unreadable header claims nothing.
         if environment.architecture == .arm64, !report.toolArchitectures.isEmpty, !report.toolArchitectures.contains(.arm64), !hasRosetta {
             problems.append(.needsRosetta)
@@ -185,7 +193,7 @@ public struct InstallerInspector: Sendable {
         return try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
     }
 
-    static func allocatedSize(of folder: URL) -> Int64 {
+    public static func allocatedSize(of folder: URL) -> Int64 {
         let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey]
         guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: keys) else { return 0 }
         var total: Int64 = 0
@@ -198,10 +206,17 @@ public struct InstallerInspector: Sendable {
 
     /// What the tool prints without arguments: its options. Run as the user; it changes nothing without root and
     /// a volume.
-    func usage(of tool: URL) async -> String {
+    func usage(of tool: URL) async -> (String, String?) {
         let usageRunner = (runner as? CommandPolicyExtending)?.allowing([tool.path]) ?? runner
-        let result = try? await usageRunner.run(Command(executable: tool.path, arguments: [],
-                                                        environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 30))
-        return result?.combinedOutput ?? ""
+        do {
+            let result = try await usageRunner.run(Command(executable: tool.path, arguments: [],
+                                                           environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 120))
+            if result.timedOut { return (result.combinedOutput, "no answer within 120 s") }
+            if result.combinedOutput.contains("--volume") { return (result.combinedOutput, nil) }
+            return (result.combinedOutput, layout.redact("exit \(result.exitCode): " + ErrorClassifier.technicalDetail(result.combinedOutput, layout: layout, maxLines: 2)))
+        } catch {
+            // Starting it failed (e.g. macOS refused): never read as “no such option”.
+            return ("", layout.redact(String(describing: error)))
+        }
     }
 }

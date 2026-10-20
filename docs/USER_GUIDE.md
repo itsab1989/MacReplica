@@ -248,6 +248,12 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
 - Versions from Software Update are downloaded by MacReplica (no password needed). For older releases MacReplica opens
   Apple's App Store page or Apple's disk image; download it there, then click **Check Again**. Macs with Apple silicon
   start up only from macOS 11 or later, so older releases are shown but cannot be chosen on them.
+- **Installers on this Mac** (top of the first step) lists the macOS installers already in Applications, with version,
+  build and size: **Use** continues with one without downloading, **Move to Trash…** frees its space (installers from
+  Software Update belong to the system, so macOS asks for the administrator password). **Choose Installer…** takes one
+  from anywhere else (Downloads, a drive); it is copied into Applications first, because Apple's tool runs only from
+  there, after checking that there is enough free space. After a drive is created, **Move Installer to Trash…** offers
+  the same; nothing is deleted without asking.
 - MacReplica checks the installer: the macOS version inside, Apple's signature on the app and on its
   `createinstallmedia`, and the options that tool has. Installers without `createinstallmedia` (OS X Lion and Mountain
   Lion) cannot make a bootable drive.
@@ -258,7 +264,8 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
 - The confirmation lists the drive and every volume on it that will be erased; tick **I understand …** and click
   **Erase and Create Installer**. MacReplica reads the drive again and stops if it is not exactly the confirmed drive,
   erases it as one Mac OS Extended (Journaled) volume, asks macOS for the administrator password and runs Apple's
-  `createinstallmedia` on exactly that volume. This often takes 10 to 30 minutes (longer with USB 2); the Mac does not
+  `createinstallmedia` on exactly that volume. In the same administrator step MacReplica first makes the installer the
+  system's own (as Software Update leaves it) and checks Apple's signature again, so nothing can change it in between. This often takes 10 to 30 minutes (longer with USB 2); the Mac does not
   sleep meanwhile. Nothing is retried by itself: after a failure, **Try Again** starts over with a new confirmation.
 - Afterwards MacReplica checks the drive (installer volume on the chosen drive, Mac OS Extended, the installer app in
   the same version, startup files, startup folder, Apple's signature on the copy) and shows how to start up an
@@ -273,6 +280,10 @@ never use these tools. Background and research: [TOOLS.md](TOOLS.md).
   only on external drives; Macs with Apple silicon may not list an installer on an internal partition at startup.
 - **Main Menu** leaves the tool from every step (it cancels a running download). While the drive is erased and
   written it is unavailable, because stopping Apple's tool halfway would leave the drive unusable.
+
+**Sleep.** While MacReplica reads the Mac, saves or checks a backup, restores, or downloads, copies or writes a macOS
+installer, the Mac does not go to sleep on its own (Activity Monitor › Energy › Preventing Sleep names what
+MacReplica is doing). The display may still turn off; closing the lid still puts the Mac to sleep.
 
 ## The backup folder
 

@@ -17,6 +17,8 @@ final class FakeDrives: @unchecked Sendable {
     var volumesRoot: URL
     var eraseFails: String?
     var listFails = false
+    var volumeTotal: Int64 = 31_000_000_000
+    var volumeUsed: Int64 = 6_000_000_000
     var blessOutput = "finderinfo[0]:      2 => Blessed System Folder is /Volumes/Install macOS Sonoma/System/Library/CoreServices"
     var codesignFails = false
     private(set) var erased: [(device: String, name: String)] = []
@@ -77,6 +79,9 @@ final class FakeDrives: @unchecked Sendable {
         case "info" where args.last == "/":
             return CommandResult(exitCode: 0, stdout: xml(["ParentWholeDisk": startupParent, "MountPoint": "/",
                                                             "APFSPhysicalStores": startupStores.map { ["APFSPhysicalStore": $0] }]), stderr: "")
+        case "info" where (args.last ?? "").range(of: #"^disk[0-9]+s[0-9]+$"#, options: .regularExpression) != nil:
+            // A volume while it is written: total and free space.
+            return CommandResult(exitCode: 0, stdout: xml(["DeviceIdentifier": args.last ?? "", "TotalSize": volumeTotal, "FreeSpace": volumeTotal - volumeUsed]), stderr: "")
         case "info":
             guard let disk = disks[args.last ?? ""] else { return CommandResult(exitCode: 1, stdout: "", stderr: "Could not find disk") }
             return CommandResult(exitCode: 0, stdout: xml(disk.info), stderr: "")
@@ -294,14 +299,18 @@ struct InstallMediaSafetyTests {
         #expect(older.argv.suffix(2) == ["--applicationpath", "/Applications/Install macOS Sonoma.app"])
         #expect(!PrivilegedOperation.createInstallMedia(tool: tool, volume: volume, applicationPath: URL(fileURLWithPath: "/Applications/Other.app")).isAllowed())
 
-        let arguments = try AppleScriptPrivilegedExecutor.arguments(for: [.requireInstallMediaMarker(marker), create], reason: "r")
+        let arguments = try AppleScriptPrivilegedExecutor.arguments(for: [.verifyInstallerTool(tool), .requireInstallMediaMarker(marker), create], reason: "r")
         #expect(arguments.suffix(9) == ["3", "/bin/test", "-f", marker.path, "4", tool.path, "--volume", volume.path, "--nointeraction"])
+        // Never without the signature check of the same tool earlier in the same step.
+        #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [.requireInstallMediaMarker(marker), create], reason: "r") }
         // Never without the marker check of the same volume right before it.
         #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [create], reason: "r") }
         let otherMarker = URL(fileURLWithPath: "/Volumes/MRINSTALL-FFFFFFFF/.MacReplicaInstallTarget-\(UUID().uuidString)")
-        #expect(throws: PrivilegedError.self) { try AppleScriptPrivilegedExecutor.arguments(for: [.requireInstallMediaMarker(otherMarker), create], reason: "r") }
         #expect(throws: PrivilegedError.self) {
-            try AppleScriptPrivilegedExecutor.arguments(for: [.requireInstallMediaMarker(marker), .createFolder(URL(fileURLWithPath: "/tmp/x")), create], reason: "r")
+            try AppleScriptPrivilegedExecutor.arguments(for: [.verifyInstallerTool(tool), .requireInstallMediaMarker(otherMarker), create], reason: "r")
+        }
+        #expect(throws: PrivilegedError.self) {
+            try AppleScriptPrivilegedExecutor.arguments(for: [.verifyInstallerTool(tool), .requireInstallMediaMarker(marker), .createFolder(URL(fileURLWithPath: "/tmp/x")), create], reason: "r")
         }
         #expect(throws: PrivilegedError.self) {
             try AppleScriptPrivilegedExecutor.arguments(for: [.createInstallMedia(tool: tool, volume: URL(fileURLWithPath: "/Volumes/Backup"), applicationPath: nil)], reason: "r")
@@ -326,6 +335,11 @@ struct InstallMediaSafetyTests {
         try prepare(s)
         let drives = s.drives
         let direct = DirectPrivilegedExecutor(toolRunner: { argv in
+                                                  if argv.first?.hasSuffix("codesign") == true {
+                                                      // The signature check as root (the fake answers like codesign).
+                                                      if drives.codesignFails { throw PrivilegedError.failed("a sealed resource is missing or invalid") }
+                                                      return
+                                                  }
                                                   if argv.count > 1, argv[1] == "eraseVolume" { try drives.eraseVolume(argv) }
                                                   else { try drives.createInstallMedia(argv, installerName: "Install macOS Sonoma", appVersion: "19.8.9") } },
                                               volumesRoot: s.layout.volumesRoot, applicationFolders: s.layout.applicationFolders)
@@ -356,8 +370,13 @@ struct InstallMediaSafetyTests {
         #expect(erase.arguments.suffix(2) == ["GPT", "disk4"])
         #expect(PrivilegedOperation.isInstallMediaVolumeName(erase.arguments[2]))
         #expect(f.recorder.calls.count == 1)
-        guard case .requireInstallMediaMarker(let marker) = f.recorder.calls[0][0],
-              case .createInstallMedia(_, let volume, let applicationPath) = f.recorder.calls[0][1] else { Issue.record("steps"); return }
+        // The sandbox installer belongs to the user: it is locked for root and its tool checked again, then the marker
+        // and createinstallmedia.
+        let steps = f.recorder.calls[0]
+        #expect(steps.count == 5)
+        #expect(steps.prefix(3) == [.lockInstallerOwner(f.report.app), .lockInstallerPermissions(f.report.app), .verifyInstallerTool(f.report.createInstallMedia!)])
+        guard case .requireInstallMediaMarker(let marker) = steps[3],
+              case .createInstallMedia(_, let volume, let applicationPath) = steps[4] else { Issue.record("steps"); return }
         #expect(volume.lastPathComponent == erase.arguments[2])
         #expect(marker.deletingLastPathComponent().path == volume.path)
         #expect(applicationPath == nil)

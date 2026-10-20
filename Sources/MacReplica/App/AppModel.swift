@@ -51,10 +51,12 @@ final class AppModel: ObservableObject {
 
     @Published var language: AppLanguage
     @Published private(set) var l: Localizer
-    @Published var screen: Screen = .home
+    @Published var screen: Screen = .home { didSet { updateSleepPrevention() } }
+    /// Keeps the Mac awake (idle sleep only) while a long operation runs.
+    let sleepPrevention = SleepPrevention()
     /// The Tools section (Gatekeeper, updates, window corners); see AppModel+Tools.
     @Published var tools = ToolsState()
-    @Published var installMedia = InstallMediaState() { didSet { updateDriveWatcher() } }
+    @Published var installMedia = InstallMediaState() { didSet { updateDriveWatcher(); updateSleepPrevention() } }
     /// Watches for drives being connected or removed while the installer tool shows its drives.
     var driveWatcher: DriveWatcher?
     @Published var problem: ProblemInfo?

@@ -144,7 +144,7 @@ struct InstallMediaBoundaryTests {
         let executor = AppleScriptPrivilegedExecutor(runner: runner)
         let volume = URL(fileURLWithPath: "/Volumes/MRINSTALL-0A1B2C3D")
         let tool = URL(fileURLWithPath: "/Applications/Install macOS Sonoma.app/Contents/Resources/createinstallmedia")
-        try await executor.run([.requireInstallMediaMarker(volume.appendingPathComponent(".MacReplicaInstallTarget-\(UUID().uuidString)")),
+        try await executor.run([.verifyInstallerTool(tool), .requireInstallMediaMarker(volume.appendingPathComponent(".MacReplicaInstallTarget-\(UUID().uuidString)")),
                                 .createInstallMedia(tool: tool, volume: volume, applicationPath: nil)], reason: "r")
         try await executor.run([.createFolder(URL(fileURLWithPath: "/Library/Fonts/x"))], reason: "r")
         #expect(runner.commands.map(\.timeout) == [TimeInterval(3 * 3600), TimeInterval(1800)])
@@ -229,5 +229,63 @@ struct InstallMediaBoundaryTests {
         let result = await f.creator.verify(drive: spare.drive, partition: spare.partition, installer: f.report)
         #expect(result.checks.first { $0.item == .otherPartitionsUntouched }?.passed == false)
         #expect(result.verification == .failed)
+    }
+
+    /// The progress bar: while createinstallmedia runs, how much is on the target volume is reported every few seconds.
+    @Test func whatIsWrittenIsReportedWhileTheToolRuns() async throws {
+        let f = try await Safety.flow("written")
+        final class Seen: @unchecked Sendable { let lock = NSLock(); var all: [Int64] = []
+            func add(_ value: Int64) { lock.withLock { all.append(value) } } }
+        let seen = Seen()
+        // The tool takes a moment, as the real one does.
+        struct Slow: PrivilegedExecuting { let inner: PrivilegedExecuting
+            func run(_ operations: [PrivilegedOperation], reason: String) async throws {
+                try await Task.sleep(nanoseconds: 700_000_000)
+                try await inner.run(operations, reason: reason)
+            } }
+        var creator = f.creator
+        creator.privileged = Slow(inner: f.recorder)
+        let result = try await creator.create(installer: f.report, on: DriveCandidate(drive: f.drive, protections: []), stage: { _ in }, written: seen.add)
+        #expect(result.verification == .verified)
+        #expect(seen.all.first == 6_000_000_000)
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == 6_000_000_000)
+        // Unreadable or nonsensical answers are not reported.
+        f.setup.drives.volumeUsed = 40_000_000_000
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == nil)
+        #expect(await f.creator.usedBytes(onVolume: "disk99") == nil)
+    }
+
+    @Test func writtenAmountBoundaries() async throws {
+        let f = try await Safety.flow("written-bounds")
+        // Empty volume: nothing written yet.
+        f.setup.drives.volumeTotal = 31_000_000_000; f.setup.drives.volumeUsed = 0
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == 0)
+        // Full volume: everything.
+        f.setup.drives.volumeUsed = 31_000_000_000
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == 31_000_000_000)
+        // A volume reported with no size tells nothing.
+        f.setup.drives.volumeTotal = 0; f.setup.drives.volumeUsed = 0
+        #expect(await f.creator.usedBytes(onVolume: "disk4s2") == nil)
+    }
+
+    @Test func aToolThatAnswersLeavesNoProblemOneThatDoesNotIsReported() async throws {
+        let sandbox = try Sandbox("usage-answer")
+        let layout = toolchainLayout(sandbox)
+        try sandbox.file("Applications/Install macOS Sonoma.app/Contents/Info.plist", "<plist/>")
+        let tool = try sandbox.file("Applications/Install macOS Sonoma.app/Contents/Resources/createinstallmedia", "#!/bin/sh\n", executable: true)
+        final class Answer: @unchecked Sendable { var text = "Usage: createinstallmedia --volume <path>\n--nointeraction" }
+        let answer = Answer()
+        let runner = ScriptedRunner { command in
+            command.executable == tool.path ? CommandResult(exitCode: 0, stdout: answer.text, stderr: "") : CommandResult(exitCode: 0, stdout: "", stderr: "")
+        }
+        let inspector = InstallerInspector(layout: layout, runner: runner, environment: ToolEnvironment(macOSVersion: "27.0.1", architecture: .arm64), hasRosetta: false)
+        let app = sandbox.url.appendingPathComponent("Applications/Install macOS Sonoma.app")
+        #expect(await inspector.inspect(app).toolUsageProblem == nil)
+        // Something else came back (no list of options): the reason is kept and shown, not read as “needs questions”.
+        answer.text = "Segmentation fault"
+        let broken = await inspector.inspect(app)
+        #expect(broken.toolUsageProblem == "exit 0: Segmentation fault")
+        #expect(inspector.problems(of: broken).contains(.toolDidNotAnswer("exit 0: Segmentation fault")))
+        #expect(!inspector.problems(of: broken).contains(.toolNeedsInteraction))
     }
 }

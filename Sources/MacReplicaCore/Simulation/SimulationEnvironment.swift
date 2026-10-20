@@ -186,7 +186,8 @@ public struct SimulationEnvironment: Sendable {
             let data = output.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
             guard process.terminationStatus == 0 else { throw PrivilegedError.failed(String(decoding: data, as: UTF8.self)) }
-        }, volumesRoot: layout.volumesRoot, applicationFolders: layout.applicationFolders, diskutil: layout.diskutil)
+        }, volumesRoot: layout.volumesRoot, applicationFolders: layout.applicationFolders, diskutil: layout.diskutil,
+                                        codesign: layout.codesign, trash: layout.homeDirectory.appendingPathComponent(".Trash"))
     }
 
     /// A simulated installer package is JSON: `{"files": [{"source": "tools/brew", "destination": "opt/homebrew/bin/brew"}]}`.

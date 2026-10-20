@@ -1,4 +1,5 @@
 import Foundation
+import SystemConfiguration
 import SQLite3
 
 /// The arrangement of Launchpad (macOS 13–15): pages with apps and folders, folders with their name and pages.
@@ -247,14 +248,21 @@ public struct LaunchpadStore: Sendable {
     }
 
     /// The user MacReplica runs as, compared with the user logged in at the screen (owner of /dev/console).
-    public static var runsAsLoggedInUser: Bool {
-        guard let console = consoleUserID else { return true }
-        return geteuid() == console
+    public static var runsAsLoggedInUser: Bool { runsAsLoggedInUser(euid: geteuid(), console: consoleUserID) }
+
+    /// The console belongs to root while the login window shows (screen locked, nobody logged in at the screen): then
+    /// only MacReplica itself running as root (`sudo`) is “another user”.
+    static func runsAsLoggedInUser(euid: uid_t, console: uid_t?) -> Bool {
+        guard let console, console != 0 else { return euid != 0 }
+        return euid == console
     }
 
+    /// The user logged in at the screen, as the system records it. `/dev/console` is not used: on macOS 27 it stayed
+    /// root's after the screen was locked and unlocked again (seen 2026-10-20) while the user was at the screen.
     static var consoleUserID: uid_t? {
-        var info = stat()
-        return stat("/dev/console", &info) == 0 ? info.st_uid : nil
+        var uid: uid_t = 0
+        guard SCDynamicStoreCopyConsoleUser(nil, &uid, nil) != nil else { return nil }
+        return uid
     }
 
     /// The running Docks as “pid/uid” from `ps -A -o pid=,uid=,comm=`.

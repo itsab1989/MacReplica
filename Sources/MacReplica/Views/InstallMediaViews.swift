@@ -153,6 +153,7 @@ struct InstallMediaChooseView: View {
         let catalog = model.installMedia.catalog
         VStack(alignment: .leading, spacing: 12) {
             Text(l.t("installMedia.choose.intro")).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            InstallMediaLocalCard()
             Card {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 3) {
@@ -242,6 +243,7 @@ struct InstallMediaReleaseRow: View {
         case .softwareUpdate: parts.append(l.t("installMedia.from.softwareUpdate"))
         case .appStore: parts.append(l.t("installMedia.from.appStore"))
         case .appleDiskImage: parts.append(l.t("installMedia.from.appleDiskImage"))
+        case .onThisMac: parts.append(l.t("installMedia.from.onThisMac"))
         }
         return parts.joined(separator: " · ")
     }
@@ -252,6 +254,7 @@ struct InstallMediaReleaseRow: View {
         case .appStore: return "appStore"
         case .appleDiskImage: return "appleDiskImage"
         case .intelMacsOnly: return "intelMacsOnly"
+        case .onThisMac: return "onThisMac"
         }
     }
 }
@@ -309,6 +312,11 @@ struct InstallMediaInstallerView: View {
                     NoticeView(style: .error, title: l.t("installMedia.download.failed"), message: problem)
                         .accessibilityIdentifier("installMedia.download.problem")
                 }
+            case .onThisMac:
+                // The installer that was chosen is no longer there.
+                Text(l.t("installMedia.local.gone", release.installerAppName)).fixedSize(horizontal: false, vertical: true)
+                Button(l.t("installMedia.checkAgain")) { model.checkForInstaller() }
+                    .accessibilityIdentifier("installMedia.checkInstaller")
             case .appStore, .appleDiskImage:
                 let isStore: Bool = { if case .appStore = release.source { return true }; return false }()
                 Text(l.t(isStore ? "installMedia.external.appStore" : "installMedia.external.diskImage", release.installerAppName))
@@ -359,6 +367,10 @@ struct InstallMediaReportCard: View {
                 NoticeView(style: .error, title: problemText(problem), message: nil)
             }
             .accessibilityIdentifier("installMedia.installer.problems")
+            if !problems.isEmpty {
+                Button(l.t("installMedia.checkAgain")) { model.checkForInstaller() }
+                    .accessibilityIdentifier("installMedia.installer.recheck")
+            }
             if problems.isEmpty {
                 Label(l.t("installMedia.installer.ready"), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                     .accessibilityIdentifier("installMedia.installer.ready")
@@ -366,13 +378,15 @@ struct InstallMediaReportCard: View {
         }
     }
 
-    private func problemText(_ problem: InstallerAppProblem) -> String {
-        let l = model.l
+    private func problemText(_ problem: InstallerAppProblem) -> String { Self.problemText(problem, model.l) }
+
+    static func problemText(_ problem: InstallerAppProblem, _ l: Localizer) -> String {
         switch problem {
         case .notFound: return l.t("installMedia.problem.notFound")
         case .notSignedByApple(let detail): return l.t("installMedia.problem.notSigned", detail)
         case .noCreateInstallMedia: return l.t("installMedia.problem.noTool")
         case .toolNeedsInteraction: return l.t("installMedia.problem.interaction")
+        case .toolDidNotAnswer(let detail): return l.t("installMedia.problem.noAnswer", detail)
         case .needsRosetta: return l.t("installMedia.problem.rosetta")
         case .payloadMissing: return l.t("installMedia.problem.payload")
         case .incomplete(let detail): return l.t("installMedia.problem.incomplete", detail)
@@ -544,6 +558,11 @@ struct InstallMediaConfirmView: View {
                     ToolStateRow(symbol: "app", color: .secondary, label: l.t("installMedia.confirm.installer"),
                                  value: [report.app.lastPathComponent, report.macOSVersion].compactMap { $0 }.joined(separator: " · "))
                 }
+                if !InstallerFiles.isLockedForRoot(report.app) {
+                    Label(l.t("installMedia.confirm.lockNote"), systemImage: "lock.shield").font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("installMedia.confirm.lockNote")
+                }
                 Card {
                     Text(l.t("installMedia.confirm.what")).font(.headline)
                     let prefix = candidate.isPartition ? "installMedia.confirm.partitionStep" : "installMedia.confirm.step"
@@ -603,6 +622,16 @@ struct InstallMediaWorkingView: View {
                     }
                 }
                 if state.stage == .creating || state.stage == .erasingAndCreating {
+                    if let written = state.writtenBytes, let total = state.report?.sizeBytes, total > 0 {
+                        // Measured on the drive: what is there so far, against the installer's size (never 100 % before
+                        // Apple's tool has finished).
+                        ProgressView(value: min(Double(written) / Double(total), 0.99)) {
+                            Text(l.t("installMedia.working.written", l.fileSize(min(written, total)), l.fileSize(total)))
+                                .font(.callout.monospacedDigit())
+                        }
+                        .accessibilityIdentifier("installMedia.working.progress")
+                        .accessibilityValue("\(Int(min(Double(written) / Double(total), 0.99) * 100))")
+                    }
                     Text(l.t("installMedia.working.creatingHint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -650,6 +679,9 @@ struct InstallMediaFinishedView: View {
                     }
                 }
                 if result.verification != .failed { InstallMediaInstructions() }
+                if let report = model.installMedia.report {
+                    InstallMediaTrashRow(app: report.app, size: report.sizeBytes)
+                }
             }
         }
     }
@@ -690,6 +722,165 @@ struct InstallMediaFailedView: View {
                        title: l.t(state.driveErased ? "installMedia.failed.erased" : "installMedia.failed.untouched"),
                        message: l.t(state.driveErased ? "installMedia.failed.erasedHint" : "installMedia.failed.untouchedHint"))
                 .accessibilityIdentifier("installMedia.failure.drive")
+        }
+    }
+}
+
+// MARK: Installers on this Mac
+
+/// The Apple installers in Applications: use one, move it to the Trash, or choose one from elsewhere.
+struct InstallMediaLocalCard: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        let state = model.installMedia
+        Card {
+            HStack(alignment: .firstTextBaseline) {
+                Text(l.t("installMedia.local.title")).font(.headline)
+                Spacer()
+                if state.checkingLocal || state.inspecting { ProgressView().controlSize(.small) }
+                Button(l.t("installMedia.checkAgain")) { model.refreshLocalInstallers() }
+                    .disabled(state.checkingLocal)
+                    .accessibilityIdentifier("installMedia.local.refresh")
+                Button(l.t("installMedia.local.choose")) { model.chooseInstallerFile() }
+                    .disabled(state.copying)
+                    .accessibilityIdentifier("installMedia.local.choose")
+            }
+            if state.localInstallers.isEmpty && !state.checkingLocal {
+                Text(l.t("installMedia.local.none")).font(.callout).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("installMedia.local.none")
+            }
+            ForEach(state.localInstallers, id: \.app) { report in
+                let problems = model.installMediaInspector.problems(of: report)
+                let blocked = model.suitability(of: InstallerFiles.release(from: report)) == .intelMacsOnly
+                HStack(alignment: .center, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(report.displayName.replacingOccurrences(of: "Install ", with: "", options: .anchored)
+                             + (report.macOSVersion.map { " \($0)" } ?? "")).fontWeight(.medium)
+                        Text([report.build.map { l.t("installMedia.build", $0) }, l.fileSize(report.sizeBytes), report.app.lastPathComponent]
+                            .compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
+                        if let problem = problems.first {
+                            Text(l.t("installMedia.local.unusable", InstallMediaReportCard.problemText(problem, l))).font(.caption).foregroundStyle(.orange)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else if blocked {
+                            Text(l.t("installMedia.suitability.intelMacsOnly")).font(.caption).foregroundStyle(.orange)
+                        }
+                    }
+                    Spacer()
+                    Button(l.t("installMedia.local.trash")) { model.askToTrash(report.app, size: report.sizeBytes) }
+                        .disabled(state.trashing)
+                        .accessibilityIdentifier("installMedia.local.trash.\(report.app.lastPathComponent)")
+                    Button(l.t("installMedia.local.use")) { model.useLocalInstaller(report) }
+                        .disabled(!problems.isEmpty || blocked)
+                        .accessibilityIdentifier("installMedia.local.use.\(report.app.lastPathComponent)")
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("installMedia.local.\(report.app.lastPathComponent)")
+            }
+            Text(l.t("installMedia.local.chooseHint")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if let existing = state.copyNameTaken {
+                NoticeView(style: .warning, title: l.t("installMedia.copy.nameTaken", existing.lastPathComponent), message: l.t("installMedia.copy.nameTakenHint"))
+                    .accessibilityIdentifier("installMedia.copy.nameTaken")
+                HStack {
+                    Button(l.t("common.cancel")) { model.cancelCopy() }
+                    Button(l.t("installMedia.copy.replace")) { model.replaceExistingAndCopy() }
+                        .accessibilityIdentifier("installMedia.copy.replace")
+                    Button(l.t("installMedia.copy.useExisting")) { model.useExistingInsteadOfCopy() }
+                        .accessibilityIdentifier("installMedia.copy.useExisting")
+                }
+            } else if let source = state.pendingCopy {
+                InstallMediaCopyQuestion(source: source)
+            }
+            if state.copying {
+                HStack { ProgressView().controlSize(.small); Text(l.t("installMedia.copy.copying")) }
+                    .accessibilityIdentifier("installMedia.copy.copying")
+            }
+            if let problem = state.copyProblem {
+                NoticeView(style: .error, title: l.t("installMedia.copy.failed"), message: problem)
+                    .accessibilityIdentifier("installMedia.copy.problem")
+            }
+            InstallMediaTrashStatus()
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("installMedia.local")
+        .modifier(InstallMediaTrashDialog())
+    }
+}
+
+struct InstallMediaCopyQuestion: View {
+    @EnvironmentObject var model: AppModel
+    var source: URL
+
+    var body: some View {
+        let l = model.l
+        let needed = model.installMedia.pendingCopyNeeded
+        let free = InstallerFiles.availableSpace(model.installerFiles.applications)
+        NoticeView(style: .info, title: l.t("installMedia.copy.title", source.lastPathComponent),
+                   message: needed == 0 ? l.t("installMedia.copy.clone")
+                       : l.t("installMedia.copy.message", needed.map { l.fileSize($0) } ?? "…", free.map { l.fileSize($0) } ?? "?"))
+            .accessibilityIdentifier("installMedia.copy.question")
+        HStack {
+            Button(l.t("common.cancel")) { model.cancelCopy() }
+                .accessibilityIdentifier("installMedia.copy.cancel")
+            Button(l.t("installMedia.copy.confirm")) { model.confirmCopy() }
+                .disabled(model.installMedia.copying || needed == nil)
+                .accessibilityIdentifier("installMedia.copy.confirm")
+        }
+    }
+}
+
+/// “Move Installer to Trash…” on the finished screen.
+struct InstallMediaTrashRow: View {
+    @EnvironmentObject var model: AppModel
+    var app: URL
+    var size: Int64
+
+    var body: some View {
+        let l = model.l
+        Card {
+            HStack {
+                Text(l.t("installMedia.done.trashHint", l.fileSize(size))).font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Button(l.t("installMedia.done.trash")) { model.askToTrash(app, size: size) }
+                    .disabled(model.installMedia.trashing || !FileManager.default.fileExists(atPath: app.path))
+                    .accessibilityIdentifier("installMedia.done.trash")
+            }
+            InstallMediaTrashStatus()
+        }
+        .modifier(InstallMediaTrashDialog())
+    }
+}
+
+struct InstallMediaTrashStatus: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let state = model.installMedia
+        if state.trashing {
+            HStack { ProgressView().controlSize(.small); Text(model.l.t("installMedia.trash.moving")) }
+        } else if let message = state.trashMessage {
+            NoticeView(style: state.trashFailed ? .error : .success, title: message, message: nil)
+                .accessibilityIdentifier("installMedia.trash.result")
+        }
+    }
+}
+
+struct InstallMediaTrashDialog: ViewModifier {
+    @EnvironmentObject var model: AppModel
+
+    func body(content: Content) -> some View {
+        let l = model.l
+        let candidate = model.installMedia.trashCandidate
+        content.confirmationDialog(l.t("installMedia.trash.title", candidate?.lastPathComponent ?? ""),
+                                   isPresented: Binding(get: { model.installMedia.trashCandidate != nil },
+                                                        set: { if !$0 { model.installMedia.trashCandidate = nil } })) {
+            Button(l.t("installMedia.trash.confirm"), role: .destructive) { model.confirmTrash() }
+                .accessibilityIdentifier("installMedia.trash.confirm")
+            Button(l.t("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(l.t("installMedia.trash.message", model.installMedia.trashCandidateSize.map { l.fileSize($0) } ?? "?"))
         }
     }
 }
