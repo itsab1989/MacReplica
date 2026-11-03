@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.12] - 2026-11-03
+
 ### Added
 - **Where Homebrew installs apps.** The restore screen lets you choose: for all users (the shared Applications folder,
   as before) or only for you (`~/Applications`, Homebrew's `--appdir`). Installer packages decide their own place;
@@ -620,7 +622,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.11...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.12...HEAD
+[1.1.12]: https://github.com/itsab1989/MacReplica/compare/v1.1.11...v1.1.12
 [1.1.11]: https://github.com/itsab1989/MacReplica/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/itsab1989/MacReplica/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/itsab1989/MacReplica/compare/v1.1.8...v1.1.9
