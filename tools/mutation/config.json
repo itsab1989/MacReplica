@@ -75,6 +75,7 @@
       "tests": [
         "StaleCaskRecordTests",
         "CaskAppFolderTests",
+        "RestoreStartAndProgressTests",
         "RestoreExecutionTests",
         "DryRunTests",
         "ResumeTests",
@@ -323,6 +324,7 @@
     {
       "file": "Downloads/DownloadSourceFinder.swift",
       "tests": [
+        "AppStoreAvailabilityTests",
         "DownloadSourceTests",
         "DownloadEdgeTests",
         "MoreRecoveryEdgeTests"
@@ -355,6 +357,7 @@
     {
       "file": "Downloads/GuidedInstallation.swift",
       "tests": [
+        "AppStoreAvailabilityTests",
         "GuidedInstallationTests",
         "DownloadEdgeTests",
         "MoreRecoveryEdgeTests",
@@ -457,9 +460,17 @@
         "HomebrewRemovedCaskTests",
         "TesterFeedback110Tests",
         "StaleCaskRecordTests",
-        "CaskAppFolderTests"
+        "CaskAppFolderTests",
+        "RestoreStartAndProgressTests"
       ],
       "area": "Homebrew detection"
+    },
+    {
+      "file": "Restore/RestoreStartGate.swift",
+      "tests": [
+        "RestoreStartAndProgressTests"
+      ],
+      "area": "One restore at a time"
     },
     {
       "file": "Downloads/DiskImageCommands.swift",

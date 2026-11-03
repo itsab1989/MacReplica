@@ -7,6 +7,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Start Restore starts one restore.** Before a restore, MacReplica checks the whole Mac, which can take minutes with
+  many Homebrew packages; until now nothing showed that, the button stayed active, and every further click started
+  another check – each of which could start the restore again. Now the screen shows “Checking this Mac before the
+  restore: N of M”, the buttons wait, and a second restore can never start while one runs (tester report).
+- The check reads the definitions of all casks in one Homebrew call instead of one call per cask, so it is faster.
+- **Continuing a restore checks casks again.** A restore continued with a newer MacReplica kept the results of the
+  earlier run, so casks an earlier version had wrongly recorded as installed (Homebrew's records without the apps,
+  fixed in 1.1.12) were not looked at again. Now every cask recorded as already installed is checked when the restore
+  continues, and missing apps or packages are reinstalled (tester report).
+- **App Store apps no longer offered.** An App Store ID the store no longer has opened a page saying "App Not
+  Available". MacReplica now asks Apple's public lookup first; for an ID that is gone it opens an App Store search for
+  the app's name instead and explains that a newer edition may have to be installed (tester report).
+
+### Changed
+- **Clearer progress while restoring.** The progress bar moves by how long the steps usually take (installing an
+  app counts far more than copying a font), and the current Homebrew output (for example the download in progress)
+  is shown under the step; **Details** lists the recent output lines – in MacReplica, no Terminal needed.
+
 ## [1.1.12] - 2026-11-03
 
 ### Added

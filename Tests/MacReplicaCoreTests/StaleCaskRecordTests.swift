@@ -245,4 +245,45 @@ struct StaleCaskRecordTests {
         #expect(await client.hasReceipt(matching: [String(repeating: "a", count: 300)]) == false)
         #expect(await client.hasReceipt(matching: [String(repeating: "a", count: 301)]) == nil)
     }
+
+    // MARK: Continuing a restore of an earlier version
+
+    /// The tester's second run (2026-11-03): 1.1.12 continued the session of 1.1.11 ("585 steps, 560 already
+    /// finished"), and the casks 1.1.11 had recorded as already installed were not looked at again.
+    func continuedSession(_ c: Context) -> (RestorePlan, RestoreSession) {
+        let selection = RestoreSelection(components: [.brewCasks, .applications])
+        let plan = RestorePlanner().plan(manifest: c.manifest, selection: selection)
+        var session = RestoreSession(backupPath: c.backup.path, selection: selection, itemIDs: plan.items.map(\.id))
+        for item in plan.items where item.kind == .cask || item.kind == .homebrew || item.kind == .commandLineTools {
+            session.results[item.id] = ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: "1.0")
+        }
+        return (plan, session)
+    }
+
+    @Test("Continuing a restore checks casks recorded as already installed again and reinstalls the missing ones")
+    func continuedRestoreRechecksCasks() async throws {
+        let c = try await context("continue")
+        try recordOnly(c, "pixel-forge", version: "2.4.1")
+        let (plan, session) = continuedSession(c)
+        #expect(session.results["cask:pixel-forge"]?.outcome == .alreadyPresent)
+        let result = await RestoreExecutor(environment: TestEnvironment.restoreEnvironment(c.target), backupRoot: c.backup, sessionStore: nil)
+            .run(plan: plan, session: session, onEvent: { _ in }).results["cask:pixel-forge"]
+        #expect(result?.outcome == .succeeded, "\(result?.outcome.label ?? "-")")
+        #expect(result?.notes.contains(.reinstalledMissingParts(parts: "Pixel Forge.app")) == true)
+        #expect(FileManager.default.fileExists(atPath: app(c, "Pixel Forge.app").path))
+    }
+
+    @Test("Continuing a restore leaves casks whose app is there alone")
+    func continuedRestoreKeepsPresentCasks() async throws {
+        let c = try await context("continue-present")
+        try recordOnly(c, "pixel-forge", version: "2.4.1")
+        try makeApp(app(c, "Pixel Forge.app"), id: "com.example.pixelforge")
+        let (plan, session) = continuedSession(c)
+        let finished = await RestoreExecutor(environment: TestEnvironment.restoreEnvironment(c.target), backupRoot: c.backup, sessionStore: nil)
+            .run(plan: plan, session: session, onEvent: { _ in })
+        #expect(finished.results["cask:pixel-forge"] == session.results["cask:pixel-forge"], "the earlier result stays")
+        #expect(!c.fresh.calls().contains { $0.hasPrefix("brew reinstall --cask pixel-forge") || $0.hasPrefix("brew install --cask pixel-forge") })
+        let infoCalls = c.fresh.calls().filter { $0.hasPrefix("brew info --json=v2 --cask") }
+        #expect(infoCalls.count == 1, "the definitions are read once, together: \(infoCalls)")
+    }
 }

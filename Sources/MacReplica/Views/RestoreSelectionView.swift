@@ -79,11 +79,18 @@ struct RestoreSelectionView: View {
                 .keyboardShortcut(.cancelAction)
             Spacer()
             HelpButton(text: l.t("restore.dryRun.help"), title: l.t("restore.select.dryRun"), id: "help.dryRun")
+            if let preparing = model.preparingRestore {
+                ProgressView().controlSize(.small)
+                Text(l.t("restore.preparing", preparing.checked, preparing.total))
+                    .font(.callout).foregroundStyle(.secondary).monospacedDigit()
+                    .accessibilityIdentifier("restore.preparing")
+            }
             Button(l.t("restore.select.dryRun")) { model.startDryRun() }
+                .disabled(model.preparingRestore != nil)
                 .accessibilityIdentifier("restore.dryRun")
             Button(l.t("restore.select.start")) { model.requestRestoreStart() }
                 .keyboardShortcut(.defaultAction)
-                .disabled(model.currentPlan().map { $0.items.isEmpty } ?? true)
+                .disabled(model.preparingRestore != nil || (model.currentPlan().map { $0.items.isEmpty } ?? true))
                 .accessibilityIdentifier("restore.start")
         }
         .sheet(isPresented: $showItems) { ItemSelectionSheet() }

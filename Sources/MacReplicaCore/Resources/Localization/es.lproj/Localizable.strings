@@ -211,6 +211,8 @@
 "progress.failed" = "Fallidos: %1$d";
 "progress.skipped" = "Omitidos: %1$d";
 "progress.recent" = "Terminados";
+"progress.details" = "Detalles";
+"restore.preparing" = "Comprobando este Mac antes de la restauración: %1$d de %2$d …";
 "progress.finishing" = "Finalizando…";
 "progress.stopping" = "Deteniendo tras el paso actual…";
 "progress.keepOpen" = "Mantén MacReplica abierto y tu Mac despierto.";
@@ -888,11 +890,13 @@
 "offer.homebrewCask" = "Descarga del fabricante (%1$@) %2$@";
 "offer.website" = "Sitio web del fabricante (%1$@)";
 "offer.appStore" = "Mac App Store";
+"offer.appStoreSearch" = "Mac App Store: esta edición ya no se ofrece – buscar «%1$@»";
 "offer.recommended" = "%1$@ (recomendado)";
 "guidedStep.finishInstaller" = "Se ha abierto el instalador de Apple. Completa allí la instalación.";
 "guidedStep.installFromDiskImage" = "La descarga se muestra en el Finder. Ábrela y arrastra la app a la carpeta Aplicaciones; acepta la licencia si se te pide.";
 "guidedStep.installFromWebsite" = "Descarga e instala la app desde el sitio web del fabricante que MacReplica ha abierto.";
 "guidedStep.installFromAppStore" = "Se ha abierto la página de la App Store. Haz clic en Obtener o en el botón de descarga, con tu cuenta de Apple iniciada.";
+"guidedStep.searchAppStore" = "Esta edición de la app ya no está en el App Store, así que muestra una búsqueda de «%1$@». Instala allí la edición actual si la quieres y haz clic en OK; si MacReplica no la reconoce como esta app, haz clic en Omitir.";
 "guidedStep.runCommand" = "Ejecuta esto en Terminal: %1$@";
 "downloadError.network" = "La descarga falló: comprueba la conexión";
 "downloadError.notTrusted" = "No verificado: no instalado";
@@ -960,6 +964,7 @@
 
 /* Offer hints */
 "offer.appStore.hint" = "MacReplica abre la página de la app en la App Store; la instalas allí y MacReplica comprueba el resultado.";
+"offer.appStoreSearch.hint" = "MacReplica abre una búsqueda en el App Store; instalas allí la edición actual y MacReplica comprueba el resultado.";
 "offer.website.hint" = "MacReplica abre el sitio web del fabricante; allí descargas e instalas la app y después MacReplica comprueba que esté instalada.";
 
 /* Guided step texts */

@@ -30,6 +30,8 @@ public enum GuidedStep: Equatable, Sendable {
     case installFromDiskImage
     case installFromWebsite
     case installFromAppStore
+    /// The app of the old Mac is no longer in the App Store; it shows a search for this name.
+    case searchAppStore(String)
     /// No official source is known: the user installs the app the way they got it originally.
     case installYourself
     /// A further package of the user's own installers (e.g. an activation package) is open in Installer.
@@ -101,7 +103,8 @@ public actor GuidedInstallation {
         switch offer.kind {
         case .appStore:
             if let url = URL(string: offer.url) { await interaction.open(url) }
-            return await waitForUser(item, step: .installFromAppStore, interaction: interaction, isInstalled: isInstalled)
+            let step: GuidedStep = offer.appStoreSearchTerm.map { .searchAppStore($0) } ?? .installFromAppStore
+            return await waitForUser(item, step: step, interaction: interaction, isInstalled: isInstalled)
         case .vendorWebsite:
             if let url = URL(string: offer.url) { await interaction.open(url) }
             return await waitForUser(item, step: .installFromWebsite, interaction: interaction, isInstalled: isInstalled)

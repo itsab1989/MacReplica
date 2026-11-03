@@ -211,6 +211,8 @@
 "progress.failed" = "Failed: %1$d";
 "progress.skipped" = "Skipped: %1$d";
 "progress.recent" = "Finished";
+"progress.details" = "Details";
+"restore.preparing" = "Checking this Mac before the restore: %1$d of %2$d …";
 "progress.finishing" = "Finishing …";
 "progress.stopping" = "Stopping after the current step …";
 "progress.keepOpen" = "Please keep MacReplica open and your Mac awake.";
@@ -890,11 +892,13 @@
 "offer.homebrewCask" = "Vendor download (%1$@) %2$@";
 "offer.website" = "Vendor website (%1$@)";
 "offer.appStore" = "Mac App Store";
+"offer.appStoreSearch" = "Mac App Store: this edition is no longer offered – search for “%1$@”";
 "offer.recommended" = "%1$@ (recommended)";
 "guidedStep.finishInstaller" = "Apple's Installer has opened. Complete the installation there.";
 "guidedStep.installFromDiskImage" = "The download is shown in Finder. Open it and drag the app into the Applications folder, accepting the license if asked.";
 "guidedStep.installFromWebsite" = "Download and install the app from the vendor's website, which MacReplica opened.";
 "guidedStep.installFromAppStore" = "The App Store page has opened. Click Get or the download button, signed in with your Apple Account.";
+"guidedStep.searchAppStore" = "This edition of the app is no longer in the App Store, so it shows a search for “%1$@”. Install the current edition there if you want it and click Done; if MacReplica does not recognise it as this app, click Skip.";
 "guidedStep.runCommand" = "Run this in Terminal: %1$@";
 "downloadError.network" = "Download failed – check the connection";
 "downloadError.notTrusted" = "Not verified – not installed";
@@ -962,6 +966,7 @@
 
 /* Offer hints */
 "offer.appStore.hint" = "MacReplica opens the app's App Store page; you install it there and MacReplica checks the result.";
+"offer.appStoreSearch.hint" = "MacReplica opens an App Store search; you install the current edition there and MacReplica checks the result.";
 "offer.website.hint" = "MacReplica opens the vendor's website; you download and install the app there, then MacReplica checks that it is installed.";
 
 /* Guided step texts */

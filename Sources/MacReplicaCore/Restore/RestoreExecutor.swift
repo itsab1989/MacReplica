@@ -17,6 +17,8 @@ public enum RestoreEvent: Sendable {
     case started(item: RestoreItem, index: Int, total: Int)
     case activity(itemID: String, RestoreActivity)
     case finished(item: RestoreItem, result: ItemResult, index: Int, total: Int)
+    /// A line of output from the tool working on the step (e.g. Homebrew's "==> Downloading …"), redacted.
+    case output(itemID: String, line: String)
     case completed(RestoreSummary)
 }
 
@@ -143,6 +145,16 @@ struct Inspector: Sendable {
     /// False for the quick check of the restore selection: Homebrew packages are not looked up one by one.
     var checkPackages = true
     let fileIndexes = FileIndexes()
+    /// Cask definitions read once for many casks (dry run), so the check does not ask Homebrew per cask.
+    let caskContentsCache = CaskContentsCache()
+
+    final class CaskContentsCache: @unchecked Sendable {
+        private let lock = NSLock()
+        private var contents: [String: CaskContents] = [:]
+        func get(_ token: String) -> CaskContents? { lock.withLock { contents[token] } }
+        func store(_ found: [String: CaskContents]) { lock.withLock { contents.merge(found) { _, new in new } } }
+        func forget(_ token: String) { lock.withLock { _ = contents.removeValue(forKey: token) } }
+    }
 
     var layout: SystemLayout { environment.layout }
 
@@ -186,7 +198,8 @@ struct Inspector: Sendable {
     /// An app counts as there at Homebrew's destination or wherever MacReplica finds apps, a package when one of its
     /// receipts is installed. Empty: nothing missing, or nothing that can be told.
     func missingCaskParts(_ item: RestoreItem, brew: HomebrewInstallation) async -> [String] {
-        let contents = await environment.homebrew.caskContents(brew, token: item.identifier)
+        var contents = caskContentsCache.get(item.identifier)
+        if contents == nil { contents = await environment.homebrew.caskContents(brew, token: item.identifier) }
         let appNames = contents.flatMap { $0.appNames.isEmpty ? nil : $0.appNames } ?? item.appBundleNames
         var missing = appNames.filter { name in
             let atTarget = contents?.appTargets.contains { ($0 as NSString).lastPathComponent == name
@@ -412,15 +425,22 @@ public final class RestoreExecutor: Sendable {
     /// Describes what a restore would do. Only read-only checks are performed.
     /// With `checkPackages` false, Homebrew packages are not looked up one by one (used for the quick
     /// check behind the restore selection); everything else is checked exactly as in the restore.
-    public func dryRun(plan: RestorePlan, selection: RestoreSelection, checkPackages: Bool = true) async -> [DryRunEntry] {
+    /// - Parameter onProgress: steps checked so far and their total, after each step.
+    public func dryRun(plan: RestorePlan, selection: RestoreSelection, checkPackages: Bool = true,
+                       onProgress: (@Sendable (Int, Int) -> Void)? = nil) async -> [DryRunEntry] {
         var inspector = Inspector(environment: environment, backupRoot: backupRoot, selection: selection, damagedFiles: damagedFiles)
         inspector.checkPackages = checkPackages
         let brew = await environment.homebrew.locate().installation
         let taps: Set<String>? = brew == nil || !checkPackages ? nil : ((try? await environment.homebrew.installedTaps(brew!)) ?? [])
+        if checkPackages, let brew {
+            let tokens = plan.items.filter { $0.kind == .cask }.map(\.identifier)
+            if !tokens.isEmpty { inspector.caskContentsCache.store(await environment.homebrew.caskContents(brew, tokens: tokens)) }
+        }
         var entries: [DryRunEntry] = []
         var blocked = Set<String>()
         var guided = Set<String>()
-        for item in plan.items {
+        for (index, item) in plan.items.enumerated() {
+            defer { onProgress?(index + 1, plan.items.count) }
             var prediction = await inspector.predict(item, brew: brew, taps: taps)
             if let dependency = item.dependsOn.first(where: { blocked.contains($0) }) {
                 if case .alreadyPresent = prediction {} else {
@@ -487,9 +507,24 @@ public final class RestoreExecutor: Sendable {
         }
         persist(&session)
 
+        // Casks recorded as already installed in an earlier run (before 1.1.12 only Homebrew's record was checked) are
+        // checked again when the restore continues; their definitions are read in one call.
+        let recordedCasks = plan.items.filter { $0.kind == .cask && session.results[$0.id]?.outcome == .alreadyPresent }
+        if let brew = context.brew, !recordedCasks.isEmpty {
+            inspector.caskContentsCache.store(await environment.homebrew.caskContents(brew, tokens: recordedCasks.map(\.identifier)))
+        }
+
         for (index, item) in plan.items.enumerated() {
             // Finished steps are not repeated; steps that wait for the user are checked again.
-            if let previous = session.results[item.id], !previous.outcome.isOpen { continue }
+            if let previous = session.results[item.id], !previous.outcome.isOpen {
+                // Except a cask recorded as already installed whose app or package is not on this Mac (tester,
+                // 2026-11-03: continuing a 1.1.11 restore with 1.1.12 kept those results and installed nothing).
+                guard item.kind == .cask, previous.outcome == .alreadyPresent, let brew = context.brew else { continue }
+                let missing = await inspector.missingCaskParts(item, brew: brew)
+                guard !missing.isEmpty else { continue }
+                log.warning("\(item.id): recorded as already installed, but \(missing.joined(separator: ", ")) is not on this Mac – checked again",
+                            component: .homebrew)
+            }
             if Task.isCancelled {
                 log.warning("Restore cancelled before \(item.id)", component: .restore)
                 break
@@ -748,14 +783,30 @@ public final class RestoreExecutor: Sendable {
         return [.newerVersionInstalled(original: original, installed: installed)]
     }
 
+    /// Passes the tool's output lines on as events, redacted (home folder, user name) and shortened; blank lines and
+    /// progress bars made only of "#" are left out.
+    private func outputForwarder(_ item: RestoreItem, _ onEvent: (@Sendable (RestoreEvent) -> Void)?) -> (@Sendable (String) -> Void)? {
+        guard let onEvent else { return nil }
+        let layout = self.layout
+        let id = item.id
+        return { line in
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, trimmed.contains(where: { $0.isLetter }) else { return }
+            onEvent(.output(itemID: id, line: String(layout.redact(trimmed).prefix(300))))
+        }
+    }
+
     /// Installs a formula or cask. If Homebrew answers that it is too old for the current package definitions, it is
     /// updated once (`brew update`, what Homebrew itself asks for and does by default before installing) and the
     /// package is tried again. An existing Homebrew is never changed without that evidence.
     private func brewInstall(_ brew: HomebrewInstallation, _ package: HomebrewPackage, item: RestoreItem,
-                             context: inout RunContext) async throws -> (CommandResult, [ResultNote]) {
+                             context: inout RunContext,
+                             onEvent: (@Sendable (RestoreEvent) -> Void)? = nil) async throws -> (CommandResult, [ResultNote]) {
         let extra = context.askpassEnvironment(environment.askpassEnvironment)
         let appdir = context.caskAppdir
-        let result = try await environment.homebrew.install(brew, package: package, askpass: environment.askpassPath, extraEnvironment: extra, appdir: appdir)
+        let output = outputForwarder(item, onEvent)
+        let result = try await environment.homebrew.install(brew, package: package, askpass: environment.askpassPath, extraEnvironment: extra,
+                                                            appdir: appdir, onOutputLine: output)
         guard !result.succeeded, HomebrewClient.isOutdatedHomebrewOutput(result.combinedOutput), !context.homebrewUpdateAttempted else {
             return (result, [])
         }
@@ -769,7 +820,8 @@ public final class RestoreExecutor: Sendable {
         let updated = await environment.homebrew.locate().installation ?? brew
         context.brew = updated
         log.info("Homebrew updated from \(brew.version) to \(updated.version); trying \(item.id) again", component: .homebrew)
-        let again = try await environment.homebrew.install(updated, package: package, askpass: environment.askpassPath, extraEnvironment: extra, appdir: appdir)
+        let again = try await environment.homebrew.install(updated, package: package, askpass: environment.askpassPath, extraEnvironment: extra,
+                                                           appdir: appdir, onOutputLine: output)
         return (again, [.homebrewUpdated(version: updated.version)])
     }
 
@@ -782,7 +834,7 @@ public final class RestoreExecutor: Sendable {
         onEvent(.activity(itemID: item.id, .installing))
         let head = inspector.selection.installsHead(item)
         let (result, updateNotes) = try await brewInstall(brew, head ? .formulaHead(item.identifier) : .formula(item.identifier),
-                                                         item: item, context: &context)
+                                                         item: item, context: &context, onEvent: onEvent)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let version = try await environment.homebrew.installedFormulaVersion(context.brew ?? brew, name: item.identifier) else {
@@ -815,7 +867,7 @@ public final class RestoreExecutor: Sendable {
             return ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: inspector.installedVersion(ofApp: app))
         }
         onEvent(.activity(itemID: item.id, .installing))
-        let (result, updateNotes) = try await brewInstall(brew, .cask(item.identifier), item: item, context: &context)
+        let (result, updateNotes) = try await brewInstall(brew, .cask(item.identifier), item: item, context: &context, onEvent: onEvent)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let version = try await environment.homebrew.installedCaskVersion(context.brew ?? brew, token: item.identifier) else {
@@ -844,7 +896,7 @@ public final class RestoreExecutor: Sendable {
         let parts = missing.joined(separator: ", ")
         log.warning("\(item.id): Homebrew lists it as installed, but \(parts) is not on this Mac – reinstalling with Homebrew", component: .homebrew)
         onEvent(.activity(itemID: item.id, .installing))
-        let (result, updateNotes) = try await brewInstall(brew, .caskReinstall(item.identifier), item: item, context: &context)
+        let (result, updateNotes) = try await brewInstall(brew, .caskReinstall(item.identifier), item: item, context: &context, onEvent: onEvent)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         let current = context.brew ?? brew
@@ -869,7 +921,7 @@ public final class RestoreExecutor: Sendable {
         onEvent(.activity(itemID: item.id, .installing))
         let result = try await environment.homebrew.install(context.brew ?? brew, package: .caskReinstall(item.identifier), askpass: environment.askpassPath,
                                                            extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment),
-                                                           appdir: context.caskAppdir)
+                                                           appdir: context.caskAppdir, onOutputLine: outputForwarder(item, onEvent))
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let reinstalled = inspector.installedApp(for: item), inspector.appRunsHere(reinstalled) else {

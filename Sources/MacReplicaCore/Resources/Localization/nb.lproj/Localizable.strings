@@ -211,6 +211,8 @@
 "progress.failed" = "Mislyktes: %1$d";
 "progress.skipped" = "Hoppet over: %1$d";
 "progress.recent" = "Fullført";
+"progress.details" = "Detaljer";
+"restore.preparing" = "Kontrollerer denne Macen før gjenopprettingen: %1$d av %2$d …";
 "progress.finishing" = "Avslutter …";
 "progress.stopping" = "Stopper etter gjeldende trinn …";
 "progress.keepOpen" = "La MacReplica være åpen og hold Macen våken.";
@@ -888,11 +890,13 @@
 "offer.homebrewCask" = "Nedlasting fra leverandøren (%1$@) %2$@";
 "offer.website" = "Leverandørens nettsted (%1$@)";
 "offer.appStore" = "Mac App Store";
+"offer.appStoreSearch" = "Mac App Store: denne utgaven tilbys ikke lenger – søk etter «%1$@»";
 "offer.recommended" = "%1$@ (anbefalt)";
 "guidedStep.finishInstaller" = "Apples installasjonsprogram er åpnet. Fullfør installasjonen der.";
 "guidedStep.installFromDiskImage" = "Nedlastingen vises i Finder. Åpne den og dra appen til Programmer-mappen, og godta lisensen hvis du blir spurt.";
 "guidedStep.installFromWebsite" = "Last ned og installer appen fra leverandørens nettsted, som MacReplica har åpnet.";
 "guidedStep.installFromAppStore" = "App Store-siden er åpnet. Klikk på Hent eller nedlastingsknappen, logget på med Apple-kontoen din.";
+"guidedStep.searchAppStore" = "Denne utgaven av appen finnes ikke lenger i App Store, så den viser et søk etter «%1$@». Installer den nåværende utgaven der hvis du vil ha den, og klikk på Ferdig; hvis MacReplica ikke gjenkjenner den som denne appen, klikk på Hopp over.";
 "guidedStep.runCommand" = "Kjør dette i Terminal: %1$@";
 "downloadError.network" = "Nedlastingen mislyktes – sjekk tilkoblingen";
 "downloadError.notTrusted" = "Ikke bekreftet – ikke installert";
@@ -960,6 +964,7 @@
 
 /* Offer hints */
 "offer.appStore.hint" = "MacReplica åpner appens side i App Store; du installerer den der, og MacReplica kontrollerer resultatet.";
+"offer.appStoreSearch.hint" = "MacReplica åpner et søk i App Store; du installerer den nåværende utgaven der, og MacReplica kontrollerer resultatet.";
 "offer.website.hint" = "MacReplica åpner leverandørens nettsted; du laster ned og installerer appen der, og deretter kontrollerer MacReplica at den er installert.";
 
 /* Guided step texts */

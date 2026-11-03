@@ -211,6 +211,8 @@
 "progress.failed" = "Fehlgeschlagen: %1$d";
 "progress.skipped" = "Übersprungen: %1$d";
 "progress.recent" = "Erledigt";
+"progress.details" = "Details";
+"restore.preparing" = "Dieser Mac wird vor der Wiederherstellung geprüft: %1$d von %2$d …";
 "progress.finishing" = "Wird abgeschlossen …";
 "progress.stopping" = "Wird nach dem aktuellen Schritt gestoppt …";
 "progress.keepOpen" = "Bitte lass MacReplica geöffnet und deinen Mac wach.";
@@ -888,11 +890,13 @@
 "offer.homebrewCask" = "Download des Herstellers (%1$@) %2$@";
 "offer.website" = "Website des Herstellers (%1$@)";
 "offer.appStore" = "Mac App Store";
+"offer.appStoreSearch" = "Mac App Store: Diese Ausgabe wird nicht mehr angeboten – Suche nach „%1$@“";
 "offer.recommended" = "%1$@ (empfohlen)";
 "guidedStep.finishInstaller" = "Das Installationsprogramm von Apple wurde geöffnet. Schließ die Installation dort ab.";
 "guidedStep.installFromDiskImage" = "Der Download wird im Finder angezeigt. Öffne ihn und zieh die App in den Ordner „Programme“; bestätige die Lizenz, falls gefragt.";
 "guidedStep.installFromWebsite" = "Lade die App von der Website des Herstellers, die MacReplica geöffnet hat, und installier sie.";
 "guidedStep.installFromAppStore" = "Die App-Store-Seite wurde geöffnet. Klick auf „Laden“ oder die Download-Taste – angemeldet mit deinem Apple Account.";
+"guidedStep.searchAppStore" = "Diese Ausgabe der App gibt es im App Store nicht mehr; er zeigt deshalb eine Suche nach „%1$@“. Installiere dort die aktuelle Ausgabe, wenn du sie möchtest, und klicke auf Fertig; erkennt MacReplica sie nicht als diese App, klicke auf Überspringen.";
 "guidedStep.runCommand" = "Führe das im Terminal aus: %1$@";
 "downloadError.network" = "Download fehlgeschlagen – Verbindung prüfen";
 "downloadError.notTrusted" = "Nicht bestätigt – nicht installiert";
@@ -960,6 +964,7 @@
 
 /* Offer hints */
 "offer.appStore.hint" = "MacReplica öffnet die App-Store-Seite der App; du installierst sie dort und MacReplica prüft das Ergebnis.";
+"offer.appStoreSearch.hint" = "MacReplica öffnet eine Suche im App Store; du installierst dort die aktuelle Ausgabe und MacReplica prüft das Ergebnis.";
 "offer.website.hint" = "MacReplica öffnet die Website des Herstellers; du lädst und installierst die App dort, danach prüft MacReplica, ob sie installiert ist.";
 
 /* Guided step texts */

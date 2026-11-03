@@ -451,6 +451,7 @@ enum FakeTools {
           appdir="$(cask_appdir "$name" "$@")"; mkdir -p "$appdir" "$S/brew/cask-appdir"; printf '%s' "$appdir" > "$S/brew/cask-appdir/$(basename "$name")"
           if [ -e "$appdir/$app" ]; then echo "Error: It seems there is already an App at '$appdir/$app'." >&2; exit 1; fi
           make_app "$appdir/$app" "$bid" "$version"
+          echo "==> Moving App '$app' to '$appdir/$app'"
         fi
         # An installer package leaves its receipt (unless "pkg-leaves-no-receipt" simulates one that installed nothing).
         rid="$(json_value "$spec" pkgutil)"
