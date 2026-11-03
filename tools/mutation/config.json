@@ -324,6 +324,7 @@
     {
       "file": "Downloads/DownloadSourceFinder.swift",
       "tests": [
+        "AppStoreAvailabilityTests",
         "DownloadSourceTests",
         "DownloadEdgeTests",
         "MoreRecoveryEdgeTests"
@@ -356,6 +357,7 @@
     {
       "file": "Downloads/GuidedInstallation.swift",
       "tests": [
+        "AppStoreAvailabilityTests",
         "GuidedInstallationTests",
         "DownloadEdgeTests",
         "MoreRecoveryEdgeTests",

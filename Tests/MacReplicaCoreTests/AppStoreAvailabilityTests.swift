@@ -83,4 +83,33 @@ struct AppStoreAvailabilityTests {
         #expect(l.guidedStepText(.searchAppStore("Daily Workouts")).contains("“Daily Workouts”"))
         #expect(l.guidedStepText(.searchAppStore("Daily Workouts")).contains("Skip"))
     }
+
+    actor StepRecorder: GuidedInstallInteraction {
+        var opened: [String] = []
+        var steps: [GuidedStep] = []
+        func openPackage(_ url: URL) async {}
+        func openInFinder(_ url: URL) async {}
+        func open(_ url: URL) async { opened.append(url.absoluteString) }
+        func waitForUser(itemID: String, step: GuidedStep) async -> GuidedDecision { steps.append(step); return .later }
+    }
+
+    @Test("The guided installation opens the search and asks with the search step; a normal offer keeps the page step")
+    func guidedSteps() async throws {
+        let fixture = try VendorFixture("app-store-search")
+        let layout = toolchainLayout(fixture.sandbox)
+        let installer = fixture.installer(layout: layout)
+        let guided = GuidedInstallation(installer: installer, queue: DownloadQueue(transport: LocalDownloadTransport(root: fixture.root),
+                                                                                    folder: installer.downloadsFolder))
+        let item = RestoreItem(id: "mas:469067434", kind: .appStoreApp, title: "DailyWorkouts", identifier: "469067434",
+                               bundleIdentifier: "com.example.dailyworkouts", appBundleNames: ["DailyWorkouts.app"])
+        var search = DownloadOffer(id: "appstore-search:469067434", itemID: item.id, kind: .appStore,
+                                   url: "macappstore://apps.apple.com/search?term=Daily%20Workouts", recommended: true)
+        search.appStoreSearchTerm = "Daily Workouts"
+        let recorder = StepRecorder()
+        _ = await guided.install(item, offer: search, interaction: recorder, isInstalled: { _ in nil })
+        let page = DownloadOffer(id: "appstore:469068059", itemID: item.id, kind: .appStore, url: "macappstore://apps.apple.com/app/id469068059")
+        _ = await guided.install(item, offer: page, interaction: recorder, isInstalled: { _ in nil })
+        #expect(await recorder.steps == [.searchAppStore("Daily Workouts"), .installFromAppStore])
+        #expect(await recorder.opened == [search.url, page.url])
+    }
 }
