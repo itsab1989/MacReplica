@@ -172,4 +172,77 @@ struct StaleCaskRecordTests {
         """
         #expect(ErrorClassifier.classify(output, exitCode: 1) == .incompatible)
     }
+
+    // MARK: How an app counts as there
+
+    func inspector(_ c: Context) -> (Inspector, HomebrewInstallation) {
+        let environment = TestEnvironment.restoreEnvironment(c.target)
+        let brew = HomebrewInstallation(executable: c.fresh.url.appendingPathComponent("opt/homebrew/bin/brew").path,
+                                        prefix: c.fresh.url.appendingPathComponent("opt/homebrew"), version: "4.4.0")
+        return (Inspector(environment: environment, backupRoot: c.backup, selection: RestoreSelection(), damagedFiles: []), brew)
+    }
+
+    func makeApp(_ url: URL, id: String) throws {
+        try FileManager.default.createDirectory(at: url.appendingPathComponent("Contents"), withIntermediateDirectories: true)
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": id, "CFBundleShortVersionString": "1.0"],
+                                           format: .xml, options: 0).write(to: url.appendingPathComponent("Contents/Info.plist"))
+    }
+
+    @Test("Homebrew's app name wins over the backup's; without an answer from Homebrew the backup's names are checked")
+    func appNamesComeFromHomebrewFirst() async throws {
+        let c = try await context("names")
+        let (inspector, brew) = inspector(c)
+        try makeApp(app(c, "Pixel Forge.app"), id: "com.example.pixelforge")
+        let renamedInBackup = RestoreItem(id: "cask:pixel-forge", kind: .cask, title: "Pixel Forge", identifier: "pixel-forge", appBundleNames: ["Old Forge.app"])
+        #expect(await inspector.missingCaskParts(renamedInBackup, brew: brew).isEmpty, "Homebrew says Pixel Forge.app, which is there")
+        // No definition Homebrew can give (brew info fails): the backup's name is all there is.
+        let unknown = RestoreItem(id: "cask:ghost-app", kind: .cask, title: "Ghost", identifier: "ghost-app", appBundleNames: ["Ghost.app"])
+        #expect(await inspector.missingCaskParts(unknown, brew: brew) == ["Ghost.app"])
+    }
+
+    @Test("An app at Homebrew's destination outside the usual folders counts as there; another app there does not")
+    func appAtHomebrewTarget() async throws {
+        let c = try await context("target")
+        let (inspector, brew) = inspector(c)
+        let custom = c.fresh.url.appendingPathComponent("Custom Apps")
+        try c.fresh.setFlag("brew/cask-appdir/pixel-forge", true, content: custom.path)
+        let item = RestoreItem(id: "cask:pixel-forge", kind: .cask, title: "Pixel Forge", identifier: "pixel-forge")
+        try makeApp(custom.appendingPathComponent("Other.app"), id: "com.example.other")
+        #expect(await inspector.missingCaskParts(item, brew: brew) == ["Pixel Forge.app"], "a different app at the destination is not this one")
+        try makeApp(custom.appendingPathComponent("Pixel Forge.app"), id: "com.example.pixelforge")
+        #expect(await inspector.missingCaskParts(item, brew: brew).isEmpty)
+    }
+
+    @Test("An app renamed since is found by its identifier; without an identifier, or with only part missing, it is missing")
+    func renamedAppByIdentifier() async throws {
+        let c = try await context("renamed")
+        let (inspector, brew) = inspector(c)
+        try makeApp(app(c, "Pixel Forge Pro.app"), id: "com.example.pixelforge")
+        let withID = RestoreItem(id: "cask:pixel-forge", kind: .cask, title: "Pixel Forge", identifier: "pixel-forge", bundleIdentifier: "com.example.pixelforge")
+        #expect(await inspector.missingCaskParts(withID, brew: brew).isEmpty)
+        let withoutID = RestoreItem(id: "cask:pixel-forge", kind: .cask, title: "Pixel Forge", identifier: "pixel-forge")
+        #expect(await inspector.missingCaskParts(withoutID, brew: brew) == ["Pixel Forge.app"])
+        // Two apps, one of them there: the other stays missing even though the identifier finds an app.
+        let two = RestoreItem(id: "cask:ghost-app", kind: .cask, title: "Ghost", identifier: "ghost-app", bundleIdentifier: "com.example.pixelforge",
+                              appBundleNames: ["Pixel Forge Pro.app", "Ghost.app"])
+        #expect(await inspector.missingCaskParts(two, brew: brew) == ["Ghost.app"])
+        // Nothing missing stays nothing missing.
+        try makeApp(app(c, "Pixel Forge.app"), id: "com.example.pixelforge")
+        #expect(await inspector.missingCaskParts(withID, brew: brew).isEmpty)
+    }
+
+    @Test("Definitions: the first cask is read, an app is listed once, only .app names count")
+    func parsingDetails() throws {
+        let json = #"{"casks":[{"token":"a","artifacts":[{"app":["Tool.app"]},{"app":["Tool.app"]},{"app":["Helper"]}]},{"token":"b","artifacts":[{"app":["Other.app"]}]}]}"#
+        #expect(HomebrewClient.parseCaskContents(Data(json.utf8))?.appNames == ["Tool.app"])
+    }
+
+    @Test("Receipt patterns: empty ones are not asked for, up to 300 characters are")
+    func receiptPatternLimits() async throws {
+        let c = try await context("receipt-limits")
+        let client = TestEnvironment.restoreEnvironment(c.target).homebrew
+        #expect(await client.hasReceipt(matching: [""]) == nil)
+        #expect(await client.hasReceipt(matching: [String(repeating: "a", count: 300)]) == false)
+        #expect(await client.hasReceipt(matching: [String(repeating: "a", count: 301)]) == nil)
+    }
 }

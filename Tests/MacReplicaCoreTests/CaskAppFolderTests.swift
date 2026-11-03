@@ -93,6 +93,8 @@ struct CaskAppFolderTests {
     @Test("Only absolute, plain paths are passed as --appdir")
     func appFolderValidation() throws {
         try HomebrewClient.validateAppFolder("/Users/someone/Applications")
+        try HomebrewClient.validateAppFolder("/" + String(repeating: "a", count: 1023))
+        #expect(throws: HomebrewError.self) { try HomebrewClient.validateAppFolder("/" + String(repeating: "a", count: 1024)) }
         for bad in ["Applications", "-x", "/Users/a/../b", "/Users/a\nb", ""] {
             #expect(throws: HomebrewError.self) { try HomebrewClient.validateAppFolder(bad) }
         }
