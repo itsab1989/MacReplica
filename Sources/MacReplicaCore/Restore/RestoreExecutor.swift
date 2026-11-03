@@ -507,9 +507,24 @@ public final class RestoreExecutor: Sendable {
         }
         persist(&session)
 
+        // Casks recorded as already installed in an earlier run (before 1.1.12 only Homebrew's record was checked) are
+        // checked again when the restore continues; their definitions are read in one call.
+        let recordedCasks = plan.items.filter { $0.kind == .cask && session.results[$0.id]?.outcome == .alreadyPresent }
+        if let brew = context.brew, !recordedCasks.isEmpty {
+            inspector.caskContentsCache.store(await environment.homebrew.caskContents(brew, tokens: recordedCasks.map(\.identifier)))
+        }
+
         for (index, item) in plan.items.enumerated() {
             // Finished steps are not repeated; steps that wait for the user are checked again.
-            if let previous = session.results[item.id], !previous.outcome.isOpen { continue }
+            if let previous = session.results[item.id], !previous.outcome.isOpen {
+                // Except a cask recorded as already installed whose app or package is not on this Mac (tester,
+                // 2026-11-03: continuing a 1.1.11 restore with 1.1.12 kept those results and installed nothing).
+                guard item.kind == .cask, previous.outcome == .alreadyPresent, let brew = context.brew else { continue }
+                let missing = await inspector.missingCaskParts(item, brew: brew)
+                guard !missing.isEmpty else { continue }
+                log.warning("\(item.id): recorded as already installed, but \(missing.joined(separator: ", ")) is not on this Mac – checked again",
+                            component: .homebrew)
+            }
             if Task.isCancelled {
                 log.warning("Restore cancelled before \(item.id)", component: .restore)
                 break

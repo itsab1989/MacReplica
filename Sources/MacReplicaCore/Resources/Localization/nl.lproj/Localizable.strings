@@ -890,11 +890,13 @@
 "offer.homebrewCask" = "Download van de leverancier (%1$@) %2$@";
 "offer.website" = "Website van de leverancier (%1$@)";
 "offer.appStore" = "Mac App Store";
+"offer.appStoreSearch" = "Mac App Store: deze editie wordt niet meer aangeboden – zoeken naar ‘%1$@’";
 "offer.recommended" = "%1$@ (aanbevolen)";
 "guidedStep.finishInstaller" = "Het installatieprogramma van Apple is geopend. Rond de installatie daar af.";
 "guidedStep.installFromDiskImage" = "De download wordt in de Finder getoond. Open hem en sleep de app naar de map Apps; accepteer de licentie als daarom wordt gevraagd.";
 "guidedStep.installFromWebsite" = "Download en installeer de app via de website van de leverancier die MacReplica heeft geopend.";
 "guidedStep.installFromAppStore" = "De App Store-pagina is geopend. Klik op Download of de downloadknop, ingelogd met je Apple Account.";
+"guidedStep.searchAppStore" = "Deze editie van de app staat niet meer in de App Store, die daarom een zoekopdracht naar ‘%1$@’ toont. Installeer daar de huidige editie als je die wilt en klik op Gereed; herkent MacReplica haar niet als deze app, klik dan op Overslaan.";
 "guidedStep.runCommand" = "Voer dit uit in Terminal: %1$@";
 "downloadError.network" = "Download mislukt – controleer de verbinding";
 "downloadError.notTrusted" = "Niet geverifieerd – niet geïnstalleerd";

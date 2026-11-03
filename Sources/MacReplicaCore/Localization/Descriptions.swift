@@ -168,7 +168,7 @@ extension Localizer {
         case .vendorFeed: text = t("offer.vendorFeed", offer.channel.map(channelText) ?? channelText(.stable), version)
         case .homebrewCask: text = t("offer.homebrewCask", offer.host, version)
         case .vendorWebsite: text = t("offer.website", offer.host)
-        case .appStore: text = t("offer.appStore")
+        case .appStore: text = offer.appStoreSearchTerm.map { t("offer.appStoreSearch", $0) } ?? t("offer.appStore")
         case .ownInstaller: text = t("offer.ownInstaller", offer.localPath.map { ($0 as NSString).lastPathComponent } ?? "", version)
         }
         return offer.recommended ? t("offer.recommended", text) : text
@@ -180,6 +180,7 @@ extension Localizer {
         case .installFromDiskImage: return t("guidedStep.installFromDiskImage")
         case .installFromWebsite: return t("guidedStep.installFromWebsite")
         case .installFromAppStore: return t("guidedStep.installFromAppStore")
+        case .searchAppStore(let term): return t("guidedStep.searchAppStore", term)
         case .installYourself: return t("guidedStep.installYourself")
         case .runCommand(let command): return t("guidedStep.runCommand", command)
         case .finishAdditionalPackage(let name): return t("guidedStep.finishAdditionalPackage", name)

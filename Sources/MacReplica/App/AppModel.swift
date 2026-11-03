@@ -1058,6 +1058,12 @@ final class AppModel: ObservableObject {
         case .activity(_, let activity):
             progress.activity = activity
         case .finished(let item, let result, _, _):
+            // A step checked again when the restore continues replaces its earlier result instead of counting twice.
+            if let earlier = progress.finished.firstIndex(where: { $0.item.id == item.id }) {
+                let outcome = progress.finished[earlier].result.outcome
+                if outcome.isSuccessLike { progress.succeeded -= 1 } else if outcome.isFailure { progress.failed -= 1 } else { progress.skipped -= 1 }
+                progress.finished.remove(at: earlier)
+            }
             progress.finished.append((item, result))
             count(result.outcome, into: &progress)
             progress.estimator.record(itemID: item.id, duration: result.duration, didWork: result.outcome == .succeeded || result.outcome.isFailure)

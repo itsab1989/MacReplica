@@ -75,6 +75,8 @@ public struct DownloadOffer: Codable, Equatable, Hashable, Sendable, Identifiabl
     /// The folder the app was in on the old Mac when it belongs to a suite (e.g. `DisplayCAL`); a suite is installed
     /// into a folder of this name.
     public var suiteFolderName: String?
+    /// For an App Store offer whose app is no longer in the store: the name the App Store is searched for instead.
+    public var appStoreSearchTerm: String?
 
     public init(id: String, itemID: String, kind: Kind, url: String, version: String? = nil, channel: ReleaseChannel? = nil,
                 expectedLength: Int64? = nil, sha256: String? = nil, edSignature: String? = nil, publicEDKey: String? = nil,

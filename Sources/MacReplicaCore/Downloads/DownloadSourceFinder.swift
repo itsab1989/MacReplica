@@ -90,13 +90,57 @@ public struct DownloadSourceFinder: Sendable {
         self.architecture = architecture
     }
 
+    /// Whether the App Store still offers this ID: Apple's public lookup (`itunes.apple.com/lookup`), first for this
+    /// Mac's region, then without one. nil when it cannot be asked (offline, unexpected answer) – the link is kept.
+    func appStoreHas(id: Int) async -> Bool? {
+        guard id > 0 else { return nil }
+        let region = Locale.current.region?.identifier.lowercased().filter(\.isLetter) ?? ""
+        let queries = (region.count == 2 ? ["&country=\(region)"] : []) + [""]
+        for query in queries {
+            guard let url = URL(string: "https://itunes.apple.com/lookup?id=\(id)\(query)"),
+                  let (data, _) = try? await fetcher.fetch(url, maxBytes: 500_000),
+                  let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let count = root["resultCount"] as? Int else { return nil }
+            if count > 0 { return true }
+        }
+        return false
+    }
+
+    /// An App Store search for the app's name, with words split where a name without spaces runs them together
+    /// ("DailyWorkouts" → "Daily Workouts", so the search finds it).
+    public static func appStoreSearchURL(for name: String) -> (term: String, url: String)? {
+        var term = name.trimmingCharacters(in: .whitespaces)
+        // Only a name without spaces is split, and only after two lower-case letters ("iPrint", "DaVinci" stay).
+        if !term.contains(" ") {
+            var split = ""
+            var lowercaseRun = 0
+            for character in term {
+                if character.isUppercase, lowercaseRun >= 2 { split.append(" ") }
+                lowercaseRun = character.isLowercase ? lowercaseRun + 1 : 0
+                split.append(character)
+            }
+            term = split
+        }
+        guard !term.isEmpty, var components = URLComponents(string: "macappstore://apps.apple.com/search") else { return nil }
+        components.queryItems = [URLQueryItem(name: "term", value: term)]
+        return components.url.map { (term, $0.absoluteString) }
+    }
+
     public func offers(for app: AppRecord, itemID: String) async -> [DownloadOffer] {
         var offers: [DownloadOffer] = []
         if let feed = app.updateFeed { offers += await feedOffers(feed, app: app, itemID: itemID) }
         offers += caskOffers(app: app, itemID: itemID)
         if case .appStore(let id) = app.restoreMethod {
-            offers.append(DownloadOffer(id: "appstore:\(id)", itemID: itemID, kind: .appStore,
-                                        url: "macappstore://apps.apple.com/app/id\(id)", recommended: true))
+            if await appStoreHas(id: id) == false, let search = Self.appStoreSearchURL(for: app.name) {
+                // The edition of the old Mac is no longer offered (the App Store answers "App Not Available"); a search
+                // for the name finds the current one (tester, 2026-11-03: two of four IDs were gone).
+                var offer = DownloadOffer(id: "appstore-search:\(id)", itemID: itemID, kind: .appStore, url: search.url, recommended: true)
+                offer.appStoreSearchTerm = search.term
+                offers.append(offer)
+            } else {
+                offers.append(DownloadOffer(id: "appstore:\(id)", itemID: itemID, kind: .appStore,
+                                            url: "macappstore://apps.apple.com/app/id\(id)", recommended: true))
+            }
         }
         if let website = app.homepage ?? caskMatch(app)?.homepage, Self.isWebsite(website) {
             offers.append(DownloadOffer(id: "website", itemID: itemID, kind: .vendorWebsite, url: website))

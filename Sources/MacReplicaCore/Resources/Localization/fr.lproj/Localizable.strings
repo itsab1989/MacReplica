@@ -890,11 +890,13 @@
 "offer.homebrewCask" = "Téléchargement de l’éditeur (%1$@) %2$@";
 "offer.website" = "Site de l’éditeur (%1$@)";
 "offer.appStore" = "Mac App Store";
+"offer.appStoreSearch" = "Mac App Store : cette édition n’est plus proposée – rechercher « %1$@ »";
 "offer.recommended" = "%1$@ (recommandé)";
 "guidedStep.finishInstaller" = "Le programme d’installation d’Apple est ouvert. Terminez l’installation dans celui-ci.";
 "guidedStep.installFromDiskImage" = "Le téléchargement est affiché dans le Finder. Ouvrez-le et faites glisser l’app dans le dossier Applications, en acceptant la licence si demandé.";
 "guidedStep.installFromWebsite" = "Téléchargez et installez l’app depuis le site de l’éditeur que MacReplica a ouvert.";
 "guidedStep.installFromAppStore" = "La page de l’App Store est ouverte. Cliquez sur Obtenir ou sur le bouton de téléchargement, en étant connecté à votre compte Apple.";
+"guidedStep.searchAppStore" = "Cette édition de l’app n’est plus dans l’App Store, qui affiche donc une recherche de « %1$@ ». Installez-y l’édition actuelle si vous le souhaitez et cliquez sur Terminé ; si MacReplica ne la reconnaît pas comme cette app, cliquez sur Ignorer.";
 "guidedStep.runCommand" = "Exécutez ceci dans le Terminal : %1$@";
 "downloadError.network" = "Échec du téléchargement – vérifiez la connexion";
 "downloadError.notTrusted" = "Non vérifié – non installé";
