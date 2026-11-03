@@ -12,6 +12,7 @@ public enum ErrorClassifier {
                               "user canceled", "user cancelled", "(-128)", "sudo: a terminal is required", "authorization failed"]),
         (.appAlreadyExists, ["it seems there is already an app at", "already an app at", "there is already a binary at"]),
         (.incompatible, ["depends on hardware architecture", "requires macos", "this software does not run on macos",
+                         "does not run on macos versions older than",
                          "is not supported on", "unsupported architecture", "requires rosetta", "bad cpu type"]),
         (.network, ["could not resolve host", "failed to connect", "connection timed out", "network is unreachable",
                     "curl: (6)", "curl: (7)", "curl: (28)", "curl: (35)", "curl: (56)", "ssl_error", "timed out while",

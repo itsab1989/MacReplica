@@ -13,6 +13,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   `brew install` does nothing. MacReplica now checks that each cask's apps and installer packages are really on the
   Mac, reinstalls the ones that are missing with Homebrew and checks them again, instead of reporting them as
   already installed (tester report).
+- A cask that needs a newer macOS (Homebrew: “does not run on macOS versions older than …”) is reported as not
+  compatible with this Mac instead of as an unknown error.
 
 ## [1.1.11] - 2026-10-20
 

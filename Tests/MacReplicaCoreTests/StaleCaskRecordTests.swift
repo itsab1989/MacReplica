@@ -159,4 +159,17 @@ struct StaleCaskRecordTests {
         #expect(await client.hasReceipt(matching: []) == nil, "nothing to ask: cannot tell")
         #expect(c.fresh.calls().contains("pkgutil --pkgs=com.microsoft.dotnet.*10.0*arm64"))
     }
+
+    @Test("A cask that needs a newer macOS is reported as not compatible, not as an unknown error")
+    func newerMacOSIsIncompatible() {
+        // The tester's output for rawtherapee on macOS 14.8.9 (Homebrew 6+, 2026-11-03), tap-trust notice included.
+        let output = """
+        casks and commands from the listed taps. Trust whole taps with:
+        brew trust borgbackup/tap
+        Error: rawtherapee: rawtherapee: This cask does not run on macOS versions older than Tahoe.
+        Error: rawtherapee: rawtherapee: This cask does not run on macOS versions older than Tahoe.
+        This is a Tier 3 configuration:
+        """
+        #expect(ErrorClassifier.classify(output, exitCode: 1) == .incompatible)
+    }
 }
