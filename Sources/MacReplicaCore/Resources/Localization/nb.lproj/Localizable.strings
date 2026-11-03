@@ -136,6 +136,11 @@
 
 "taps.title" = "Ekstra Homebrew-kilder";
 "taps.message" = "Noen pakker kommer fra kilder utenfor den offisielle Homebrew-samlingen (kalt «taps»). Tillat bare kilder du stoler på. Pakker fra kilder du ikke tillater, hoppes over.";
+"caskFolder.title" = "Hvor Homebrew installerer apper";
+"caskFolder.allUsers" = "For alle brukere (Programmer)";
+"caskFolder.currentUser" = "Bare for meg (min egen Programmer-mappe)";
+"caskFolder.message" = "Gjelder apper som installeres med Homebrew i denne gjenopprettingen. Installasjonspakker bestemmer selv hvor de havner, og apper som allerede er på denne Macen, blir der de er.";
+"caskFolder.help" = "Homebrew legger vanligvis appene sine i Programmer-mappen som alle brukere deler. «Bare for meg» legger dem i stedet i Programmer-mappen i hjemmemappen din (Homebrews --appdir); da vises de bare for deg i Launchpad og Spotlight. Noen apper, for eksempel med systemutvidelser eller egen oppdaterer, forventer den delte mappen; hvis en ikke fungerer fra mappen din, installer den på nytt for alle brukere.";
 
 "items.title" = "Velg enkeltelementer";
 "items.search" = "Søk";
@@ -2213,6 +2218,7 @@
 "failure.wrongProcessor.title" = "Laget for en annen prosessor";
 "failure.wrongProcessor.explanation" = "Appen i Programmer har ingen kode for denne Macens prosessor (for eksempel en app bare for Apple silicon på en Intel-Mac, slik en utdatert Homebrew kan installere), så den kan ikke åpnes her. Hvis Homebrew installerte den, installerte MacReplica den på nytt én gang; ellers blir den som den er. Flytt appen til papirkurven og velg Prøv mislykkede igjen – eller installer en versjon for denne Macen fra utvikleren.";
 "note.reinstalledForThisProcessor" = "Homebrews kopi hadde bare kode for %1$@ og kunne ikke kjøre på denne Macen, så MacReplica installerte den på nytt med Homebrew og kontrollerte den igjen.";
+"note.reinstalledMissingParts" = "Homebrew oppførte dette som installert, men %1$@ fantes ikke på denne Macen (Time Machine kan hente tilbake Homebrews oppføringer uten appene), så MacReplica installerte det på nytt med Homebrew og kontrollerte det igjen.";
 "skip.launchpadAccessDenied" = "Ikke ordnet: macOS lar ikke MacReplica lese Launchpads database. Gi MacReplica full disktilgang, avslutt MacReplica og åpne den igjen (først da tar macOS i bruk tillatelsen), og velg deretter Fortsett – eller Hopp over";
 "skip.launchpadOtherUser" = "Ikke ordnet: MacReplica kjører som en annen bruker enn den som er logget på (for eksempel startet med sudo i Terminal), så den når ikke Launchpad-en din. Avslutt MacReplica, åpne den fra Finder eller Launchpad, og velg deretter Fortsett";
 "restore.selectAll" = "Velg alle";

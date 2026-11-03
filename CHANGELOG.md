@@ -7,6 +7,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Where Homebrew installs apps.** The restore screen lets you choose: for all users (the shared Applications folder,
+  as before) or only for you (`~/Applications`, Homebrew's `--appdir`). Installer packages decide their own place;
+  apps already on the Mac are not installed a second time (tester request).
+
+### Fixed
+- **Apps Homebrew only remembers are installed again.** When Time Machine brings back Homebrew's records but not
+  the apps (for example after restoring everything except apps), Homebrew still lists the casks as installed and
+  `brew install` does nothing. MacReplica now checks that each cask's apps and installer packages are really on the
+  Mac, reinstalls the ones that are missing with Homebrew and checks them again, instead of reporting them as
+  already installed (tester report).
+- A cask that needs a newer macOS (Homebrew: “does not run on macOS versions older than …”) is reported as not
+  compatible with this Mac instead of as an unknown error.
+
 ## [1.1.11] - 2026-10-20
 
 ### Fixed

@@ -174,6 +174,13 @@ public enum ConflictResolution: String, Codable, Sendable, CaseIterable {
     case keepBoth
 }
 
+/// Where Homebrew puts the apps of casks: the shared Applications folder (Homebrew's default) or the user's own
+/// `~/Applications` (`brew install --cask --appdir`). Installer packages decide their own place and are not affected.
+public enum CaskAppFolder: String, Codable, Sendable, CaseIterable {
+    case allUsers
+    case currentUser
+}
+
 /// Everything the user chose on the restore screen.
 public struct RestoreSelection: Codable, Equatable, Sendable {
     public var components: Set<RestoreComponent>
@@ -190,6 +197,8 @@ public struct RestoreSelection: Codable, Equatable, Sendable {
     /// Where an item should come from when there are several sources: a download offer ID for
     /// guided installs, or `stable` for a Homebrew formula that was a development (HEAD) build.
     public var sourceChoices: [String: String]
+    /// Where Homebrew installs the apps of casks.
+    public var caskAppFolder: CaskAppFolder = .allUsers
 
     public init(components: Set<RestoreComponent> = RestoreComponent.defaultSelection, excludedItemIDs: Set<String> = [],
                 enabledTaps: Set<String> = [], matchDecisions: [String: String] = [:],
@@ -205,7 +214,7 @@ public struct RestoreSelection: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case components, excludedItemIDs, enabledTaps, matchDecisions, conflictResolution, conflictOverrides, sourceChoices
+        case components, excludedItemIDs, enabledTaps, matchDecisions, conflictResolution, conflictOverrides, sourceChoices, caskAppFolder
     }
 
     // Sessions saved by earlier versions lack newer fields; they are read with defaults.
@@ -218,6 +227,7 @@ public struct RestoreSelection: Codable, Equatable, Sendable {
         conflictResolution = try c.decodeIfPresent(ConflictResolution.self, forKey: .conflictResolution) ?? .keepExisting
         conflictOverrides = try c.decodeIfPresent([String: ConflictResolution].self, forKey: .conflictOverrides) ?? [:]
         sourceChoices = try c.decodeIfPresent([String: String].self, forKey: .sourceChoices) ?? [:]
+        caskAppFolder = (try? c.decodeIfPresent(CaskAppFolder.self, forKey: .caskAppFolder)) ?? .allUsers
     }
 
     /// True if a Homebrew development (HEAD) build should be installed as such.
@@ -392,6 +402,9 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case homebrewUpdated(version: String)
     /// Homebrew's copy had code only for another processor (`found`) and was reinstalled for this Mac.
     case reinstalledForThisProcessor(found: String)
+    /// Homebrew listed the cask as installed, but these of its apps or packages were not on this Mac (`parts`), so it
+    /// was reinstalled with Homebrew and checked again.
+    case reinstalledMissingParts(parts: String)
     /// Launchpad: apps on this Mac that are not in the arrangement saved in the backup (left out of a backup made
     /// before 1.1.7, or installed later); macOS puts them after the arranged pages. `names`: at most a few.
     case launchpadAppsNotInBackup(count: Int, names: [String])

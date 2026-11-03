@@ -73,6 +73,8 @@
     {
       "file": "Restore/RestoreExecutor.swift",
       "tests": [
+        "StaleCaskRecordTests",
+        "CaskAppFolderTests",
         "RestoreExecutionTests",
         "DryRunTests",
         "ResumeTests",
@@ -453,7 +455,9 @@
         "InventoryTests",
         "HomebrewAvailabilityTests",
         "HomebrewRemovedCaskTests",
-        "TesterFeedback110Tests"
+        "TesterFeedback110Tests",
+        "StaleCaskRecordTests",
+        "CaskAppFolderTests"
       ],
       "area": "Homebrew detection"
     },

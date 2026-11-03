@@ -180,6 +180,28 @@ struct Inspector: Sendable {
         ApplicationLocator.find(names: item.appBundleNames, bundleIdentifier: item.bundleIdentifier, in: layout.applicationFolders)
     }
 
+    /// What a cask Homebrew lists as installed should have put on this Mac but is not there: Time Machine can bring
+    /// back Homebrew's records (`/opt/homebrew/Caskroom`) without the apps or the packages' receipts, and Homebrew then
+    /// answers "already installed" and installs nothing (tester, 2026-11-03; reproduced with Homebrew 7.0.12).
+    /// An app counts as there at Homebrew's destination or wherever MacReplica finds apps, a package when one of its
+    /// receipts is installed. Empty: nothing missing, or nothing that can be told.
+    func missingCaskParts(_ item: RestoreItem, brew: HomebrewInstallation) async -> [String] {
+        let contents = await environment.homebrew.caskContents(brew, token: item.identifier)
+        let appNames = contents.flatMap { $0.appNames.isEmpty ? nil : $0.appNames } ?? item.appBundleNames
+        var missing = appNames.filter { name in
+            let atTarget = contents?.appTargets.contains { ($0 as NSString).lastPathComponent == name
+                && FileManager.default.fileExists(atPath: $0) } ?? false
+            return !atTarget && ApplicationLocator.find(names: [name], bundleIdentifier: nil, in: layout.applicationFolders) == nil
+        }
+        // Renamed since: the app is still found by its identifier.
+        if !missing.isEmpty, missing.count == appNames.count, item.bundleIdentifier != nil, installedApp(for: item) != nil { missing = [] }
+        if let contents, !contents.packages.isEmpty, !contents.receipts.isEmpty,
+           await environment.homebrew.hasReceipt(matching: contents.receipts) == false {
+            missing += contents.packages
+        }
+        return missing
+    }
+
     /// The processors the app's main executable has code for; empty when it cannot be read.
     func executableArchitectures(ofApp url: URL) -> [CPUArchitecture] {
         let info = NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
@@ -302,7 +324,8 @@ struct Inspector: Sendable {
         case .cask:
             if let reason = architectureSkip(item) { return .willSkip(reason) }
             if let brew, let version = try? await environment.homebrew.installedCaskVersion(brew, token: item.identifier) {
-                return .alreadyPresent(version: version)
+                // Homebrew's record alone is not enough: what it installed must be on this Mac.
+                return await missingCaskParts(item, brew: brew).isEmpty ? .alreadyPresent(version: version) : .willInstall
             }
             if let app = installedApp(for: item) { return .alreadyPresent(version: installedVersion(ofApp: app)) }
             return brew == nil ? .dependsOnEarlierStep : .willInstall
@@ -450,6 +473,11 @@ public final class RestoreExecutor: Sendable {
             if let broker = context.askpassBroker { Task { await broker.forget() } }
         }
         context.brew = await environment.homebrew.locate().installation
+        if session.selection.caskAppFolder == .currentUser {
+            let folder = layout.homeDirectory.appendingPathComponent("Applications")
+            context.caskAppdir = folder.path
+            log.info("Apps from Homebrew casks go to \(layout.displayPath(folder)) (installer packages decide their own place)", component: .homebrew)
+        }
         prepareToolchains(plan: plan, context: &context)
         let total = plan.items.count
         log.info("Restore session \(session.id): \(total) steps, \(session.finishedItemIDs.count) already finished", component: .restore)
@@ -543,6 +571,8 @@ public final class RestoreExecutor: Sendable {
         var privilegedBatchDone = false
         /// `brew update` runs at most once per restore, and only when Homebrew said it is too old.
         var homebrewUpdateAttempted = false
+        /// `--appdir` for casks when the user chose their own Applications folder; nil = Homebrew's default.
+        var caskAppdir: String?
         /// The channel the askpass helper gets the administrator password from during this run.
         var askpassServer: AskpassServer?
         var askpassBroker: AdminPasswordBroker?
@@ -724,7 +754,8 @@ public final class RestoreExecutor: Sendable {
     private func brewInstall(_ brew: HomebrewInstallation, _ package: HomebrewPackage, item: RestoreItem,
                              context: inout RunContext) async throws -> (CommandResult, [ResultNote]) {
         let extra = context.askpassEnvironment(environment.askpassEnvironment)
-        let result = try await environment.homebrew.install(brew, package: package, askpass: environment.askpassPath, extraEnvironment: extra)
+        let appdir = context.caskAppdir
+        let result = try await environment.homebrew.install(brew, package: package, askpass: environment.askpassPath, extraEnvironment: extra, appdir: appdir)
         guard !result.succeeded, HomebrewClient.isOutdatedHomebrewOutput(result.combinedOutput), !context.homebrewUpdateAttempted else {
             return (result, [])
         }
@@ -738,7 +769,7 @@ public final class RestoreExecutor: Sendable {
         let updated = await environment.homebrew.locate().installation ?? brew
         context.brew = updated
         log.info("Homebrew updated from \(brew.version) to \(updated.version); trying \(item.id) again", component: .homebrew)
-        let again = try await environment.homebrew.install(updated, package: package, askpass: environment.askpassPath, extraEnvironment: extra)
+        let again = try await environment.homebrew.install(updated, package: package, askpass: environment.askpassPath, extraEnvironment: extra, appdir: appdir)
         return (again, [.homebrewUpdated(version: updated.version)])
     }
 
@@ -770,6 +801,10 @@ public final class RestoreExecutor: Sendable {
             if let app = inspector.installedApp(for: item), !inspector.appRunsHere(app) {
                 return try await reinstallForThisMac(item, app: app, brew: brew, inspector: inspector, context: &context, onEvent: onEvent)
             }
+            let missing = await inspector.missingCaskParts(item, brew: brew)
+            guard missing.isEmpty else {
+                return try await reinstallMissing(item, missing: missing, brew: brew, inspector: inspector, context: &context, onEvent: onEvent)
+            }
             return ItemResult(itemID: item.id, outcome: .alreadyPresent, installedVersion: version)
         }
         if let app = inspector.installedApp(for: item) {
@@ -793,8 +828,34 @@ public final class RestoreExecutor: Sendable {
             }
             installedVersion = inspector.installedVersion(ofApp: app) ?? version
         }
+        let missing = await inspector.missingCaskParts(item, brew: context.brew ?? brew)
+        guard missing.isEmpty else {
+            return failed(item, .verificationFailed, "not on this Mac after installation: \(missing.joined(separator: ", "))")
+        }
         return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: installedVersion,
                           notes: updateNotes + versionNotes(original: item.originalVersion, installed: installedVersion) + inspector.notes(for: item))
+    }
+
+    /// Homebrew lists the cask as installed, but its app or package is not on this Mac (Homebrew's records came back
+    /// without them). `brew install` would only answer "already installed" and `--force` changes nothing (both checked
+    /// with Homebrew 7.0.12, 2026-11-03), so the cask is reinstalled; the result counts only if everything is there.
+    private func reinstallMissing(_ item: RestoreItem, missing: [String], brew: HomebrewInstallation, inspector: Inspector,
+                                  context: inout RunContext, onEvent: @escaping @Sendable (RestoreEvent) -> Void) async throws -> ItemResult {
+        let parts = missing.joined(separator: ", ")
+        log.warning("\(item.id): Homebrew lists it as installed, but \(parts) is not on this Mac – reinstalling with Homebrew", component: .homebrew)
+        onEvent(.activity(itemID: item.id, .installing))
+        let (result, updateNotes) = try await brewInstall(brew, .caskReinstall(item.identifier), item: item, context: &context)
+        guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
+        onEvent(.activity(itemID: item.id, .verifying))
+        let current = context.brew ?? brew
+        let still = await inspector.missingCaskParts(item, brew: current)
+        guard still.isEmpty else {
+            return failed(item, .verificationFailed, "still not on this Mac after brew reinstall: \(still.joined(separator: ", "))")
+        }
+        let version = try await environment.homebrew.installedCaskVersion(current, token: item.identifier)
+        let installedVersion = inspector.installedApp(for: item).flatMap(inspector.installedVersion(ofApp:)) ?? version
+        return ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: installedVersion,
+                          notes: updateNotes + [.reinstalledMissingParts(parts: parts)] + inspector.notes(for: item))
     }
 
     /// Homebrew lists the cask as installed, but its app has no code for this Mac's processor (an outdated Homebrew
@@ -807,7 +868,8 @@ public final class RestoreExecutor: Sendable {
                     + "this Mac is \(environment.targetArchitecture.rawValue) – reinstalling with Homebrew", component: .homebrew)
         onEvent(.activity(itemID: item.id, .installing))
         let result = try await environment.homebrew.install(context.brew ?? brew, package: .caskReinstall(item.identifier), askpass: environment.askpassPath,
-                                                           extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment))
+                                                           extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment),
+                                                           appdir: context.caskAppdir)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let reinstalled = inspector.installedApp(for: item), inspector.appRunsHere(reinstalled) else {

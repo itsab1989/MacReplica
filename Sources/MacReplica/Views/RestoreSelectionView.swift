@@ -69,6 +69,7 @@ struct RestoreSelectionView: View {
                     }
 
                     TapSection()
+                    CaskAppFolderSection()
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 16)
@@ -185,6 +186,31 @@ struct ComponentToggle: View {
         .toggleStyle(.checkbox)
         .disabled(count == 0)
         .accessibilityIdentifier("component.\(component.rawValue)")
+    }
+}
+
+/// Where Homebrew puts the apps of casks: the shared Applications folder or the user's own.
+struct CaskAppFolderSection: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        let l = model.l
+        if model.selection.components.contains(.brewCasks) || model.selection.components.contains(.applications) {
+            VStack(alignment: .leading, spacing: 6) {
+                LabelWithHelp(label: l.t("caskFolder.title"), help: l.t("caskFolder.help"), id: "help.caskFolder", font: .headline)
+                Picker("", selection: $model.selection.caskAppFolder) {
+                    Text(l.t("caskFolder.allUsers")).tag(CaskAppFolder.allUsers)
+                    Text(l.t("caskFolder.currentUser")).tag(CaskAppFolder.currentUser)
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+                .accessibilityIdentifier("caskFolder")
+                Text(l.t("caskFolder.message"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
 

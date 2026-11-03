@@ -136,6 +136,11 @@
 
 "taps.title" = "Extra Homebrew-bronnen";
 "taps.message" = "Sommige pakketten komen uit bronnen buiten de officiële Homebrew-collectie (zogeheten ‘taps’). Sta alleen bronnen toe die je vertrouwt. Pakketten uit bronnen die je niet toestaat, worden overgeslagen.";
+"caskFolder.title" = "Waar Homebrew apps installeert";
+"caskFolder.allUsers" = "Voor alle gebruikers (Apps)";
+"caskFolder.currentUser" = "Alleen voor mij (mijn eigen Apps-map)";
+"caskFolder.message" = "Geldt voor apps die bij dit herstel met Homebrew worden geïnstalleerd. Installatiepakketten bepalen zelf hun plaats, en apps die al op deze Mac staan, blijven waar ze zijn.";
+"caskFolder.help" = "Homebrew zet zijn apps normaal in de Apps-map die alle gebruikers delen. ‘Alleen voor mij’ zet ze in plaats daarvan in de Apps-map in je thuismap (--appdir van Homebrew); ze verschijnen dan alleen voor jou in Launchpad en Spotlight. Sommige apps, bijvoorbeeld met systeemextensies of een eigen updater, verwachten de gedeelde map; werkt er een niet vanuit je eigen map, installeer hem dan opnieuw voor alle gebruikers.";
 
 "items.title" = "Kies afzonderlijke onderdelen";
 "items.search" = "Zoek";
@@ -2213,6 +2218,7 @@
 "failure.wrongProcessor.title" = "Gemaakt voor een andere processor";
 "failure.wrongProcessor.explanation" = "De app in Apps bevat geen code voor de processor van deze Mac (bijvoorbeeld een app alleen voor Apple silicon op een Intel-Mac, zoals een verouderde Homebrew kan installeren) en opent hier niet. Heeft Homebrew haar geïnstalleerd, dan heeft MacReplica haar één keer opnieuw geïnstalleerd; anders blijft ze zoals ze is. Zet de app in de prullenmand en kies Probeer mislukte onderdelen opnieuw – of installeer een versie voor deze Mac van de ontwikkelaar.";
 "note.reinstalledForThisProcessor" = "De kopie van Homebrew bevatte alleen code voor %1$@ en kon niet draaien op deze Mac, dus MacReplica heeft haar opnieuw geïnstalleerd met Homebrew en opnieuw gecontroleerd.";
+"note.reinstalledMissingParts" = "Homebrew gaf dit aan als geïnstalleerd, maar %1$@ stond niet op deze Mac (Time Machine kan de gegevens van Homebrew terugzetten zonder de apps), dus MacReplica heeft het opnieuw geïnstalleerd met Homebrew en opnieuw gecontroleerd.";
 "skip.launchpadAccessDenied" = "Niet ingedeeld: macOS laat MacReplica de database van Launchpad niet lezen. Geef MacReplica volledige schijftoegang, stop MacReplica en open het opnieuw (pas dan past macOS de toestemming toe) en kies dan Hervat – of Overslaan";
 "skip.launchpadOtherUser" = "Niet ingedeeld: MacReplica draait als een andere gebruiker dan de ingelogde (bijvoorbeeld gestart met sudo in Terminal) en bereikt je Launchpad daarom niet. Stop MacReplica, open het vanuit de Finder of Launchpad en kies dan Hervat";
 "restore.selectAll" = "Selecteer alles";

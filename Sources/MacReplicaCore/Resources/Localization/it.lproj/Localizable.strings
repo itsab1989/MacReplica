@@ -136,6 +136,11 @@
 
 "taps.title" = "Sorgenti Homebrew aggiuntive";
 "taps.message" = "Alcuni pacchetti provengono da sorgenti esterne alla raccolta ufficiale di Homebrew (chiamate «tap»). Consenti solo sorgenti di cui ti fidi. I pacchetti da sorgenti non consentite vengono saltati.";
+"caskFolder.title" = "Dove Homebrew installa le app";
+"caskFolder.allUsers" = "Per tutti gli utenti (Applicazioni)";
+"caskFolder.currentUser" = "Solo per me (la mia cartella Applicazioni)";
+"caskFolder.message" = "Vale per le app installate con Homebrew in questo ripristino. I pacchetti di installazione decidono da soli la loro posizione, e le app già presenti su questo Mac restano dove sono.";
+"caskFolder.help" = "Homebrew di solito mette le sue app nella cartella Applicazioni condivisa da tutti gli utenti. «Solo per me» le mette invece nella cartella Applicazioni della tua cartella Inizio (--appdir di Homebrew); così appaiono solo per te in Launchpad e Spotlight. Alcune app, per esempio con estensioni di sistema o un proprio programma di aggiornamento, si aspettano la cartella condivisa; se una non funziona dalla tua cartella, reinstallala per tutti gli utenti.";
 
 "items.title" = "Scegli singoli elementi";
 "items.search" = "Cerca";
@@ -2213,6 +2218,7 @@
 "failure.wrongProcessor.title" = "Creato per un altro processore";
 "failure.wrongProcessor.explanation" = "L’app in Applicazioni non contiene codice per il processore di questo Mac (per esempio un’app solo per Apple silicon su un Mac Intel, come può installare un Homebrew non aggiornato) e qui non si apre. Se l’ha installata Homebrew, MacReplica l’ha reinstallata una volta; altrimenti resta com’è. Sposta l’app nel Cestino, poi scegli Riprova elementi non riusciti – oppure installa una versione per questo Mac dallo sviluppatore.";
 "note.reinstalledForThisProcessor" = "La copia di Homebrew conteneva solo codice per %1$@ e non poteva funzionare su questo Mac, quindi MacReplica l’ha reinstallata con Homebrew e l’ha controllata di nuovo.";
+"note.reinstalledMissingParts" = "Homebrew lo indicava come installato, ma %1$@ non era su questo Mac (Time Machine può ripristinare i dati di Homebrew senza le app), quindi MacReplica l’ha reinstallato con Homebrew e l’ha controllato di nuovo.";
 "skip.launchpadAccessDenied" = "Non disposto: macOS non permette a MacReplica di leggere il database di Launchpad. Concedi a MacReplica l’accesso completo al disco, esci da MacReplica e riaprilo (solo allora macOS applica il permesso), poi scegli Riprendi – oppure Salta";
 "skip.launchpadOtherUser" = "Non disposto: MacReplica funziona come un utente diverso da quello che ha effettuato l’accesso (per esempio avviato con sudo nel Terminale), quindi non raggiunge il tuo Launchpad. Esci da MacReplica, aprilo dal Finder o da Launchpad, poi scegli Riprendi";
 "restore.selectAll" = "Seleziona tutto";
