@@ -211,6 +211,8 @@
 "progress.failed" = "Fallidos: %1$d";
 "progress.skipped" = "Omitidos: %1$d";
 "progress.recent" = "Terminados";
+"progress.notFinished" = "Sin terminar (%1$d): fallidos, omitidos o en espera";
+"progress.finishedCount" = "Terminados (%1$d)";
 "progress.details" = "Detalles";
 "restore.preparing" = "Comprobando este Mac antes de la restauración: %1$d de %2$d …";
 "progress.finishing" = "Finalizando…";

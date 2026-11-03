@@ -467,6 +467,21 @@
       "area": "Homebrew detection"
     },
     {
+      "file": "Restore/ProgressEstimator.swift",
+      "tests": [
+        "RestoreProgressStateTests",
+        "FailureModeTests"
+      ],
+      "area": "Restore progress screen"
+    },
+    {
+      "file": "Restore/RestoreProgressState.swift",
+      "tests": [
+        "RestoreProgressStateTests"
+      ],
+      "area": "Restore progress screen"
+    },
+    {
       "file": "Restore/RestoreStartGate.swift",
       "tests": [
         "RestoreStartAndProgressTests"

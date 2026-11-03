@@ -132,7 +132,7 @@ struct RestoreProgressView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Card {
                     HStack(alignment: .firstTextBaseline) {
-                        Text(l.t("progress.position", p.position, p.total))
+                        Text(l.t("progress.position", p.done, p.total))
                             .font(.title3.monospacedDigit().weight(.semibold))
                             .accessibilityIdentifier("progress.position")
                         Spacer()
@@ -178,14 +178,16 @@ struct RestoreProgressView: View {
                         ScrollViewReader { proxy in
                             ScrollView {
                                 LazyVStack(alignment: .leading, spacing: 1) {
-                                    ForEach(Array(p.output.enumerated()), id: \.offset) { index, line in
-                                        Text(line).font(.caption.monospaced()).textSelection(.enabled)
-                                            .frame(maxWidth: .infinity, alignment: .leading).id(index)
+                                    ForEach(p.output, id: \.id) { entry in
+                                        Text(entry.line).font(.caption.monospaced()).textSelection(.enabled)
+                                            .fontWeight(entry.line.hasPrefix("— ") ? .semibold : .regular)
+                                            .frame(maxWidth: .infinity, alignment: .leading).id(entry.id)
                                     }
                                 }
                             }
                             .frame(height: 140)
-                            .onChange(of: p.output.count) { count in proxy.scrollTo(count - 1, anchor: .bottom) }
+                            // The running number keeps growing when the list is full (300 lines), so it keeps following.
+                            .onChange(of: p.outputCount) { count in proxy.scrollTo(count, anchor: .bottom) }
                         }
                     } label: {
                         Text(l.t("progress.details")).font(.headline)
@@ -193,27 +195,16 @@ struct RestoreProgressView: View {
                     .accessibilityIdentifier("progress.details")
                 }
 
-                if !p.finished.isEmpty {
-                    Text(l.t("progress.recent")).font(.headline)
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 2) {
-                                ForEach(Array(p.finished.enumerated()), id: \.offset) { index, entry in
-                                    HStack(spacing: 8) {
-                                        OutcomeIcon(outcome: entry.result.outcome)
-                                        Text(l.itemTitle(entry.item)).lineLimit(1)
-                                        Spacer()
-                                        Text(l.outcomeText(entry.result.outcome))
-                                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                                    }
-                                    .id(index)
-                                }
-                            }
-                        }
-                        .onChange(of: p.finished.count) { count in
-                            proxy.scrollTo(count - 1, anchor: .bottom)
-                        }
-                    }
+                let open = p.finished.filter { !$0.result.outcome.isSuccessLike }
+                let completed = p.finished.filter { $0.result.outcome.isSuccessLike }
+                if !open.isEmpty {
+                    // Failed, skipped or waiting steps apart from the finished ones (tester, 2026-11-04).
+                    Text(l.t("progress.notFinished", open.count)).font(.headline)
+                    ResultList(entries: open, height: 110).accessibilityIdentifier("progress.notFinished")
+                }
+                if !completed.isEmpty {
+                    Text(l.t("progress.finishedCount", completed.count)).font(.headline)
+                    ResultList(entries: completed, height: nil).accessibilityIdentifier("progress.finished")
                 }
             }
             .padding(.horizontal, 28)
@@ -230,6 +221,37 @@ struct RestoreProgressView: View {
             Button(l.t("progress.continue"), role: .cancel) {}
         } message: {
             Text(l.t("progress.stopConfirm.message"))
+        }
+    }
+}
+
+/// Results of finished steps, newest last, following the newest.
+struct ResultList: View {
+    @EnvironmentObject var model: AppModel
+    var entries: [(item: RestoreItem, result: ItemResult)]
+    var height: CGFloat?
+
+    var body: some View {
+        let l = model.l
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(entries, id: \.item.id) { entry in
+                        HStack(spacing: 8) {
+                            OutcomeIcon(outcome: entry.result.outcome)
+                            Text(l.itemTitle(entry.item)).lineLimit(1)
+                            Spacer()
+                            Text(l.outcomeText(entry.result.outcome))
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        .id(entry.item.id)
+                    }
+                }
+            }
+            .frame(maxHeight: height ?? .infinity)
+            .onChange(of: entries.count) { _ in
+                if let last = entries.last { proxy.scrollTo(last.item.id, anchor: .bottom) }
+            }
         }
     }
 }
