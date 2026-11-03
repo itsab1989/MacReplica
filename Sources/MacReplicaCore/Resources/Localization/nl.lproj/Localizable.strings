@@ -940,6 +940,16 @@
 "guided.state.installing" = "Installeren …";
 "guided.state.waiting" = "Wacht op jou";
 "guided.pending.hint" = "MacReplica controleert of de app is geïnstalleerd als je op Klaar klikt. Later laat hem open voor een andere keer; Annuleren stopt de overige installaties.";
+"guided.pending.notFound" = "MacReplica heeft %1$@ niet gevonden in Apps of in je eigen Apps-map. Heb je hem ergens anders of onder een andere naam geïnstalleerd, kies hem dan met Kies de app…";
+"guided.choose" = "Kies de app…";
+"guided.choose.prompt" = "Kies";
+"guided.choose.message" = "Kies de geïnstalleerde %1$@.";
+"guided.choose.different.title" = "‘%1$@’ is niet de app uit de reservekopie";
+"guided.choose.different.message" = "Naam en identificatie verschillen van %1$@ in de reservekopie (misschien een nieuwere editie of een andere app). Toch als geïnstalleerd tellen?";
+"guided.choose.different.use" = "Tel als geïnstalleerd";
+"guided.searchWeb" = "Zoek op het web";
+"note.chosenByUser" = "Je hebt %1$@ als geïnstalleerde app gekozen; MacReplica heeft gecontroleerd dat het de app uit de reservekopie is.";
+"note.chosenByUser.confirmed" = "Je hebt %1$@ als geïnstalleerde app gekozen en bevestigd, hoewel naam en identificatie verschillen van die in de reservekopie.";
 "guided.pending.done" = "Klaar";
 "guided.pending.cancel" = "Installatie annuleren";
 "items.source" = "Installeren";

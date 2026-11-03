@@ -7,6 +7,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Done in the guided installation explains itself.** When MacReplica does not find an app after Done, it now says
+  so and where it looked, instead of showing the same window again without a word. **Choose the App…** points
+  MacReplica at the installed app (installed elsewhere or under another name); an app with another identifier counts
+  only after you confirm it, and the result says so (tester report).
+
+### Added
+- **Search the Web** for apps MacReplica knows no official download for, so the vendor's page is one click away
+  (tester request).
+
 ## [1.1.13] - 2026-11-04
 
 ### Fixed

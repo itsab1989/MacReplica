@@ -216,6 +216,7 @@ extension Localizer {
         case .homebrewUpdated(let version): return t("note.homebrewUpdated", version)
         case .reinstalledForThisProcessor(let found): return t("note.reinstalledForThisProcessor", found)
         case .reinstalledMissingParts(let parts): return t("note.reinstalledMissingParts", parts)
+        case .chosenByUser(let app, let confirmed): return t(confirmed ? "note.chosenByUser.confirmed" : "note.chosenByUser", app)
         case .launchpadAppsNotInBackup(let count, let names):
             return t("note.launchpadAppsNotInBackup", count, names.joined(separator: ", ") + (count > names.count ? ", …" : ""))
         case .existingFileMovedAside(let path): return t("note.movedAside", path)

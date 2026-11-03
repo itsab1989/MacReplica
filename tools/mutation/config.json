@@ -357,6 +357,7 @@
     {
       "file": "Downloads/GuidedInstallation.swift",
       "tests": [
+        "GuidedChooseAppTests",
         "AppStoreAvailabilityTests",
         "GuidedInstallationTests",
         "DownloadEdgeTests",

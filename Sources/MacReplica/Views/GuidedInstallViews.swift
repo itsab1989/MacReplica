@@ -297,7 +297,19 @@ struct PendingStepSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(title).font(.title3.weight(.semibold))
             Text(l.guidedStepText(pending.step)).fixedSize(horizontal: false, vertical: true)
+            if pending.notFound {
+                Label(l.t("guided.pending.notFound", title), systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("pending.notFound")
+            }
             Text(l.t("guided.pending.hint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                if pending.step == .installYourself {
+                    Button(l.t("guided.searchWeb")) { model.searchWeb(for: pending.itemID) }.accessibilityIdentifier("pending.searchWeb")
+                }
+                Button(l.t("guided.choose")) { model.chooseInstalledApp(for: pending.itemID) }.accessibilityIdentifier("pending.choose")
+                Spacer()
+            }
             HStack {
                 Button(l.t("guided.pending.cancel"), role: .destructive) { model.answerPending(.cancel) }
                     .accessibilityIdentifier("pending.cancel")

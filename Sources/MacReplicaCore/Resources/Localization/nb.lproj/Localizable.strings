@@ -940,6 +940,16 @@
 "guided.state.installing" = "Installerer …";
 "guided.state.waiting" = "Venter på deg";
 "guided.pending.hint" = "MacReplica kontrollerer om appen er installert når du klikker Ferdig. Senere holder den åpen til en annen gang; Avbryt stopper de gjenværende installasjonene.";
+"guided.pending.notFound" = "MacReplica fant ikke %1$@ i Programmer eller i din egen Programmer-mappe. Hvis du installerte den et annet sted eller under et annet navn, velg den med Velg appen …";
+"guided.choose" = "Velg appen …";
+"guided.choose.prompt" = "Velg";
+"guided.choose.message" = "Velg den installerte %1$@.";
+"guided.choose.different.title" = "«%1$@» er ikke appen fra sikkerhetskopien";
+"guided.choose.different.message" = "Navnet og identifikatoren er forskjellige fra %1$@ i sikkerhetskopien (kanskje en nyere utgave eller en annen app). Telle den som installert likevel?";
+"guided.choose.different.use" = "Tell som installert";
+"guided.searchWeb" = "Søk på nettet";
+"note.chosenByUser" = "Du valgte %1$@ som den installerte appen; MacReplica kontrollerte at det er appen fra sikkerhetskopien.";
+"note.chosenByUser.confirmed" = "Du valgte %1$@ som den installerte appen og bekreftet det, selv om navn og identifikator er forskjellige fra sikkerhetskopiens.";
 "guided.pending.done" = "Ferdig";
 "guided.pending.cancel" = "Avbryt installasjonen";
 "items.source" = "Installer";

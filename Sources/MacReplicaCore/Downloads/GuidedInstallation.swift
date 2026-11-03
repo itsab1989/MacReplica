@@ -10,6 +10,9 @@ public enum GuidedDecision: Sendable, Equatable {
     case later
     /// Stop the installation that is in progress.
     case cancel
+    /// The user pointed at the installed app (installed elsewhere or under another name). `confirmed`: the user
+    /// agreed to count it although its name and identifier differ from the backup's.
+    case chosen(URL, confirmed: Bool)
 }
 
 /// What MacReplica asks the app (the user interface) to do during a guided installation.
@@ -22,6 +25,14 @@ public protocol GuidedInstallInteraction: Sendable {
     func open(_ url: URL) async
     /// Waits for the user after a step they have to finish themselves.
     func waitForUser(itemID: String, step: GuidedStep) async -> GuidedDecision
+    /// The same, after "Done" found nothing (`notFound`), so the user learns why the step is asked again.
+    func waitForUser(itemID: String, step: GuidedStep, notFound: Bool) async -> GuidedDecision
+}
+
+extension GuidedInstallInteraction {
+    public func waitForUser(itemID: String, step: GuidedStep, notFound: Bool) async -> GuidedDecision {
+        await waitForUser(itemID: itemID, step: step)
+    }
 }
 
 /// The step the user is asked to complete.
@@ -270,14 +281,24 @@ public actor GuidedInstallation {
 
     private func waitForUser(_ item: RestoreItem, step: GuidedStep, interaction: GuidedInstallInteraction,
                              isInstalled: @escaping @Sendable (RestoreItem) -> String??) async -> ItemResult {
+        var notFound = false
         while true {
             set(item.id, .waitingForUser(step))
-            let decision = await interaction.waitForUser(itemID: item.id, step: step)
+            let decision = await interaction.waitForUser(itemID: item.id, step: step, notFound: notFound)
             switch decision {
             case .checkAgain:
                 if let version = isInstalled(item) {
                     return finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version))
                 }
+                // Until 1.1.13 the same question came back without a word (tester, 2026-11-03).
+                notFound = true
+                log?.info("\(item.id): Done, but the app was not found", component: .downloads)
+            case .chosen(let app, let confirmed):
+                guard confirmed || Self.matches(item, app: app) else { notFound = true; continue }
+                let version = ApplicationLocator.version(of: app)
+                log?.info("\(item.id): the user chose \(app.lastPathComponent)\(confirmed ? " (confirmed although it differs)" : "")", component: .downloads)
+                return finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version,
+                                               notes: [.chosenByUser(app: app.lastPathComponent, confirmed: confirmed)]))
             case .skip: return finish(item, ItemResult(itemID: item.id, outcome: .skipped(.userSkipped)))
             case .later: return finish(item, ItemResult(itemID: item.id, outcome: .skipped(.postponedByUser)))
             case .cancel:
@@ -285,6 +306,16 @@ public actor GuidedInstallation {
                 return finish(item, ItemResult(itemID: item.id, outcome: .skipped(.cancelledByUser)))
             }
         }
+    }
+
+    /// True if the app the user chose is the one in the backup: the same bundle identifier, or – when the backup has
+    /// none – the same bundle name.
+    public static func matches(_ item: RestoreItem, app: URL) -> Bool {
+        let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
+        if let expected = item.bundleIdentifier?.lowercased() {
+            return (info?["CFBundleIdentifier"] as? String)?.lowercased() == expected
+        }
+        return info != nil && item.appBundleNames.contains(app.lastPathComponent)
     }
 
     private func failed(_ item: RestoreItem, _ error: DownloadError) -> ItemResult {
