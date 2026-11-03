@@ -964,6 +964,7 @@
 
 /* Offer hints */
 "offer.appStore.hint" = "MacReplica öffnet die App-Store-Seite der App; du installierst sie dort und MacReplica prüft das Ergebnis.";
+"offer.appStoreSearch.hint" = "MacReplica öffnet eine Suche im App Store; du installierst dort die aktuelle Ausgabe und MacReplica prüft das Ergebnis.";
 "offer.website.hint" = "MacReplica öffnet die Website des Herstellers; du lädst und installierst die App dort, danach prüft MacReplica, ob sie installiert ist.";
 
 /* Guided step texts */
