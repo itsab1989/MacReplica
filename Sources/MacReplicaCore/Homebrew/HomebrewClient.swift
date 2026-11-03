@@ -198,6 +198,40 @@ public struct HomebrewClient: Sendable {
     public static func parseCaskContents(_ data: Data) -> CaskContents? {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let cask = (root["casks"] as? [[String: Any]])?.first else { return nil }
+        return contents(ofCask: cask)
+    }
+
+    /// The definitions of several casks in one `brew info` call (up to 100 tokens per call), by token and full token.
+    /// Empty when Homebrew does not answer, e.g. because one of the casks no longer exists; callers then ask per cask.
+    public func caskContents(_ brew: HomebrewInstallation, tokens: [String]) async -> [String: CaskContents] {
+        let valid = Array(Set(tokens.filter { (try? Self.validatePackageName($0)) != nil })).sorted()
+        var result: [String: CaskContents] = [:]
+        var start = 0
+        while start < valid.count {
+            let chunk = Array(valid[start..<min(start + 100, valid.count)])
+            start += 100
+            guard let output = try? await runner.run(command(brew, ["info", "--json=v2", "--cask"] + chunk, timeout: 300)),
+                  output.succeeded else { continue }
+            result.merge(Self.parseAllCaskContents(Data(output.stdout.utf8))) { first, _ in first }
+        }
+        return result
+    }
+
+    /// Every cask of `brew info --json=v2 --cask` output, by `token` and `full_token`.
+    public static func parseAllCaskContents(_ data: Data) -> [String: CaskContents] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let casks = root["casks"] as? [[String: Any]] else { return [:] }
+        var result: [String: CaskContents] = [:]
+        for cask in casks {
+            let contents = contents(ofCask: cask)
+            for key in ["token", "full_token"] {
+                if let token = cask[key] as? String, result[token] == nil { result[token] = contents }
+            }
+        }
+        return result
+    }
+
+    static func contents(ofCask cask: [String: Any]) -> CaskContents {
         let artifacts = cask["artifacts"] as? [[String: Any]] ?? []
         var contents = CaskContents()
         for artifact in artifacts {

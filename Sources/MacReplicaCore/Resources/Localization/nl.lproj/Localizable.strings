@@ -211,6 +211,8 @@
 "progress.failed" = "Mislukt: %1$d";
 "progress.skipped" = "Overgeslagen: %1$d";
 "progress.recent" = "Voltooid";
+"progress.details" = "Details";
+"restore.preparing" = "Deze Mac wordt vóór het herstel gecontroleerd: %1$d van %2$d …";
 "progress.finishing" = "Afronden …";
 "progress.stopping" = "Stoppen na de huidige stap …";
 "progress.keepOpen" = "Houd MacReplica open en je Mac wakker.";

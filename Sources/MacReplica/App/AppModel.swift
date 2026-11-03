@@ -40,8 +40,20 @@ struct RestoreProgressState {
     var finished: [(item: RestoreItem, result: ItemResult)] = []
     var estimator = ProgressEstimator(items: [])
     var stopping = false
+    /// The latest lines of output from the tool working on the current step (Homebrew's downloads and installs).
+    var output: [String] = []
+    var lastOutput: String?
+    static let outputLimit = 300
 
-    var fraction: Double { total == 0 ? 0 : Double(succeeded + failed + skipped) / Double(total) }
+    /// Weighted by how long each kind of step usually takes (an app install counts far more than a font), so the bar
+    /// does not stand still through slow downloads and race through quick copies.
+    var fraction: Double { total == 0 ? 0 : estimator.fractionComplete }
+
+    mutating func addOutput(_ line: String) {
+        output.append(line)
+        if output.count > Self.outputLimit { output.removeFirst(output.count - Self.outputLimit) }
+        lastOutput = line
+    }
 }
 
 @MainActor
@@ -52,6 +64,10 @@ final class AppModel: ObservableObject {
     @Published var language: AppLanguage
     @Published private(set) var l: Localizer
     @Published var screen: Screen = .home { didSet { updateSleepPrevention() } }
+    /// The check before a restore is running: steps checked so far and their total.
+    @Published var preparingRestore: (checked: Int, total: Int)?
+    /// One check and one restore at a time.
+    private var startGate = RestoreStartGate()
     /// Keeps the Mac awake (idle sleep only) while a long operation runs.
     let sleepPrevention = SleepPrevention()
     /// The Tools section (Gatekeeper, updates, window corners); see AppModel+Tools.
@@ -302,6 +318,8 @@ final class AppModel: ObservableObject {
     func goHome() {
         task?.cancel()
         task = nil
+        preparingRestore = nil
+        startGate.endCheck()
         screen = .home
         inventory = nil
         savedBackup = nil
@@ -894,6 +912,8 @@ final class AppModel: ObservableObject {
 
     /// Checks for conflicts and administrator needs, then starts the restore or asks first.
     func requestRestoreStart() {
+        // One check and one restore at a time: clicking again while it runs changes nothing (tester, 2026-11-03).
+        guard !startGate.checking, !startGate.restoring else { return }
         // Credentials are unlocked first: only then can the check find which ones would conflict with files on this Mac.
         if selection.components.contains(.credentials), backupHasCredentials, !credentialsUnlocked {
             askForRestorePassphrase = true
@@ -902,9 +922,17 @@ final class AppModel: ObservableObject {
         guard let plan = currentPlan(), let executor = makeExecutor(log: LogStore(fileURL: nil, homeDirectory: services.layout.homeDirectory)) else { return }
         self.plan = plan
         let selection = self.selection
+        guard startGate.beginCheck() else { return }
+        preparingRestore = (0, plan.items.count)
+        let model = self
         task = Task { [weak self] in
-            let entries = await executor.dryRun(plan: plan, selection: selection)
+            let entries = await executor.dryRun(plan: plan, selection: selection) { checked, total in
+                Task { @MainActor in model.updatePreparing(checked, total) }
+            }
             guard let self else { return }
+            self.preparingRestore = nil
+            self.startGate.endCheck()
+            guard !Task.isCancelled else { return }
             // Every conflict needs a decision; choices made earlier in the item list count.
             let conflicts = entries.filter { entry in
                 guard case .conflict = entry.prediction else { return false }
@@ -918,13 +946,25 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func updatePreparing(_ checked: Int, _ total: Int) {
+        if preparingRestore != nil { preparingRestore = (checked, total) }
+    }
+
     func resolveConflicts(_ choices: [String: ConflictResolution]) {
         selection.conflictOverrides.merge(choices) { _, new in new }
         pendingConflicts = []
-        guard let plan, let executor = makeExecutor(log: LogStore(fileURL: nil, homeDirectory: services.layout.homeDirectory)) else { return }
+        guard let plan, let executor = makeExecutor(log: LogStore(fileURL: nil, homeDirectory: services.layout.homeDirectory)),
+              startGate.beginCheck() else { return }
         let selection = self.selection
+        preparingRestore = (0, plan.items.count)
+        let model = self
         task = Task { [weak self] in
-            let entries = await executor.dryRun(plan: plan, selection: selection)
+            let entries = await executor.dryRun(plan: plan, selection: selection) { checked, total in
+                Task { @MainActor in model.updatePreparing(checked, total) }
+            }
+            self?.preparingRestore = nil
+            self?.startGate.endCheck()
+            guard !Task.isCancelled else { return }
             self?.checkAdminAndStart(entries: entries)
         }
     }
@@ -962,6 +1002,11 @@ final class AppModel: ObservableObject {
     }
 
     private func run(plan: RestorePlan, session: RestoreSession) {
+        // Never two restores at once, however often a start is requested.
+        guard startGate.beginRestore() else {
+            appLog.warning("A restore is already running; the second start was ignored", component: .restore)
+            return
+        }
         let log = LogStore.session(in: services.layout.logs, name: "restore", homeDirectory: services.layout.homeDirectory)
         restoreLog = log
         // Items the user left out never reach the plan; their decision is still recorded.
@@ -969,7 +1014,7 @@ final class AppModel: ObservableObject {
         for item in candidateItems where !planned.contains(item.id) && session.selection.excludedItemIDs.contains(item.id) {
             log.info("\(item.id): decision skipped_by_user", component: item.kind.logComponent)
         }
-        guard let executor = makeExecutor(log: log) else { return }
+        guard let executor = makeExecutor(log: log) else { startGate.endRestore(); return }
         self.plan = plan
         self.session = session
         var state = RestoreProgressState()
@@ -990,6 +1035,7 @@ final class AppModel: ObservableObject {
             }
             await MainActor.run { [weak self] in
                 guard let self else { return }
+                self.startGate.endRestore()
                 self.session = finalSession
                 self.screen = .restoreSummary
                 self.writeRestoreReport(plan: plan, session: finalSession)
@@ -1008,12 +1054,16 @@ final class AppModel: ObservableObject {
             progress.position = index + 1
             progress.total = total
             progress.activity = .checking
+            progress.lastOutput = nil
         case .activity(_, let activity):
             progress.activity = activity
         case .finished(let item, let result, _, _):
             progress.finished.append((item, result))
             count(result.outcome, into: &progress)
             progress.estimator.record(itemID: item.id, duration: result.duration, didWork: result.outcome == .succeeded || result.outcome.isFailure)
+        case .output(let itemID, let line):
+            guard progress.currentItem?.id == itemID else { return }
+            progress.addOutput(line)
         case .completed:
             progress.currentItem = nil
         }

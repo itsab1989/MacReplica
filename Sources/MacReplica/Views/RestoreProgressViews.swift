@@ -123,6 +123,7 @@ struct DryRunRow: View {
 struct RestoreProgressView: View {
     @EnvironmentObject var model: AppModel
     @ViewState private var confirmStop = false
+    @ViewState private var showDetails = false
 
     var body: some View {
         let l = model.l
@@ -151,6 +152,12 @@ struct RestoreProgressView: View {
                         Text(l.activityText(p.activity))
                             .foregroundStyle(p.activity == .waitingForCommandLineTools || p.activity == .waitingForAdmin ? .orange : .secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                        if let line = p.lastOutput {
+                            Text(line)
+                                .font(.caption.monospaced()).foregroundStyle(.secondary)
+                                .lineLimit(1).truncationMode(.middle)
+                                .accessibilityIdentifier("progress.lastOutput")
+                        }
                     } else {
                         Text(p.stopping ? l.t("progress.stopping") : l.t("progress.finishing")).foregroundStyle(.secondary)
                     }
@@ -164,6 +171,26 @@ struct RestoreProgressView: View {
                         Text(l.percent(p.fraction)).monospacedDigit().foregroundStyle(.secondary)
                     }
                     .font(.callout)
+                }
+
+                if !p.output.isEmpty {
+                    DisclosureGroup(isExpanded: $showDetails) {
+                        ScrollViewReader { proxy in
+                            ScrollView {
+                                LazyVStack(alignment: .leading, spacing: 1) {
+                                    ForEach(Array(p.output.enumerated()), id: \.offset) { index, line in
+                                        Text(line).font(.caption.monospaced()).textSelection(.enabled)
+                                            .frame(maxWidth: .infinity, alignment: .leading).id(index)
+                                    }
+                                }
+                            }
+                            .frame(height: 140)
+                            .onChange(of: p.output.count) { count in proxy.scrollTo(count - 1, anchor: .bottom) }
+                        }
+                    } label: {
+                        Text(l.t("progress.details")).font(.headline)
+                    }
+                    .accessibilityIdentifier("progress.details")
                 }
 
                 if !p.finished.isEmpty {

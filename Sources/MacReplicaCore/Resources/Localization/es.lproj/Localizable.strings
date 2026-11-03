@@ -211,6 +211,8 @@
 "progress.failed" = "Fallidos: %1$d";
 "progress.skipped" = "Omitidos: %1$d";
 "progress.recent" = "Terminados";
+"progress.details" = "Detalles";
+"restore.preparing" = "Comprobando este Mac antes de la restauración: %1$d de %2$d …";
 "progress.finishing" = "Finalizando…";
 "progress.stopping" = "Deteniendo tras el paso actual…";
 "progress.keepOpen" = "Mantén MacReplica abierto y tu Mac despierto.";

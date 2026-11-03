@@ -211,6 +211,8 @@
 "progress.failed" = "Mislyktes: %1$d";
 "progress.skipped" = "Hoppet over: %1$d";
 "progress.recent" = "Fullført";
+"progress.details" = "Detaljer";
+"restore.preparing" = "Kontrollerer denne Macen før gjenopprettingen: %1$d av %2$d …";
 "progress.finishing" = "Avslutter …";
 "progress.stopping" = "Stopper etter gjeldende trinn …";
 "progress.keepOpen" = "La MacReplica være åpen og hold Macen våken.";

@@ -75,6 +75,7 @@
       "tests": [
         "StaleCaskRecordTests",
         "CaskAppFolderTests",
+        "RestoreStartAndProgressTests",
         "RestoreExecutionTests",
         "DryRunTests",
         "ResumeTests",
@@ -457,9 +458,17 @@
         "HomebrewRemovedCaskTests",
         "TesterFeedback110Tests",
         "StaleCaskRecordTests",
-        "CaskAppFolderTests"
+        "CaskAppFolderTests",
+        "RestoreStartAndProgressTests"
       ],
       "area": "Homebrew detection"
+    },
+    {
+      "file": "Restore/RestoreStartGate.swift",
+      "tests": [
+        "RestoreStartAndProgressTests"
+      ],
+      "area": "One restore at a time"
     },
     {
       "file": "Downloads/DiskImageCommands.swift",

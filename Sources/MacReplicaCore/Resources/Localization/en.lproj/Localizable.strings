@@ -211,6 +211,8 @@
 "progress.failed" = "Failed: %1$d";
 "progress.skipped" = "Skipped: %1$d";
 "progress.recent" = "Finished";
+"progress.details" = "Details";
+"restore.preparing" = "Checking this Mac before the restore: %1$d of %2$d …";
 "progress.finishing" = "Finishing …";
 "progress.stopping" = "Stopping after the current step …";
 "progress.keepOpen" = "Please keep MacReplica open and your Mac awake.";

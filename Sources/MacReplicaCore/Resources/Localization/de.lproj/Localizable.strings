@@ -211,6 +211,8 @@
 "progress.failed" = "Fehlgeschlagen: %1$d";
 "progress.skipped" = "Übersprungen: %1$d";
 "progress.recent" = "Erledigt";
+"progress.details" = "Details";
+"restore.preparing" = "Dieser Mac wird vor der Wiederherstellung geprüft: %1$d von %2$d …";
 "progress.finishing" = "Wird abgeschlossen …";
 "progress.stopping" = "Wird nach dem aktuellen Schritt gestoppt …";
 "progress.keepOpen" = "Bitte lass MacReplica geöffnet und deinen Mac wach.";
