@@ -20,6 +20,8 @@ struct GuidedUIState {
 struct PendingGuidedStep: Equatable {
     var itemID: String
     var step: GuidedStep
+    /// "Done" was clicked but the app was not found.
+    var notFound = false
 }
 
 /// Bridges the guided installation to AppKit and to the sheet that asks the user.
@@ -45,10 +47,14 @@ struct AppGuidedInteraction: GuidedInstallInteraction {
     }
 
     func waitForUser(itemID: String, step: GuidedStep) async -> GuidedDecision {
+        await waitForUser(itemID: itemID, step: step, notFound: false)
+    }
+
+    func waitForUser(itemID: String, step: GuidedStep, notFound: Bool) async -> GuidedDecision {
         await withCheckedContinuation { continuation in
             Task { @MainActor in
                 model.pendingDecision = continuation
-                model.guided.pending = PendingGuidedStep(itemID: itemID, step: step)
+                model.guided.pending = PendingGuidedStep(itemID: itemID, step: step, notFound: notFound)
             }
         }
     }
@@ -193,6 +199,38 @@ extension AppModel {
         let continuation = pendingDecision
         pendingDecision = nil
         continuation?.resume(returning: decision)
+    }
+
+    /// "Choose the App…": the user points at the installed app. One that differs from the backup's (another
+    /// identifier or name) counts only after the user confirms it.
+    func chooseInstalledApp(for itemID: String) {
+        guard let item = openApps.first(where: { $0.id == itemID }) ?? plan?.item(id: itemID) else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = l.t("guided.choose.prompt")
+        panel.message = l.t("guided.choose.message", l.itemTitle(item))
+        guard panel.runModal() == .OK, let app = panel.url else { return }
+        if GuidedInstallation.matches(item, app: app) {
+            answerPending(.chosen(app, confirmed: false))
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = l.t("guided.choose.different.title", app.deletingPathExtension().lastPathComponent)
+        alert.informativeText = l.t("guided.choose.different.message", l.itemTitle(item))
+        alert.addButton(withTitle: l.t("guided.choose.different.use"))
+        alert.addButton(withTitle: l.t("common.cancel"))
+        if alert.runModal() == .alertFirstButtonReturn { answerPending(.chosen(app, confirmed: true)) }
+    }
+
+    /// "Search the Web" for an app MacReplica knows no download for: the user's browser, the app's name.
+    func searchWeb(for itemID: String) {
+        guard let item = openApps.first(where: { $0.id == itemID }) ?? plan?.item(id: itemID),
+              var components = URLComponents(string: "https://duckduckgo.com/") else { return }
+        components.queryItems = [URLQueryItem(name: "q", value: "\(l.itemTitle(item)) Mac download")]
+        if let url = components.url { NSWorkspace.shared.open(url) }
     }
 
     /// Skips or postpones an app without starting anything.

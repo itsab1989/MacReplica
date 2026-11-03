@@ -940,6 +940,16 @@
 "guided.state.installing" = "Instalando …";
 "guided.state.waiting" = "Esperando tu acción";
 "guided.pending.hint" = "MacReplica comprueba si la app está instalada cuando haces clic en Hecho. Más tarde la deja pendiente para otro momento; Cancelar detiene las instalaciones restantes.";
+"guided.pending.notFound" = "MacReplica no encontró %1$@ en Aplicaciones ni en tu propia carpeta Aplicaciones. Si la instalaste en otro lugar o con otro nombre, elígela con Elegir la app…";
+"guided.choose" = "Elegir la app…";
+"guided.choose.prompt" = "Elegir";
+"guided.choose.message" = "Elige la app %1$@ instalada.";
+"guided.choose.different.title" = "«%1$@» no es la app de la copia";
+"guided.choose.different.message" = "Su nombre e identificador difieren de %1$@ en la copia (quizá una edición más reciente u otra app). ¿Contarla como instalada de todos modos?";
+"guided.choose.different.use" = "Contar como instalada";
+"guided.searchWeb" = "Buscar en la web";
+"note.chosenByUser" = "Elegiste %1$@ como la app instalada; MacReplica comprobó que es la app de la copia.";
+"note.chosenByUser.confirmed" = "Elegiste %1$@ como la app instalada y lo confirmaste, aunque su nombre e identificador difieren de los de la copia.";
 "guided.pending.done" = "Hecho";
 "guided.pending.cancel" = "Cancelar instalación";
 "items.source" = "Instalar";

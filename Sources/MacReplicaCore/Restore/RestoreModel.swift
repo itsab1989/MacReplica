@@ -405,6 +405,8 @@ public enum ResultNote: Codable, Equatable, Sendable {
     /// Homebrew listed the cask as installed, but these of its apps or packages were not on this Mac (`parts`), so it
     /// was reinstalled with Homebrew and checked again.
     case reinstalledMissingParts(parts: String)
+    /// Guided installation: the user pointed at the installed app; `confirmed` – although it differs from the backup's.
+    case chosenByUser(app: String, confirmed: Bool)
     /// Launchpad: apps on this Mac that are not in the arrangement saved in the backup (left out of a backup made
     /// before 1.1.7, or installed later); macOS puts them after the arranged pages. `names`: at most a few.
     case launchpadAppsNotInBackup(count: Int, names: [String])

@@ -940,6 +940,16 @@
 "guided.state.installing" = "Installation …";
 "guided.state.waiting" = "En attente de votre action";
 "guided.pending.hint" = "MacReplica vérifie si l’app est installée lorsque vous cliquez sur Terminé. Plus tard la garde ouverte pour une autre fois ; Annuler arrête les installations restantes.";
+"guided.pending.notFound" = "MacReplica n’a trouvé %1$@ ni dans Applications ni dans votre propre dossier Applications. Si vous l’avez installée ailleurs ou sous un autre nom, choisissez-la avec Choisir l’app…";
+"guided.choose" = "Choisir l’app…";
+"guided.choose.prompt" = "Choisir";
+"guided.choose.message" = "Choisissez l’app %1$@ installée.";
+"guided.choose.different.title" = "« %1$@ » n’est pas l’app de la sauvegarde";
+"guided.choose.different.message" = "Son nom et son identifiant diffèrent de ceux de %1$@ dans la sauvegarde (peut-être une édition plus récente ou une autre app). La compter quand même comme installée ?";
+"guided.choose.different.use" = "Compter comme installée";
+"guided.searchWeb" = "Rechercher sur le Web";
+"note.chosenByUser" = "Vous avez choisi %1$@ comme app installée ; MacReplica a vérifié qu’il s’agit de l’app de la sauvegarde.";
+"note.chosenByUser.confirmed" = "Vous avez choisi %1$@ comme app installée et l’avez confirmé, bien que son nom et son identifiant diffèrent de ceux de la sauvegarde.";
 "guided.pending.done" = "Terminé";
 "guided.pending.cancel" = "Annuler l’installation";
 "items.source" = "Installer";
