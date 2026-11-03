@@ -56,6 +56,20 @@ struct AppStoreAvailabilityTests {
         #expect(step == .searchAppStore("Daily Workouts"))
     }
 
+    @Test("This Mac's region is asked first when it has one; an invalid ID is not looked up")
+    func regionAndInvalidID() async {
+        let fetcher = LookupFetcher(known: [])
+        _ = await offers(fetcher, name: "SimplyYoga", id: 413817190)
+        let region = Locale.current.region?.identifier.lowercased().filter(\.isLetter) ?? ""
+        let first = fetcher.asked.all.first?.absoluteString ?? ""
+        #expect(first.contains("&country=") == (region.count == 2), "\(first)")
+        if region.count == 2 { #expect(first == "https://itunes.apple.com/lookup?id=413817190&country=\(region)") }
+        let none = LookupFetcher(known: [])
+        let offer = await offers(none, name: "Zero", id: 0).first { $0.kind == .appStore }
+        #expect(none.asked.all.isEmpty, "ID 0 is not asked for")
+        #expect(offer?.url == "macappstore://apps.apple.com/app/id0")
+    }
+
     @Test("Without an answer from Apple (offline) the page link is kept")
     func offlineKeepsLink() async {
         let offer = await offers(LookupFetcher(known: [], failing: true), name: "SimplyYoga", id: 413817190).first { $0.kind == .appStore }

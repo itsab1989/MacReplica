@@ -134,7 +134,7 @@ public struct DownloadSourceFinder: Sendable {
             if await appStoreHas(id: id) == false, let search = Self.appStoreSearchURL(for: app.name) {
                 // The edition of the old Mac is no longer offered (the App Store answers "App Not Available"); a search
                 // for the name finds the current one (tester, 2026-11-03: two of four IDs were gone).
-                var offer = DownloadOffer(id: "appstore-search:\(id)", itemID: itemID, kind: .appStore, url: search.url, recommended: true)
+                var offer = DownloadOffer(id: "appstore-search:\(id)", itemID: itemID, kind: .appStore, url: search.url)
                 offer.appStoreSearchTerm = search.term
                 offers.append(offer)
             } else {
