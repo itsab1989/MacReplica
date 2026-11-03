@@ -13,6 +13,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   MacReplica at the installed app (installed elsewhere or under another name); an app with another identifier counts
   only after you confirm it, and the result says so (tester report).
 
+- **The restore screen tells the truth when a restore continues.** The counter shows the steps done ("570 / 585"
+  next to 570 successful – it showed the position in the plan, "23 / 585"); a step that runs again (a cask checked
+  again) leaves the finished list while it runs instead of staying green, and the progress bar counts it as open
+  again instead of standing at 97 %. Failed, skipped and waiting steps are listed apart from the finished ones.
+- **Details shows the current step.** Once 300 lines had arrived it stopped following and showed older lines; each
+  step's lines now start with its name, and the events reach the screen in the order they happen (tester report).
+
 ### Added
 - **Search the Web** for apps MacReplica knows no official download for, so the vendor's page is one click away
   (tester request).
