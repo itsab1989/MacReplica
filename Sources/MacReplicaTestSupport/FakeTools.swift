@@ -243,6 +243,8 @@ enum FakeTools {
         if [ -n "$app" ] && [ ! -f "$S/reinstall-keeps-app" ]; then
           rm -rf "${appdir:?}/$app"; make_app "$appdir/$app" "$(json_value "$spec" bundle_id)" "$(json_value "$spec" version)"
         fi
+        rid="$(json_value "$spec" pkgutil)"
+        if [ -n "$rid" ] && [ ! -f "$S/reinstall-keeps-app" ]; then mkdir -p "$S/receipts"; : > "$S/receipts/$rid"; fi
         echo "==> Reinstalling Cask $name"
         exit 0 ;;
       update)
@@ -264,8 +266,16 @@ enum FakeTools {
           shift 3; printf '{"formulae":[],"casks":['; first=1
           for t in "$@"; do
             f="$S/brew/tap-casks/$(echo "$t" | sed 's#/#__#g').json"
-            [ -f "$f" ] || { echo "Error: Cask '$t' is unavailable" >&2; exit 1; }
-            [ $first = 1 ] || printf ','; first=0; cat "$f"
+            [ $first = 1 ] || printf ','; first=0
+            if [ -f "$f" ]; then cat "$f"; continue; fi
+            # A cask of the main repository: its apps (with Homebrew 7's full target) and packages with their receipts.
+            spec="$S/brew/available/casks/$t.json"
+            [ -f "$spec" ] || { echo "Error: Cask '$t' is unavailable" >&2; exit 1; }
+            app="$(json_value "$spec" app)"; pkg="$(json_value "$spec" pkg)"; rid="$(json_value "$spec" pkgutil)"; arts=""
+            [ -n "$app" ] && arts="{\"app\":[\"$app\"],\"target\":\"$(cat "$S/appdir")/$app\"}"
+            [ -n "$pkg" ] && arts="$arts${arts:+,}{\"pkg\":[\"$pkg\"]}"
+            [ -n "$rid" ] && arts="$arts${arts:+,}{\"uninstall\":[{\"pkgutil\":\"$rid\"}]}"
+            printf '{"token":"%s","artifacts":[%s]}' "$t" "$arts"
           done
           printf ']}\n'; exit 0
         fi
@@ -434,6 +444,9 @@ enum FakeTools {
           if [ -e "$appdir/$app" ]; then echo "Error: It seems there is already an App at '$appdir/$app'." >&2; exit 1; fi
           make_app "$appdir/$app" "$bid" "$version"
         fi
+        # An installer package leaves its receipt (unless "pkg-leaves-no-receipt" simulates one that installed nothing).
+        rid="$(json_value "$spec" pkgutil)"
+        if [ -n "$rid" ] && [ ! -f "$S/pkg-leaves-no-receipt" ]; then mkdir -p "$S/receipts"; : > "$S/receipts/$rid"; fi
         printf '%s' "$version" > "$S/brew/casks/$(basename "$name")"
         echo "==> Installing Cask $name"
         exit 0 ;;
@@ -581,6 +594,14 @@ enum FakeTools {
     #!/bin/bash
     . "${MACREPLICA_SIMULATION_ROOT:?}/tools/lib.sh"
     log_call "pkgutil $*"
+    case "${1:-}" in --pkgs=*)
+      # Like pkgutil: the whole ID against a pattern with * and ? (case-sensitive); exit 1 when nothing matches.
+      pattern="${1#--pkgs=}"; found=1
+      for f in "$S"/receipts/*; do [ -e "$f" ] || continue; n="$(basename "$f")"
+        # shellcheck disable=SC2053
+        if [[ "$n" == $pattern ]]; then echo "$n"; found=0; fi; done
+      exit $found ;;
+    esac
     if [ "${1:-}" = "--files" ]; then
       if [ -f "$S/receipts/${2:-}" ]; then cat "$S/receipts/${2:-}"; exit 0; fi
       echo "No receipt for '${2:-}' found at '/'." >&2

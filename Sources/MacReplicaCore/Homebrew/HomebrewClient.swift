@@ -182,6 +182,67 @@ public struct HomebrewClient: Sendable {
         return Self.parseListVersions(result.stdout)
     }
 
+    /// What a cask puts on the Mac according to its definition (`brew info --json=v2 --cask`, only parsed, never run):
+    /// its apps and its installer packages. nil when Homebrew does not answer.
+    public func caskContents(_ brew: HomebrewInstallation, token: String) async -> CaskContents? {
+        guard (try? Self.validatePackageName(token)) != nil,
+              let result = try? await runner.run(command(brew, ["info", "--json=v2", "--cask", token], timeout: 120)),
+              result.succeeded else { return nil }
+        return Self.parseCaskContents(Data(result.stdout.utf8))
+    }
+
+    /// Reads the first cask of `brew info --json=v2 --cask` output. Homebrew 7 gives each app's full destination as
+    /// `target` (e.g. `{"app": ["KeyCastr.app"], "target": "/Applications/KeyCastr.app"}`, seen 2026-11-03); a cask
+    /// that renames its app gives `{"app": ["Foo.app", {"target": "Bar.app"}]}`. Packages are `{"pkg": ["X.pkg", …]}`;
+    /// the receipts they leave are named in `uninstall` as `pkgutil` (one ID or a list, regular expressions allowed).
+    public static func parseCaskContents(_ data: Data) -> CaskContents? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let cask = (root["casks"] as? [[String: Any]])?.first else { return nil }
+        let artifacts = cask["artifacts"] as? [[String: Any]] ?? []
+        var contents = CaskContents()
+        for artifact in artifacts {
+            if let apps = artifact["app"] as? [Any] {
+                var names: [String] = []
+                for entry in apps {
+                    if let name = entry as? String { names.append((name as NSString).lastPathComponent) }
+                    if let options = entry as? [String: Any], let target = options["target"] as? String {
+                        names = [(target as NSString).lastPathComponent]
+                        if target.hasPrefix("/") { contents.appTargets.append(target) }
+                    }
+                }
+                if let target = artifact["target"] as? String {
+                    if target.hasPrefix("/") { contents.appTargets.append(target) }
+                    names = [(target as NSString).lastPathComponent]
+                }
+                contents.appNames += names.filter { $0.hasSuffix(".app") && !contents.appNames.contains($0) }
+            }
+            if let packages = artifact["pkg"] as? [Any], let name = packages.first as? String {
+                contents.packages.append((name as NSString).lastPathComponent)
+            }
+            for stanza in artifact["uninstall"] as? [[String: Any]] ?? [] {
+                if let id = stanza["pkgutil"] as? String { contents.receipts.append(id) }
+                if let ids = stanza["pkgutil"] as? [String] { contents.receipts += ids }
+            }
+        }
+        return contents
+    }
+
+    /// Whether one of a cask's receipts is installed, asked the way Homebrew asks: `pkgutil --pkgs=<pattern>`
+    /// (read-only) for each `pkgutil` pattern of the cask. The patterns then mean what they mean to Homebrew: the whole
+    /// ID, `*` and `?` as wildcards (`com.microsoft.dotnet.*10.0*arm64`), case-sensitive; pkgutil exits with 1 when
+    /// nothing matches (checked 2026-11-03). nil if pkgutil cannot be run.
+    public func hasReceipt(matching patterns: [String]) async -> Bool? {
+        var answered = false
+        for pattern in patterns where !pattern.isEmpty && pattern.count <= 300 {
+            guard let result = try? await runner.run(Command(executable: layout.pkgutil, arguments: ["--pkgs=\(pattern)"],
+                                                             environment: layout.processEnvironment(homebrewPrefix: nil, askpass: nil), timeout: 60))
+            else { continue }
+            answered = true
+            if result.succeeded, !result.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        }
+        return answered ? false : nil
+    }
+
     /// `brew list --versions` prints "name 1.2.3 1.2.4"; the newest version is last.
     public static func parseListVersions(_ output: String) -> String? {
         guard let line = output.split(whereSeparator: \.isNewline).first else { return nil }
@@ -268,6 +329,25 @@ public struct HomebrewClient: Sendable {
             if remote.range(of: #"^git@[A-Za-z0-9.-]+:[A-Za-z0-9._/-]+$"#, options: .regularExpression) != nil { return }
             throw HomebrewError.invalidPackageName(remote)
         }
+    }
+}
+
+/// What a cask installs, from its definition.
+public struct CaskContents: Sendable, Equatable {
+    /// App bundle names (as installed, after a rename).
+    public var appNames: [String] = []
+    /// Full destination paths of the apps, when Homebrew gives them.
+    public var appTargets: [String] = []
+    /// Installer package file names.
+    public var packages: [String] = []
+    /// Receipt IDs (patterns) the packages leave, from `uninstall pkgutil:`.
+    public var receipts: [String] = []
+
+    public init(appNames: [String] = [], appTargets: [String] = [], packages: [String] = [], receipts: [String] = []) {
+        self.appNames = appNames
+        self.appTargets = appTargets
+        self.packages = packages
+        self.receipts = receipts
     }
 }
 

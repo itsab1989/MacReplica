@@ -7,6 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Apps Homebrew only remembers are installed again.** When Time Machine brings back Homebrew's records but not
+  the apps (for example after restoring everything except apps), Homebrew still lists the casks as installed and
+  `brew install` does nothing. MacReplica now checks that each cask's apps and installer packages are really on the
+  Mac, reinstalls the ones that are missing with Homebrew and checks them again, instead of reporting them as
+  already installed (tester report).
+
 ## [1.1.11] - 2026-10-20
 
 ### Fixed
