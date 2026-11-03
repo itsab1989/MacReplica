@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Where Homebrew installs apps.** The restore screen lets you choose: for all users (the shared Applications folder,
+  as before) or only for you (`~/Applications`, Homebrew's `--appdir`). Installer packages decide their own place;
+  apps already on the Mac are not installed a second time (tester request).
+
 ### Fixed
 - **Apps Homebrew only remembers are installed again.** When Time Machine brings back Homebrew's records but not
   the apps (for example after restoring everything except apps), Homebrew still lists the casks as installed and

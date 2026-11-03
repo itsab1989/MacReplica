@@ -98,6 +98,12 @@
    - Untick whole areas or click **Choose Individual Items …** to untick single items, see details
      (version on this Mac, format, origin) and decide conflicts.
    - Allow third-party Homebrew sources (taps) only if you trust them.
+   - **Where Homebrew installs apps:** *For all users* (the shared Applications folder, Homebrew's default) or *Only
+     for me* (the Applications folder in your home folder). Installer packages decide their own place, and apps already
+     on the Mac stay where they are. A few apps (with system extensions or their own updater) expect the shared folder.
+   - If Time Machine brought back Homebrew's records but not the apps (for example after restoring everything except
+     apps), Homebrew still lists those apps as installed. MacReplica checks that each one is really there and
+     reinstalls the missing ones with Homebrew.
    - **Credentials** are restored only if you switch them on, with the passphrase or the recovery key from the old Mac
      (asked before the check, so files that differ from this Mac's get a decision: keep this Mac's version, keep both,
      replace, or skip).
