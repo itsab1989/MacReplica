@@ -136,6 +136,11 @@
 
 "taps.title" = "Ekstra Homebrew-kilder";
 "taps.message" = "Noen pakker kommer fra kilder utenfor den offisielle Homebrew-samlingen (kalt «taps»). Tillat bare kilder du stoler på. Pakker fra kilder du ikke tillater, hoppes over.";
+"caskFolder.title" = "Hvor Homebrew installerer apper";
+"caskFolder.allUsers" = "For alle brukere (Programmer)";
+"caskFolder.currentUser" = "Bare for meg (min egen Programmer-mappe)";
+"caskFolder.message" = "Gjelder apper som installeres med Homebrew i denne gjenopprettingen. Installasjonspakker bestemmer selv hvor de havner, og apper som allerede er på denne Macen, blir der de er.";
+"caskFolder.help" = "Homebrew legger vanligvis appene sine i Programmer-mappen som alle brukere deler. «Bare for meg» legger dem i stedet i Programmer-mappen i hjemmemappen din (Homebrews --appdir); da vises de bare for deg i Launchpad og Spotlight. Noen apper, for eksempel med systemutvidelser eller egen oppdaterer, forventer den delte mappen; hvis en ikke fungerer fra mappen din, installer den på nytt for alle brukere.";
 
 "items.title" = "Velg enkeltelementer";
 "items.search" = "Søk";

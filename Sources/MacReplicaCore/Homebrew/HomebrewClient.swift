@@ -257,10 +257,11 @@ public struct HomebrewClient: Sendable {
         return Set(result.stdout.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
     }
 
+    /// - Parameter appdir: for casks, the folder their apps go to (`--appdir`); nil keeps Homebrew's default.
     public func install(_ brew: HomebrewInstallation, package: HomebrewPackage, askpass: String?,
-                        extraEnvironment: [String: String] = [:],
+                        extraEnvironment: [String: String] = [:], appdir: String? = nil,
                         onOutputLine: (@Sendable (String) -> Void)? = nil) async throws -> CommandResult {
-        let arguments: [String]
+        var arguments: [String]
         switch package {
         case .formula(let name):
             try Self.validatePackageName(name)
@@ -282,6 +283,14 @@ public struct HomebrewClient: Sendable {
             } else {
                 arguments = ["tap", name]
             }
+        }
+        switch package {
+        case .cask, .caskReinstall:
+            if let appdir {
+                try Self.validateAppFolder(appdir)
+                arguments.append("--appdir=\(appdir)")
+            }
+        default: break
         }
         var installCommand = command(brew, arguments, timeout: 3600, askpass: askpass)
         if askpass != nil {
@@ -320,6 +329,14 @@ public struct HomebrewClient: Sendable {
         let pattern = #"^[A-Za-z0-9][A-Za-z0-9@+._-]*(/[A-Za-z0-9][A-Za-z0-9@+._-]*){0,2}$"#
         guard name.count <= 200, name.range(of: pattern, options: .regularExpression) != nil, !name.contains("..") else {
             throw HomebrewError.invalidPackageName(name)
+        }
+    }
+
+    /// The app folder for `--appdir` is an absolute path without control characters.
+    public static func validateAppFolder(_ path: String) throws {
+        guard path.hasPrefix("/"), path.count <= 1024, !path.contains(".."),
+              path.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) }) else {
+            throw HomebrewError.invalidPackageName(path)
         }
     }
 

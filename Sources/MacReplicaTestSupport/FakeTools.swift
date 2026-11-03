@@ -58,6 +58,14 @@ enum FakeTools {
     }
 
     log_call() { echo "$*" >> "$S/calls.log"; }
+
+    cask_appdir() { # token args… → the folder for the cask's app: --appdir=…, else the one it was installed to, else the default
+      local token="$1" dir=""; shift
+      for a in "$@"; do case "$a" in --appdir=*) dir="${a#--appdir=}" ;; esac; done
+      [ -z "$dir" ] && [ -f "$S/brew/cask-appdir/$token" ] && dir="$(cat "$S/brew/cask-appdir/$token")"
+      [ -z "$dir" ] && dir="$(cat "$S/appdir")"
+      echo "$dir"
+    }
     """#
 
     /// One stand-in for the version and package managers (uv, pyenv, pipx, fnm, volta, npm, pnpm,
@@ -239,7 +247,7 @@ enum FakeTools {
         # Replaces Homebrew's own copy of a cask's app; "reinstall-keeps-app" simulates a reinstall that changes nothing.
         name="${3:-}"; spec="$S/brew/available/casks/$name.json"
         [ -f "$S/brew/casks/$name" ] && [ -f "$spec" ] || { echo "Error: Cask '$name' is not installed." >&2; exit 1; }
-        app="$(json_value "$spec" app)"; appdir="$(cat "$S/appdir")"
+        app="$(json_value "$spec" app)"; appdir="$(cask_appdir "$name" "$@")"
         if [ -n "$app" ] && [ ! -f "$S/reinstall-keeps-app" ]; then
           rm -rf "${appdir:?}/$app"; make_app "$appdir/$app" "$(json_value "$spec" bundle_id)" "$(json_value "$spec" version)"
         fi
@@ -272,7 +280,7 @@ enum FakeTools {
             spec="$S/brew/available/casks/$t.json"
             [ -f "$spec" ] || { echo "Error: Cask '$t' is unavailable" >&2; exit 1; }
             app="$(json_value "$spec" app)"; pkg="$(json_value "$spec" pkg)"; rid="$(json_value "$spec" pkgutil)"; arts=""
-            [ -n "$app" ] && arts="{\"app\":[\"$app\"],\"target\":\"$(cat "$S/appdir")/$app\"}"
+            [ -n "$app" ] && arts="{\"app\":[\"$app\"],\"target\":\"$(cask_appdir "$t")/$app\"}"
             [ -n "$pkg" ] && arts="$arts${arts:+,}{\"pkg\":[\"$pkg\"]}"
             [ -n "$rid" ] && arts="$arts${arts:+,}{\"uninstall\":[{\"pkgutil\":\"$rid\"}]}"
             printf '{"token":"%s","artifacts":[%s]}' "$t" "$arts"
@@ -440,7 +448,7 @@ enum FakeTools {
           done
         fi
         if [ -n "$app" ]; then
-          appdir="$(cat "$S/appdir")"
+          appdir="$(cask_appdir "$name" "$@")"; mkdir -p "$appdir" "$S/brew/cask-appdir"; printf '%s' "$appdir" > "$S/brew/cask-appdir/$(basename "$name")"
           if [ -e "$appdir/$app" ]; then echo "Error: It seems there is already an App at '$appdir/$app'." >&2; exit 1; fi
           make_app "$appdir/$app" "$bid" "$version"
         fi

@@ -473,6 +473,11 @@ public final class RestoreExecutor: Sendable {
             if let broker = context.askpassBroker { Task { await broker.forget() } }
         }
         context.brew = await environment.homebrew.locate().installation
+        if session.selection.caskAppFolder == .currentUser {
+            let folder = layout.homeDirectory.appendingPathComponent("Applications")
+            context.caskAppdir = folder.path
+            log.info("Apps from Homebrew casks go to \(layout.displayPath(folder)) (installer packages decide their own place)", component: .homebrew)
+        }
         prepareToolchains(plan: plan, context: &context)
         let total = plan.items.count
         log.info("Restore session \(session.id): \(total) steps, \(session.finishedItemIDs.count) already finished", component: .restore)
@@ -566,6 +571,8 @@ public final class RestoreExecutor: Sendable {
         var privilegedBatchDone = false
         /// `brew update` runs at most once per restore, and only when Homebrew said it is too old.
         var homebrewUpdateAttempted = false
+        /// `--appdir` for casks when the user chose their own Applications folder; nil = Homebrew's default.
+        var caskAppdir: String?
         /// The channel the askpass helper gets the administrator password from during this run.
         var askpassServer: AskpassServer?
         var askpassBroker: AdminPasswordBroker?
@@ -747,7 +754,8 @@ public final class RestoreExecutor: Sendable {
     private func brewInstall(_ brew: HomebrewInstallation, _ package: HomebrewPackage, item: RestoreItem,
                              context: inout RunContext) async throws -> (CommandResult, [ResultNote]) {
         let extra = context.askpassEnvironment(environment.askpassEnvironment)
-        let result = try await environment.homebrew.install(brew, package: package, askpass: environment.askpassPath, extraEnvironment: extra)
+        let appdir = context.caskAppdir
+        let result = try await environment.homebrew.install(brew, package: package, askpass: environment.askpassPath, extraEnvironment: extra, appdir: appdir)
         guard !result.succeeded, HomebrewClient.isOutdatedHomebrewOutput(result.combinedOutput), !context.homebrewUpdateAttempted else {
             return (result, [])
         }
@@ -761,7 +769,7 @@ public final class RestoreExecutor: Sendable {
         let updated = await environment.homebrew.locate().installation ?? brew
         context.brew = updated
         log.info("Homebrew updated from \(brew.version) to \(updated.version); trying \(item.id) again", component: .homebrew)
-        let again = try await environment.homebrew.install(updated, package: package, askpass: environment.askpassPath, extraEnvironment: extra)
+        let again = try await environment.homebrew.install(updated, package: package, askpass: environment.askpassPath, extraEnvironment: extra, appdir: appdir)
         return (again, [.homebrewUpdated(version: updated.version)])
     }
 
@@ -860,7 +868,8 @@ public final class RestoreExecutor: Sendable {
                     + "this Mac is \(environment.targetArchitecture.rawValue) – reinstalling with Homebrew", component: .homebrew)
         onEvent(.activity(itemID: item.id, .installing))
         let result = try await environment.homebrew.install(context.brew ?? brew, package: .caskReinstall(item.identifier), askpass: environment.askpassPath,
-                                                           extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment))
+                                                           extraEnvironment: context.askpassEnvironment(environment.askpassEnvironment),
+                                                           appdir: context.caskAppdir)
         guard result.succeeded else { return ItemResult(itemID: item.id, outcome: .failed(failure(from: result))) }
         onEvent(.activity(itemID: item.id, .verifying))
         guard let reinstalled = inspector.installedApp(for: item), inspector.appRunsHere(reinstalled) else {

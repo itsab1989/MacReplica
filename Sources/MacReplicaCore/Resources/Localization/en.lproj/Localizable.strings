@@ -136,6 +136,11 @@
 
 "taps.title" = "Additional Homebrew sources";
 "taps.message" = "Some packages come from sources outside the official Homebrew collection (called “taps”). Only allow sources you trust. Packages from sources you do not allow are skipped.";
+"caskFolder.title" = "Where Homebrew installs apps";
+"caskFolder.allUsers" = "For all users (Applications)";
+"caskFolder.currentUser" = "Only for me (my own Applications folder)";
+"caskFolder.message" = "Applies to apps installed with Homebrew in this restore. Installer packages decide their own place, and apps that are already on this Mac stay where they are.";
+"caskFolder.help" = "Homebrew normally puts its apps into the Applications folder shared by all users. “Only for me” puts them into the Applications folder in your home folder instead (Homebrew's --appdir); they then appear in Launchpad and Spotlight for you only. Some apps, for example ones with system extensions or their own updater, expect the shared folder; if one does not work from your folder, install it again for all users.";
 
 "items.title" = "Choose Individual Items";
 "items.search" = "Search";

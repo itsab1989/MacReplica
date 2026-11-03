@@ -136,6 +136,11 @@
 
 "taps.title" = "Sorgenti Homebrew aggiuntive";
 "taps.message" = "Alcuni pacchetti provengono da sorgenti esterne alla raccolta ufficiale di Homebrew (chiamate «tap»). Consenti solo sorgenti di cui ti fidi. I pacchetti da sorgenti non consentite vengono saltati.";
+"caskFolder.title" = "Dove Homebrew installa le app";
+"caskFolder.allUsers" = "Per tutti gli utenti (Applicazioni)";
+"caskFolder.currentUser" = "Solo per me (la mia cartella Applicazioni)";
+"caskFolder.message" = "Vale per le app installate con Homebrew in questo ripristino. I pacchetti di installazione decidono da soli la loro posizione, e le app già presenti su questo Mac restano dove sono.";
+"caskFolder.help" = "Homebrew di solito mette le sue app nella cartella Applicazioni condivisa da tutti gli utenti. «Solo per me» le mette invece nella cartella Applicazioni della tua cartella Inizio (--appdir di Homebrew); così appaiono solo per te in Launchpad e Spotlight. Alcune app, per esempio con estensioni di sistema o un proprio programma di aggiornamento, si aspettano la cartella condivisa; se una non funziona dalla tua cartella, reinstallala per tutti gli utenti.";
 
 "items.title" = "Scegli singoli elementi";
 "items.search" = "Cerca";

@@ -136,6 +136,11 @@
 
 "taps.title" = "Sources Homebrew supplémentaires";
 "taps.message" = "Certains paquets proviennent de sources extérieures à la collection officielle de Homebrew (appelées « taps »). N’autorise que les sources auxquelles tu fais confiance. Les paquets provenant de sources non autorisées sont ignorés.";
+"caskFolder.title" = "Où Homebrew installe les apps";
+"caskFolder.allUsers" = "Pour tous les utilisateurs (Applications)";
+"caskFolder.currentUser" = "Pour moi seulement (mon propre dossier Applications)";
+"caskFolder.message" = "S’applique aux apps installées avec Homebrew lors de cette restauration. Les paquets d’installation choisissent leur propre emplacement, et les apps déjà présentes sur ce Mac restent où elles sont.";
+"caskFolder.help" = "Homebrew place normalement ses apps dans le dossier Applications partagé par tous les utilisateurs. « Pour moi seulement » les place dans le dossier Applications de votre dossier personnel (--appdir de Homebrew) ; elles n’apparaissent alors que pour vous dans Launchpad et Spotlight. Certaines apps, par exemple avec des extensions système ou leur propre outil de mise à jour, attendent le dossier partagé ; si l’une ne fonctionne pas depuis votre dossier, réinstallez-la pour tous les utilisateurs.";
 
 "items.title" = "Choisir des éléments";
 "items.search" = "Rechercher";

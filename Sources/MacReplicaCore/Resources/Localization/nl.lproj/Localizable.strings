@@ -136,6 +136,11 @@
 
 "taps.title" = "Extra Homebrew-bronnen";
 "taps.message" = "Sommige pakketten komen uit bronnen buiten de officiële Homebrew-collectie (zogeheten ‘taps’). Sta alleen bronnen toe die je vertrouwt. Pakketten uit bronnen die je niet toestaat, worden overgeslagen.";
+"caskFolder.title" = "Waar Homebrew apps installeert";
+"caskFolder.allUsers" = "Voor alle gebruikers (Apps)";
+"caskFolder.currentUser" = "Alleen voor mij (mijn eigen Apps-map)";
+"caskFolder.message" = "Geldt voor apps die bij dit herstel met Homebrew worden geïnstalleerd. Installatiepakketten bepalen zelf hun plaats, en apps die al op deze Mac staan, blijven waar ze zijn.";
+"caskFolder.help" = "Homebrew zet zijn apps normaal in de Apps-map die alle gebruikers delen. ‘Alleen voor mij’ zet ze in plaats daarvan in de Apps-map in je thuismap (--appdir van Homebrew); ze verschijnen dan alleen voor jou in Launchpad en Spotlight. Sommige apps, bijvoorbeeld met systeemextensies of een eigen updater, verwachten de gedeelde map; werkt er een niet vanuit je eigen map, installeer hem dan opnieuw voor alle gebruikers.";
 
 "items.title" = "Kies afzonderlijke onderdelen";
 "items.search" = "Zoek";

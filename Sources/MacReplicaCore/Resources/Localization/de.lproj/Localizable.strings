@@ -136,6 +136,11 @@
 
 "taps.title" = "Zusätzliche Homebrew-Quellen";
 "taps.message" = "Einige Pakete stammen aus Quellen außerhalb der offiziellen Homebrew-Sammlung (sogenannte „Taps“). Erlaube nur Quellen, denen du vertraust. Pakete aus nicht erlaubten Quellen werden übersprungen.";
+"caskFolder.title" = "Wohin Homebrew Apps installiert";
+"caskFolder.allUsers" = "Für alle Benutzer (Programme)";
+"caskFolder.currentUser" = "Nur für mich (eigener Programme-Ordner)";
+"caskFolder.message" = "Gilt für Apps, die bei dieser Wiederherstellung mit Homebrew installiert werden. Installationspakete bestimmen ihren Ort selbst, und Apps, die schon auf diesem Mac sind, bleiben, wo sie sind.";
+"caskFolder.help" = "Homebrew legt seine Apps normalerweise in den Programme-Ordner, den alle Benutzer teilen. „Nur für mich“ legt sie stattdessen in den Programme-Ordner in deinem Benutzerordner (Homebrews --appdir); sie erscheinen dann nur für dich im Launchpad und in Spotlight. Manche Apps, etwa mit Systemerweiterungen oder eigenem Updater, erwarten den gemeinsamen Ordner; funktioniert eine aus deinem Ordner nicht, installiere sie erneut für alle Benutzer.";
 
 "items.title" = "Einzelne Objekte wählen";
 "items.search" = "Suchen";
