@@ -107,4 +107,18 @@ struct RestoreStartAndProgressTests {
         #expect(!lines.contains { $0.1.trimmingCharacters(in: .whitespaces).isEmpty })
         withExtendedLifetime(sandbox) {}
     }
+
+    @Test("Up to 100 casks per Homebrew call: 100 in one call, 101 in two")
+    func batchesOfAHundred() async throws {
+        let (sandbox, _, _, fresh, target) = try await context("chunks")
+        let client = TestEnvironment.restoreEnvironment(target).homebrew
+        let brew = HomebrewInstallation(executable: fresh.url.appendingPathComponent("opt/homebrew/bin/brew").path,
+                                        prefix: fresh.url.appendingPathComponent("opt/homebrew"), version: "4.4.0")
+        func infoCalls() -> Int { fresh.calls().filter { $0.hasPrefix("brew info --json=v2 --cask") }.count }
+        _ = await client.caskContents(brew, tokens: (1...100).map { "cask-\($0)" })
+        #expect(infoCalls() == 1)
+        _ = await client.caskContents(brew, tokens: (1...101).map { "cask-\($0)" })
+        #expect(infoCalls() == 3)
+        withExtendedLifetime(sandbox) {}
+    }
 }
