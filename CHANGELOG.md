@@ -14,7 +14,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   so and where it looked, instead of showing the same window again without a word. **Choose the App…** points
   MacReplica at the installed app (installed elsewhere or under another name); an app with another identifier counts
   only after you confirm it, and the result says so (tester report).
-
 - **The restore screen tells the truth when a restore continues.** The counter shows the steps done ("570 / 585"
   next to 570 successful – it showed the position in the plan, "23 / 585"); a step that runs again (a cask checked
   again) leaves the finished list while it runs instead of staying green, and the progress bar counts it as open
