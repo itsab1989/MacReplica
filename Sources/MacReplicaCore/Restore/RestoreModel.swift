@@ -407,6 +407,11 @@ public enum ResultNote: Codable, Equatable, Sendable {
     case reinstalledMissingParts(parts: String)
     /// Guided installation: the user pointed at the installed app; `confirmed` – although it differs from the backup's.
     case chosenByUser(app: String, confirmed: Bool)
+    /// The app the user chose was outside Applications (e.g. still in the opened installer disk image) and was copied
+    /// into `folder` before it counted as installed.
+    case chosenAndCopied(app: String, folder: String)
+    /// The same, for an app in a folder on the same disk (Downloads): moved into `folder`.
+    case chosenAndMoved(app: String, folder: String)
     /// Launchpad: apps on this Mac that are not in the arrangement saved in the backup (left out of a backup made
     /// before 1.1.7, or installed later); macOS puts them after the arranged pages. `names`: at most a few.
     case launchpadAppsNotInBackup(count: Int, names: [String])

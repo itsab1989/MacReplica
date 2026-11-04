@@ -143,4 +143,28 @@ struct RestoreProgressStateTests {
         #expect(state.pending.map(\.id) == ["cask:c"])
         #expect(state.done == 5)
     }
+
+    @Test("A step that runs a tool shows its heading at once; a quiet step without a tool adds none")
+    func headingsAtOnce() {
+        var state = RestoreProgressState()
+        let x = item("cask:xquartz"), y = item("cask:yed"), font = item("font:1", .font)
+        state.apply(.started(item: x, index: 0, total: 3), title: \.title)
+        state.apply(.output(itemID: x.id, line: "==> Fetching downloads for: xquartz"), title: \.title)
+        state.apply(.finished(item: x, result: ItemResult(itemID: x.id, outcome: .succeeded), index: 0, total: 3), title: \.title)
+        state.apply(.started(item: y, index: 1, total: 3), title: \.title)
+        #expect(state.output.last?.line == "— cask:yed —", "the newest entry names the running step before it prints anything")
+        #expect(state.lastOutput == nil)
+        state.apply(.finished(item: y, result: ItemResult(itemID: y.id, outcome: .succeeded), index: 1, total: 3), title: \.title)
+        let count = state.outputCount
+        state.apply(.started(item: font, index: 2, total: 3), title: \.title)
+        #expect(state.outputCount == count, "no heading for a font")
+        #expect(RestoreProgressState.runsTool(.formula) && RestoreProgressState.runsTool(.pythonEnvironment) && !RestoreProgressState.runsTool(.font))
+        #expect(RestoreProgressState.runsTool(.commandLineTools) && RestoreProgressState.runsTool(.homebrew) && RestoreProgressState.runsTool(.tap))
+        #expect(RestoreProgressState.runsTool(.masTool) && RestoreProgressState.runsTool(.toolchainStep) && !RestoreProgressState.runsTool(.applicationData))
+        // The heading also respects the 300-line limit.
+        var full = RestoreProgressState()
+        for n in 1...300 { full.addOutput("line \(n)") }
+        full.apply(.started(item: x, index: 0, total: 1), title: \.title)
+        #expect(full.output.count == RestoreProgressState.outputLimit && full.output.last?.line == "— cask:xquartz —")
+    }
 }

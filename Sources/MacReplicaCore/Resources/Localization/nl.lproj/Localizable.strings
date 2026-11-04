@@ -953,6 +953,10 @@
 "guided.searchWeb" = "Zoek op het web";
 "note.chosenByUser" = "Je hebt %1$@ als geïnstalleerde app gekozen; MacReplica heeft gecontroleerd dat het de app uit de reservekopie is.";
 "note.chosenByUser.confirmed" = "Je hebt %1$@ als geïnstalleerde app gekozen en bevestigd, hoewel naam en identificatie verschillen van die in de reservekopie.";
+"note.chosenAndCopied" = "%1$@ stond nog niet in Apps (bijvoorbeeld nog in de geopende schijfkopie), dus MacReplica heeft hem naar %2$@ gekopieerd.";
+"note.chosenAndMoved" = "%1$@ stond nog niet in Apps (bijvoorbeeld nog in Downloads), dus MacReplica heeft hem naar %2$@ verplaatst.";
+"guided.choose.copyFailed.title" = "%1$@ kon niet naar Apps worden gekopieerd";
+"guided.choose.copyFailed.message" = "Een gekozen app die nog niet in Apps staat (bijvoorbeeld nog in de geopende schijfkopie), kopieert MacReplica daar eerst naartoe. Dat is niet gelukt: %1$@ Kopieer hem zelf naar Apps en klik dan op Gereed.";
 "guided.pending.done" = "Klaar";
 "guided.pending.cancel" = "Installatie annuleren";
 "items.source" = "Installeren";

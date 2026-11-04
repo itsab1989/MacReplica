@@ -7,6 +7,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **An app chosen with Choose the App… is really installed.** One that was not in Applications yet – the downloaded
+  app in Downloads, or the app in the opened disk image – counted as installed and was left where it was. MacReplica
+  now moves it into Applications (from the same disk, like installing it in Finder) or copies it (from a disk image
+  or another drive), checks it there and notes what it did; if that is not possible it says so and the step stays
+  open (tester report).
+- **Details names the running step at once.** For a step that runs Homebrew or another tool, its name appears in
+  Details as soon as it starts, and the list scrolls once the new line is shown, so it no longer shows the previous
+  step's lines as the newest for a moment (tester report).
+
 ## [1.1.15] - 2026-11-04
 
 ### Fixed

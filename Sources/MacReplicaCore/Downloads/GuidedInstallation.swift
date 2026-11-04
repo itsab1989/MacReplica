@@ -11,8 +11,9 @@ public enum GuidedDecision: Sendable, Equatable {
     /// Stop the installation that is in progress.
     case cancel
     /// The user pointed at the installed app (installed elsewhere or under another name). `confirmed`: the user
-    /// agreed to count it although its name and identifier differ from the backup's.
-    case chosen(URL, confirmed: Bool)
+    /// agreed to count it although its name and identifier differ from the backup's. `copiedFrom`: it was outside
+    /// Applications and was copied or `moved` there first (from this place).
+    case chosen(URL, confirmed: Bool, copiedFrom: URL? = nil, moved: Bool = false)
 }
 
 /// What MacReplica asks the app (the user interface) to do during a guided installation.
@@ -293,12 +294,20 @@ public actor GuidedInstallation {
                 // Until 1.1.13 the same question came back without a word (tester, 2026-11-03).
                 notFound = true
                 log?.info("\(item.id): Done, but the app was not found", component: .downloads)
-            case .chosen(let app, let confirmed):
+            case .chosen(let app, let confirmed, let copiedFrom, let moved):
                 guard confirmed || Self.matches(item, app: app) else { notFound = true; continue }
                 let version = ApplicationLocator.version(of: app)
-                log?.info("\(item.id): the user chose \(app.lastPathComponent)\(confirmed ? " (confirmed although it differs)" : "")", component: .downloads)
-                return finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version,
-                                               notes: [.chosenByUser(app: app.lastPathComponent, confirmed: confirmed)]))
+                log?.info("\(item.id): the user chose \(app.lastPathComponent)\(confirmed ? " (confirmed although it differs)" : "")"
+                          + (copiedFrom.map { " – \(moved ? "moved" : "copied") from \($0.deletingLastPathComponent().path) to \(app.deletingLastPathComponent().path)" } ?? ""),
+                          component: .downloads)
+                var notes: [ResultNote] = [.chosenByUser(app: app.lastPathComponent, confirmed: confirmed)]
+                if copiedFrom != nil {
+                    // The folder as Finder shows it ("Programme" on a German Mac).
+                    let folder = FileManager.default.displayName(atPath: app.deletingLastPathComponent().path)
+                    notes.append(moved ? .chosenAndMoved(app: app.lastPathComponent, folder: folder)
+                                       : .chosenAndCopied(app: app.lastPathComponent, folder: folder))
+                }
+                return finish(item, ItemResult(itemID: item.id, outcome: .succeeded, installedVersion: version, notes: notes))
             case .skip: return finish(item, ItemResult(itemID: item.id, outcome: .skipped(.userSkipped)))
             case .later: return finish(item, ItemResult(itemID: item.id, outcome: .skipped(.postponedByUser)))
             case .cancel:
@@ -306,6 +315,36 @@ public actor GuidedInstallation {
                 return finish(item, ItemResult(itemID: item.id, outcome: .skipped(.cancelledByUser)))
             }
         }
+    }
+
+    /// The app the user chose, in an Applications folder: as it is when it already is in one of `folders` (also in a
+    /// suite folder there), otherwise copied into the first of them – an app still in the opened installer disk image
+    /// or in Downloads is not installed (tester, 2026-11-04: it was counted as installed and never copied).
+    /// An app on the same disk in a folder the user can change (Downloads) is moved, like installing it in Finder; one on
+    /// a disk image or another drive is copied. Returns the app's place, where it came from (nil when it was already in
+    /// place) and whether it was moved.
+    public static func placeChosenApp(_ app: URL, in folders: [URL], fileManager: FileManager = .default) throws -> (app: URL, copiedFrom: URL?, moved: Bool) {
+        let path = app.standardizedFileURL.resolvingSymlinksInPath().path
+        for folder in folders {
+            let base = folder.standardizedFileURL.resolvingSymlinksInPath().path
+            if path.hasPrefix(base + "/") { return (app, nil, false) }
+        }
+        guard let destination = folders.first else { throw CocoaError(.fileNoSuchFile) }
+        let target = destination.appendingPathComponent(app.lastPathComponent)
+        guard !fileManager.fileExists(atPath: target.path) else { throw CocoaError(.fileWriteFileExists) }
+        if sameVolume(app, destination), fileManager.isWritableFile(atPath: app.deletingLastPathComponent().path) {
+            try fileManager.moveItem(at: app, to: target)
+            return (target, app, true)
+        }
+        try fileManager.copyItem(at: app, to: target)
+        return (target, app, false)
+    }
+
+    static func sameVolume(_ a: URL, _ b: URL) -> Bool {
+        let first = try? a.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier as? NSObject
+        let second = try? b.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier as? NSObject
+        guard let first, let second else { return false }
+        return first.isEqual(second)
     }
 
     /// True if the app the user chose is the one in the backup: the same bundle identifier, or – when the backup has
