@@ -187,7 +187,8 @@ struct RestoreProgressView: View {
                             }
                             .frame(height: 140)
                             // The running number keeps growing when the list is full (300 lines), so it keeps following.
-                            .onChange(of: p.outputCount) { count in proxy.scrollTo(count, anchor: .bottom) }
+                            // After the new line is laid out (scrolling at once could miss it until the next line came).
+                            .onChange(of: p.outputCount) { count in DispatchQueue.main.async { proxy.scrollTo(count, anchor: .bottom) } }
                         }
                     } label: {
                         Text(l.t("progress.details")).font(.headline)

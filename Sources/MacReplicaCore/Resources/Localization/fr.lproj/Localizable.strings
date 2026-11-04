@@ -953,6 +953,10 @@
 "guided.searchWeb" = "Rechercher sur le Web";
 "note.chosenByUser" = "Vous avez choisi %1$@ comme app installée ; MacReplica a vérifié qu’il s’agit de l’app de la sauvegarde.";
 "note.chosenByUser.confirmed" = "Vous avez choisi %1$@ comme app installée et l’avez confirmé, bien que son nom et son identifiant diffèrent de ceux de la sauvegarde.";
+"note.chosenAndCopied" = "%1$@ n’était pas encore dans Applications (par exemple encore dans l’image disque ouverte) ; MacReplica l’a donc copiée dans %2$@.";
+"note.chosenAndMoved" = "%1$@ n’était pas encore dans Applications (par exemple encore dans Téléchargements) ; MacReplica l’a donc déplacée dans %2$@.";
+"guided.choose.copyFailed.title" = "Impossible de copier %1$@ dans Applications";
+"guided.choose.copyFailed.message" = "MacReplica copie d’abord dans Applications une app choisie qui n’y est pas encore (par exemple encore dans l’image disque ouverte). Cela n’a pas fonctionné : %1$@ Copiez-la vous-même dans Applications, puis cliquez sur Terminé.";
 "guided.pending.done" = "Terminé";
 "guided.pending.cancel" = "Annuler l’installation";
 "items.source" = "Installer";

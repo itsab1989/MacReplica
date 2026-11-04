@@ -955,6 +955,10 @@
 "guided.searchWeb" = "Search the Web";
 "note.chosenByUser" = "You chose %1$@ as the installed app; MacReplica checked that it is the app from the backup.";
 "note.chosenByUser.confirmed" = "You chose %1$@ as the installed app and confirmed it, although its name and identifier differ from the backup's.";
+"note.chosenAndCopied" = "%1$@ was not in Applications yet (for example still in the opened disk image), so MacReplica copied it into %2$@.";
+"note.chosenAndMoved" = "%1$@ was not in Applications yet (for example still in Downloads), so MacReplica moved it into %2$@.";
+"guided.choose.copyFailed.title" = "%1$@ could not be copied into Applications";
+"guided.choose.copyFailed.message" = "MacReplica puts a chosen app that is not in Applications yet (for example still in Downloads or in the opened disk image) there first. That did not work: %1$@ Copy it into Applications yourself, then click Done.";
 "guided.pending.done" = "Done";
 "guided.pending.cancel" = "Cancel Installation";
 "items.source" = "Install";

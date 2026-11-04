@@ -213,16 +213,31 @@ extension AppModel {
         panel.prompt = l.t("guided.choose.prompt")
         panel.message = l.t("guided.choose.message", l.itemTitle(item))
         guard panel.runModal() == .OK, let app = panel.url else { return }
-        if GuidedInstallation.matches(item, app: app) {
-            answerPending(.chosen(app, confirmed: false))
-            return
+        var confirmed = false
+        if !GuidedInstallation.matches(item, app: app) {
+            let alert = NSAlert()
+            alert.messageText = l.t("guided.choose.different.title", app.deletingPathExtension().lastPathComponent)
+            alert.informativeText = l.t("guided.choose.different.message", l.itemTitle(item))
+            alert.addButton(withTitle: l.t("guided.choose.different.use"))
+            alert.addButton(withTitle: l.t("common.cancel"))
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            confirmed = true
         }
-        let alert = NSAlert()
-        alert.messageText = l.t("guided.choose.different.title", app.deletingPathExtension().lastPathComponent)
-        alert.informativeText = l.t("guided.choose.different.message", l.itemTitle(item))
-        alert.addButton(withTitle: l.t("guided.choose.different.use"))
-        alert.addButton(withTitle: l.t("common.cancel"))
-        if alert.runModal() == .alertFirstButtonReturn { answerPending(.chosen(app, confirmed: true)) }
+        // An app outside Applications (still in the opened disk image, in Downloads …) is copied there first.
+        do {
+            let placed = try GuidedInstallation.placeChosenApp(app, in: services.layout.applicationFolders)
+            if let source = placed.copiedFrom {
+                appLog.info("\(itemID): \(placed.moved ? "moved" : "copied") the chosen \(app.lastPathComponent) from \(services.layout.displayPath(source.deletingLastPathComponent())) into Applications",
+                            component: .downloads)
+            }
+            answerPending(.chosen(placed.app, confirmed: confirmed, copiedFrom: placed.copiedFrom, moved: placed.moved))
+        } catch {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = l.t("guided.choose.copyFailed.title", app.lastPathComponent)
+            alert.informativeText = l.t("guided.choose.copyFailed.message", (error as NSError).localizedDescription)
+            alert.runModal()
+        }
     }
 
     /// "Search the Web" for an app MacReplica knows no download for: the user's browser, the app's name.

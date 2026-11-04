@@ -953,6 +953,10 @@
 "guided.searchWeb" = "Søk på nettet";
 "note.chosenByUser" = "Du valgte %1$@ som den installerte appen; MacReplica kontrollerte at det er appen fra sikkerhetskopien.";
 "note.chosenByUser.confirmed" = "Du valgte %1$@ som den installerte appen og bekreftet det, selv om navn og identifikator er forskjellige fra sikkerhetskopiens.";
+"note.chosenAndCopied" = "%1$@ var ikke i Programmer ennå (for eksempel fortsatt i det åpnede diskbildet), så MacReplica kopierte den til %2$@.";
+"note.chosenAndMoved" = "%1$@ var ikke i Programmer ennå (for eksempel fortsatt i Nedlastinger), så MacReplica flyttet den til %2$@.";
+"guided.choose.copyFailed.title" = "%1$@ kunne ikke kopieres til Programmer";
+"guided.choose.copyFailed.message" = "En valgt app som ikke er i Programmer ennå (for eksempel fortsatt i det åpnede diskbildet), kopierer MacReplica dit først. Det gikk ikke: %1$@ Kopier den selv til Programmer, og klikk deretter på Ferdig.";
 "guided.pending.done" = "Ferdig";
 "guided.pending.cancel" = "Avbryt installasjonen";
 "items.source" = "Installer";

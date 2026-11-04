@@ -64,6 +64,14 @@ public struct RestoreProgressState {
         }
     }
 
+    /// Steps whose tool prints output (Homebrew, Python, toolchains).
+    public static func runsTool(_ kind: RestoreItemKind) -> Bool {
+        switch kind {
+        case .commandLineTools, .homebrew, .tap, .masTool, .formula, .cask, .pythonEnvironment, .toolchainStep: return true
+        default: return false
+        }
+    }
+
     /// Counts a result that is already known (a step finished in an earlier run).
     public mutating func count(_ outcome: ItemOutcome) {
         if outcome.isSuccessLike { succeeded += 1 } else if outcome.isFailure { failed += 1 } else { skipped += 1 }
@@ -86,7 +94,16 @@ public struct RestoreProgressState {
             self.total = total
             activity = .checking
             lastOutput = nil
-            headingPending = true
+            // A step that runs a tool gets its heading at once, so Details never shows the previous step's lines as the
+            // newest while this one is still quiet (tester, 2026-11-04: "fetching xquartz" while yEd ran).
+            if Self.runsTool(item.kind) {
+                headingPending = false
+                output.append((outputCount + 1, "— \(title(item)) —"))
+                outputCount += 1
+                if output.count > Self.outputLimit { output.removeFirst(output.count - Self.outputLimit) }
+            } else {
+                headingPending = true
+            }
         case .activity(_, let activity):
             self.activity = activity
         case .finished(let item, let result, _, _):
