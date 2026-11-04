@@ -28,6 +28,12 @@ public struct ProgressEstimator: Sendable {
         }
     }
 
+    /// A step that was finished runs again (a cask re-checked when a restore continues): it counts as open until
+    /// it finishes again, so the bar moves with it instead of standing still (tester, 2026-11-04).
+    public mutating func reopen(itemID: String) {
+        finished.remove(itemID)
+    }
+
     public var remainingWeight: Double {
         weights.filter { !finished.contains($0.key) }.values.reduce(0, +)
     }

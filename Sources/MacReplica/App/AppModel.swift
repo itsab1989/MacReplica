@@ -29,33 +29,6 @@ struct ProblemInfo: Equatable {
 }
 
 /// Live state of a running restore, derived from executor events.
-struct RestoreProgressState {
-    var total = 0
-    var position = 0
-    var currentItem: RestoreItem?
-    var activity: RestoreActivity = .checking
-    var succeeded = 0
-    var failed = 0
-    var skipped = 0
-    var finished: [(item: RestoreItem, result: ItemResult)] = []
-    var estimator = ProgressEstimator(items: [])
-    var stopping = false
-    /// The latest lines of output from the tool working on the current step (Homebrew's downloads and installs).
-    var output: [String] = []
-    var lastOutput: String?
-    static let outputLimit = 300
-
-    /// Weighted by how long each kind of step usually takes (an app install counts far more than a font), so the bar
-    /// does not stand still through slow downloads and race through quick copies.
-    var fraction: Double { total == 0 ? 0 : estimator.fractionComplete }
-
-    mutating func addOutput(_ line: String) {
-        output.append(line)
-        if output.count > Self.outputLimit { output.removeFirst(output.count - Self.outputLimit) }
-        lastOutput = line
-    }
-}
-
 @MainActor
 final class AppModel: ObservableObject {
     let services: AppServices
@@ -1031,7 +1004,9 @@ final class AppModel: ObservableObject {
         let model = self
         task = Task { [weak self] in
             let finalSession = await executor.run(plan: plan, session: session) { event in
-                Task { @MainActor in model.handle(event) }
+                // In the order the restore sends them (separate Tasks may run in any order, so a step's output
+                // could appear after the next step had started).
+                DispatchQueue.main.async { MainActor.assumeIsolated { model.handle(event) } }
             }
             await MainActor.run { [weak self] in
                 guard let self else { return }
@@ -1048,31 +1023,8 @@ final class AppModel: ObservableObject {
     }
 
     private func handle(_ event: RestoreEvent) {
-        switch event {
-        case .started(let item, let index, let total):
-            progress.currentItem = item
-            progress.position = index + 1
-            progress.total = total
-            progress.activity = .checking
-            progress.lastOutput = nil
-        case .activity(_, let activity):
-            progress.activity = activity
-        case .finished(let item, let result, _, _):
-            // A step checked again when the restore continues replaces its earlier result instead of counting twice.
-            if let earlier = progress.finished.firstIndex(where: { $0.item.id == item.id }) {
-                let outcome = progress.finished[earlier].result.outcome
-                if outcome.isSuccessLike { progress.succeeded -= 1 } else if outcome.isFailure { progress.failed -= 1 } else { progress.skipped -= 1 }
-                progress.finished.remove(at: earlier)
-            }
-            progress.finished.append((item, result))
-            count(result.outcome, into: &progress)
-            progress.estimator.record(itemID: item.id, duration: result.duration, didWork: result.outcome == .succeeded || result.outcome.isFailure)
-        case .output(let itemID, let line):
-            guard progress.currentItem?.id == itemID else { return }
-            progress.addOutput(line)
-        case .completed:
-            progress.currentItem = nil
-        }
+        let l = self.l
+        progress.apply(event, title: { l.itemTitle($0) })
     }
 
     /// Stops after the current step; the session stays resumable.

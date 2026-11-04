@@ -467,6 +467,21 @@
       "area": "Homebrew detection"
     },
     {
+      "file": "Restore/ProgressEstimator.swift",
+      "tests": [
+        "RestoreProgressStateTests",
+        "FailureModeTests"
+      ],
+      "area": "Restore progress screen"
+    },
+    {
+      "file": "Restore/RestoreProgressState.swift",
+      "tests": [
+        "RestoreProgressStateTests"
+      ],
+      "area": "Restore progress screen"
+    },
+    {
       "file": "Restore/RestoreStartGate.swift",
       "tests": [
         "RestoreStartAndProgressTests"
@@ -938,6 +953,11 @@
       "file": "Restore/LaunchpadRestore.swift",
       "pattern": "Date\\(\\) >= deadline",
       "reason": "Timing boundary of the settle wait (>= vs >) is not observable."
+    },
+    {
+      "file": "Restore/RestoreProgressState.swift",
+      "pattern": "if output\\.count > Self\\.outputLimit",
+      "reason": "At exactly the limit removeFirst(0) removes nothing, so > and >= behave the same (equivalent mutant)."
     },
     {
       "file": "Homebrew/HomebrewClient.swift",

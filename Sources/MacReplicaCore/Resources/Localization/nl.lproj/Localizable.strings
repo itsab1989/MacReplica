@@ -211,6 +211,8 @@
 "progress.failed" = "Mislukt: %1$d";
 "progress.skipped" = "Overgeslagen: %1$d";
 "progress.recent" = "Voltooid";
+"progress.notFinished" = "Niet voltooid (%1$d): mislukt, overgeslagen of wachtend";
+"progress.finishedCount" = "Voltooid (%1$d)";
 "progress.details" = "Details";
 "restore.preparing" = "Deze Mac wordt vóór het herstel gecontroleerd: %1$d van %2$d …";
 "progress.finishing" = "Afronden …";
