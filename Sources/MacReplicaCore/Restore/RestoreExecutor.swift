@@ -19,6 +19,9 @@ public enum RestoreEvent: Sendable {
     case finished(item: RestoreItem, result: ItemResult, index: Int, total: Int)
     /// A line of output from the tool working on the step (e.g. Homebrew's "==> Downloading …"), redacted.
     case output(itemID: String, line: String)
+    /// Steps finished in an earlier run that are open again before the first step runs (casks recorded as installed
+    /// whose apps or packages are missing), so the screen counts them as still to do from the start.
+    case reopened(itemIDs: [String])
     case completed(RestoreSummary)
 }
 
@@ -512,19 +515,28 @@ public final class RestoreExecutor: Sendable {
         let recordedCasks = plan.items.filter { $0.kind == .cask && session.results[$0.id]?.outcome == .alreadyPresent }
         if let brew = context.brew, !recordedCasks.isEmpty {
             inspector.caskContentsCache.store(await environment.homebrew.caskContents(brew, tokens: recordedCasks.map(\.identifier)))
-        }
-
-        for (index, item) in plan.items.enumerated() {
-            // Finished steps are not repeated; steps that wait for the user are checked again.
-            if let previous = session.results[item.id], !previous.outcome.isOpen {
-                // Except a cask recorded as already installed whose app or package is not on this Mac (tester,
-                // 2026-11-03: continuing a 1.1.11 restore with 1.1.12 kept those results and installed nothing).
-                guard item.kind == .cask, previous.outcome == .alreadyPresent, let brew = context.brew else { continue }
+            // All of them before the first step: those with missing apps or packages are open again from the start, so
+            // the screen counts them as still to do (1.1.14 found them one by one, and the counts stood still).
+            var reopened: [String] = []
+            for item in recordedCasks {
                 let missing = await inspector.missingCaskParts(item, brew: brew)
                 guard !missing.isEmpty else { continue }
                 log.warning("\(item.id): recorded as already installed, but \(missing.joined(separator: ", ")) is not on this Mac – checked again",
                             component: .homebrew)
+                session.results[item.id] = nil
+                reopened.append(item.id)
             }
+            if !reopened.isEmpty {
+                persist(&session)
+                onEvent(.reopened(itemIDs: reopened))
+            }
+        }
+
+        for (index, item) in plan.items.enumerated() {
+            // Finished steps are not repeated; steps that wait for the user are checked again.
+            // (Casks recorded as installed whose apps or packages are missing were opened again above – tester,
+            // 2026-11-03: continuing a 1.1.11 restore with 1.1.12 kept those results and installed nothing.)
+            if let previous = session.results[item.id], !previous.outcome.isOpen { continue }
             if Task.isCancelled {
                 log.warning("Restore cancelled before \(item.id)", component: .restore)
                 break

@@ -211,7 +211,8 @@
 "progress.failed" = "Mislyktes: %1$d";
 "progress.skipped" = "Hoppet over: %1$d";
 "progress.recent" = "Fullført";
-"progress.notFinished" = "Ikke fullført (%1$d): mislyktes, hoppet over eller venter";
+"progress.notFinished" = "Ikke fullført (%1$d): pågår, gjenstår, mislyktes, hoppet over eller venter";
+"progress.stillToDo" = "Gjenstår (%1$d): %2$@";
 "progress.finishedCount" = "Fullført (%1$d)";
 "progress.details" = "Detaljer";
 "restore.preparing" = "Kontrollerer denne Macen før gjenopprettingen: %1$d av %2$d …";

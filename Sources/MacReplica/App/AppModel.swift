@@ -990,15 +990,7 @@ final class AppModel: ObservableObject {
         guard let executor = makeExecutor(log: log) else { startGate.endRestore(); return }
         self.plan = plan
         self.session = session
-        var state = RestoreProgressState()
-        state.total = plan.items.count
-        state.estimator = ProgressEstimator(items: plan.items, alreadyFinished: session.finishedItemIDs)
-        for item in plan.items {
-            guard let result = session.results[item.id] else { continue }
-            state.finished.append((item, result))
-            count(result.outcome, into: &state)
-        }
-        progress = state
+        progress = RestoreProgressState(items: plan.items, results: session.results, alreadyFinished: session.finishedItemIDs)
         screen = .restoring
         unfinishedSession = nil
         let model = self
@@ -1016,10 +1008,6 @@ final class AppModel: ObservableObject {
                 self.writeRestoreReport(plan: plan, session: finalSession)
             }
         }
-    }
-
-    private func count(_ outcome: ItemOutcome, into state: inout RestoreProgressState) {
-        if outcome.isSuccessLike { state.succeeded += 1 } else if outcome.isFailure { state.failed += 1 } else { state.skipped += 1 }
     }
 
     private func handle(_ event: RestoreEvent) {

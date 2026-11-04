@@ -286,4 +286,29 @@ struct StaleCaskRecordTests {
         let infoCalls = c.fresh.calls().filter { $0.hasPrefix("brew info --json=v2 --cask") }
         #expect(infoCalls.count == 1, "the definitions are read once, together: \(infoCalls)")
     }
+
+    final class Events: @unchecked Sendable {
+        private let lock = NSLock()
+        private var list: [RestoreEvent] = []
+        func add(_ event: RestoreEvent) { lock.withLock { list.append(event) } }
+        var all: [RestoreEvent] { lock.withLock { list } }
+    }
+
+    @Test("Casks to reinstall are announced as open before the first step, so the screen can count them from the start")
+    func reopenedBeforeTheFirstStep() async throws {
+        let c = try await context("reopened")
+        try recordOnly(c, "pixel-forge", version: "2.4.1")
+        let (plan, session) = continuedSession(c)
+        let events = Events()
+        let finished = await RestoreExecutor(environment: TestEnvironment.restoreEnvironment(c.target), backupRoot: c.backup, sessionStore: nil)
+            .run(plan: plan, session: session, onEvent: { events.add($0) })
+        let all = events.all
+        let reopenedAt = all.firstIndex { if case .reopened = $0 { return true }; return false }
+        let firstStart = all.firstIndex { if case .started = $0 { return true }; return false }
+        guard let reopenedAt, case .reopened(let ids) = all[reopenedAt] else { Issue.record("no reopened event"); return }
+        #expect(ids.contains("cask:pixel-forge"))
+        #expect(!ids.contains("cask:font-example-mono"), "a cask without an app is not reopened")
+        #expect(firstStart.map { reopenedAt < $0 } ?? false, "announced before the first step starts")
+        #expect(finished.results["cask:pixel-forge"]?.outcome == .succeeded)
+    }
 }

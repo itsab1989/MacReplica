@@ -7,6 +7,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **The counts move with every reinstalled app when a restore continues.** The casks that have to be reinstalled are
+  found before the first step and count as still to do from the start; each one that finishes raises the counter,
+  *Successful* and *Finished* and lowers *Not finished*. *Not finished* now also names the steps still to do (in 1.1.14
+  the counts stood still at 584 / 585 because each reinstall was taken out and put back) (tester report).
+
 ## [1.1.14] - 2026-11-04
 
 ### Fixed

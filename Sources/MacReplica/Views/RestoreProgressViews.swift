@@ -197,10 +197,18 @@ struct RestoreProgressView: View {
 
                 let open = p.finished.filter { !$0.result.outcome.isSuccessLike }
                 let completed = p.finished.filter { $0.result.outcome.isSuccessLike }
-                if !open.isEmpty {
-                    // Failed, skipped or waiting steps apart from the finished ones (tester, 2026-11-04).
-                    Text(l.t("progress.notFinished", open.count)).font(.headline)
-                    ResultList(entries: open, height: 110).accessibilityIdentifier("progress.notFinished")
+                let toDo = p.pending.filter { $0.id != p.currentItem?.id }
+                if !open.isEmpty || !toDo.isEmpty {
+                    // Failed, skipped or waiting steps and the ones still to do, apart from the finished ones; the count
+                    // goes down with every step that finishes (tester, 2026-11-04).
+                    Text(l.t("progress.notFinished", open.count + toDo.count + (p.currentItem == nil ? 0 : 1))).font(.headline)
+                    ResultList(entries: open, height: 90).accessibilityIdentifier("progress.notFinished")
+                    if !toDo.isEmpty {
+                        Text(l.t("progress.stillToDo", toDo.count, toDo.prefix(6).map { l.itemTitle($0) }.joined(separator: ", ")
+                                 + (toDo.count > 6 ? ", …" : "")))
+                            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("progress.stillToDo")
+                    }
                 }
                 if !completed.isEmpty {
                     Text(l.t("progress.finishedCount", completed.count)).font(.headline)
