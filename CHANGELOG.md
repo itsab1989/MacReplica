@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.16] - 2026-11-04
+
 ### Fixed
 - **An app chosen with Choose the App… is really installed.** One that was not in Applications yet – the downloaded
   app in Downloads, or the app in the opened disk image – counted as installed and was left where it was. MacReplica
@@ -679,7 +681,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.15...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.16...HEAD
+[1.1.16]: https://github.com/itsab1989/MacReplica/compare/v1.1.15...v1.1.16
 [1.1.15]: https://github.com/itsab1989/MacReplica/compare/v1.1.14...v1.1.15
 [1.1.14]: https://github.com/itsab1989/MacReplica/compare/v1.1.13...v1.1.14
 [1.1.13]: https://github.com/itsab1989/MacReplica/compare/v1.1.12...v1.1.13
