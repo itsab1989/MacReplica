@@ -7,12 +7,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.14] - 2026-11-04
+
 ### Fixed
 - **Done in the guided installation explains itself.** When MacReplica does not find an app after Done, it now says
   so and where it looked, instead of showing the same window again without a word. **Choose the App…** points
   MacReplica at the installed app (installed elsewhere or under another name); an app with another identifier counts
   only after you confirm it, and the result says so (tester report).
-
 - **The restore screen tells the truth when a restore continues.** The counter shows the steps done ("570 / 585"
   next to 570 successful – it showed the position in the plan, "23 / 585"); a step that runs again (a cask checked
   again) leaves the finished list while it runs instead of staying green, and the progress bar counts it as open
@@ -660,7 +661,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.13...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.14...HEAD
+[1.1.14]: https://github.com/itsab1989/MacReplica/compare/v1.1.13...v1.1.14
 [1.1.13]: https://github.com/itsab1989/MacReplica/compare/v1.1.12...v1.1.13
 [1.1.12]: https://github.com/itsab1989/MacReplica/compare/v1.1.11...v1.1.12
 [1.1.11]: https://github.com/itsab1989/MacReplica/compare/v1.1.10...v1.1.11
