@@ -955,6 +955,11 @@
       "reason": "Timing boundary of the settle wait (>= vs >) is not observable."
     },
     {
+      "file": "Restore/RestoreProgressState.swift",
+      "pattern": "if output\\.count > Self\\.outputLimit",
+      "reason": "At exactly the limit removeFirst(0) removes nothing, so > and >= behave the same (equivalent mutant)."
+    },
+    {
       "file": "Homebrew/HomebrewClient.swift",
       "pattern": "sorted \\{ \\$0\\.(name|token) < \\$1\\.(name|token) \\}",
       "reason": "Package names and tokens are unique, so < and <= sort the same (equivalent mutant)."

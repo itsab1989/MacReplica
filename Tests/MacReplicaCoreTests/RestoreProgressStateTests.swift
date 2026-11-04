@@ -77,6 +77,7 @@ struct RestoreProgressStateTests {
         #expect(state.lastOutput == nil, "a new step starts without the previous step's line")
         state.apply(.output(itemID: b.id, line: "==> Fetching b"), title: { "A \($0.id)" })
         #expect(state.output.map(\.line) == ["— A cask:a —", "==> Downloading a", "==> Installing a", "— A cask:b —", "==> Fetching b"])
+        #expect(state.output.map(\.id) == [1, 2, 3, 4, 5], "headings get running numbers too")
         #expect(state.lastOutput == "==> Fetching b")
         state.apply(.completed(RestoreSummary(results: [], total: 3)), title: { "A \($0.id)" })
         #expect(state.currentItem == nil)
@@ -89,8 +90,25 @@ struct RestoreProgressStateTests {
         #expect(state.output.count == RestoreProgressState.outputLimit)
         #expect(state.outputCount == 305)
         #expect(state.output.first?.line == "line 6" && state.output.last?.id == 305)
-        state.addOutput("— heading —", isHeading: true)
-        #expect(state.lastOutput == "line 305", "a heading is not the current line")
+    }
+
+    @Test("A new state is not stopping and has no heading waiting; work done feeds the time estimate")
+    func defaultsAndEstimate() {
+        let fresh = RestoreProgressState()
+        #expect(!fresh.stopping && !fresh.headingPending && fresh.done == 0 && fresh.fraction == 0)
+        let a = item("cask:a"), b = item("cask:b"), c = item("cask:c")
+        var state = RestoreProgressState()
+        state.total = 3
+        state.estimator = ProgressEstimator(items: [a, b, c])
+        state.apply(.finished(item: a, result: ItemResult(itemID: a.id, outcome: .alreadyPresent, duration: 30), index: 0, total: 3), title: \.title)
+        #expect(state.estimator.remainingSeconds == nil, "nothing was installed: no speed to estimate from")
+        state.apply(.finished(item: b, result: ItemResult(itemID: b.id, outcome: .succeeded, duration: 30), index: 1, total: 3), title: \.title)
+        #expect(state.estimator.remainingSeconds == 30, "one cask took 30 s, one is left")
+        var failing = RestoreProgressState()
+        failing.estimator = ProgressEstimator(items: [a, b])
+        failing.apply(.finished(item: a, result: ItemResult(itemID: a.id, outcome: .failed(RestoreFailure(category: .network, technicalDetail: "")), duration: 20),
+                                index: 0, total: 2), title: \.title)
+        #expect(failing.estimator.remainingSeconds == 20, "a failed attempt also took time")
     }
 
     @Test("Activity is taken over")

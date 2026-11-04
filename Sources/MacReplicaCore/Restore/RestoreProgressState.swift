@@ -32,11 +32,11 @@ public struct RestoreProgressState {
     /// does not stand still through slow downloads and race through quick copies.
     public var fraction: Double { total == 0 ? 0 : estimator.fractionComplete }
 
-    public mutating func addOutput(_ line: String, isHeading: Bool = false) {
+    public mutating func addOutput(_ line: String) {
         outputCount += 1
         output.append((outputCount, line))
         if output.count > Self.outputLimit { output.removeFirst(output.count - Self.outputLimit) }
-        if !isHeading { lastOutput = line }
+        lastOutput = line
     }
 
     /// Takes a step out of the finished ones while it runs again, so it is neither green nor counted twice.
@@ -76,7 +76,9 @@ public struct RestoreProgressState {
             // Details shows which step the lines belong to: a heading before the first line of each step.
             if headingPending {
                 headingPending = false
-                addOutput("— \(title(item)) —", isHeading: true)
+                // Details only: the step's own line follows at once and becomes the current one.
+                output.append((outputCount + 1, "— \(title(item)) —"))
+                outputCount += 1
             }
             addOutput(line)
         case .completed:
