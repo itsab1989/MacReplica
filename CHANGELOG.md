@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.15] - 2026-11-04
+
 ### Fixed
 - **The counts move with every reinstalled app when a restore continues.** The casks that have to be reinstalled are
   found before the first step and count as still to do from the start; each one that finishes raises the counter,
@@ -667,7 +669,8 @@ First public release.
 - Seven languages: English, German, Norwegian Bokmål, French, Spanish, Italian and Dutch.
 - Universal app for Apple silicon and Intel, macOS 13 or later.
 
-[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.14...HEAD
+[Unreleased]: https://github.com/itsab1989/MacReplica/compare/v1.1.15...HEAD
+[1.1.15]: https://github.com/itsab1989/MacReplica/compare/v1.1.14...v1.1.15
 [1.1.14]: https://github.com/itsab1989/MacReplica/compare/v1.1.13...v1.1.14
 [1.1.13]: https://github.com/itsab1989/MacReplica/compare/v1.1.12...v1.1.13
 [1.1.12]: https://github.com/itsab1989/MacReplica/compare/v1.1.11...v1.1.12
