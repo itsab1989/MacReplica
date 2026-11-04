@@ -211,7 +211,8 @@
 "progress.failed" = "Non riusciti: %1$d";
 "progress.skipped" = "Saltati: %1$d";
 "progress.recent" = "Completati";
-"progress.notFinished" = "Non completati (%1$d): non riusciti, saltati o in attesa";
+"progress.notFinished" = "Non completati (%1$d): in corso, da fare, non riusciti, saltati o in attesa";
+"progress.stillToDo" = "Da fare (%1$d): %2$@";
 "progress.finishedCount" = "Completati (%1$d)";
 "progress.details" = "Dettagli";
 "restore.preparing" = "Controllo di questo Mac prima del ripristino: %1$d di %2$d …";

@@ -117,4 +117,30 @@ struct RestoreProgressStateTests {
         state.apply(.activity(itemID: "x", .installing), title: \.title)
         #expect(state.activity == .installing)
     }
+
+    @Test("Reopened steps count as still to do from the start; every finished one moves the counts and the lists")
+    func reopenedCountUp() {
+        let fonts = (1...3).map { item("font:\($0)", .font) }
+        let a = item("cask:a"), b = item("cask:b"), c = item("cask:c")
+        let items = fonts + [a, b, c]
+        var results: [String: ItemResult] = [:]
+        for entry in fonts + [a, b] { results[entry.id] = ItemResult(itemID: entry.id, outcome: .alreadyPresent) }
+        var state = RestoreProgressState(items: items, results: results, alreadyFinished: Set(results.keys))
+        #expect(state.total == 6 && state.done == 5 && state.succeeded == 5)
+        #expect(state.pending.map(\.id) == ["cask:c"])
+        state.apply(.reopened(itemIDs: ["cask:a", "cask:b", "cask:unknown"]), title: \.title)
+        #expect(state.done == 3 && state.succeeded == 3, "counted as still to do from the start")
+        #expect(Set(state.pending.map(\.id)) == ["cask:a", "cask:b", "cask:c"])
+        #expect(!state.finished.contains { $0.item.id == "cask:a" })
+        let start = state.fraction
+        state.apply(.started(item: a, index: 3, total: 6), title: \.title)
+        #expect(!state.pending.contains { $0.id == "cask:a" }, "running, not waiting")
+        state.apply(.finished(item: a, result: ItemResult(itemID: a.id, outcome: .succeeded, duration: 60), index: 3, total: 6), title: \.title)
+        #expect(state.done == 4 && state.succeeded == 4, "each finished install counts up")
+        #expect(state.fraction > start)
+        #expect(state.finished.last?.item.id == "cask:a")
+        state.apply(.finished(item: b, result: ItemResult(itemID: b.id, outcome: .succeeded, duration: 60), index: 4, total: 6), title: \.title)
+        #expect(state.pending.map(\.id) == ["cask:c"])
+        #expect(state.done == 5)
+    }
 }

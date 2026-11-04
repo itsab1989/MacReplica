@@ -14,6 +14,8 @@ public struct RestoreProgressState {
     public var finished: [(item: RestoreItem, result: ItemResult)] = []
     public var estimator = ProgressEstimator(items: [])
     public var stopping = false
+    /// Steps of the plan that have not run yet (also those opened again when a restore continues), in plan order.
+    public var pending: [RestoreItem] = []
     /// The latest lines of output from the tool working on the current step (Homebrew's downloads and installs),
     /// each with a running number that keeps growing (the list itself stays at `outputLimit` lines).
     public var output: [(id: Int, line: String)] = []
@@ -48,6 +50,20 @@ public struct RestoreProgressState {
         estimator.reopen(itemID: itemID)
     }
 
+    /// The state at the start of a run: the steps finished earlier, the ones still to do.
+    public init(items: [RestoreItem], results: [String: ItemResult], alreadyFinished: Set<String>) {
+        total = items.count
+        estimator = ProgressEstimator(items: items, alreadyFinished: alreadyFinished)
+        for item in items {
+            if let result = results[item.id] {
+                finished.append((item, result))
+                count(result.outcome)
+            } else {
+                pending.append(item)
+            }
+        }
+    }
+
     /// Counts a result that is already known (a step finished in an earlier run).
     public mutating func count(_ outcome: ItemOutcome) {
         if outcome.isSuccessLike { succeeded += 1 } else if outcome.isFailure { failed += 1 } else { skipped += 1 }
@@ -56,8 +72,15 @@ public struct RestoreProgressState {
     /// Applies an event of the running restore. `title` names a step for the headings in Details.
     public mutating func apply(_ event: RestoreEvent, title: (RestoreItem) -> String) {
         switch event {
+        case .reopened(let itemIDs):
+            for id in itemIDs {
+                guard let item = finished.first(where: { $0.item.id == id })?.item else { continue }
+                reopen(id)
+                if !pending.contains(where: { $0.id == id }) { pending.append(item) }
+            }
         case .started(let item, let index, let total):
             reopen(item.id)
+            pending.removeAll { $0.id == item.id }
             currentItem = item
             position = index + 1
             self.total = total
@@ -68,6 +91,7 @@ public struct RestoreProgressState {
             self.activity = activity
         case .finished(let item, let result, _, _):
             reopen(item.id)
+            pending.removeAll { $0.id == item.id }
             finished.append((item, result))
             count(result.outcome)
             estimator.record(itemID: item.id, duration: result.duration, didWork: result.outcome == .succeeded || result.outcome.isFailure)
