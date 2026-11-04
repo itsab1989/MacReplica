@@ -956,6 +956,11 @@
     },
     {
       "file": "Restore/RestoreProgressState.swift",
+      "pattern": "finished\\.first\\(where: \\{ \\$0\\.item\\.id == id \\}\\)",
+      "reason": "A step is in the finished list at most once (reopen removes it before it is added again), so first and last find the same entry (equivalent mutant)."
+    },
+    {
+      "file": "Restore/RestoreProgressState.swift",
       "pattern": "if output\\.count > Self\\.outputLimit",
       "reason": "At exactly the limit removeFirst(0) removes nothing, so > and >= behave the same (equivalent mutant)."
     },
