@@ -158,6 +158,8 @@ struct RestoreProgressStateTests {
         let count = state.outputCount
         state.apply(.started(item: font, index: 2, total: 3), title: \.title)
         #expect(state.outputCount == count, "no heading for a font")
+        state.apply(.output(itemID: font.id, line: "font output"), title: \.title)
+        #expect(state.output.suffix(2).map(\.line) == ["— font:1 —", "font output"], "a quiet step gets its heading with its first line")
         #expect(RestoreProgressState.runsTool(.formula) && RestoreProgressState.runsTool(.pythonEnvironment) && !RestoreProgressState.runsTool(.font))
         #expect(RestoreProgressState.runsTool(.commandLineTools) && RestoreProgressState.runsTool(.homebrew) && RestoreProgressState.runsTool(.tap))
         #expect(RestoreProgressState.runsTool(.masTool) && RestoreProgressState.runsTool(.toolchainStep) && !RestoreProgressState.runsTool(.applicationData))
